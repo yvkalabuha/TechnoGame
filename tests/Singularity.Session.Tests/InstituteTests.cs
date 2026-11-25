@@ -684,6 +684,42 @@ public class InstituteTests
         Assert.True(inst.BuildRate(h, 30) > InstituteMath.BuildRate(3, 0, P));
     }
 
+    // Run to the end: the stretched project opens about its historical year and pays the price of opening on time in every month, so the sum is months x base rate.
+    [Fact]
+    public void StretchedProject_RunsToItsHistoricalYear_AndPaysTheBaseRateEveryMonth()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Fx6 low = s.World.Policy.Shares(usa).Research * Fx6.FromRaw(350_000);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(usa, new Singularity.Core.Policy.BudgetShares(low, Fx6.One - low, Fx6.Zero, Fx6.Zero, Fx6.Zero))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(usa, h.Slot)).Accepted);
+        long sum = 0;
+        int months = 0;
+        long m = 28;
+        for (; m < 28 + 12 * 40 && (m == 28 || !inst.Standing(h)); m++)
+        {
+            s.StepThroughMonth(m);
+            if (inst.Building(h))
+            {
+                Fx6 charged = inst.BuildRate(h, m + 1);
+                Assert.True(charged <= InstituteMath.BuildRate(3, 1, P), $"month {m}: the price must stay about the base one");
+                sum += charged.Raw;
+                months++;
+            }
+        }
+        Assert.True(inst.Standing(h));
+        int openYear = inst.Layout.YearOf(inst.OpenedMonth(h));
+        Assert.InRange(openYear, 1957, 1959);
+        Assert.True(months > 12 * 5, "the project was stretched well beyond its nominal term");
+        // The project opens in December of the year before, so at most the one-year step (x1.02) applies: the sum stays within 2 % of months x base rate (the old rule charged x1.77).
+        long baseSum = months * (long)InstituteMath.BuildRate(3, 0, P).Raw;
+        Assert.InRange(sum, baseSum, baseSum * 102 / 100);
+    }
+
     // A project without any research money never opens: it pays the price of the historical year (x1) and the year of an absurd month does not overflow.
     [Fact]
     public void ProjectWithoutFunding_PaysThePriceOfOpeningOnTime()
