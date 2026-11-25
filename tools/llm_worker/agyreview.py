@@ -7,11 +7,13 @@ worktree and this run's own brain folders, refuses the review. Keys are never re
 
 import functools
 import json
+import re
 import shutil
 from pathlib import Path
 
 MODEL = "claude-sonnet-5-5-medium"
 DEFAULT_TIMEOUT_S = 900
+OVERLOAD_RE = re.compile(r"\b503\b|overload|No capacity|UNAVAILABLE", re.I)
 REVIEW_CONTROL = ("finish", "wait", "wait_5_seconds")  # no generate_image, no sub-agents
 REVIEW_PATH_TOOLS = ("view_file", "read_file", "list_dir", "grep_search", "find_by_name")
 
@@ -22,6 +24,10 @@ class AgyLimit(RuntimeError):
 
 class AgyFailed(RuntimeError):
     pass
+
+
+class AgyOverloaded(AgyFailed):
+    """Server capacity error (503, overload) in stderr or the result status; no quota was used."""
 
 
 class AgyTimeout(RuntimeError):
@@ -90,7 +96,29 @@ def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOU
         raise AgyFailed(f"agy could not start: {e}") from None
 
 
-def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_brain, runner, which):
+def unread_files(calls, brain_dir, ids, worktree, must_read):
+    """Files of must_read without proof of a successful read. Proof: a read_file/view_file call on the exact path
+    inside the workspace (a search or a listing is no read; agy writes string args as JSON-quoted text), and at least
+    as many image attachments in the transcripts as files (a failed read attaches nothing)."""
+    opened = {p.strip().strip('"') for name, paths in calls if name in ("read_file", "view_file") for p in paths}
+    unread = [f for f in must_read if str(Path(worktree) / f) not in opened]
+    attached = 0
+    for cid in ids:
+        try:
+            lines = (Path(brain_dir) / cid / ".system_generated" / "logs" / "transcript.jsonl").read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            continue
+        for line in lines:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            media = ev.get("media") if isinstance(ev, dict) else None
+            attached += sum(1 for m in media or () if isinstance(m, dict) and str(m.get("mime_type", "")).startswith("image/"))
+    return unread or ([] if attached >= len(must_read) else list(must_read))
+
+
+def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_brain, runner, which, must_read=()):
     """brain_dir: where this process finds the brain folders; inside_brain: how agy names that folder."""
     from . import sketch
 
@@ -120,9 +148,16 @@ def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_
     if timed_out:  # the audit above has run on whatever the stream held
         raise AgyTimeout(f"agy gave no answer in {timeout_s + 60} s")
     if result is None or rc != 0 or result.get("status") != "SUCCESS":
+        texts = [err or "", str((result or {}).get("status")), str((result or {}).get("response") or ""),
+                 str((result or {}).get("error") or "")]
         if sketch.quota_hit(err, result, out):
             raise AgyLimit(sketch.one_line(err[-300:] or "agy quota error", 300))
+        if any(OVERLOAD_RE.search(t) for t in texts):
+            raise AgyOverloaded(f"agy exited {rc}: {sketch.one_line(err or out, 300)}")
         raise AgyFailed(f"agy exited {rc}: {sketch.one_line(err or out, 300)}")
+    unread = unread_files(calls, brain_dir, ids, worktree, must_read)
+    if unread:  # an answer without evidence of reading is not published
+        raise AgyFailed(f"the transcript shows no successful read of: {', '.join(unread)}")
     answer = extract_answer(result)
     if not answer.strip():
         raise AgyFailed("agy returned an empty answer")

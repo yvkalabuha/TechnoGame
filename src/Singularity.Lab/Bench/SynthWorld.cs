@@ -53,7 +53,7 @@ public sealed record SynthWorldStats(int Actors, int Nodes, int Copies, int Requ
 /// Synthetic full-scale world for the tick benchmark (ADR-0016, tick-benchmark-m0.md §2, TASK-0065): a Lab-only mod overlay (ADR-0010) on top of
 /// <c>mods/core</c>. No Core or Session change: the overlay is plain mod data, loaded by <see cref="ModLoader"/> and validated like any mod.
 /// <list type="bullet">
-/// <item>Nodes: copy 0 is the core graph itself; copies 1… are renamed clones (<c>id_kC</c>, number <c>C·100 + n</c>); the last copy may be
+/// <item>Nodes: copy 0 is the core graph itself; copies 1… are renamed clones (<c>id_kC</c>, number <c>C·200 + n</c>); the last copy may be
 /// partial — a prefix of a topological order, so it is closed under requires.</item>
 /// <item>Actors: the core actors stay first and unchanged (USA, GBR, SUN keep their names: Session looks them up); the clones cycle through
 /// them with ids XAA, XAB, … and a seeded ±10% perturbation of GDP, GDP per capita and budget index. Every actor knows and masters the clone of
@@ -68,7 +68,7 @@ public static class SynthWorldGenerator
 {
     public const string ModId = "synth_bench";
     public const string ScenarioId = "synth_bench";
-    public const int NumberStride = 100;
+    public const int NumberStride = 200;   // above the largest core node number (156 since TASK-0188, #575); Validate checks it
     public const int CrossInformsPerFnd = 2;
     public static readonly Fx6 CrossInformsWeight = Fx6.FromRaw(300_000);
     public static readonly Fx6 CrossRequiresChance = Fx6.FromRaw(250_000);

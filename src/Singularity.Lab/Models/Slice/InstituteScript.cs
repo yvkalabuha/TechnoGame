@@ -93,6 +93,8 @@ internal sealed class InstituteScript
     private readonly long[] _paid, _monthsRun;
     private readonly bool[] _reported;
     private readonly long[] _maxTake;
+    private readonly int[] _node;      // slot model: Resolve buffers of one actor (instance, never static)
+    private readonly byte[] _focus;
     private readonly int[] _maxConcurrent;
     private int _local;
     private BudgetShares? _sent;
@@ -127,6 +129,8 @@ internal sealed class InstituteScript
         _reported = new bool[_actors * _slots];
         _maxTake = new long[_actors];
         _maxConcurrent = new int[_actors];
+        _node = new int[InstituteSystem.MaxSlotsLimit];
+        _focus = new byte[InstituteSystem.MaxSlotsLimit];
     }
 
     public int Commands { get; private set; }
@@ -179,8 +183,11 @@ internal sealed class InstituteScript
             _inst.Propose(_player, nextMonth, goals, starts);
             for (int k = 0; k < slots; k++)
             {
+                // Slot model (TASK-0187): the adviser's node goes into the list of the free slot (assign_node), the shares model keeps set_priority_node.
+                // The script confirms a start the money covers badly (Acknowledged, §1.2) as the AI would: without it a short country is held back at
+                // apply time, which Submit does not report (TASK-0187 part 2: GBR idled 19.6 % of its slot-months 1945-1990 in 3 seeds).
                 if (goals[k] != 0)
-                    Submit(new SetPriorityNode(_player, k, goals[k]), nextMonth);
+                    Submit(_inst.SlotsOn ? new AssignNode(_player, k, goals[k], Acknowledged: true) : new SetPriorityNode(_player, k, goals[k]), nextMonth);
             }
         }
         if (_spec.Fund < Fx6.One)
@@ -201,9 +208,10 @@ internal sealed class InstituteScript
         Commands++;
         if (!v.Accepted)
         {
-            // A refused order is a defect of the script (it checks the same rules first), except a goal the adviser proposes again for a slot ordered this month.
+            // A refused order is a defect of the script (it checks the same rules first), except a goal the adviser proposes again for a slot ordered this month
+            // (slot model: or a node that already stands in another list of the player).
             Refused++;
-            if (c is not SetPriorityNode)
+            if (c is not (SetPriorityNode or AssignNode))
                 throw new InvalidOperationException($"the institute script was refused at month {month}: {c} — {v.Message}");
         }
     }
@@ -244,13 +252,17 @@ internal sealed class InstituteScript
         Span<Fx6> mults = stackalloc Fx6[InstituteSystem.MaxSlotsLimit];
         InstituteLayout l = _inst.Layout;
         KnowledgeSystem know = _s.World.Knowledge;
+        bool slotsOn = _inst.SlotsOn;
         for (int a = 0; a < _actors; a++)
         {
+            // Slot model: the node a slot works on in month + 1, the same pure function the step of month + 1 calls.
+            if (slotsOn)
+                _inst.Resolve(a, month + 1, _node.AsSpan(0, l.SlotCount(a)), _focus.AsSpan(0, l.SlotCount(a)));
             for (int k = 0; k < l.SlotCount(a); k++)
             {
                 var h = new InstituteHandle(a, k);
                 int i = a * _slots + k;
-                int g = _inst.GoalNode(h);
+                int g = slotsOn ? (_node[k] > 0 ? _node[k] : 0) : _inst.GoalNode(h);
                 if (g != _goal[i])
                 {
                     if (_goal[i] != 0)
@@ -259,7 +271,9 @@ internal sealed class InstituteScript
                     _goalSet[i] = checked((int)month);
                     int row = _s.World.Graph.RowOf(g);
                     int disc = row < 0 ? -1 : _s.World.Graph.Discipline[row];
-                    _goalMult[i] = g == 0 ? 0 : InstituteMath.LevelMultiplier(disc < 0 ? 0 : _inst.Level(h, disc), _inst.Parameters).Raw;
+                    _goalMult[i] = g == 0 || row < 0 ? 0
+                        : slotsOn ? _inst.InstituteMultiplier(h, row).Raw
+                        : InstituteMath.LevelMultiplier(disc < 0 ? 0 : _inst.Level(h, disc), _inst.Parameters).Raw;
                 }
                 if (!_reported[i] && _inst.BuiltByProject(h))
                 {
@@ -267,7 +281,8 @@ internal sealed class InstituteScript
                     _reported[i] = true;
                 }
             }
-            int n = _inst.Goals(a, rows, mults);
+            // P-8 compares the shares path with and without goals; the slot model has no shares path.
+            int n = slotsOn ? 0 : _inst.Goals(a, rows, mults);
             if (n == 0)
                 continue;
             long t = month + 1;
@@ -357,7 +372,7 @@ internal sealed class InstituteScript
         static string I(long v) => v.ToString(CultureInfo.InvariantCulture);
         yield return new("inst_commands", I(Commands));
         yield return new("inst_refused", I(Refused));
-        if (_spec.Probe)
+        if (_spec.Probe && !_inst.SlotsOn)
         {
             yield return new("inst_p8_goal_months", I(P8GoalMonths));
             yield return new("inst_p8_slower", I(P8Slower));

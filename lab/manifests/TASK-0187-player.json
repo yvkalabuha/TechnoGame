@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0187-player",
+  "description": "TASK-0187: GBR played by the institute script (INST_PLAYER, assign_node from the adviser; INST_PROBE tables), slot model (PLAYER) and shares model (PLAYER_SH). INTEL = false: with a player and intelligence on, the Lab observer cannot read the hidden node blocks of the other actors ('actor not subscribed'), a limit of the observer, not of the model.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 3
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full",
+    "LEVERS": "ON"
+  },
+  "series": [
+    {
+      "name": "PLAYER",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_PROBE": true,
+        "INTEL": false
+      }
+    },
+    {
+      "name": "PLAYER_SH",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_PROBE": true,
+        "INTEL": false,
+        "SLOTS": false
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/slot-model-pilot.md, section «Ядро TASK-0187»",
+    "task": "TASK-0187"
+  }
+}

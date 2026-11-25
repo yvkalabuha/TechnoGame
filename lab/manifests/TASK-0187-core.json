@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0187-core",
+  "description": "TASK-0187 (docs/simulation/slot-model-pilot.md, section «Ядро TASK-0187»): the slot science model of the core (SliceRunConfig.ScienceSlots, on with LEVERS = ON) against the shares model with the same levers (SLOTS = false); all five actors AI. Liveness counters slot_* of SlotProbe in model_info. JetSlice FULL 1945-09..2030-12. Player script: TASK-0187-player.json.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full",
+    "LEVERS": "ON"
+  },
+  "series": [
+    {
+      "name": "SLOTS",
+      "params": {}
+    },
+    {
+      "name": "SHARES",
+      "params": {
+        "SLOTS": false
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/slot-model-pilot.md, section «Ядро TASK-0187»",
+    "task": "TASK-0187"
+  }
+}

@@ -1,7 +1,7 @@
 ---
 id: TASK-0190
 title: "Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "owner message 2026-11-25: «мы не по ключу же работаем»"
+review_ref: "reviewer: APPROVE; codex 3 returns, waived by #432, DEBT-0113; merge 241181f"
 created: 2026-11-25
 ---
 
