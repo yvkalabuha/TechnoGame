@@ -1,5 +1,7 @@
 """Codex sketches (TASK-0145): JSONL parsing, limit, cap, engine fallback. Fake runners, no codex, no network.
-The JSONL image item shape is an assumption until a live run after the limit reset (see README)."""
+Fixtures: thread.started, item.started/completed, turn.completed/failed are seen in real runs; the image item carries
+revised_prompt and saved_path (field names found in the codex 0.170.0 binary, ImageGenerationItem). UNKNOWN until a
+live run after the limit reset: the exact item "type" string and whether base64 "result" is ever in the exec JSONL."""
 
 import base64
 import json
@@ -69,7 +71,7 @@ class CodexSketchTest(unittest.TestCase):
 
     def test_parse_image_item_and_thread(self):
         out = stream(ev(type="thread.started", thread_id=THREAD),
-                     ev(type="item.completed", item={"type": "image_generation", "path": "/x/a.png"}),
+                     ev(type="item.completed", item={"type": "image_generation", "id": "item_1", "revised_prompt": "a desk", "saved_path": "/x/a.png"}),
                      ev(type="item.completed", item={"type": "agent_message", "text": "done"}))
         thread, paths, blobs, model, shell = codexsketch.parse_run(out)
         self.assertEqual((thread, paths, blobs, shell), (THREAD, ["/x/a.png"], [], []))
@@ -97,7 +99,7 @@ class CodexSketchTest(unittest.TestCase):
     def test_event_path_outside_codex_images_is_ignored(self):
         evil = self.home / "secret.png"
         evil.write_bytes(png())
-        out = stream(ev(type="thread.started", thread_id=THREAD), ev(type="item.completed", item={"type": "image_generation", "path": str(evil)}))
+        out = stream(ev(type="thread.started", thread_id=THREAD), ev(type="item.completed", item={"type": "image_generation", "revised_prompt": "x", "saved_path": str(evil)}))
         with self.assertRaises(sketch.SketchError) as c:
             self.go(self.runner(out))
         self.assertEqual(c.exception.code, "no_images")
@@ -150,7 +152,7 @@ class CodexSketchTest(unittest.TestCase):
 
         def take():
             try:
-                codexsketch.reserve_attempt(self.ledger, "2026-11-25", 3, "TASK-0145", "d")
+                codexsketch.reserve_attempt(self.ledger, datetime(2026, 11, 25, 9, tzinfo=timezone.utc), 3, "TASK-0145", "d")
                 results.append(True)
             except sketch.SketchError:
                 results.append(False)
@@ -175,16 +177,47 @@ class CodexSketchTest(unittest.TestCase):
             codexsketch.run_codex_sketch("TASK-0145", self.prompt, count=2, root=self.root)
         self.assertEqual(c.exception.code, "bad_count")
 
-    def test_land_lock_blocks_live_pid_only(self):
+    def test_land_lock_blocks_while_landing_holds_it(self):
+        import fcntl
         lock = self.home / "land.lock"
-        lock.write_text(str(os.getpid()))
-        with self.assertRaises(sketch.SketchError) as c:
-            self.go(self.runner(""), land_lock=lock)
-        self.assertEqual((c.exception.code, self.calls), ("land_in_progress", []))
-        lock.write_text("999999999")  # no such pid: a stale lock
+        fd = os.open(lock, os.O_CREAT | os.O_RDWR)
+        fcntl.flock(fd, fcntl.LOCK_EX)  # a landing is running
+        try:
+            with self.assertRaises(sketch.SketchError) as c:
+                self.go(self.runner(""), land_lock=lock)
+        finally:
+            os.close(fd)
+        self.assertEqual((c.exception.code, self.calls, list(self.ledger.glob("*.jsonl"))), ("land_in_progress", [], []))
+        lock.write_text("999999999")  # the file is left over, the flock is free: no landing
         out = stream(ev(type="thread.started", thread_id=THREAD))
         self.go(self.runner(out, save=png()), land_lock=lock)
         self.assertEqual(len(self.calls), 1)
+
+    def test_sketch_holds_shared_lock_while_codex_runs(self):
+        import fcntl
+        lock = self.home / "land.lock"
+        seen = []
+
+        def run(argv, prompt, timeout, env):
+            fd = os.open(lock, os.O_RDWR)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)  # what land.py does
+                seen.append("landing started")
+            except OSError:
+                seen.append("landing refused")
+            finally:
+                os.close(fd)
+            return 0, stream(ev(type="thread.started", thread_id=THREAD)), ""
+        with self.assertRaises(sketch.SketchError):
+            self.go(run, land_lock=lock)
+        self.assertEqual(seen, ["landing refused"])
+
+    def test_record_names_are_unique(self):
+        out = stream(ev(type="thread.started", thread_id=THREAD))
+        with mock.patch("time.time", return_value=1795518306.0):
+            a = self.go(self.runner(out, save=png()), clock=lambda: 1795518306.0)[0]
+            b = self.go(self.runner(out, save=png()), clock=lambda: 1795518306.0)[0]
+        self.assertNotEqual(a, b)
 
     def test_bad_thread_id_is_ignored(self):
         out = stream(ev(type="thread.started", thread_id="../../.."))

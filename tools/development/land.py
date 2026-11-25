@@ -24,6 +24,7 @@ The commit message is used as given: put the attribution trailer into -m.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import subprocess
@@ -35,7 +36,8 @@ from pathlib import Path
 # Paths whose content verify.py builds or tests.
 # One review may walk the whole chain: Codex (up to 1800 s), agy (900 s + 60 s grace), then DeepSeek.
 REVIEW_TIMEOUT_S = 3600
-LAND_LOCK = Path.home() / ".cache" / "singularity" / "land.lock"  # pid while a landing runs; tools/llm_worker/codexsketch.py reads it
+LAND_LOCK = Path.home() / ".cache" / "singularity" / "land.lock"  # flock file, see main()
+LAND_WAIT_S = 900  # how long a landing waits for a running Codex sketch
 CODE_PATHS = ("src/", "tests/", "mods/", "tools/", "lab/", ".github/")
 
 
@@ -127,36 +129,28 @@ def insert_trailer(message: str, line: str) -> str:
 
 
 def main() -> int:
-    """Hold LAND_LOCK (our pid) for the whole landing: Codex sketches do not start while it exists."""
+    """Hold an exclusive flock on LAND_LOCK for the whole landing. The kernel drops it when the process dies, so a
+    dead landing never leaves a stale lock and nothing is ever deleted. Codex sketches hold it shared while they run
+    (tools/llm_worker/codexsketch.py), so a landing waits for a running sketch and a sketch never starts mid-landing."""
     LAND_LOCK.parent.mkdir(parents=True, exist_ok=True)
-    for _ in range(2):
-        try:  # O_EXCL: two landings cannot both take the lock
-            fd = os.open(LAND_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    fd = os.open(LAND_LOCK, os.O_CREAT | os.O_RDWR, 0o600)
+    deadline = time.monotonic() + LAND_WAIT_S
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             break
-        except FileExistsError:
-            try:
-                other = int(LAND_LOCK.read_text(encoding="utf-8").strip())
-                os.kill(other, 0)
-            except PermissionError:
-                other = -1
-            except (OSError, ValueError):
-                LAND_LOCK.unlink(missing_ok=True)  # stale: dead pid or garbage
-                continue
-            print(f"land: another landing is running (pid {other}); lock {LAND_LOCK}")
-            return 4
-    else:
-        print(f"land: cannot take {LAND_LOCK}")
-        return 4
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(str(os.getpid()))
+        except OSError:
+            if time.monotonic() >= deadline:
+                print(f"land: another landing or a Codex sketch holds {LAND_LOCK}; try again later")
+                os.close(fd)
+                return 4
+            time.sleep(1)
+    os.ftruncate(fd, 0)
+    os.write(fd, str(os.getpid()).encode())  # information only
     try:
         return run()
-    finally:  # only our own lock is removed
-        try:
-            if LAND_LOCK.read_text(encoding="utf-8").strip() == str(os.getpid()):
-                LAND_LOCK.unlink()
-        except OSError:
-            pass
+    finally:
+        os.close(fd)  # releases the lock
 
 
 def run() -> int:

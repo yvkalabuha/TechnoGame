@@ -8,6 +8,7 @@ under ~/.codex/generated_images/<thread_id>/ (path also named by the image event
 A sketch is a proposal: ADR-0026 needs ui-art-director's approval before use in mods/core/."""
 
 import base64
+import contextlib
 import fcntl
 import hashlib
 import json
@@ -17,6 +18,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -97,16 +99,16 @@ def default_runner(argv, prompt, timeout, env):
     return p.returncode, p.stdout, p.stderr
 
 
-def reserve_attempt(directory, day, cap, task, digest):
+def reserve_attempt(directory, now, cap, task, digest):
     """Check the daily cap and log the attempt under one flock: two runs cannot both take the last slot."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     fd = os.open(directory / "codex_attempts.lock", os.O_CREAT | os.O_RDWR, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        if daily_attempts(directory, day) >= cap:
+        if daily_attempts(directory, now.strftime("%Y-%m-%d")) >= cap:
             raise SketchError("codex_daily_cap", f"{cap} Codex sketch attempts today (--codex-daily-cap)")
-        codex.log_attempt(task, digest, "started", directory=directory, provider=ATTEMPT_PROVIDER)
+        codex.log_attempt(task, digest, "started", directory=directory, provider=ATTEMPT_PROVIDER, now=now)
     finally:
         os.close(fd)
 
@@ -128,16 +130,21 @@ def daily_attempts(directory, day):
     return n
 
 
-def land_running(lock=None):
-    """True when land.py holds its lock under a live pid (a stale lock of a dead pid does not count)."""
+@contextlib.contextmanager
+def land_guard(lock=None):
+    """Shared flock on land.py's lock for the whole Codex run: a landing cannot start meanwhile (it waits), and no
+    sketch starts while a landing holds the lock exclusively. The kernel frees it on any exit."""
+    lock = Path(lock or LAND_LOCK)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        pid = int((lock or LAND_LOCK).read_text(encoding="utf-8").strip())
-        os.kill(pid, 0)
-    except PermissionError:
-        return True
-    except (OSError, ValueError):
-        return False
-    return True
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except OSError:
+            raise SketchError("land_in_progress", "land.py is running: the second review needs the Codex limit") from None
+        yield
+    finally:
+        os.close(fd)
 
 
 def codex_version(exe):
@@ -185,9 +192,6 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
     until = limitstate.limited_until(now, state_dir)
     if until:
         raise SketchError("codex_quota", f"Codex limit is active, reset at {until.isoformat(timespec='minutes')}")
-    if land_running(land_lock):
-        raise SketchError("land_in_progress", "land.py is running: the second review needs the Codex limit")
-    day = datetime.fromtimestamp(clock(), timezone.utc).strftime("%Y-%m-%d")
     try:
         exe = find()
         real, _, node_dir = codex.codex_mounts(exe, home)
@@ -210,15 +214,17 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
             argv = codex.bwrap_argv(ws, None, exe, home=home, bwrap=bwrap) + command(str(real), [f"/work/{n}" for n in ws_refs])
         except SandboxUnavailable as e:
             raise SketchError("sandbox_unavailable", str(e)) from None
-        reserve_attempt(ledger_dir, day, daily_cap, task, digest)
-        rc, out, err = runner(argv, build_prompt(brief, ws_refs), timeout_s, env)
+        with land_guard(land_lock):  # the last check before launch; held until Codex exits
+            reserve_attempt(ledger_dir, datetime.fromtimestamp(clock(), timezone.utc), daily_cap, task, digest)
+            rc, out, err = runner(argv, build_prompt(brief, ws_refs), timeout_s, env)
     thread, paths, blobs, model, shell = parse_run(out)
     record.update(started_at=datetime.fromtimestamp(started, timezone.utc).isoformat(timespec="seconds"), exit_code=rc,
                   conversation_id=thread, codex_version=version)
     record["date"] = record["started_at"][:10]
+    stem = f"{record_stem(runs_dir, task, digest, started)}-{uuid.uuid4().hex[:8]}"  # unique even for concurrent runs
     if shell:
         record["agent_tool_violation"] = shell
-        write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record,
+        write_pair(Path(runs_dir), stem, record,
                    lambda r: f"# Codex sketches: {r['task']}\n\nREFUSED: agent tool violation: {', '.join(r['agent_tool_violation'])}\n")
         raise SketchError("agent_tool_violation", ", ".join(shell))
     images = []  # (name, bytes)
@@ -255,15 +261,19 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
     name, data = images[0]
     dst = out_dir / name
     k = 1
-    while dst.exists():
-        dst = out_dir / f"{Path(name).stem}-{k}{Path(name).suffix}"
-        k += 1
-    dst.write_bytes(data)
+    while True:  # exclusive create: a concurrent run cannot take the same name
+        try:
+            with open(dst, "xb") as fh:
+                fh.write(data)
+            break
+        except FileExistsError:
+            dst = out_dir / f"{Path(name).stem}-{k}{Path(name).suffix}"
+            k += 1
     record["files"].append({"name": dst.name, "path": str(dst), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
                             "source": "codex generated_images"})
     record["partial"] = False
     record["attribution"] = [attribution_line(record, f) for f in record["files"]]
-    path, md = write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record, summary_md)
+    path, md = write_pair(Path(runs_dir), stem, record, summary_md)
     return path, md, record
 
 

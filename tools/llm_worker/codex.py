@@ -198,11 +198,11 @@ def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None
     return text, usage
 
 
-def log_attempt(task, head, outcome, usage=None, directory=config.LEDGER_DIR, provider="codex"):
+def log_attempt(task, head, outcome, usage=None, directory=config.LEDGER_DIR, provider="codex", now=None):
     """Append-only attempt log next to the ledger (Codex costs no USD, so it is not a ledger entry)."""
     directory.mkdir(parents=True, exist_ok=True)
     usage = usage or {}
-    rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "task": task, "head": head[:12],
+    rec = {"ts": (now or datetime.now(timezone.utc)).isoformat(timespec="seconds"), "task": task, "head": head[:12],
            "outcome": outcome, "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens")}
     if provider != "codex":
         rec["provider"] = provider
