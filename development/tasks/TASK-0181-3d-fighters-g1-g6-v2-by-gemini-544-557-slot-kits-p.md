@@ -1,7 +1,7 @@
 ---
 id: TASK-0181
 title: "3D fighters G1-G6 v2 by Gemini (#544, #557): slot kits, paper-style sheet, art director acceptance"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: 3d-modeler
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#557"
+review_ref: "ui-art-director: PASS round 2 + Gemini pass; reviewer: code acceptable, determinism and slot test run by orchestrator (3 equal sha256, test PASS); codex accept 851522b3, leftovers DEBT-0109; merge 446daee"
 created: 2026-11-25
 ---
 
