@@ -30,6 +30,8 @@
 - TASK-0156 [REVIEW] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
 - TASK-0171 [BLOCKED] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
 - TASK-0167 [APPROVED] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
+- TASK-0176 [APPROVED] Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) (simulation-engineer)
+- TASK-0177 [APPROVED] Data: Mongolia 1945 as an independent country (MNG owner and controller), #550 (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

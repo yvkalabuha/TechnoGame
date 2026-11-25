@@ -689,3 +689,6 @@ Design by ui-art-director with game-designer (information architecture); the own
 | 546 | 2026-11-25 | Leader trait "cost reduction" saves money (institute upkeep or the funding rush cost less), it does not add speed; choice "money vs speed" | владелец (ответ на вопрос 2026-11-25) |
 | 547 | 2026-11-25 | No appointment fee for institute leaders in v0; the price of a change is the onboarding time (bonus grows 6–12 months) and the minimum period between changes | владелец (ответ на вопрос 2026-11-25) |
 | 548 | 2026-11-25 | Leader effect on design-bureau project terms (#461) deferred until bureaus exist in the slice; until then leaders affect research speed and money only | владелец (ответ на вопрос 2026-11-25) |
+| 549 | 2026-11-25 | Default-on batch (TASK-0171): recalibrate institute parameters in the Lab until 1945–1977 history is back within tolerance for all countries, including AI-run ones (A16); no player-only institutes, no accepted shift | владелец (ответ на вопрос 2026-11-25) |
+| 550 | 2026-11-25 | Mongolia 1945 is shown as an independent country (de facto MPR; ROC recognised it in January 1946), not as occupied China (A9) | владелец (ответ на вопрос 2026-11-25) |
+| 551 | 2026-11-25 | Client shot batch and the Blender 3D redo (G1–G6) postponed again; ask later | владелец (ответ на вопрос 2026-11-25) |

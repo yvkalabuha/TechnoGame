@@ -191,6 +191,8 @@
 | [TASK-0173](../development/tasks/TASK-0173-lab-p7-institutes-early-build.md) | DONE | Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on | MS-M0 |
 | [TASK-0174](../development/tasks/TASK-0174-institutes-followup-debt0107.md) | DONE | Institutes follow-up: iterative group walk (deep graph), built institute capacity by level, cooldown on same goal, no build charge after completion | MS-M0 |
 | [TASK-0175](../development/tasks/TASK-0175-institutes-stretched-price.md) | DONE | Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares) | MS-M0 |
+| [TASK-0176](../development/tasks/TASK-0176-lab-recalibrate-institute-parameters-so-1945-1977-.md) | APPROVED | Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) | MS-M0 |
+| [TASK-0177](../development/tasks/TASK-0177-data-mongolia-1945-as-an-independent-country-mng-o.md) | APPROVED | Data: Mongolia 1945 as an independent country (MNG owner and controller), #550 | MS-M0 |
 
 ## Гипотезы
 
