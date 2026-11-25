@@ -12,10 +12,11 @@ ui.closeline,Close line,Закрыть линию
 ui.cancel,Cancel,Снять
 speed.pause,pause,пауза
 speed.day,1 day/s,1 день/с
+speed.days3,3 days/s,3 дня/с
 speed.week,1 week/s,1 неделя/с
 speed.month,1 month/s,1 месяц/с
 tip.date,Date in the game,Дата в игре
-tip.tempo,"Time tempo: pause, day, week, month per second (Space, 1, 2, 3)","Темп времени: пауза, день, неделя, месяц в секунду (Пробел, 1, 2, 3)"
+tip.tempo,"Time tempo: pause, day, 3 days, week, month per second (Space, 1, 2, 3, 4)","Темп времени: пауза, день, 3 дня, неделя, месяц в секунду (Пробел, 1, 2, 3, 4)"
 tip.power,The power you play,"Держава, за которую вы играете"
 tip.lang,Interface language,Язык интерфейса
 tip.sig.real,Signal from the simulation. Click to acknowledge.,"Сигнал из симуляции. Нажмите, чтобы квитировать."
@@ -28,7 +29,7 @@ sig.goal,GOAL,ЦЕЛЬ
 sig.gap,GAP,РАЗРЫВ
 sig.war,WAR,ВОЙНА
 sig.fail,FAULT,СБОЙ
-help.text,"LMB drag: rotate, wheel: zoom, click a foreign power: panel.\nSpace: pause, 1/2/3: tempo, [ ]: speed.\nT E F M I G J: areas (T again: knowledge tree), Esc: back to the map, \: rail width, `: journal, F3: debug, F1: this help.","ЛКМ-тяга — вращать, колесо — масштаб, клик по чужой державе — панель.\nПробел — пауза, 1/2/3 — темп, [ ] — скорость.\nT E F M I G J — области (T ещё раз — дерево знаний), Esc — на карту, \ — ширина рейки, ` — журнал, F3 — отладка, F1 — эта помощь."
+help.text,"LMB drag: rotate, wheel: zoom, click a foreign power: panel.\nSpace: pause, 1/2/3/4: tempo, [ ]: speed.\nT E F M I G J: areas (T again: knowledge tree), Esc: back to the map, \: rail width, `: journal, F3: debug, F1: this help.","ЛКМ-тяга — вращать, колесо — масштаб, клик по чужой державе — панель.\nПробел — пауза, 1/2/3/4 — темп, [ ] — скорость.\nT E F M I G J — области (T ещё раз — дерево знаний), Esc — на карту, \ — ширина рейки, ` — журнал, F3 — отладка, F1 — эта помощь."
 panel.budget,BUDGET,БЮДЖЕТ
 panel.budget.text,"Monthly budget: {0} (scenario units), procurement {1}","Бюджет месяца: {0} (ед. сценария), закупки {1}"
 panel.budget.none,Monthly budget: not computed yet,Бюджет месяца: ещё не считался
@@ -39,7 +40,7 @@ share.1,Capacity,Мощности
 share.2,Mastery,Освоение
 share.3,Procurement,Закупки
 share.4,Quality,Качество
-panel.sub,profile “{0}” · fielded generation G{1} · month {2},профиль «{0}» · поколение в строю G{1} · месяц {2}
+panel.sub,profile “{0}” · fielded: generation {1} · month {2},профиль «{0}» · в строю: {1}-е поколение · месяц {2}
 profile.0,quality,качество
 profile.1,mass,массовость
 profile.2,adaptive,адаптивный
@@ -51,39 +52,42 @@ stage.4,in service,в эксплуатации
 stage.5,retired,снят
 panel.designs,PRODUCTS AND LINES,ИЗДЕЛИЯ И ЛИНИИ
 panel.licence,LICENCE,ЛИЦЕНЗИЯ
-panel.why,WHY NOT,ПОЧЕМУ НЕ
-design.line,#{0} G{1} · {2} · unit cost {3} · readiness {4} · in service {5},№{0} G{1} · {2} · себест. {3} · готовность {4} · в строю {5}
-design.series, · rate {0} · bound by {1}, · темп {0} · лимит {1}
+panel.why,WHAT BLOCKS IT,ЧТО МЕШАЕТ ПОЛУЧИТЬ
+design.line,Project {0} · generation {1} · {2} · unit cost {3} · readiness {4} · in service {5},Проект {0} · {1}-е поколение · {2} · себест. {3} · готовность {4} · в строю {5}
+design.series, · output rate {0} · limited by: {1}, · скорость выпуска {0} · упирается в: {1}
 design.none,No designs. Creating designs is not wired in the client yet.,Проектов нет. Создание изделий в клиенте пока не подключено.
 design.nocreate,Starting a series and creating designs are not wired in the client yet.,Запуск серии и создание изделий в клиенте пока не подключены.
-licence.active,"Licence active: generation G{0}, seller {1}, since month {2}, flow {3}","Лицензия активна: поколение G{0}, продавец {1}, с месяца {2}, поток {3}"
+licence.active,"Licence active: generation {0}, seller {1}, since month {2}, flow {3}","Лицензия активна: {0}-е поколение, продавец {1}, с месяца {2}, поток {3}"
 licence.none,No licence,Лицензии нет
 licence.refusals,"Licence refusals: {0} (own {1}, empty {2}, generation {3}, money {4})","Отказов по лицензии: {0} (свой {1}, пусто {2}, поколение {3}, деньги {4})"
-why.error,Could not build the “why not” chain.,Не удалось построить цепочку «почему не».
+why.error,Could not find what blocks getting the goal.,Не удалось определить, что мешает получить цель.
 why.none,No new product to field: every known product is already fielded.,Новых изделий пока нет: все известные уже приняты на вооружение.
 why.goal,"Goal: yearly requirement, generation {0}.","Цель: годовое требование, поколение {0}."
 why.goalkind,Goal: {0} {1}.,Цель: {0} {1}.
 why.links, links {0}, звеньев {0}
 why.more,… {0} more,… ещё {0}
-why.eta, · ETA {0} mo., · срок {0} мес.
-why.levers, · levers: {0}, · рычаги: {0}
+why.eta, Expected in about {0} mo., Хватит примерно через {0} мес.
+why.have, Have {0} of {1} units., Есть {0} из {1} ед.
+why.levers, What you can do: {0}., Что можно сделать: {0}.
+why.line,Blocks: {0}{1}.,Мешает: {0}{1}.
+why.root,Main blocker. ,Главная помеха. 
 layer.Knowledge,Knowledge,Знание
 layer.Capability,Capability,Мощности
 layer.Product,Product,Изделие
 layer.Economy,Economy,Экономика
 cause.MissingNode,missing node,нет узла
 cause.AltUnavailable,no alternative available,нет доступной альтернативы
-cause.CultureH,culture below requirement,культура ниже требуемой
-cause.ToolingM,tooling,оснастка
-cause.Engineers,engineers,инженеры
-cause.SkilledWorkforce,skilled workforce,квалифицированные кадры
+cause.CultureH,production culture is too low,низкая производственная культура
+cause.ToolingM,not enough tooling,не хватает оснастки
+cause.Engineers,not enough engineers,не хватает инженеров
+cause.SkilledWorkforce,not enough skilled workers,не хватает квалифицированных кадров
 cause.AlloyDeficit,alloy deficit,дефицит сплава
 cause.NotAffordable,not affordable,не по карману
 cause.Licence,licence,лицензия
 cause.NoDesign,no design,нет проекта
 cmd.budget,budget shares,доли бюджета
-cmd.close,close line #{0},закрыть линию №{0}
-cmd.cancel,cancel design #{0},снять проект №{0}
+cmd.close,close line of project {0},закрыть линию проекта {0}
+cmd.cancel,cancel project {0},снять проект {0}
 cmd.focus,mastery focus,фокус освоения
 cmd.job,command,команда
 cmd.Pending,{0}: pending. Applies after unpause.,{0}: ожидает. Применится после снятия паузы.
@@ -96,7 +100,7 @@ refusal.FocusNotKnown,process not known,процесс не известен
 tree.path,Map ▸ Knowledge,Карта ▸ Знание
 tree.a,A · Planisphere,A · Планисфера
 tree.b,B · Goal statement,B · Ведомость цели
-tree.close,Close ×,Закрыть ×
+tree.close,Close × (Esc),Закрыть × (Esc)
 panel.foreign,◆ FOREIGN POWER · read only,◆ ЧУЖАЯ ДЕРЖАВА · только просмотр
 panel.shares.profile,Shares of the AI doctrine profile (not this country's data).,Доли доктрины ИИ-профиля (не данные этой державы).
 tree.reset,Reset view,Сбросить вид
@@ -156,14 +160,16 @@ stmt.g.goal,GOAL,ЦЕЛЬ
 stmt.g.front,FRONTIER ON THE ROUTE,ФРОНТИР НА ПУТИ
 stmt.g.wait,WAITING,ЖДУТ
 stmt.g.off,FRONTIER OFF THE ROUTE,ФРОНТИР ВНЕ ПУТИ
-stmt.chain,The thick blue link is the longest chain from the “why not” root.,Толстая синяя связь — самая длинная цепочка от корня «почему не».
+stmt.chain,The thick blue link is the longest chain from the root of “what blocks it”.,Толстая синяя связь — самая длинная цепочка от корня «что мешает».
 stmt.overview,OVERVIEW OF {0} NODES: discipline × generation,ОБЗОР {0} УЗЛОВ: дисциплина × поколение
 inset.title,{0} · knowledge,{0} · знание
-inset.why,WHY NOT,ПОЧЕМУ НЕ
+inset.why,WHAT BLOCKS GETTING: {0},ЧТО МЕШАЕТ ПОЛУЧИТЬ: {0}
+inset.why.nogoal,WHAT BLOCKS IT,ЧТО МЕШАЕТ ПОЛУЧИТЬ
 inset.goal,Goal: {0} · steps to the blocker: {1},Цель: {0} · шагов до препятствия: {1}
 inset.eta," · ETA: ≈ {0} mo."," · срок: ≈ {0} мес."
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
 inset.node,NODE,УЗЕЛ
+card.index,Node {0} of {1} in the reference,Узел {0} из {1} в справочнике
 card.requires,REQUIRES,ЗАВИСИТ ОТ
 inset.before, (before), (до)
 inset.requires,Requires: {0},Требует: {0}
@@ -171,12 +177,14 @@ inset.process,Process: yield {0} · mastered {1} · admitted {2},Процесс:
 inset.focus,MASTERY FOCUS (up to 3 known processes),ФОКУС ОСВОЕНИЯ (до 3 известных процессов)
 inset.focus.add,Add to focus,В фокус освоения
 inset.focus.remove,Remove from focus,Убрать из фокуса
-inset.focus.empty,Draft is empty. Select a known process (□).,Черновик пуст. Выберите известный процесс (□).
+inset.focus.empty,"Pick a known process (a square on the map) and press “Add to focus”; up to 3.","Выберите известный процесс (на карте он — квадрат) и нажмите «В фокус освоения»; можно до 3 процессов."
 inset.focus.send,Give order: focus,Отдать приказ: фокус
+inset.focus.nothing,"Nothing to order: 0 of 3 processes chosen.","Нечего отдавать: выбрано 0 из 3 процессов."
+inset.focus.help,"Goal is the product we work towards; it gives the route. Mastery focus is up to 3 known processes the institutes master deeper now.","Цель — изделие, к которому идём; даёт маршрут. Фокус освоения — до 3 известных процессов, которые институты осваивают глубже сейчас."
 yes,yes,да
 no,no,нет
 bind.None,no line,нет линии
-bind.Rate,rate,темп
+bind.Rate,line capacity,мощности линии
 bind.Alloy,alloy,сплав
 bind.Money,money,деньги
 lever.ResearchPriority,research priority,приоритет НИОКР
@@ -222,7 +230,7 @@ tip.time.slower.min,"Already the slowest speed: {0}","Уже самая медл
 tip.time.faster.max,"Already the fastest speed: {0}","Уже самая быстрая скорость: {0}"
 tip.time.pause.off,"Pause (Space, P)","Поставить на паузу (Пробел, P)"
 time.gauge.name,"Speed: {0}","Скорость: {0}"
-time.gauge.tip,"Game speed: {0}. Keys [ and ] or 1-3","Скорость игры: {0}. Клавиши [ и ] или 1–3"
+time.gauge.tip,"Game speed: {0}. Keys [ and ] or 1-4","Скорость игры: {0}. Клавиши [ и ] или 1–4"
 tip.time.slower,Slower (key [),Медленнее (клавиша [)
 tip.time.faster,Faster (key ]),Быстрее (клавиша ])
 tip.menu,Menu (Esc),Меню (Esc)
@@ -312,7 +320,7 @@ legend.btn,Legend,Легенда
 legend.disc,Disciplines (wedge),Дисциплины (клин)
 legend.lines,Lines,Линии
 legend.route,Route to goal,Маршрут к цели
-legend.root,Root of the “why not”,Корень «почему не»
+legend.root,Root of “what blocks it”,Корень «что мешает»
 legend.close,Esc or L closes,Esc или L закрывает
 area.map,Map,Карта
 area.science,Science,Наука
@@ -342,19 +350,19 @@ area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Research in progress (the nearest to completion),Исследования в работе (ближайшие к завершению)
 flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
-flask.sci.threshold,{0}: threshold reached ({1} of {2}); discovery is not certain (hatched),{0}: порог достигнут ({1} из {2}); открытие не гарантировано (штриховка)
-flask.sci.threshold.note,{0}: threshold reached (hatched flask); discovery is not certain,{0}: порог достигнут (штриховка); открытие не гарантировано
+flask.sci.threshold,"{0}: everything needed is in place ({1} of {2}); the discovery itself still depends on chance, so the flask is hatched","{0}: всё нужное есть ({1} из {2}); само открытие зависит от случая, поэтому колба заштрихована"
+flask.sci.threshold.note,"{0}: the flask is 100 % ready and hatched: the discovery is a chance event, readiness does not guarantee it","{0}: колба заполнена на 100 % и заштрихована — это готовность; открытие остаётся случайным событием и не гарантировано"
 flask.sci.none,No research in progress,Нет хода исследования
-flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
-flask.alloy.cap.deficit,Alloy: {0} % of what the lines ask for,Сплав: {0} % от запроса линий
-flask.alloy.cap.disrupted,Alloy: {0} % of the normal supply,Сплав: {0} % от обычного снабжения
-flask.alloy.cap.none,No alloy,Сплава нет
-flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
+flask.alloy.cap.ok,Heat-resistant alloy: sufficient,Жаропрочный сплав: хватает
+flask.alloy.cap.deficit,Heat-resistant alloy: {0} % of what the lines ask for,Жаропрочный сплав: {0} % от запроса линий
+flask.alloy.cap.disrupted,Heat-resistant alloy: {0} % of the normal supply,Жаропрочный сплав: {0} % от обычного снабжения
+flask.alloy.cap.none,No heat-resistant alloy,Жаропрочного сплава нет
+flask.alloy.tip,Stock is {0}% of the normal supply. Without the alloy new engines cannot go into series.,Запас — {0}% от обычного снабжения. Без жаропрочного сплава новые двигатели не выйдут в серию.
 flask.deficit,low,мало
 flask.none,none,нет
-flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Снабжение покрывает {0}% потребности: дефицит (штриховка)
-flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched),Снабжение — {0}% от обычного, пока длится сбой (штриховка)
-flask.alloy.none,No alloy is being smelted (hatched),Сплав не выплавляется (штриховка)
+flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched). Without the alloy new engines cannot go into series.,Снабжение покрывает {0}% потребности: дефицит (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
+flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched). Without the alloy new engines cannot go into series.,Снабжение — {0}% от обычного, пока длится сбой (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
+flask.alloy.none,No alloy is being smelted (hatched). Without it new engines cannot go into series.,Сплав не выплавляется (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · opens later (development stage {2}),{0} · {1} · откроется позже (этап разработки {2})
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
@@ -376,7 +384,7 @@ set.rail.narrow,Narrow,Узкая
 set.rail.wide,Wide,Широкая
 set.musicamount,Music amount,Количество музыки
 ui.tree.effects.knowledge,"A knowledge step: it does not raise a parameter by itself, it opens dependent nodes.","Ступень знания: сама параметр не повышает, открывает зависимые узлы."
-ui.tree.schem.example,Schematic (example),Схема (пример)
+ui.tree.schem.example,Illustration - not a drawing of the node,Иллюстрация — не чертёж узла
 ui.tree.anchor,Historical date: {0}{1},Историческая дата: {0}{1}
 ui.tree.anchor.named,Historical date: {0}{1} · {2},Историческая дата: {0}{1} · {2}
 ui.tree.anchor.tip,The year when this step appeared in real history,"Год, когда этот шаг появился в реальной истории"

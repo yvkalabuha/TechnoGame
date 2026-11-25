@@ -180,6 +180,18 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool ProductAi { get; init; } = true;
 
+    /// <summary>
+    /// Actors (rows) the player controls and whose line decisions the AI only proposes (TASK-0153, #479). Empty = off: the AI leads every actor, as before.
+    /// Needs <see cref="ProductAi"/>.
+    /// </summary>
+    public System.Collections.Immutable.ImmutableArray<int> AdviserActors { get; init; }
+
+    /// <summary>How long a refused proposal stays silent, in years (a yearly norm; the policy turns it into months).</summary>
+    public int AdviserRefuseYears { get; init; } = 1;
+
+    /// <summary>The most lines an adviser actor may run at once (levers doc 1.2: 2 in wave 1).</summary>
+    public int AdviserMaxLines { get; init; } = 2;
+
     /// <summary>Arm <c>DERIV</c> (spec §6.8): once a year the AI also derives a design from its newest root project. Diagnostic; off in main.</summary>
     public bool Derive { get; init; }
 
@@ -191,6 +203,34 @@ public sealed partial record SliceRunConfig
 
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <c>YPROD</c> in main; <c>ADMIT</c> is the rule before F17b (regression, diagnostics).</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
+
+    /// <summary>
+    /// The budget reserve account (#475, TASK-0150): shares may sum to less than 1, the remainder goes to <c>res.balance</c> (leaks about 10 % a year),
+    /// and <c>fund_programme</c> pays from it. Off = the table, the hash and every golden are those of a build without the reserve.
+    /// </summary>
+    public bool Reserve { get; init; }
+
+    /// <summary>
+    /// Research priorities through institutes (TASK-0151, #484-#496): the institutes of the data stand in the table, <c>set_priority_node</c> gives a slot a goal
+    /// (money first, institute bonus), the AI picks goals by the same rules. Off = no institute columns, the old knowledge path, the hash and every golden of a
+    /// build without them.
+    /// </summary>
+    public bool Institutes { get; init; }
+
+    /// <summary>
+    /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft
+    /// channel in <c>c_eff</c>, estimates with confidence. Needs the <c>intelligence</c> object in the data. Off = the table, the hash and every golden are those of
+    /// a build without it.
+    /// </summary>
+    public bool Intelligence { get; init; }
+
+    /// <summary>
+    /// The actor the player controls (null = none: Lab, tests, the views of the whole world). Not part of the data. With institutes the AI neither sets the priorities nor
+    /// starts the projects of this actor: it only proposes (<c>InstituteView.ProposedGoal</c>, <c>ProposesBuild</c>), O-067, so it enters the fingerprint then. With
+    /// intelligence on, the licence of another actor is shown to it only through intelligence (a visible estimate and the confidence of the hidden event,
+    /// EVENTS_POLITICS.md §10); otherwise the view carries an empty licence.
+    /// </summary>
+    public int? PlayerActor { get; init; }
 
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
@@ -212,6 +252,18 @@ public sealed partial record SliceRunConfig
 
     /// <summary><c>lic_knows</c> (spec §6.7, #47): a bought licence also makes known the seller's engine and the PRC of its mask with their closure. Diagnostic; off in main.</summary>
     public bool LicKnows { get; init; }
+
+    /// <summary>
+    /// The licence market (TASK-0152; production-lines-and-licence-market.md §2): several licences per country keyed (seller, gen), a permanent catalogue,
+    /// <c>BuyLicence</c> / <c>OfferLicence</c>, AI buying by the rules of O-062. Off in main: with it off the world, the columns and the hash are those of main.
+    /// </summary>
+    public bool LicenceMarket { get; init; }
+
+    /// <summary>Actor rows whose licences move only by commands (the player's); the AI buys nothing for them and sells at m = 1. Empty = every actor is AI.</summary>
+    public ImmutableArray<int> LicenceExternalActors { get; init; } = [];
+
+    /// <summary>Blocs and friends by year for the buyer circle (O-056), loaded from <c>mods/core/scenarios/1945/alliances.yaml</c> by the host; null = none.</summary>
+    public AllianceTable? Alliances { get; init; }
 
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;

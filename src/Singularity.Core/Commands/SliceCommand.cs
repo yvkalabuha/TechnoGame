@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -57,6 +58,12 @@ public enum CommandKind
     SellCohort = 8,
     StartMasteryProgramme = 9,
     CancelMasteryProgramme = 10,
+    FundProgramme = 11,
+    BuyLicence = 12,
+    OfferLicence = 13,
+    RefuseProposal = 14,
+    SetPriorityNode = 15,
+    BuildInstitute = 16,
 }
 
 /// <summary>
@@ -68,8 +75,12 @@ public abstract record SliceCommand(int Actor)
     public abstract CommandKind Kind { get; }
 }
 
-/// <summary><c>set_budget_shares</c>: R / capability / D / procurement / QP; sums to exactly 1 (validated at Submit).</summary>
-public sealed record SetBudgetShares(int Actor, BudgetShares Shares) : SliceCommand(Actor)
+/// <summary>
+/// <c>set_budget_shares</c>: R / capability / D / procurement / QP and, in a run with intelligence, the seventh item security; sums to exactly 1 (validated at Submit).
+/// <paramref name="Targets"/> (intelligence only, TASK-0160): at most three targets with a mode; <c>default</c> keeps the plan in force (the AI plan, or the last one the
+/// player set), an empty array sets "no targets". It travels with the shares so the command set has no new family (ADR-0027 draft).
+/// </summary>
+public sealed record SetBudgetShares(int Actor, BudgetShares Shares, ImmutableArray<IntelTarget> Targets = default) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SetBudgetShares;
 }
@@ -108,6 +119,16 @@ public sealed record StartSeries(int Actor, DesignHandle Design, Fx6 Rate, bool 
 public sealed record CloseLine(int Actor, DesignHandle Design) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CloseLine;
+}
+
+/// <summary>
+/// <c>refuse_proposal(design, close)</c> (TASK-0153, #479): the player refuses the adviser's proposal to open (or, with <paramref name="Close"/>, to close) the line of the
+/// design; the adviser stays silent about it for the refusal period. The silence is kept per design slot, whatever the generation of the project in it (a new project in the slot is silenced too). Accepting a proposal is an ordinary <see cref="StartSeries"/> or <see cref="CloseLine"/> with the proposal's handle.
+/// Valid only in a run with an adviser for the actor.
+/// </summary>
+public sealed record RefuseProposal(int Actor, DesignHandle Design, bool Close) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.RefuseProposal;
 }
 
 /// <summary>
@@ -155,6 +176,53 @@ public sealed record StartMasteryProgramme(int Actor, int ProcessNumber, bool Ab
 public sealed record CancelMasteryProgramme(int Actor, int ProcessNumber) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CancelMasteryProgramme;
+}
+
+/// <summary>
+/// <c>fund_programme(node, amount)</c> (PLAYER_LEVERS_WAVE1 §A2, #471): a one-off payment from the reserve into the progress of a research node of the actor's
+/// frontier. It goes through the same <c>c_eff</c> as the monthly money (ahead-of-time multiplier included), with the return <c>1/(1+k)</c>, <c>k</c> = earlier
+/// programmes on the node. One per actor and month. <paramref name="Node"/> is the node number of the data.
+/// </summary>
+public sealed record FundProgramme(int Actor, int Node, Fx6 Amount) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.FundProgramme;
+}
+
+/// <summary>
+/// <c>buy_licence(seller, gen)</c> (TASK-0152, the licence market): the seller's own serial project of that engine generation, at the seller's asking price. The deal is
+/// checked now (<see cref="CommandRefusal.LicenceRefused"/> names the reason) and queued; it is validated again and paid when the month begins.
+/// </summary>
+public sealed record BuyLicence(int Actor, int Seller, int Gen) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.BuyLicence;
+}
+
+/// <summary>
+/// <c>offer_licence(gen, m, circle)</c>: the multiplier of the asking price (<c>m × reference</c>, <c>m</c> in [0,5; 2]) and who may buy, for the actor's own serial project of
+/// the generation. Standing until changed.
+/// </summary>
+public sealed record OfferLicence(int Actor, int Gen, Fx6 M, SaleCircle Circle) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.OfferLicence;
+}
+
+/// <summary>
+/// <c>set_priority_node(slot, node)</c> (research-institutes-priorities §4): the institute in <paramref name="Slot"/> of the actor works on the node first (money first, bonus of its
+/// level in the area). <paramref name="Slot"/> is the position of the institute among those of the actor (<see cref="Singularity.Core.Institutes.InstituteHandle"/>), <paramref name="Node"/> the node number of the data.
+/// A standing order: it stays until the node is known.
+/// </summary>
+public sealed record SetPriorityNode(int Actor, int Slot, int Node) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.SetPriorityNode;
+}
+
+/// <summary>
+/// <c>build_institute(slot)</c> (research-institutes-priorities §8, #491): starts the project of the candidate institute in <paramref name="Slot"/>. It takes a share of the research
+/// money while it runs and opens the institute (a slot, capacity, upkeep) after its months. Not before <c>ref_year − 10</c>; a small country builds at most 3 levels per project.
+/// </summary>
+public sealed record BuildInstitute(int Actor, int Slot) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.BuildInstitute;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

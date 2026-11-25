@@ -57,6 +57,12 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly LongColumn[] _prog;
     private readonly LongColumn[] _kd, _kind;
     private readonly LongColumn[]? _since;
+    private readonly IntColumn[]? _fundN;
+    private readonly IntColumn[]? _disc;
+    private readonly Singularity.Core.Institutes.InstituteParams? _prio;
+
+    /// <summary>Most priority goals of one actor the step takes (one per institute slot).</summary>
+    private const int GoalCap = 16;
 
     // Scratch, rewritten every step; row a only by the chunk that owns it.
     [Scratch]
@@ -77,8 +83,11 @@ public sealed class KnowledgeSystem : ITickSystem
     public KnowledgeSystem(Table table, KnowledgeGraph graph, KnowledgeStart start, KnowledgeParams parameters,
         IKnowledgeInputs inputs, CounterRng know, int chunkCount, KnowledgeMode mode = KnowledgeMode.Full,
         ImmutableArray<long>? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId,
-        bool trackKnownSince = false, long startKnownSince = KnownSinceMarks.StartKnown)
+        bool trackKnownSince = false, long startKnownSince = KnownSinceMarks.StartKnown, bool fundProgrammes = false,
+        Singularity.Core.Institutes.InstituteParams? priorities = null)
     {
+        priorities?.Validate();
+        _prio = priorities;
         // The start value must lie below every month of the horizon (tau of the start section starts at the horizon, spec §6.1 v0.24 r2); −1 is the mark «unknown».
         if (trackKnownSince && startKnownSince > KnownSinceMarks.StartKnown)
             throw new ArgumentOutOfRangeException(nameof(startKnownSince), startKnownSince, $"startKnownSince must be at most {KnownSinceMarks.StartKnown}.");
@@ -122,6 +131,22 @@ public sealed class KnowledgeSystem : ITickSystem
             _since = new LongColumn[_n];
             foreach (int r in graph.Order)
                 _since[r] = table.AddLong($"know.since.{graph.Number[r]}");
+        }
+
+        // know.disc.N: the node was opened by the actor's own research, not granted by a licence (the institutes credit experience only for it); absent without priorities.
+        if (priorities is not null && mode == KnowledgeMode.Full)
+        {
+            _disc = new IntColumn[_n];
+            foreach (int r in graph.Order)
+                _disc[r] = table.AddInt($"know.disc.{graph.Number[r]}");
+        }
+
+        // know.fund.N: how many programmes the actor paid into the node (the `k` of the diminishing return); absent without the reserve.
+        if (fundProgrammes && mode == KnowledgeMode.Full)
+        {
+            _fundN = new IntColumn[_n];
+            foreach (int r in graph.Order)
+                _fundN[r] = table.AddInt($"know.fund.{graph.Number[r]}");
         }
 
         var col = new int[_actors];
@@ -221,6 +246,15 @@ public sealed class KnowledgeSystem : ITickSystem
         return count;
     }
 
+    /// <summary>Number of nodes the actor knows (a read of the snapshot).</summary>
+    public int KnownCount(int actorRow)
+    {
+        int n = 0;
+        for (int r = 0; r < _n; r++)
+            n += IsKnown(actorRow, r) ? 1 : 0;
+        return n;
+    }
+
     /// <summary>The node is unknown and its requirements are known: it is in the actor's frontier (spec §3.1).</summary>
     public bool InFrontier(int actorRow, int nodeRow) => !IsKnown(actorRow, nodeRow) && RequiresKnown(actorRow, nodeRow);
 
@@ -235,6 +269,14 @@ public sealed class KnowledgeSystem : ITickSystem
     {
         if (!InFrontier(actorRow, nodeRow))
             return Fx6.Zero;
+        if (_prio is not null)
+        {
+            Span<int> goalRows = stackalloc int[GoalCap];
+            Span<Fx6> goalMult = stackalloc Fx6[GoalCap];
+            int goals = _inputs.PriorityGoals(actorRow, month, goalRows, goalMult);
+            if (goals > 0)
+                return PriorityRate(actorRow, nodeRow, month, goalRows[..goals], goalMult[..goals]);
+        }
         Fx6 wsum = Fx6.Zero, wn = Fx6.Zero;
         foreach (int r in _g.Order)
         {
@@ -248,6 +290,166 @@ public sealed class KnowledgeSystem : ITickSystem
         if (wsum == Fx6.Zero)
             return Fx6.Zero;
         return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow, month);
+    }
+
+    // ProgressRate with priority goals: the same allocation as the step (PlanOf, AllocOf), from the weights of the snapshot.
+    private Fx6 PriorityRate(int a, int nodeRow, long t, ReadOnlySpan<int> goalRows, ReadOnlySpan<Fx6> goalMult)
+    {
+        Span<long> w = _n <= 512 ? stackalloc long[_n] : new long[_n]; // heap only above 512 nodes: callers include view building (WhyNot), so no shared scratch
+        w.Clear();
+        Span<sbyte> group = _n <= 512 ? stackalloc sbyte[_n] : new sbyte[_n];
+        BuildGroups(a, goalRows, group);
+        Fx6 wsum = Fx6.Zero;
+        foreach (int r in _g.Order)
+        {
+            if (!InFrontier(a, r))
+                continue;
+            Fx6 x = _inputs.Priority(a, r, t) * _inputs.J(a, r, t);
+            w[r] = x.Raw;
+            wsum += x;
+        }
+        if (wsum == Fx6.Zero)
+            return Fx6.Zero;
+        Fx6 s = _inputs.ResearchBudget(a, t);
+        PriorityPlan plan = PlanOf(a, s, wsum, group, w);
+        Fx6 alloc = AllocOf(nodeRow, s, Fx6.FromRaw(w[nodeRow]), wsum, plan, group);
+        return alloc * GoalMultiplier(nodeRow, goalRows, goalMult) / CEff(a, nodeRow, t);
+    }
+
+    /// <summary>What the priority groups of an actor change in one month: the common multiplier and the money left for the others.</summary>
+    private readonly record struct PriorityPlan(Fx6 Kappa, Fx6 OthersPool, Fx6 OthersWeight);
+
+    // Fills group[r] with the first goal whose path (the unknown requirements of the goal in the frontier) holds r, or −1.
+    // One walk per goal with a visited mark (a node already grouped is not walked again: its requirements belong to the same or an earlier goal).
+    // Iterative: a mod graph may be a chain of any depth. A node is marked when pushed, so every node enters the stack at most once and n entries suffice.
+    // Called with goals only; the stack lives on the stack frame up to 512 nodes, else on the heap (no shared scratch: view building calls this too).
+    private void BuildGroups(int a, ReadOnlySpan<int> goalRows, Span<sbyte> group)
+    {
+        group.Fill(-1);
+        Span<int> stack = _n <= 512 ? stackalloc int[_n] : new int[_n];
+        RequirementLists req = _g.Requires;
+        for (int j = 0; j < goalRows.Length; j++)
+        {
+            int root = goalRows[j];
+            if (group[root] >= 0)
+                continue;
+            group[root] = (sbyte)j;
+            int top = 0;
+            stack[top++] = root;
+            while (top > 0)
+            {
+                int from = stack[--top];
+                if (IsKnown(a, from))
+                    continue;
+                for (int g = req.GroupStart[from]; g < req.GroupStart[from + 1]; g++)
+                {
+                    bool satisfied = false;
+                    foreach (int m in req.GroupMembers(g))
+                        satisfied |= IsKnown(a, m);
+                    if (satisfied)
+                        continue;
+                    foreach (int m in req.GroupMembers(g))
+                    {
+                        if (group[m] >= 0)
+                            continue;
+                        group[m] = (sbyte)j;
+                        stack[top++] = m;
+                    }
+                }
+            }
+        }
+    }
+
+    private PriorityPlan PlanOf(int a, Fx6 s, Fx6 wsum, ReadOnlySpan<sbyte> group, ReadOnlySpan<long> w)
+    {
+        Fx6 groupW = Fx6.Zero;
+        foreach (int r in _g.Order)
+        {
+            if (InFrontier(a, r) && group[r] >= 0)
+                groupW += Fx6.FromRaw(w[r]);
+        }
+        Fx6 kappa = Singularity.Core.Institutes.InstituteMath.KappaEff(wsum, groupW, _prio!);
+        Fx6 spent = Fx6.Zero;
+        foreach (int r in _g.Order)
+        {
+            if (InFrontier(a, r) && group[r] >= 0)
+                spent += s * (Fx6.FromRaw(w[r]) / wsum) * kappa;
+        }
+        return new PriorityPlan(kappa, s - spent, wsum - groupW);
+    }
+
+    // Money of a frontier node: a group node gets kappa times its usual share; the others share what is left in the ratio of their weights.
+    private Fx6 AllocOf(int r, Fx6 s, Fx6 w, Fx6 wsum, in PriorityPlan plan, ReadOnlySpan<sbyte> group)
+    {
+        if (group[r] >= 0)
+            return s * (w / wsum) * plan.Kappa;
+        return plan.OthersWeight > Fx6.Zero ? plan.OthersPool * (w / plan.OthersWeight) : Fx6.Zero;
+    }
+
+    // The institute bonus acts on the goal node itself, not on the nodes of its path (§3).
+    private static Fx6 GoalMultiplier(int r, ReadOnlySpan<int> goalRows, ReadOnlySpan<Fx6> goalMult)
+    {
+        for (int j = 0; j < goalRows.Length; j++)
+        {
+            if (goalRows[j] == r)
+                return goalMult[j];
+        }
+        return Fx6.One;
+    }
+
+    /// <summary>The node was opened by the research of the actor (not by a licence grant); false without priority parameters.</summary>
+    public bool DiscoveredByResearch(int actorRow, int nodeRow) => _disc is not null && _disc[nodeRow].Current[actorRow] != 0;
+
+    /// <summary>Programmes the actor has paid into the node so far (0 without the reserve).</summary>
+    public int ProgrammesOn(int actorRow, int nodeRow) => _fundN is null ? 0 : _fundN[nodeRow].Current[actorRow];
+
+    /// <summary>
+    /// Progress a programme of <paramref name="amount"/> adds to a node now: <c>M / c_eff · 1/(1+k)</c>, the same <c>c_eff</c> (ahead-of-time multiplier
+    /// included) as the monthly money. A pure read of the snapshot; the preview and the step share it.
+    /// </summary>
+    public Fx6 ProgrammeGain(int actorRow, int nodeRow, long month, Fx6 amount)
+    {
+        Fx6 cap = ProgrammeCapacity(actorRow, nodeRow, month);
+        return Gain(amount < cap ? amount : cap, CEff(actorRow, nodeRow, month), ProgrammesOn(actorRow, nodeRow));
+    }
+
+    /// <summary>
+    /// The most money a programme can put into the node in month t: what the node still absorbs before its ceiling (1 for every node, a
+    /// hazard node alike, after this month's regular money) times <c>c_eff·(1+k)</c>. Zero outside the frontier or at the ceiling. A pure read of the snapshot.
+    /// </summary>
+    public Fx6 ProgrammeCapacity(int actorRow, int nodeRow, long month)
+    {
+        if (!InFrontier(actorRow, nodeRow))
+            return Fx6.Zero;
+        Fx6 basis = Prog(actorRow, nodeRow) + ProgressRate(actorRow, nodeRow, month);
+        // The design ceiling of a programme is 1 for every node (a hazard node too: its chance to open grows with the regular money, not with a purchase).
+        Fx6 room = basis > Fx6.One ? Fx6.Zero : Fx6.One - basis;
+        return room > Fx6.Zero ? room * CEff(actorRow, nodeRow, month) * Fx6.FromInt(1 + ProgrammesOn(actorRow, nodeRow)) : Fx6.Zero;
+    }
+
+    private static Fx6 Gain(Fx6 amount, Fx6 ceff, int k) => amount / ceff * (Fx6.One / Fx6.FromInt(1 + k));
+
+    /// <summary>
+    /// Reserve money the actor's programme takes in month t: the funded amount when its node is in the frontier, else zero (the money stays).
+    /// The reserve reads this, so what leaves the account is exactly what the node received.
+    /// </summary>
+    public Fx6 ProgrammeSpend(int actorRow, long month) => FundedAmount(actorRow, month, out _);
+
+    private Fx6 FundedAmount(int a, long t, out int row)
+    {
+        row = -1;
+        if (_fundN is null || !_inputs.FundProgramme(a, t, out int r, out Fx6 amount) || r < 0 || amount <= Fx6.Zero || !InFrontier(a, r))
+            return Fx6.Zero;
+        // Only what the node can absorb is spent: money that the ceiling would cut is not taken, and a node at its ceiling costs nothing (and does not count as a programme).
+        Fx6 cap = ProgrammeCapacity(a, r, t);
+        if (cap <= Fx6.Zero)
+            return Fx6.Zero;
+        Fx6 spend = amount < cap ? amount : cap;
+        // A programme whose gain floors to zero would take money for nothing (and count as one): it does not run.
+        if (Gain(spend, CEff(a, r, t), ProgrammesOn(a, r)) <= Fx6.Zero)
+            return Fx6.Zero;
+        row = r;
+        return spend;
     }
 
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
@@ -303,6 +505,8 @@ public sealed class KnowledgeSystem : ITickSystem
                 if (_since is not null)
                     _since[r].Next[a] = MonthOf(context);
                 (discovery ? _lastDiscoveries : _lastGrants).Add((_start.ActorNumber[a], _g.Number[r]));
+                if (discovery && _disc is not null)
+                    _disc[r].Next[a] = 1;
                 if (discovery && _g.Discipline[r] >= 0)
                     _openedCount[a * _d + _g.Discipline[r]]++;
             }
@@ -343,6 +547,7 @@ public sealed class KnowledgeSystem : ITickSystem
     {
         int actor = _start.ActorNumber[a];
         Fx6 s = _inputs.ResearchBudget(a, t);
+        Fx6 fundAmount = FundedAmount(a, t, out int fundRow);
         Fx6 wsum = Fx6.Zero;
         foreach (int r in _g.Order)
         {
@@ -355,19 +560,44 @@ public sealed class KnowledgeSystem : ITickSystem
             }
         }
 
+        // Priority goals: none = the old path below, unchanged. With goals the groups get kappa_eff times their share (PlanOf, AllocOf).
+        Span<int> goalRows = stackalloc int[GoalCap];
+        Span<Fx6> goalMult = stackalloc Fx6[GoalCap];
+        int goals = _prio is null ? 0 : _inputs.PriorityGoals(a, t, goalRows, goalMult);
+        goalRows = goalRows[..goals];
+        goalMult = goalMult[..goals];
+        // No goals = no group buffer: the old path allocates nothing (tick-path allocation test, point A has > 512 nodes).
+        Span<sbyte> group = goals == 0 ? default : _n <= 512 ? stackalloc sbyte[_n] : new sbyte[_n];
+        if (goals > 0)
+            BuildGroups(a, goalRows, group);
+        PriorityPlan plan = goals == 0 || wsum == Fx6.Zero ? default : PlanOf(a, s, wsum, group, new ReadOnlySpan<long>(_wraw, a * _n, _n));
+
         Fx6 spent = Fx6.Zero;
         foreach (int r in _g.Order)
         {
-            if (!_trace[a * _n + r].InFrontier || wsum == Fx6.Zero)
+            bool funded = r == fundRow;
+            if (!_trace[a * _n + r].InFrontier || (wsum == Fx6.Zero && !funded))
                 continue;
-            Fx6 wn = Fx6.FromRaw(_wraw[a * _n + r]) / wsum;
-            Fx6 alloc = s * wn;
+            Fx6 wn = wsum == Fx6.Zero ? Fx6.Zero : Fx6.FromRaw(_wraw[a * _n + r]) / wsum;
+            Fx6 alloc = goals == 0 || wsum == Fx6.Zero ? s * wn : AllocOf(r, s, Fx6.FromRaw(_wraw[a * _n + r]), wsum, plan, group);
+            if (goals > 0 && spent + alloc > s)
+                alloc = s - spent;   // rounding of the shares must never spend above the budget (I4)
             spent += alloc;
             int disc = _g.Discipline[r];
             Fx6 kmix = KMix(a, r);
             Fx6 ceff = CEffOf(a, r, kmix, t);
-            Fx6 dprog = alloc / ceff;
+            Fx6 dprog = goals == 0 || wsum == Fx6.Zero ? alloc / ceff : alloc * GoalMultiplier(r, goalRows, goalMult) / ceff;
             Fx6 prog = Prog(a, r) + dprog;
+            if (funded)
+            {
+                // The programme never carries a node above 1 by itself (the spend was cut to the room under 1 already; this is the same bound for the floor).
+                Fx6 ceiling = prog > Fx6.One ? prog : Fx6.One;
+                prog += Gain(fundAmount, ceff, _fundN![r].Current[a]);
+                if (prog > ceiling)
+                    prog = ceiling;
+                dprog = prog - Prog(a, r);
+                _fundN[r].Next[a] = _fundN[r].Current[a] + 1;
+            }
             bool open;
             HazardStep hz = default;
             ulong u = 0;
@@ -459,7 +689,7 @@ public sealed class KnowledgeSystem : ITickSystem
 
     // The ahead-of-time multiplier is a pure function of (node, month): a few integer operations, no table to refresh, nothing stored.
     private Fx6 CEffOf(int a, int r, Fx6 kmix, long month) =>
-        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
+        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r), _inputs.StealShare(a, r, month));
 
     private bool RequiresKnown(int a, int r)
     {

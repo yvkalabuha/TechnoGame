@@ -20,7 +20,7 @@ internal static class Cli
         var o = new BuildOptions
         {
             Root = root,
-            Cache = Path.GetFullPath(Opt("--cache", Environment.GetEnvironmentVariable("SINGULARITY_MAP_CACHE") ?? Path.Combine(root, ".cache"))),
+            Cache = Path.GetFullPath(Opt("--cache", Environment.GetEnvironmentVariable("SINGULARITY_MAP_CACHE") ?? DefaultCache())),
             OutDir = Path.GetFullPath(Opt("--out", Path.Combine(repo, "mods", "core", "map"))),
             ScenarioDir = Path.GetFullPath(Opt("--scenario", Path.Combine(repo, "mods", "core", "scenarios", "1945"))),
         };
@@ -29,7 +29,8 @@ internal static class Cli
             switch (args[0])
             {
                 case "fetch":
-                    await Sources.FetchAsync(Sources.Load(Path.Combine(root, "sources.lock.yaml")), o.Cache, args.Contains("--pin"));
+                    if (args.Contains("--terrain")) await TerrainSources.FetchAsync(Sources.Load(Path.Combine(root, "sources.lock.yaml")), o.Cache, args.Contains("--pin"));
+                    else await Sources.FetchAsync(Sources.Load(Path.Combine(root, "sources.lock.yaml")), o.Cache, args.Contains("--pin"));
                     return 0;
                 case "find":
                     return Find(o, args[1]);
@@ -43,6 +44,8 @@ internal static class Cli
                     return At(o, args.Skip(1).TakeWhile(a => !a.StartsWith("--")).Select(a => a.Split(',').Select(x => double.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray()).ToList());
                 case "dump":
                     return Dump(o);
+                case "terrain":
+                    return Terrain.Run(o);
                 case "bootstrap":
                     return DoBootstrap(o);
                 case "build":
@@ -58,6 +61,11 @@ internal static class Cli
             return 1;
         }
     }
+
+    /// <summary>One cache for every command (fetch, fetch --terrain, build, terrain): ~/.cache/singularity/map, never inside the repository.
+    /// Override with SINGULARITY_MAP_CACHE or --cache.</summary>
+    private static string DefaultCache()
+        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "singularity", "map");
 
     private static string FindRoot()
     {

@@ -62,6 +62,9 @@ jobs:
   # and byte-identical rebuild when the pinned sources are available.
   map-tooling:
     runs-on: ubuntu-latest
+    env:
+      # One cache for fetch, ensure_geo and check_determinism (TASK-0168 changed the default)
+      SINGULARITY_MAP_CACHE: ${{ github.workspace }}/tools/map/.cache
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

@@ -188,6 +188,102 @@ class RunTest(unittest.TestCase):
         # the fallback prompt carries file contents, the Codex one did not
         self.assertIn("=== FILE tools/a.py", fake.calls[0]["messages"][1]["content"])
 
+    def test_repeat_review_gets_rejected_findings_with_reasons(self):
+        runs = self.tmp / "runs"
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "checked: handled in b.py")
+        review.mark_finding(path, 2, True)
+        got = []
+
+        def runner(prompt, wt):
+            got.append(prompt)
+            return json.dumps(GOOD), {}
+
+        self.run_review("codex", codex_runner=runner)
+        self.assertIn("PREVIOUSLY REJECTED FINDINGS", got[0])
+        self.assertIn("checked: handled in b.py", got[0])
+        self.assertIn('"c"', got[0])
+        self.assertNotIn('"c2"', got[0])  # confirmed finding is not listed
+        fake = FakeProvider([GOOD])
+        self.run_review("deepseek", make_provider=lambda: fake)
+        self.assertIn("checked: handled in b.py", fake.calls[0]["messages"][1]["content"])
+        self.assertEqual(len(list(runs.glob("*.json"))) >= 3, True)
+
+    def _record(self, runs, name, rnd, claims, marks, reasons=None, raw_side=None):
+        runs.mkdir(exist_ok=True)
+        rec = {"kind": "review", "round": rnd, "result": {"findings": [
+            {"severity": "low", "path": "p.py", "line": i, "claim": c, "evidence": ""} for i, c in enumerate(claims, 1)]}}
+        (runs / name).write_text(json.dumps(rec))
+        side = {"confirmed": marks}
+        if reasons is not None:
+            side["reasons"] = reasons
+        (runs / (name + ".confirm.json")).write_text(raw_side if raw_side is not None else json.dumps(side))
+
+    def test_keeps_newest_rejections_by_round(self):
+        runs = self.tmp / "runs"
+        n = review.MAX_REJECTED
+        # the newest round has the alphabetically smallest name
+        self._record(runs, "review-TASK-0001-aaaa-codex.json", 2, [f"new{i}" for i in range(n)], {str(i): False for i in range(1, n + 1)})
+        self._record(runs, "review-TASK-0001-zzzz-codex.json", 1, ["old"], {"1": False})
+        got = review.rejected_findings(runs, "TASK-0001")
+        self.assertEqual(len(got), n)
+        self.assertNotIn("old", [g["claim"] for g in got])
+
+    def test_malformed_sidecar_skipped_with_warning(self):
+        runs = self.tmp / "runs"
+        logs = []
+        self._record(runs, "review-TASK-0001-aaaa-codex.json", 1, ["c"], {"1": False}, reasons=["not", "a dict"])
+        self._record(runs, "review-TASK-0001-bbbb-codex.json", 2, ["c"], {}, raw_side="{broken")
+        self._record(runs, "review-TASK-0001-cccc-codex.json", 3, ["ok"], {"1": False}, reasons={"1": "r"})
+        got = review.rejected_findings(runs, "TASK-0001", log=logs.append)
+        self.assertEqual([g["claim"] for g in got], ["ok"])
+        self.assertEqual(len(logs), 2)
+
+    def test_path_truncated_and_instruction_outside_data_block(self):
+        runs = self.tmp / "runs"
+        self._record(runs, "review-TASK-0001-aaaa-codex.json", 1, ["c"], {"1": False}, reasons={"1": "r"})
+        rec = json.loads((runs / "review-TASK-0001-aaaa-codex.json").read_text())
+        rec["result"]["findings"][0]["path"] = "x" * 5000
+        (runs / "review-TASK-0001-aaaa-codex.json").write_text(json.dumps(rec))
+        self.assertLessEqual(len(review.rejected_findings(runs, "TASK-0001")[0]["path"]), review.MAX_REJECTED_TEXT)
+        self.assertNotIn("Do not repeat", review.rejected_block(review.rejected_findings(runs, "TASK-0001")))
+        got = []
+        self.run_review("codex", codex_runner=lambda p, wt: (got.append(p) or json.dumps(GOOD), {}))
+        # (runs dir of run_review is the same one)
+        self.assertIn("Do not repeat", got[0].split("=== TASK")[0])
+
+    def test_repeated_rejection_without_reason_keeps_reason(self):
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "why")
+        review.mark_finding(path, 1, False)
+        self.assertEqual(json.loads(review.confirm_path(path).read_text())["reasons"], {"1": "why"})
+
+    def test_rejected_block_never_exceeds_input_limit(self):
+        items = [{"path": "p:1", "claim": "c" * 200, "reason": f"r{i}" * 50} for i in range(10)]
+        parts = ["x" * 1000]
+        fence = review._fit_rejected(items, parts, 1000 + 2 + 1200, 10 ** 6)
+        self.assertLessEqual(len(parts[0]) + 2 + len(fence.encode()), 1000 + 2 + 1200)
+        self.assertIn("older rejected findings omitted", fence)
+        self.assertIn("r9", fence)  # newest kept
+        self.assertNotIn("r0r0", fence)  # oldest dropped
+        self.assertIsNone(review._fit_rejected(items, parts, 1000, 10 ** 6))
+
+    def test_first_review_has_no_rejected_block(self):
+        got = []
+
+        def runner(prompt, wt):
+            got.append(prompt)
+            return json.dumps(GOOD), {}
+
+        self.run_review("codex", codex_runner=runner)
+        self.assertNotIn("PREVIOUSLY REJECTED", got[0])
+
+    def test_reason_saved_in_sidecar(self):
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "why")
+        side = json.loads(review.confirm_path(path).read_text())
+        self.assertEqual((side["confirmed"], side["reasons"]), ({"1": False}, {"1": "why"}))
+
     def test_codex_prompt_starts_with_instruction(self):
         got = []
 

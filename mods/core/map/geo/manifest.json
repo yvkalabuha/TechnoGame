@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "data_binding": "6b0f8dae90847ff5e431e53f5ac3b62f31e904cc7b35252f0f5b738b6d458623",
-  "files": {"arcs.bin": {"sha256": "087bbb6f8c212a52d74560ffbc68344fafd0c89dfbc3d5d31ffe3c130990c10a", "bytes": 3699892}},
+  "data_binding": "eef3bdea0a4aa131ec4e34c1d954ded99f761c290738e5581db87ee87f852760",
+  "files": {"arcs.bin": {"sha256": "0d1fe8dfe7b83a8f12e05b363fb15e324d48c31206deb8f52a24c2b67bc889d8", "bytes": 3699892}},
   "counts": {"provinces": 3124, "territories": 8, "regions": 379, "arcs": 13313},
   "sources": [
     {"id": "ne_admin1", "sha256": "22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5", "license": "public-domain"},
@@ -16,7 +16,8 @@
     {"id": "ohm:relation/2692239@v13", "sha256": "0e2d3e291e777b01d419bff2b889618c6ec0173d3542847a75b0cdca0b76499a", "license": "CC0-1.0"},
     {"id": "ohm:relation/2800540@v6", "sha256": "ab21affc535914058d08301d1944e970d98b0ad7c03afb0930aa9196a65eafff", "license": "CC-BY-4.0+CC0-1.0"},
     {"id": "ohm:relation/2800539@v9", "sha256": "dab3b7e167138fac90d4a679778d4312edff566abac6f37c60c54d53ad57fb64", "license": "CC-BY-4.0+CC0-1.0"},
-    {"id": "ohm:relation/2851104@v65", "sha256": "045ab4924c4dce5efaab6e3cddf6eb598785a740bccd25fe74702822764f54a7", "license": "CC-BY-4.0+CC0-1.0"}
+    {"id": "ohm:relation/2851104@v65", "sha256": "045ab4924c4dce5efaab6e3cddf6eb598785a740bccd25fe74702822764f54a7", "license": "CC-BY-4.0+CC0-1.0"},
+    {"id": "ne_rivers", "sha256": "bb854a900ecbd3b408df46d5e16e3e0f974ba55993f9d8b5c26e855273c0905a", "license": "public-domain"}
   ],
   "provenance": {
     "afghanistan.badakhshan": {"ne_src": ["AFG-1760"], "cuts": []},

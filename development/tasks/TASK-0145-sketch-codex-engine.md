@@ -1,7 +1,7 @@
 ---
 id: TASK-0145
 title: "Sketches through Codex CLI image generation (llm_worker sketch --engine codex)"
-status: APPROVED
+status: DONE
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0141, TASK-0143]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24: use Codex with its separate limit for sketches; light task approved by Orchestrator"
+review_ref: "reviewer: CHANGES addressed (23f6635); codex: waived after 3 returns (#432); landed ce7b627; DEBT-0102"
 created: 2026-11-24
 ---
 

@@ -104,3 +104,245 @@ sources:
     license: CC-BY-4.0+CC0-1.0
     retrieved: 2026-11-18
     note: "Italia 1929-06-07..1940-06-24 (Italy before the Second World War, with Istria, Fiume, Zara and the Julian March; cuts the lands ceded to Yugoslavia in 1947). Some member ways carry CC-BY-4.0 (Surveying and Mapping Authority of the Republic of Slovenia; see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: gmted_mea30
+    kind: raster
+    url: https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/topo/downloads/GMTED/Global_tiles_GMTED/300darcsec/mea/{dir}/{name}
+    sha256: 71264da5a932b1706bdf210c7a2ced48b27e68bcf651735e4f2ca2153bdc6978
+    license: public-domain
+    retrieved: 2026-11-25
+    note: "GMTED2010 mean elevation, 30 arc-second tiles (USGS EROS, public domain: https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)"
+    files:
+      - {name: 50S180W_20101117_gmted_mea300.tif, sha256: a32608ba50963209fa4c281337dc00ee6b07056b2000bc0bf58f6b26203f9b5c}
+      - {name: 50S150W_20101117_gmted_mea300.tif, sha256: 9dc3cf302ec1afa59e182b97876f47dddf2403113c69ce658709176e74b20be8}
+      - {name: 50S120W_20101117_gmted_mea300.tif, sha256: 5ace4fc0ef3dff7d3d156b3fb0aeacf5bd7e81a752524dac9d55ae8e734bce28}
+      - {name: 50S090W_20101117_gmted_mea300.tif, sha256: 6b1ad3a7d0beb8f309e7600fb9e7b567867ded9a5d1f75ca4e14d6c9cf18a014}
+      - {name: 50S060W_20101117_gmted_mea300.tif, sha256: 664b4cfe3a7f22d74ecdaf790075e9ea76c2a443a2f694c416075d8af4311324}
+      - {name: 50S030W_20101117_gmted_mea300.tif, sha256: 6be3a7bb43d915e6ad9a38236d8ebc9b214be8ce7dc9bb25c364a0f82190093a}
+      - {name: 50S000E_20101117_gmted_mea300.tif, sha256: 2e88b0dcf70c72aa5838a3cb886a1e1428853597d052246d4e1338e31cc436ee}
+      - {name: 50S030E_20101117_gmted_mea300.tif, sha256: 29e12767503e45363f1bc3153af6985f36fcd9828684b1377b0ea6c82715ddce}
+      - {name: 50S060E_20101117_gmted_mea300.tif, sha256: 586c10ac0841caed7e872ccc59771e226bd83b1c12a3b4f4c90d40853606b34e}
+      - {name: 50S090E_20101117_gmted_mea300.tif, sha256: e8fb2a07ee528a6414e3e9556b1bac7058c2d66e20be6e2366112bbf8858195d}
+      - {name: 50S120E_20101117_gmted_mea300.tif, sha256: f83982bbf220eeab8fffa5eb7f48f43ec8d362749dfa3fa84ff8620aa855ab2c}
+      - {name: 50S150E_20101117_gmted_mea300.tif, sha256: 15130b0fa8f9e3a0b7f4ed9cde73be1a52a398473edd193a2214e8cfc205f663}
+      - {name: 70S180W_20101117_gmted_mea300.tif, sha256: 563b1008c825c67d5ae1d79f1e3e9bd8ee6ee1b293024f7750f0d8709cc4a6ca}
+      - {name: 70S150W_20101117_gmted_mea300.tif, sha256: d2ce152eabb31a3242e7d6149ecb47d11f44f57e329bf2458783a0c8173b89b1}
+      - {name: 70S120W_20101117_gmted_mea300.tif, sha256: 4ec4b7c9ad329d33b0f70510001954fa3f3cfd3a8ec76d8bdc27c3c58ee49779}
+      - {name: 70S090W_20101117_gmted_mea300.tif, sha256: b4377984650ac5e64978530c30456dcb88b7602f1667b46e449ace4625d56d33}
+      - {name: 70S060W_20101117_gmted_mea300.tif, sha256: 5cf22104cd0b770e27d1af80aa8c9a2b866c0006104cd28f8e66eea5cb98bbca}
+      - {name: 70S030W_20101117_gmted_mea300.tif, sha256: 9d0aefd969fb57a10063c9cb0faf39fc812f0d425fe7ca3acb33853f0f6f65e5}
+      - {name: 70S000E_20101117_gmted_mea300.tif, sha256: 6e745c41006e6a740370f86b49a6a5c586d4e61744a2031ede1698393ebb01ec}
+      - {name: 70S030E_20101117_gmted_mea300.tif, sha256: a243b1f1bce17e76b1e2ddf0fca1cf0b20359d5cb1e09fdf8c4fd62b921020b1}
+      - {name: 70S060E_20101117_gmted_mea300.tif, sha256: 6e3d2f15af8f9fead57bf90fea4d5f16335d45393f73a24ab0529e6d8b899e78}
+      - {name: 70S090E_20101117_gmted_mea300.tif, sha256: b4eaffabfebe8adb2be2d0c52f8042b1f83a31256557e1d5a05de55bf69afae3}
+      - {name: 70S120E_20101117_gmted_mea300.tif, sha256: 509e993a2843e31e1a9254b9549baabe63675fc4fb7d39948508b8afecf997ca}
+      - {name: 70S150E_20101117_gmted_mea300.tif, sha256: cde312c6a9806ffc022615e74b7d28369bcc5c9c011bded4df19a68e682e2ce2}
+      - {name: 30S180W_20101117_gmted_mea300.tif, sha256: 325d612bb48fe27ca8ae968c6995ab48a8348dd2e7d28a3aa971c5494e04dfa2}
+      - {name: 30S150W_20101117_gmted_mea300.tif, sha256: 03640654f146f1aa2e7e1e3654e3e08f9add147b7fa78a97f08f99d0476c64ba}
+      - {name: 30S120W_20101117_gmted_mea300.tif, sha256: e44582f9ee8a3e7c93441f2ab138c9d42405c8f77414921887f0ea578a12ee46}
+      - {name: 30S090W_20101117_gmted_mea300.tif, sha256: a02f13e0029c53684d350b4a1b7b3d26cc9b1bc16bc2ca3c0add9280969259ef}
+      - {name: 30S060W_20101117_gmted_mea300.tif, sha256: 66e0188bda88a368267a8d6af2bb547f2e56514b8b49dac2d662c65abaf16538}
+      - {name: 30S030W_20101117_gmted_mea300.tif, sha256: f00ebd8159185703217862790e23161d2235fa633713e5bde81b32f4f630a9a6}
+      - {name: 30S000E_20101117_gmted_mea300.tif, sha256: 8090a4f4aa89e66af6e73c61a468114edeef874fc413afe4374850f7f7b663e4}
+      - {name: 30S030E_20101117_gmted_mea300.tif, sha256: dd444ea116e3e29df4dd6852bac7564518d12dc65b04a6e694260fee5aed5cb4}
+      - {name: 30S060E_20101117_gmted_mea300.tif, sha256: e4ed42a9a087dac4d0af6a97135408e34675842121219725a82b0b711431561e}
+      - {name: 30S090E_20101117_gmted_mea300.tif, sha256: 8c71f328225db2d8a1b3d927c9e74e3814929db1745e6e12aebd0bfc83aec215}
+      - {name: 30S120E_20101117_gmted_mea300.tif, sha256: 3bcc6c3aa9786ced6d46ac5c1779e9d9ca65a9fd824340ea199a9a588b9035e3}
+      - {name: 30S150E_20101117_gmted_mea300.tif, sha256: 7adde231de682af142982c9b9f428a279eff72b75dccf0b31470bbda36448af3}
+      - {name: 10S180W_20101117_gmted_mea300.tif, sha256: 7f1c925d204aff39e8bc6739bf99eb2a7041668e75ebad32eec1d45a89270769}
+      - {name: 10S150W_20101117_gmted_mea300.tif, sha256: 4cb1d1304f6355892656f2597da8085251b17d35d1d54984163c4d4ff8f2a774}
+      - {name: 10S120W_20101117_gmted_mea300.tif, sha256: 137f4ab3399ff58192d076091f517eed2031e88c52518ecca2fbd54ccbd3a12d}
+      - {name: 10S090W_20101117_gmted_mea300.tif, sha256: c864c531d6ba793065766f8aa861054d991bca21bac03cb426a38c21c3adb887}
+      - {name: 10S060W_20101117_gmted_mea300.tif, sha256: 3546621344f1ccf3ead7a830e6f51d1a7234fc5d24417a34d1d860f3b722e296}
+      - {name: 10S030W_20101117_gmted_mea300.tif, sha256: 63202c818d3d9ded97a2982b124f708db97460b811119dd921a70f8eba81fccb}
+      - {name: 10S000E_20101117_gmted_mea300.tif, sha256: 517022f28237fdb5b0a25cb0df59df706ee0176f82177d1ac0e0f5df91d4f79b}
+      - {name: 10S030E_20101117_gmted_mea300.tif, sha256: 3d5d1305d0171dfab2316c609899c7ba65ba44106a459b7093d6b4475be7b792}
+      - {name: 10S060E_20101117_gmted_mea300.tif, sha256: 551b1ed96222480086985521b95bba6b2e5595a3c28e93f99b8ed9c44482d4dd}
+      - {name: 10S090E_20101117_gmted_mea300.tif, sha256: 0609fe32e92c4319edfcec252622b687b2d52a09ad8d7f82184bb1d89cbc0f16}
+      - {name: 10S120E_20101117_gmted_mea300.tif, sha256: e579c714af7e0b6de6baa2e366d99f28673158346927ce2ca089cfcc4f471272}
+      - {name: 10S150E_20101117_gmted_mea300.tif, sha256: d35a490976b9560b60b2d46ad3853e2f8418604feb5437c7dd3ad5ccf7d61fbd}
+      - {name: 10N180W_20101117_gmted_mea300.tif, sha256: 59c4a933d89e31e0fdd855705215f50bfb2477144b5e1d6f9c5e703b8403dddb}
+      - {name: 10N150W_20101117_gmted_mea300.tif, sha256: b87761a6111751ceae082475b56126bfb2e3f2f5aa30258213a4c8fb1c329fd5}
+      - {name: 10N120W_20101117_gmted_mea300.tif, sha256: 23f97c33657cb0c7b3d2d4abed17489e33e6d0f49fe246239a7bda31611cbfce}
+      - {name: 10N090W_20101117_gmted_mea300.tif, sha256: 240927ea2d57e273b2d4ce40c37ad3f09f89d4c0012d119fbe3fb7bafa33f6e4}
+      - {name: 10N060W_20101117_gmted_mea300.tif, sha256: f6b34b3013abbf5cd4524142894e4c77e5cfe7f185fef222b34ade5277666ace}
+      - {name: 10N030W_20101117_gmted_mea300.tif, sha256: e71b74d1ba33420669e5e2aab68ff10fa8ffb9a8d9c09d53545409e2d36eaf58}
+      - {name: 10N000E_20101117_gmted_mea300.tif, sha256: d1f472b6bf9f4d40f5010e0674ebc87979f0551a748d60ffd7fae6896b635211}
+      - {name: 10N030E_20101117_gmted_mea300.tif, sha256: 190d9dfd122454dffceed591de5c95719f51efa99d5d972f99d237b1066692e1}
+      - {name: 10N060E_20101117_gmted_mea300.tif, sha256: 0a2645d027e5e160097b67d977f77a129c05fc9d9022423da68860a4bf826df4}
+      - {name: 10N090E_20101117_gmted_mea300.tif, sha256: abcd3bd17c572b8236c97caceb6017611b4feb4af27d1a4dac6b87c7983ca653}
+      - {name: 10N120E_20101117_gmted_mea300.tif, sha256: ee3ccb5cd216fae812334572e15044d8506356ca0ce9e8b5c1ca9be0e9f9665b}
+      - {name: 10N150E_20101117_gmted_mea300.tif, sha256: 7d505565f68d1a2713ca58474fc37367244c79be5875fa2cdf8f50b00059b38a}
+      - {name: 30N180W_20101117_gmted_mea300.tif, sha256: 87e5572fca402c45d26621bbccd8f23742369f5964831e44e2e0019b240fba6c}
+      - {name: 30N150W_20101117_gmted_mea300.tif, sha256: 19d7681d888e75f892709dcf64ae90ef621b97e0bd70fe095afee11d066ed994}
+      - {name: 30N120W_20101117_gmted_mea300.tif, sha256: 7839690fd536c8518e8fd2eb047e065fc502421560d256d9e43dcf0473db480a}
+      - {name: 30N090W_20101117_gmted_mea300.tif, sha256: 87974630897fd5c5db03bf5e06f8281af9c6df3f4d9176949a25229b9a7db07b}
+      - {name: 30N060W_20101117_gmted_mea300.tif, sha256: d16a000b7a71e9196f0d209a25d6dcc95fde5bdeabc1600ddcf6eb3093d1e081}
+      - {name: 30N030W_20101117_gmted_mea300.tif, sha256: cc9f116a00f33c74ab8a2c94db27e0ee05ba23b5b3efc7b0858f5d0e14143ceb}
+      - {name: 30N000E_20101117_gmted_mea300.tif, sha256: f704bb6e1d93928f0d639a288dd8cc00c09db27faa699e2c27c5830b5ca251e7}
+      - {name: 30N030E_20101117_gmted_mea300.tif, sha256: 34f09ebfc86be2a73d3a567cbf924f6591c42226a020813191919d3a8a8d4bc6}
+      - {name: 30N060E_20101117_gmted_mea300.tif, sha256: 0f3746176740c52a462e623d849f9ab057a07e4cd966091f0278e5d4e72f03f6}
+      - {name: 30N090E_20101117_gmted_mea300.tif, sha256: efa3f11af67fab8aa9e13ba1b9cd0c3fb38f7aa7f42bc4d77cbb38bdde0ebfde}
+      - {name: 30N120E_20101117_gmted_mea300.tif, sha256: 580f4a770e814d118cdf046860ff1dd9ff47131a92892a2d4e129c18e4f9d553}
+      - {name: 30N150E_20101117_gmted_mea300.tif, sha256: 3e94b1842ae05ec18506576ce660d89525644a0e6bf161e99067507032ebb814}
+      - {name: 50N180W_20101117_gmted_mea300.tif, sha256: 8967ae4f887f8417689bbe4cd3e8402e4cb59ccc9cbb4fe50a426461f1223e9f}
+      - {name: 50N150W_20101117_gmted_mea300.tif, sha256: 3a18fcd724ddccdfcadbd4cb9dfd4116a1cdf94dbc3281751582cc0ee708e5e6}
+      - {name: 50N120W_20101117_gmted_mea300.tif, sha256: 3b4275ab5ea8c805a57bbcb1a72eeef9e3523cc3ffc76b1c8a76e6c9f83347ca}
+      - {name: 50N090W_20101117_gmted_mea300.tif, sha256: 026661c36f2ed3a92f3569f8316d7c6d9c379f6c0636665d42111e30554a4947}
+      - {name: 50N060W_20101117_gmted_mea300.tif, sha256: 5182b7c8b7a3d2a6c4b6e0e9f0fb322f98772e9803a5bec650fd1b1a6e8d80ae}
+      - {name: 50N030W_20101117_gmted_mea300.tif, sha256: 8ad50b3646793f3d3ba287e7340e7daa7e766f903366754ce3d6ce77eaf5081d}
+      - {name: 50N000E_20101117_gmted_mea300.tif, sha256: f53d158158034b8609295037a096c2cabae61320d0b846d4931b1047242a79bd}
+      - {name: 50N030E_20101117_gmted_mea300.tif, sha256: d13fca2c2532b616f7caf4c8a800287a0f84851c4e98945b5d32f90c577d836e}
+      - {name: 50N060E_20101117_gmted_mea300.tif, sha256: 32e80fdf8ee407aac2dfc7813505d7e1d37ca8606f1900bed15e440269e3a44f}
+      - {name: 50N090E_20101117_gmted_mea300.tif, sha256: 2aef31a915447345ca9db5c609f1b6a8a7c902fd4237a3d3272f85f66c171241}
+      - {name: 50N120E_20101117_gmted_mea300.tif, sha256: 327de36318ef69a614e4c2825dad37c18f2fd65b3b8afce30b4a646ea7e3954b}
+      - {name: 50N150E_20101117_gmted_mea300.tif, sha256: 6e4904488320588c785b70c2806116908c45ba13ec030291f3b17bb94c673509}
+      - {name: 70N180W_20101117_gmted_mea300.tif, sha256: fbd119a41d5087b989e39f481426fe2158fd55a32ba518b9b543babcdce71dcc}
+      - {name: 70N150W_20101117_gmted_mea300.tif, sha256: 697eb25538067d8511f77994e4a4d8d315c538ebda2b5d508ef91394b7cde9de}
+      - {name: 70N120W_20101117_gmted_mea300.tif, sha256: b0151e3569b620669081c6f7cb370f5248ea79433c938c0dd7aa374f843f74b4}
+      - {name: 70N090W_20101117_gmted_mea300.tif, sha256: 795b3a4d970315bfecb9474e30f37d44387f54bc255d55a64c998f1437d76cc2}
+      - {name: 70N060W_20101117_gmted_mea300.tif, sha256: 8b0321bbfb7f1d23b44dd4460e39a64a1dbc9e62ce3cd98462200374a5704a61}
+      - {name: 70N030W_20101117_gmted_mea300.tif, sha256: 73502e25d4893f078f43335994f7026f412630edeb48d45a45ca6347756ea077}
+      - {name: 70N000E_20101117_gmted_mea300.tif, sha256: 872f6dca8071416bf5c14e8fca8afd4c14a2e454281be73cb78a17fce80b3d19}
+      - {name: 70N030E_20101117_gmted_mea300.tif, sha256: cf45483c57a3c85c5edbb2b1d3e070daa9f743a53fe0d6c6143c358d99ae89b9}
+      - {name: 70N060E_20101117_gmted_mea300.tif, sha256: 8973bcacdfcb110cb6d439ec149358253a92ab654811e7185a5796b4b167019d}
+      - {name: 70N090E_20101117_gmted_mea300.tif, sha256: 424a3b4e49915bbde6b39e3aa0935b8a78b1f55f9aa6c6aa0a7783e7d6d565d3}
+      - {name: 70N120E_20101117_gmted_mea300.tif, sha256: 1083166ce7cbccf2897ea821a22541fc92c8f1bf98a33664d3a00cd79d98b65f}
+      - {name: 70N150E_20101117_gmted_mea300.tif, sha256: 3ebe1deaed769795cbe8b20ec43f9209b4c2082201fb88cd9f78d091def762cf}
+  - id: gmted_std30
+    kind: raster
+    url: https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/topo/downloads/GMTED/Global_tiles_GMTED/300darcsec/std/{dir}/{name}
+    sha256: 9b4acb93087c371ffdfebae3c8324c3333646fcbd964916fcf3870a860caff2e
+    license: public-domain
+    retrieved: 2026-11-25
+    note: "GMTED2010 standard deviation of elevation, 30 arc-second tiles (USGS EROS, public domain)"
+    files:
+      - {name: 50S180W_20101117_gmted_std300.tif, sha256: 669a16666cf22d467e99dc8bc018f8eb75317c45097e2468c46c614496f98879}
+      - {name: 50S150W_20101117_gmted_std300.tif, sha256: 9dc3cf302ec1afa59e182b97876f47dddf2403113c69ce658709176e74b20be8}
+      - {name: 50S120W_20101117_gmted_std300.tif, sha256: 5ace4fc0ef3dff7d3d156b3fb0aeacf5bd7e81a752524dac9d55ae8e734bce28}
+      - {name: 50S090W_20101117_gmted_std300.tif, sha256: 3b6546d4da83934b052add0991a9de0c7a6d410c735b2cb1bd2150befe25072d}
+      - {name: 50S060W_20101117_gmted_std300.tif, sha256: 71da2d964182ff1e2928b60e604e69dc53f7800fe68a70eb32405cc3868b60dd}
+      - {name: 50S030W_20101117_gmted_std300.tif, sha256: 7ebe31ab3295d16683f143f0432c7ebb8f9a46cd165fa818537ac68b0febac82}
+      - {name: 50S000E_20101117_gmted_std300.tif, sha256: 80b3d32c65939e8ffa841e225f1c318be0cf4388264f9fa23b9ccadd00cb340d}
+      - {name: 50S030E_20101117_gmted_std300.tif, sha256: cbb76974e5639349c35815c30e62c3acd0cd6b0a3743b6eacea509af3c484868}
+      - {name: 50S060E_20101117_gmted_std300.tif, sha256: 6c9b6c61058a7cae718e1383d703f5e7fe5e9638b86845c2c1b0c35aaf02bb7b}
+      - {name: 50S090E_20101117_gmted_std300.tif, sha256: 2bd9582768c3e498a0dd37217a4cdf13baa334faffe87a80bfe4c0e0baf78498}
+      - {name: 50S120E_20101117_gmted_std300.tif, sha256: 6a153b7e3de9d7058d46eddf6a5f07e6181e3219c739d7842b201147bd5a0801}
+      - {name: 50S150E_20101117_gmted_std300.tif, sha256: 36f41406ed643f44afe27cf48b5d62d642c3d1b4914a8f5c169e8f4c3b791b50}
+      - {name: 70S180W_20101117_gmted_std300.tif, sha256: 2c8c5dcbb5883228ae949bec942049052369826362d8b629c2c2fa7b886aedb4}
+      - {name: 70S150W_20101117_gmted_std300.tif, sha256: aa66a4a513698c67ce12cb56757c90cadefe51aaef5ff49f72112f329b4a6b9c}
+      - {name: 70S120W_20101117_gmted_std300.tif, sha256: 7cee939412b670cdf3f93eb9dc92febb5c9b50133ef6f48ec81fc2d2586cf1f3}
+      - {name: 70S090W_20101117_gmted_std300.tif, sha256: 20ca7b9da44cca1ed91c583810350384e12438c2f5a513c07d98b949fb9240b2}
+      - {name: 70S060W_20101117_gmted_std300.tif, sha256: 87b1dbeca88196b46220132bb9b4582d55029d4b2abcdf3f0d5907e8ec35493b}
+      - {name: 70S030W_20101117_gmted_std300.tif, sha256: d9ab48055935ae58791d1a579d45979bbe2856ed66f45902983cf2d983bafe0f}
+      - {name: 70S000E_20101117_gmted_std300.tif, sha256: 346a818ced62a9ce8bbf37afbdf2bde92c95910418c9dec3a2bc80cc44e4122f}
+      - {name: 70S030E_20101117_gmted_std300.tif, sha256: 249fba7e554380a65471e283e0116839cebfecb38cb7306dba25d67c9dc8c9a7}
+      - {name: 70S060E_20101117_gmted_std300.tif, sha256: 9857f830c56cff2bbce0c817a1c9963fda059a10711023d4a27eed067552e521}
+      - {name: 70S090E_20101117_gmted_std300.tif, sha256: d903b4e2261bd681a8216d9e9c7129f75a10eb46d43147e8bc44e03643b9008d}
+      - {name: 70S120E_20101117_gmted_std300.tif, sha256: e9af4fa627ac8843cd8a801538c4f147929fcb3dff106cfbcb629b2c3191800f}
+      - {name: 70S150E_20101117_gmted_std300.tif, sha256: 24ad119044d5ed1f5a7746bc4d86bdc1e97695d6e6fabef9506b64280c0aa8c5}
+      - {name: 30S180W_20101117_gmted_std300.tif, sha256: beb98014cc11349cbdf33c91733dd6c7428556ac95e04177dea0539e601764ca}
+      - {name: 30S150W_20101117_gmted_std300.tif, sha256: bcb6d63dc299239ab67696af86235854f4a2bc2903e295e229ad2ea7fe888bf8}
+      - {name: 30S120W_20101117_gmted_std300.tif, sha256: dce3146f8b1d15ae0e493cdc75019df751aed266417140feb4ecec5ae6ab0b67}
+      - {name: 30S090W_20101117_gmted_std300.tif, sha256: 5adb6f72ec3851fd8a77749735a7d36e4abfc6ed58a0fcb3183b684e6efa78f9}
+      - {name: 30S060W_20101117_gmted_std300.tif, sha256: de7b58731fb9e56eb0ece6caefeee73e86183addddef5717ee453774a93d1938}
+      - {name: 30S030W_20101117_gmted_std300.tif, sha256: 316312d411ffb82a4a4b0a718fe7db379b7cf176648fad94b92759a88c49de2b}
+      - {name: 30S000E_20101117_gmted_std300.tif, sha256: c936764e7af54cb1935b179e9e7574c7308756537e372e981ca996ee2a6c7c10}
+      - {name: 30S030E_20101117_gmted_std300.tif, sha256: c6fcbfb56ccec0303dda29a278dc8df94f839d8db5d4b06186301009e651b415}
+      - {name: 30S060E_20101117_gmted_std300.tif, sha256: dd260f00d3fdd0ef10fac8052be9c8f62afbec8e1d04d469a8549922f4c88831}
+      - {name: 30S090E_20101117_gmted_std300.tif, sha256: 1b2dedc5bdc1563219ae0ed2a47cd69d1ec62c9446a660f7f6c7f92b8a6d7d7a}
+      - {name: 30S120E_20101117_gmted_std300.tif, sha256: a029e7f40721e538bad4de6eecad4853b9045a6130d865d891161558287f503f}
+      - {name: 30S150E_20101117_gmted_std300.tif, sha256: af10a6e289be53bde198093e71a2652a5f2db21ddc607f77dfc471c1bbeb19f1}
+      - {name: 10S180W_20101117_gmted_std300.tif, sha256: b7124d43648dbf2ff7ad30e061bacd2fad9b9d2ec6c4a08eb0c3f5d74a206cfc}
+      - {name: 10S150W_20101117_gmted_std300.tif, sha256: 4283af13a565a57968a96e8182d1f92ddbee345ff1a7d75d28e1ccae07b5115d}
+      - {name: 10S120W_20101117_gmted_std300.tif, sha256: a971aea5d976a1e657baed9735f2875b31999a55559a6931828e9afa2743c1dd}
+      - {name: 10S090W_20101117_gmted_std300.tif, sha256: 42a4bf4a3cba23470037885c32c4600698ccee97b8f49c9b005a95b8aff55e10}
+      - {name: 10S060W_20101117_gmted_std300.tif, sha256: d9e33ff84619ea6ba6c17f34a2d014907f7d1671e160b1628c17b19a50199b35}
+      - {name: 10S030W_20101117_gmted_std300.tif, sha256: 249ac3b170603c644292a397a13f3d871df0bc633aab1ea5e15677310569585b}
+      - {name: 10S000E_20101117_gmted_std300.tif, sha256: dc5e70e7041914b826e15b71c4ade8f55c7fc047bc49b3f3d53f5c2e3d98f6fa}
+      - {name: 10S030E_20101117_gmted_std300.tif, sha256: c629890c2a2bbec4f27d75473106dff0f3a966c07a8ffa327e21b4ffad8d798b}
+      - {name: 10S060E_20101117_gmted_std300.tif, sha256: ae6ed9665d64fa9d7c7944a81cb5c9776e4f07aa0176d8a4e13243567e250ea9}
+      - {name: 10S090E_20101117_gmted_std300.tif, sha256: bca3a890552ecd7f4c8555c09ca69f700428f743244532278baccd8c79acec25}
+      - {name: 10S120E_20101117_gmted_std300.tif, sha256: 27619ecad2c2e35e3eff4c198cd6cb4dc1f801c84e58b6eb9ca1ac9fabd7a553}
+      - {name: 10S150E_20101117_gmted_std300.tif, sha256: 0144bc97e625abeda323613ee986ad265076fa925f6b5840841cb4fbce0c8bb0}
+      - {name: 10N180W_20101117_gmted_std300.tif, sha256: 084664be36245a09ef9b5e952324c45198f1fda92de69e7e1114fc095d62aa11}
+      - {name: 10N150W_20101117_gmted_std300.tif, sha256: b87761a6111751ceae082475b56126bfb2e3f2f5aa30258213a4c8fb1c329fd5}
+      - {name: 10N120W_20101117_gmted_std300.tif, sha256: 94625b52789cc094a1cdfed7ec2155836953cc282666c90d9c96ef3b5d516443}
+      - {name: 10N090W_20101117_gmted_std300.tif, sha256: 73a985d5756d4132446f6208f5f171de15e55b92c8cdc3fff7883eba3556c2e8}
+      - {name: 10N060W_20101117_gmted_std300.tif, sha256: 67a207e24ae681a7f4d78a8524ba9dd9339151a68db6644158ffcf019343b141}
+      - {name: 10N030W_20101117_gmted_std300.tif, sha256: 903a91e72c593592ffb05c05f77ab76dce3da40b603e78330b3f86288ecf85a9}
+      - {name: 10N000E_20101117_gmted_std300.tif, sha256: bdfdbb3b0a87c7c62dda7930b91a8d1b6d6236f07bf3653937621a7ebb55df3e}
+      - {name: 10N030E_20101117_gmted_std300.tif, sha256: c2f30a391d369f1ef415c125c57c60e6c6e4681f2b893ced4aed546188a9c6ff}
+      - {name: 10N060E_20101117_gmted_std300.tif, sha256: de0bdedf4d6bd83e24cc6a0d6a465ee0349bbc0c5b4d21d55bb049006252fa67}
+      - {name: 10N090E_20101117_gmted_std300.tif, sha256: b21e5066def2e0b8fad6377bc7e16f04e50637a461af0d8bf076ed37aea1035e}
+      - {name: 10N120E_20101117_gmted_std300.tif, sha256: d708d11f6eca8cd68c59adefe4aec74523c55e90a0bec8d142632194a5e624f8}
+      - {name: 10N150E_20101117_gmted_std300.tif, sha256: cce9a28b0a09a2e065ab6f15b325542d7ccb71f780fd62bf8eebb461db0442bf}
+      - {name: 30N180W_20101117_gmted_std300.tif, sha256: 87e5572fca402c45d26621bbccd8f23742369f5964831e44e2e0019b240fba6c}
+      - {name: 30N150W_20101117_gmted_std300.tif, sha256: aebedd06b4b38d1bd60fd949497d26fc23c94aa4f811dbb5c193f92a297c1147}
+      - {name: 30N120W_20101117_gmted_std300.tif, sha256: 15c2246e5e63199b515224e7e7210b78936e6fe29ce60daf3c057fd48efa1cec}
+      - {name: 30N090W_20101117_gmted_std300.tif, sha256: 0d9bac4824574909266f44fbeee747d7c522707cc8a49b655b225e3149a571c0}
+      - {name: 30N060W_20101117_gmted_std300.tif, sha256: 15f618efda5a5d8dad3649ac6c84b01ec61ff02a7ea3e2b744b56aa7fa44deb2}
+      - {name: 30N030W_20101117_gmted_std300.tif, sha256: dff9a2ed69236332e929ab5c39a1f61139b79a595fbb020afc119516f6d4b5bf}
+      - {name: 30N000E_20101117_gmted_std300.tif, sha256: 5f4e5ac04d73ee5d75b3298be825d576cf4e776514ff6b1a065e8daf2ead7284}
+      - {name: 30N030E_20101117_gmted_std300.tif, sha256: e3c10f29a904eb82ff4a0529650129e61176ac861f9a457d956541bde543c091}
+      - {name: 30N060E_20101117_gmted_std300.tif, sha256: b11a30af2fafb711912380804063451b194c1904b0dfc82a0d220657b4a03235}
+      - {name: 30N090E_20101117_gmted_std300.tif, sha256: 26b06cf27d3fd3c11d6c6cc0c096dec2cd37415aa669171b43a659fc694b6472}
+      - {name: 30N120E_20101117_gmted_std300.tif, sha256: 92733f3df6e639f22d7806530001b646a2ec952e432ee29cde1ffe52bcb28314}
+      - {name: 30N150E_20101117_gmted_std300.tif, sha256: e7715087d148a323619d171b1c721346ebc6169bf043388b790f89abd615a502}
+      - {name: 50N180W_20101117_gmted_std300.tif, sha256: 3d9791f5a9db0f945c65cb758a0ed7b87c706a48f3307bf1c0c3b4367a159249}
+      - {name: 50N150W_20101117_gmted_std300.tif, sha256: 0dfac11a41c1c6c54d59f695fd30694c5773a2e5fa97869bbf52e8d479a6d171}
+      - {name: 50N120W_20101117_gmted_std300.tif, sha256: 82938797dbc26bb5d02318a7729d341ce11163517bb7500bdb802461c486403c}
+      - {name: 50N090W_20101117_gmted_std300.tif, sha256: 0db11727479b7ba74e377f817b1aa64d253530dbe72604afec0a82466637e17b}
+      - {name: 50N060W_20101117_gmted_std300.tif, sha256: 850f3bede690cc5dc1ab8b816a6e4303985802b12fc25545adf9967be4e5a06d}
+      - {name: 50N030W_20101117_gmted_std300.tif, sha256: 4335df29f1157f6860504c1a23a685f760a49caa861102221807e7dacdfb2666}
+      - {name: 50N000E_20101117_gmted_std300.tif, sha256: 6cffed528e3898d9713bb566910ce11fa0c3945ef1ebfbf48735f6c286d48f0b}
+      - {name: 50N030E_20101117_gmted_std300.tif, sha256: d49b6d97ee1280f801985771b909e0534de59e38861242a1b528ff067ace0970}
+      - {name: 50N060E_20101117_gmted_std300.tif, sha256: 512dcec7a267705e765bef43711f5774a010215b987c7fb8075a2528c806e1e1}
+      - {name: 50N090E_20101117_gmted_std300.tif, sha256: ff34d86e3aa330ba0b5d7a7774f0ff8f57cc6889974fa008f199f4be681ccf02}
+      - {name: 50N120E_20101117_gmted_std300.tif, sha256: df7d04297a0f18b5ee0099ff948bc58a5d3817edb2f4b082623f00c21eafefd5}
+      - {name: 50N150E_20101117_gmted_std300.tif, sha256: 5ee4484bf3c07b633ef5d20d9dc400859eeb671713201b462f23f7a44e718f53}
+      - {name: 70N180W_20101117_gmted_std300.tif, sha256: eee743c42609d6d808a1affd0c6efeeab19f8ac40666613e2016860171e13aed}
+      - {name: 70N150W_20101117_gmted_std300.tif, sha256: 27fb839819a96e7c9cf2b2f1fb649e3427e29f1e617ad1e0e0e7b00be85a4f29}
+      - {name: 70N120W_20101117_gmted_std300.tif, sha256: 0dd26371b28555f2eff4bbcde71bbc3807f29f2045fd0862841428dbaa7ab5d1}
+      - {name: 70N090W_20101117_gmted_std300.tif, sha256: da2ef3b5eac54784ee7503cf7260d64b3f2c4b3b9a41495f42a0c103f1f1163a}
+      - {name: 70N060W_20101117_gmted_std300.tif, sha256: c28f78ebe03c6bfd2cf4962df58c30ff259b2538f0ab7a0bdcda118224249149}
+      - {name: 70N030W_20101117_gmted_std300.tif, sha256: 4f423cda8d61fb28e13b2c9934056531729f8618b0a5b68cfbd8a83885112b88}
+      - {name: 70N000E_20101117_gmted_std300.tif, sha256: cb70b4b53ccdcead40a6426f9d2e9376388b0cf79c7aad9096148d99cfa862a5}
+      - {name: 70N030E_20101117_gmted_std300.tif, sha256: 5409f7cfc5e36bdd5bc2a40e7969b8fc331bbe93b1b29bd881776e49899d36db}
+      - {name: 70N060E_20101117_gmted_std300.tif, sha256: 9ac311a62e3cddb6abb0a6fc3c3cab1294af55debe448935cb8874989851de2d}
+      - {name: 70N090E_20101117_gmted_std300.tif, sha256: 3993d68fb3255ea2076b047af85c2d91ba68963c344b87921d92ee1e9ff1bab2}
+      - {name: 70N120E_20101117_gmted_std300.tif, sha256: c669edaa425c075e38b234b822ed04acb87597a464b7b89eb2d2212ba40d73ac}
+      - {name: 70N150E_20101117_gmted_std300.tif, sha256: 1e26de7eed63db9df6cbf36fa228b9e09eb314a6834975175ef8c1438b74e3e1}
+  - id: glwd_v2
+    kind: raster
+    url: https://ndownloader.figshare.com/files/54001814
+    sha256: 0eb180b3efa0a6aba375055effcc79c05404c519877128374eb8b80ada0a4c0d
+    license: CC-BY-4.0
+    retrieved: 2026-11-25
+    note: "Global Lakes and Wetlands Database v2.0, combined classes (GeoTIFF, 15 arc-second), Lehner et al., doi 10.6084/m9.figshare.28519994.v1, CC BY 4.0"
+    files:
+      - {name: GLWD_v2_0_combined_classes_tif.zip, sha256: 5003d9e6603efd5b2e97ab91ef5e4a33c7ada544c73b7fe74d22a08847d88236}
+  - id: worldcover_grid
+    kind: raster
+    url: https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/esa_worldcover_grid.geojson
+    sha256: c401fb198e89a66ccd08c32277695e15f4ac1797440848eb974aa8ba60543d17
+    license: CC-BY-4.0
+    retrieved: 2026-11-25
+    note: "ESA WorldCover 2021 v200 tile grid"
+    files:
+      - {name: esa_worldcover_grid.geojson, sha256: eeb5074bf182c411b3872b2494f6514401ecd9ba8ba0c353fe282f1e2b822f5b}
+  - id: worldcover_2021
+    kind: cog-overview
+    url: https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_{name}_Map.tif
+    grid: worldcover_grid
+    level: 1125
+    sha256: 4a46a65013ce9f9d13210d7f380f9df48d7b9f77c4e1c32597b0ba55c2d390ec
+    license: CC-BY-4.0
+    retrieved: 2026-11-25
+    note: "ESA WorldCover 2021 v200 (Zanaga et al., doi 10.5281/zenodo.7254221, CC BY 4.0), only the 1125x1125 overview of each 3x3 degree tile is read; sha256 covers the decoded overview bytes of all tiles"
+  - id: ne_rivers
+    kind: ne
+    url: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_rivers_lake_centerlines.geojson
+    sha256: bb854a900ecbd3b408df46d5e16e3e0f974ba55993f9d8b5c26e855273c0905a
+    license: public-domain
+    retrieved: 2026-11-25
+    note: "Natural Earth 10m rivers and lake centerlines, tag v5.1.2 (https://www.naturalearthdata.com/about/terms-of-use/)"

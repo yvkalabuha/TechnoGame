@@ -14,6 +14,9 @@ public static class ModLoader
     public const string NodeKind = "node";
     public const string ProductClassKind = "product_class";
     public const string ScenarioKind = "scenario";
+    public const string InstituteKind = "institute";
+    public const string IntelligenceKind = "intelligence";
+    public const string NodeHistoryKind = "node_history";
 
     /// <summary>
     /// Reserved sub-directory of a mod for localization (ADR-0018 §2). The loader never reads, lists or hashes it:
@@ -28,6 +31,9 @@ public static class ModLoader
         var nodes = new ObjectStore(NodeKind);
         var classes = new ObjectStore(ProductClassKind);
         var scenarios = new ObjectStore(ScenarioKind);
+        var institutes = new ObjectStore(InstituteKind);
+        var intelligence = new ObjectStore(IntelligenceKind);
+        var history = new ObjectStore(NodeHistoryKind);
         foreach (ModManifest mod in mods)
         {
             CheckUnlistedFiles(mod);
@@ -38,7 +44,7 @@ public static class ModLoader
                 if (!File.Exists(path))
                     throw new DataLoadException($"{path}: file listed in {mod.Id}/mod.yaml does not exist");
                 YNode root = StrictYaml.Parse(File.ReadAllText(path), path);
-                ApplyFile(root, context, nodes, classes, scenarios);
+                ApplyFile(root, context, nodes, classes, scenarios, history, intelligence, institutes);
             }
         }
 
@@ -46,10 +52,17 @@ public static class ModLoader
         ProductClassTable classTable = ProductClassTable.Build(classes.Objects(), nodeTable);
         ImmutableArray<ScenarioData> scenarioList =
             [.. scenarios.Objects().Select(o => ScenarioData.Build(o.Map, nodeTable, classTable))];
-        return new GameData(mods, nodeTable, classTable, scenarioList);
+        List<(string Id, YMap Map)> intel = intelligence.Objects();
+        if (intel.Count > 1)
+            throw new DataLoadException($"{IntelligenceKind}: at most one object is allowed, found {intel.Count}");
+        var warnings = new List<string>();
+        NodeHistoryTable historyTable = NodeHistoryTable.Build(history.Objects(), nodeTable, nodes.IsDeleted, warnings);
+        return new GameData(mods, nodeTable, classTable, scenarioList, historyTable, warnings.ToImmutableArray(), InstituteTable.Build(institutes.Objects()),
+            intel.Count == 1 ? IntelligenceData.Build(intel[0].Map) : null);
     }
 
-    private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios)
+    private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios,
+        ObjectStore history, ObjectStore intelligence, ObjectStore institutes)
     {
         var file = new MapReader(root);
         YNode kindNode = file.Required("kind");
@@ -58,6 +71,9 @@ public static class ModLoader
             NodeKind => nodes,
             ProductClassKind => classes,
             ScenarioKind => scenarios,
+            InstituteKind => institutes,
+            IntelligenceKind => intelligence,
+            NodeHistoryKind => history,
             var other => throw DataLoadException.At(kindNode, $"unknown kind '{other}'"),
         };
 

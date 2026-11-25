@@ -1,7 +1,7 @@
 ---
 id: TASK-0140
 title: "Sound audit: sounds that play at the wrong moment or irritate (owner feedback)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: sound-director
@@ -13,6 +13,7 @@ related: [TASK-0135]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («звуки невпопад, раздражают немного»)"
+review_ref: "sound-director: PASS (task review); owner: accepted in playtest 2026-11-24 (Звуки — нормально, без замечаний)"
 created: 2026-11-24
 ---
 

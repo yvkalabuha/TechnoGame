@@ -155,14 +155,50 @@
 | [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | DONE | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
 | [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | DONE | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
 | [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | DONE | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
-| [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | REVIEW | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
+| [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | DONE | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
 | [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | DONE | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
 | [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | DONE | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 | [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | DONE | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
-| [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | REVIEW | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
-| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
+| [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | DONE | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
+| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | DONE | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | DONE | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
+| [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | DONE | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
+| [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | DONE | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
+| [TASK-0150](../development/tasks/TASK-0150-levers-core-reserve.md) | DONE | Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme | MS-M05 |
+| [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | DONE | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
+| [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | DONE | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
+| [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | DONE | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
+| [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | DONE | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
+| [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | DONE | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
+| [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | REVIEW | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
+| [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | DONE | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
+| [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
+| [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | DONE | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
+| [TASK-0160](../development/tasks/TASK-0160-intelligence-v1-core.md) | DONE | Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) | MS-M05 |
+| [TASK-0161](../development/tasks/TASK-0161-tree-year-rings.md) | IN_PROGRESS | Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) | MS-M05 |
+| [TASK-0162](../development/tasks/TASK-0162-k0-kernel-primitives.md) | DONE | K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5 | MS-M1 |
+| [TASK-0163](../development/tasks/TASK-0163-globe-country-labels.md) | IN_PROGRESS | Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) | MS-M05 |
+| [TASK-0164](../development/tasks/TASK-0164-m0-slice-tag.md) | DONE | M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) | MS-M1 |
+| [TASK-0165](../development/tasks/TASK-0165-kernel-entity-tables.md) | DONE | M1: Kernel entity tables mechanism (ADR-0029, T-M1-03), no golden change | MS-M1 |
+| [TASK-0166](../development/tasks/TASK-0166-owners-1945-check.md) | IN_PROGRESS | M1: verify 1945 owners of 379 regions against sources (T-M1-10) | MS-M1 |
+| [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | IN_PROGRESS | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
+| [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | DONE | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
+| [TASK-0169](../development/tasks/TASK-0169-red-ci-sketch-order.md) | DONE | Red CI: sketch validates task id and count before opening the sandbox Box | MS-M0 |
+| [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | DONE | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
+| [TASK-0171](../development/tasks/TASK-0171-levers-flags-on-golden-batch.md) | BLOCKED | Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation | MS-M0 |
+| [TASK-0172](../development/tasks/TASK-0172-zaf-core-regions.md) | DONE | Data: South Africa regions status core of ZAF (O-076), checked per region | MS-M0 |
+| [TASK-0173](../development/tasks/TASK-0173-lab-p7-institutes-early-build.md) | DONE | Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on | MS-M0 |
+| [TASK-0174](../development/tasks/TASK-0174-institutes-followup-debt0107.md) | DONE | Institutes follow-up: iterative group walk (deep graph), built institute capacity by level, cooldown on same goal, no build charge after completion | MS-M0 |
+| [TASK-0175](../development/tasks/TASK-0175-institutes-stretched-price.md) | DONE | Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares) | MS-M0 |
+| [TASK-0176](../development/tasks/TASK-0176-lab-recalibrate-institute-parameters-so-1945-1977-.md) | REVIEW | Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) | MS-M0 |
+| [TASK-0177](../development/tasks/TASK-0177-data-mongolia-1945-as-an-independent-country-mng-o.md) | DONE | Data: Mongolia 1945 as an independent country (MNG owner and controller), #550 | MS-M0 |
+| [TASK-0178](../development/tasks/TASK-0178-gate-ai-institute-goals-on-the-path-to-the-next-ai.md) | IN_PROGRESS | Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) | MS-M0 |
+| [TASK-0179](../development/tasks/TASK-0179-lab-licence-market-calibration-what-ai-buys-and-wh.md) | IN_PROGRESS | Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) | MS-M0 |
+| [TASK-0180](../development/tasks/TASK-0180-data-real-prerequisites-for-early-g5-g6-knowledge-.md) | IN_PROGRESS | Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) | MS-M0 |
+| [TASK-0181](../development/tasks/TASK-0181-3d-fighters-g1-g6-v2-by-gemini-544-557-slot-kits-p.md) | DONE | 3D fighters G1-G6 v2 by Gemini (#544, #557): slot kits, paper-style sheet, art director acceptance | MS-M0 |
+| [TASK-0182](../development/tasks/TASK-0182-fix-ai-fleet-sale-booked-at-a-different-g-front-th.md) | IN_PROGRESS | Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10) | MS-M0 |
+| [TASK-0183](../development/tasks/TASK-0183-pace-tuning-g3-g4-after-owner-play-session-ahead-c.md) | PROPOSED | Pace tuning G3-G4 after owner play session: ahead cost on on-time nodes, epoch budget weighting (#558) | MS-M0 |
 
 ## Гипотезы
 
@@ -217,6 +253,9 @@
 | [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
 | [ADR-0025](../docs/decisions/ADR-0025-view-snapshot-buffer-ring.md) | ACCEPTED | View snapshot: scoped client view |
 | [ADR-0026](../docs/decisions/ADR-0026-ai-generated-images.md) | ACCEPTED | AI-generated images as static illustrations (amendment to ADR-0009, #445) |
+| [ADR-0027](../docs/decisions/ADR-0027-daily-tick-228.md) | ACCEPTED | Daily tick (#228): closable conditions of ADR-0019, decay and growth on Rate, parallel work with the player levers batch |
+| [ADR-0028](../docs/decisions/ADR-0028-m1-tick-budget.md) | ACCEPTED | M1 tick budget: split revision after EXP-0007, one K_d definition, K4 thresholds for the 5-7 s speed floor, measurement ladder with pre-registered outcomes |
+| [ADR-0029](../docs/decisions/ADR-0029-entity-tables.md) | ACCEPTED | Entity tables on the move to ADR-0020: which entities leave the actors table, child tables with parent-aligned chunks |
 
 ## Research Reports
 

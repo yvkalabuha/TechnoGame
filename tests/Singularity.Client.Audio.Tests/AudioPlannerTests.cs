@@ -368,7 +368,7 @@ public class SpeedSoundsTests
     {
         var s = new SpeedSounds();
         Assert.Null(s.Observe(2));
-        Assert.Equal("tempo_3", s.Observe(3));
+        Assert.Equal("tempo_3", s.Observe(4));
         s.Rebase();
         Assert.Null(s.Observe(1));       // after a load
     }

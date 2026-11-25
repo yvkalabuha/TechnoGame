@@ -66,6 +66,7 @@ public class WorldMapTests
         new object[] { 18.0, 59.3, null!, "SWE", "core" },
         new object[] { 139.7, 35.7, null!, "JPN", "core" },
         new object[] { 32.5, 15.6, null!, "SDN_AE", "colony" },
+        new object[] { 106.9, 47.9, null!, "MNG", "core" }, // Ulaanbaatar: Outer Mongolia is its own country in 1945 (#550)
     };
 
     [GeoTheory]

@@ -81,13 +81,42 @@ public enum PilotProfileSet
 }
 
 /// <summary>Budget split of an actor: research, capability, process development (D), procurement, quality programme (spec §3.4).</summary>
-public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality)
+public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality, Fx6 Security = default)
 {
-    public Fx6 Sum => Research + Capability + Effort + Procurement + Quality;
+    /// <summary>
+    /// The sum of every item. <c>Security</c> is the seventh item of the owner decision #260 (intelligence, TASK-0160): zero in a run without intelligence, so the sums of
+    /// such a run are the old ones.
+    /// </summary>
+    public Fx6 Sum => Research + Capability + Effort + Procurement + Quality + Security;
 
     /// <summary>Every share is non-negative and the sum is exactly 1 in <see cref="Fx6"/> (the <c>set_budget_shares</c> validator).</summary>
-    public bool IsValid => Research >= Fx6.Zero && Capability >= Fx6.Zero && Effort >= Fx6.Zero
-        && Procurement >= Fx6.Zero && Quality >= Fx6.Zero && Sum == Fx6.One;
+    public bool IsValid => InRange && Sum == Fx6.One;
+
+    /// <summary>
+    /// The split with the seventh item taken out for the AI (TASK-0160): the preset is paid first from the quality item (it has no reader in the core), the rest from
+    /// procurement; clamped to what both hold, so no share goes negative. Zero security returns the split unchanged. The sum stays what it was.
+    /// </summary>
+    public BudgetShares WithSecurity(Fx6 security)
+    {
+        if (security <= Fx6.Zero)
+            return this;
+        Fx6 room = Quality + Procurement;
+        if (security > room)
+            security = room;
+        Fx6 fromQuality = security < Quality ? security : Quality;
+        return this with { Quality = Quality - fromQuality, Procurement = Procurement - (security - fromQuality), Security = Security + security };
+    }
+
+    /// <summary>What the five items leave: the share that goes to the reserve account (zero when the sum is 1).</summary>
+    public Fx6 Reserve => Fx6.One - Sum;
+
+    /// <summary>Every share is non-negative and the sum is at most 1: the remainder is the reserve (the validator when the reserve is on).</summary>
+    public bool IsValidWithReserve => InRange && Sum <= Fx6.One;
+
+    /// <summary>Every share lies in [0, 1]; checked before any sum so that an absurd value is a refusal, not an overflow.</summary>
+    public bool InRange => Within(Research) && Within(Capability) && Within(Effort) && Within(Procurement) && Within(Quality) && Within(Security);
+
+    private static bool Within(Fx6 v) => v >= Fx6.Zero && v <= Fx6.One;
 }
 
 /// <summary>
@@ -214,6 +243,51 @@ public sealed record PolicyParams
     /// <c>LIC_OFF</c> (contract §8.6 п. 6): no licence offers and no <c>EVT_LIC</c> draws; the rest of T6d (disruptions, why_not triggers) stays.
     /// </summary>
     public bool LicOff { get; init; }
+
+    // ---- the licence market (TASK-0152; flag off = the world of main; the numbers are O-062, declared before any run)
+
+    /// <summary>The licence market (several licences per country, a permanent catalogue, <c>BuyLicence</c>, AI buying rules). Off in main.</summary>
+    public bool LicenceMarket { get; init; }
+
+    /// <summary>Rows of the actors whose licences move only by commands (the player's): the AI never buys for them and their catalogue default is m = 1.</summary>
+    public System.Collections.Immutable.ImmutableArray<int> LicenceExternalRows { get; init; } = [];
+
+    /// <summary>Lowest and highest multiplier of a seller's price (O-062).</summary>
+    public Fx6 SellerMMin { get; init; } = F(500_000);
+    public Fx6 SellerMMax { get; init; } = Fx6.FromInt(2);
+
+    /// <summary>Default multiplier of an AI seller by profile (O-062): Quality 1.3, Mass 0.8, the others 1.</summary>
+    public Fx6 SellerMQuality { get; init; } = F(1_300_000);
+    public Fx6 SellerMMass { get; init; } = F(800_000);
+
+    /// <summary><c>k</c>: the AI buys at a price not above <c>k × ref</c> (O-062: 1.5).</summary>
+    public Fx6 AiPriceK { get; init; } = F(1_500_000);
+
+    /// <summary><c>L</c> in months of the buyer's procurement: the AI buys at a price not above it (O-062: 6).</summary>
+    public int AiStockMonths { get; init; } = 6;
+
+    /// <summary>
+    /// Share of its funds an AI buyer keeps in the month it pays a licence (licence-prices.md §7 test: the purchases of the AI do not fall below half
+    /// a month's base). Not in O-062: it stands for the reserve of TASK-0150 until that lands, so a price can never take the whole month.
+    /// </summary>
+    public Fx6 AiKeepShare { get; init; } = F(500_000);
+
+    /// <summary>The AI does not buy a generation it reaches itself within this many months (O-062: 12).</summary>
+    public int AiMinOwnEtaMonths { get; init; } = 12;
+
+    /// <summary>Licence income of an externally controlled seller per calendar year, as a share of its yearly budget (O-062: 10 %).</summary>
+    public Fx6 IncomeCapShare { get; init; } = F(100_000);
+
+    /// <summary>Fewer AI catalogues of a generation than this show no world average price (O-062: 2).</summary>
+    public int ThinMarketSellers { get; init; } = 2;
+
+    /// <summary>Actor ids by row and the calendar of the run, for the yearly blocs and friends.</summary>
+    public System.Collections.Immutable.ImmutableArray<string> MarketActorIds { get; init; } = [];
+    public int MarketStartYear { get; init; } = 1945;
+    public int MarketStartMonth { get; init; } = 1;
+
+    /// <summary>Blocs and friends by year (O-056); empty when not given.</summary>
+    public AllianceTable Alliances { get; init; } = AllianceTable.Empty;
 
     /// <summary><c>T6D_OFF</c> (contract §8.6 п. 6): no licences, no disruptions, no why_not triggers (A43.7) and no <c>mult_P</c>: the world of the build before T6d.</summary>
     public bool T6dOff { get; init; }

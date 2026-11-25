@@ -12,6 +12,9 @@ public sealed record ProductsParams
 {
     private static Fx6 F(long raw) => Fx6.FromRaw(raw);
 
+    /// <summary>The licence market (TASK-0152): a project may come with a licence (column <c>licFrom</c> per design). Off in main: no column, no adoption.</summary>
+    public bool LicenceMarket { get; init; }
+
     /// <summary>Wright exponent of the class as q10 (ADR-0012): LR 0.80 → b = 0.3219 → 330.</summary>
     public int LearningQ10 { get; init; } = 330;
 

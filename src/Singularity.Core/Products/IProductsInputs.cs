@@ -191,6 +191,12 @@ public interface IProductsInputs
     Fx6? LineRate(int actorRow, int design, long month);
 
     /// <summary>
+    /// The actor's own <c>start_series</c> on a line already in series sets the rate of that line (the player under an adviser, TASK-0153). For any other actor
+    /// such a command stays without effect, as before.
+    /// </summary>
+    bool PlayerRateCommands(int actorRow) => false;
+
+    /// <summary>
     /// <c>TrainingBudget(actor, design, t)</c> = <c>T_a</c> of the tooling plan of month t when the line of <paramref name="design"/> is the
     /// actor's training series, else 0 (contract §4.4d step 7, spec §3.5 A39, A41; F15); ≥ 0. Step 7 spends it after the common money
     /// left, on that line only; what is not spent is an unspent residue of the month.
@@ -202,6 +208,12 @@ public interface IProductsInputs
     /// (TASK-0134). Allocates nothing.
     /// </summary>
     int ProgrammeCommands(int actorRow, long month, Span<ProgrammeCommand> into) => 0;
+
+    /// <summary>
+    /// The licences that begin in month t (the licence market, TASK-0152): (seller row, engine generation), written to <paramref name="into"/>; returns the count.
+    /// The layer makes each a project of the actor (<c>AdoptLicensedDesign</c>). Allocates nothing; 0 without the market.
+    /// </summary>
+    int NewLicences(int actorRow, long month, Span<(int Seller, int Gen)> into) => 0;
 
     /// <summary>Whether a programme may start on the process now (<c>why_not</c> of the command): a pure function of the snapshot.</summary>
     ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) => new(MasteryRefusal.OutOfScope);

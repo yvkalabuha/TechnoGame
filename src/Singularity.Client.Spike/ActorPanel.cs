@@ -216,8 +216,8 @@ public sealed partial class ActorPanel : PanelContainer
         for (int i = 0; i < _flaskSci.Length; i++)
         {
             _sciName[i].CustomMinimumSize = new Vector2(112, 0); _flaskSci[i].SizeFlagsHorizontal = SizeFlags.ShrinkCenter; _sciName[i].TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            // C1: the name wraps by words to at most two lines at the text size; only a longer name is trimmed (tooltip has the full one)
-            _sciName[i].AutowrapMode = TextServer.AutowrapMode.Word; _sciName[i].MaxLinesVisible = 2; _sciName[i].CustomMinimumSize = new Vector2(112, 40);
+            // C1: the name wraps by words to at most three lines at the text size; only a longer name is trimmed (tooltip has the full one)
+            _sciName[i].AutowrapMode = TextServer.AutowrapMode.Word; _sciName[i].MaxLinesVisible = 3; _sciName[i].CustomMinimumSize = new Vector2(112, 58);
             _sciName[i].HorizontalAlignment = HorizontalAlignment.Center; _sciName[i].MouseFilter = MouseFilterEnum.Pass;
             _sciCell[i].AddThemeConstantOverride("separation", 0);
             _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]);
@@ -537,7 +537,7 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var d in a.Designs)
         {
             if (d.Stage == DesignStage.None) continue;
-            string line = Loc.T("design.line", d.Design, d.Gen, Loc.T("stage." + (int)d.Stage), Loc.N(d.UnitCost.ToDouble()), Loc.N(d.Readiness.ToDouble()), Loc.N(d.InService.ToDouble(), 0))
+            string line = Loc.T("design.line", d.Design + 1, d.Gen, Loc.T("stage." + (int)d.Stage), Loc.N(d.UnitCost.ToDouble()), Loc.N(d.Readiness.ToDouble()), Loc.N(d.InService.ToDouble(), 0))
                 + (d.Stage is DesignStage.Series ? Loc.T("design.series", Loc.N(d.Rate.ToDouble()), Loc.T("bind." + d.Bind)) : "");
             rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Handle));
         }
@@ -552,8 +552,8 @@ public sealed partial class ActorPanel : PanelContainer
             var r = new HBoxContainer();
             r.AddChild(Ui.Wrap(text));
             Button act = null;
-            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design.Slot), focusable: true);
-            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design.Slot), focusable: true);
+            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design.Slot + 1), focusable: true);
+            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design.Slot + 1), focusable: true);
             if (act != null) { act.SizeFlagsVertical = SizeFlags.ShrinkBegin; r.AddChild(act); }
             _designs.AddChild(r);
         }
@@ -590,10 +590,15 @@ public sealed partial class ActorPanel : PanelContainer
             foreach (var l in s.Links)
             {
                 if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false)); break; }
-                string subj = l.Layer == WhyNotLayer.Knowledge ? Names.Node(_host.Data, l.SubjectId) : "№" + l.SubjectId;
+                // The affected process keeps its plain name (a capability link names it in Process), so that two processes with one blocker differ; never a bare id.
+                int subjNode = l.Layer == WhyNotLayer.Knowledge ? l.SubjectId : l.Layer == WhyNotLayer.Capability ? l.Process : -1;
+                string subjName = subjNode >= 0 ? Names.Node(_host.Data, subjNode) : "";
+                string subj = subjName != "" && subjName[0] != '#' ? ": " + subjName : "";
                 string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
                 string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("lever." + x, x.ToString()))));
-                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {subj} · {Loc.N(l.Have.ToDouble())}/{Loc.N(l.Need.ToDouble())}{eta}{lev}", n == 1));
+                // A plain sentence: what blocks, how much is there, when it will be enough, what to do; the red square gets the words «Главная помеха» (C4, A5).
+                string text = string.Join(" ", new[] { (n == 1 ? Loc.T("why.root") : ""), Loc.T("why.line", Loc.TOr("cause." + l.Cause, l.Cause.ToString()), subj), Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble())), eta, lev }.Select(x => x.Trim()).Where(x => x != ""));
+                lines.Add((text, n == 1));
             }
         }
         string sig = Loc.Lang + "|" + string.Join("\n", lines.Select(x => x.text));

@@ -13,7 +13,11 @@ namespace Singularity.Session;
 /// </summary>
 internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInputs
 {
-    public Fx6 ResearchBudget(int actorRow, long month) => world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow);
+    // With institutes the money is cut by the running projects and the upkeep and grown by the capacity of the built ones (rev 4 §8); the factor is exactly 1 without them.
+    public Fx6 ResearchBudget(int actorRow, long month) =>
+        world.Institutes is null
+            ? world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow)
+            : world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow) * world.Institutes.BudgetFactor(actorRow, month);
 
     public Fx6 Priority(int actorRow, int nodeRow, long month)
     {
@@ -23,8 +27,27 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
         return world.ResearchWeight.Length == 0 || d < 0 ? prio : prio * world.ResearchWeight[d];
     }
 
+    public int PriorityGoals(int actorRow, long month, Span<int> nodeRows, Span<Fx6> multipliers) =>
+        world.Institutes?.Goals(actorRow, nodeRows, multipliers) ?? 0;
+
     public Fx6 J(int actorRow, int nodeRow, long month) =>
         KnowledgeRng.J(world.Streams.Know, month == 0 ? 0 : (int)((month - 1) / 12), actorRow, world.Graph.Number[nodeRow]);
+
+    // The player's fund_programme of month t, cut to the reserve of the snapshot: the same value the reserve spends (one function in the knowledge layer).
+    public bool FundProgramme(int actorRow, long month, out int nodeRow, out Fx6 amount)
+    {
+        nodeRow = -1;
+        amount = Fx6.Zero;
+        if (world.Reserve is null || world.Commands.Fund(actorRow, month) is not { } f)
+            return false;
+        nodeRow = world.Graph.RowOf(f.Node);
+        Fx6 balance = world.Reserve.Spendable(actorRow);
+        amount = f.Amount < balance ? f.Amount : balance;
+        return nodeRow >= 0;
+    }
+
+    // The theft channel of the intelligence layer; zero (and no read) in a run without it, so c_eff is the old value.
+    public Fx6 StealShare(int actorRow, int nodeRow, long month) => world.Intel?.StealShare(actorRow, nodeRow) ?? Fx6.Zero;
 
     public Fx6 DisciplineVolume(int actorRow, int discipline, long month) => world.Industry.DisciplineVolume(actorRow, discipline);
 

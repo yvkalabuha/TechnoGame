@@ -2,6 +2,7 @@
   <ItemGroup>
     <!-- The client is outside the solution (ADR-0014); its Godot-free audio logic is compiled here as a source link. -->
     <Compile Include="../../src/Singularity.Client.Spike/AudioLogic.cs" Link="AudioLogic.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/ShotFilter.cs" Link="ShotFilter.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/GlobeLookLogic.cs" Link="GlobeLookLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/CreditsData.cs" Link="CreditsData.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/PlanisphereMath.cs" Link="PlanisphereMath.cs" />
@@ -18,6 +19,7 @@
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/PaperTexture.cs" Link="PaperTexture.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/AreaData.cs" Link="AreaData.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/SpeedSteps.cs" Link="SpeedSteps.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TimeGlyphMetrics.cs" Link="TimeGlyphMetrics.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TextureValidator.cs" Link="TextureValidator.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/ViewSubscriptionSync.cs" Link="ViewSubscriptionSync.cs" />

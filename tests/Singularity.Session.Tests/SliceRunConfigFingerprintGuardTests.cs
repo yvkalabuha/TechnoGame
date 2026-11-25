@@ -17,6 +17,7 @@ public class SliceRunConfigFingerprintGuardTests
         ["ChunkSize"] = "execution only (L2): never changes the result",
         ["ViewMode"] = "execution only: what the read views hold",
         ["ViewScope"] = "execution only (ADR-0025): which actors the views carry the node blocks of",
+        ["PlayerActor"] = "execution only (TASK-0160): whose eyes the read views are; only with Institutes it changes the AI and then enters the fingerprint (O-067)",
         ["DailyTickProbe"] = "execution only: an empty daily system, the outcome is that of the flag off",
         ["HashCheckpoints"] = "execution only: when a hash is taken",
         ["HashEveryTick"] = "execution only: when a hash is taken",
@@ -58,6 +59,13 @@ public class SliceRunConfigFingerprintGuardTests
             var a = (ImmutableArray<Fx6>)current!;
             return a.IsDefault ? ImmutableArray.Create(Fx6.One) : a.Add(Fx6.One);
         }
+        if (type == typeof(ImmutableArray<int>))
+        {
+            var a = (ImmutableArray<int>)current!;
+            return a.IsDefault ? ImmutableArray.Create(1) : a.Add(1);
+        }
+        if (type == typeof(AllianceTable))
+            return AllianceTable.Parse("schema: 1\nblocs: []\nfriends:\n  - {a: AAA, b: BBB, from: 1945}\n", "guard.yaml");
         if (type == typeof(ImmutableArray<DisciplineWeight>))
         {
             var a = (ImmutableArray<DisciplineWeight>)current!;

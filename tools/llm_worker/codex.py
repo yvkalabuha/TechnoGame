@@ -128,8 +128,10 @@ def bwrap_argv(worktree, schema_file, codex_exe, home=None, bwrap=None, codex_ho
         a += ["--ro-bind", str(p), str(p)]
     if codex_home.is_dir():
         a += ["--bind", str(codex_home), str(codex_home)]
-    a += ["--ro-bind", str(worktree), "/work", "--ro-bind", str(schema_file), "/schema.json", "--chdir", "/work"]
-    return a
+    a += ["--ro-bind", str(worktree), "/work"]
+    if schema_file is not None:  # image sketches have no output schema
+        a += ["--ro-bind", str(schema_file), "/schema.json"]
+    return a + ["--chdir", "/work"]
 
 
 def command(codex_exe):
@@ -196,11 +198,11 @@ def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None
     return text, usage
 
 
-def log_attempt(task, head, outcome, usage=None, directory=config.LEDGER_DIR, provider="codex"):
+def log_attempt(task, head, outcome, usage=None, directory=config.LEDGER_DIR, provider="codex", now=None):
     """Append-only attempt log next to the ledger (Codex costs no USD, so it is not a ledger entry)."""
     directory.mkdir(parents=True, exist_ok=True)
     usage = usage or {}
-    rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "task": task, "head": head[:12],
+    rec = {"ts": (now or datetime.now(timezone.utc)).isoformat(timespec="seconds"), "task": task, "head": head[:12],
            "outcome": outcome, "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens")}
     if provider != "codex":
         rec["provider"] = provider

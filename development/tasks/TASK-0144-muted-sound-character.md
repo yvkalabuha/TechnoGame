@@ -1,7 +1,7 @@
 ---
 id: TASK-0144
 title: "Muted sound character (#455): soften attack and low-pass all routine cues"
-status: REVIEW
+status: DONE
 level: light
 milestone: MS-M05
 agent: sound-director
@@ -13,6 +13,7 @@ related: [TASK-0140]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner preference #455; light task approved by Orchestrator"
+review_ref: "sound-director: PASS (task review); owner: accepted in playtest 2026-11-24 (Звуки — нормально, без замечаний)"
 created: 2026-11-24
 ---
 

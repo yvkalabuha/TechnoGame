@@ -344,6 +344,8 @@ public sealed partial class PolicySystem
         var profile = (PolicyProfile)_profile.Current[row];
         Decisions dec = t_decisions ??= new Decisions();
         dec.Reset(_gens, _designs);
+        if (monthly && IsAdviser(row))
+            ReadOrders(row, t);
         PolicyDesign[] designs = dec.Designs;
         for (int d = 0; d < _designs; d++)
             designs[d] = prod.Design(row, d, t);
@@ -478,9 +480,10 @@ public sealed partial class PolicySystem
                 // A project cancelled this month or whose cancel is still pending does not launch.
                 if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > launchLimit || cancelNow[d]
                     || CancelPending(row, t, x.HandleOf(d))
-                    || !prod.Admitted(row, d, t) || GateBlocks(row, d, t))
+                    || !prod.Admitted(row, d, t) || GateBlocks(row, d, t)
+                    || monthly && IsAdviser(row) && OpenSilenced(row, d, t))   // a refused project does not hold the only opening: the next eligible one is proposed
                     continue;
-                Fx6 procurement = Shares(row).Procurement * Budget(row);
+                Fx6 procurement = PlannedProcurement(Shares(row)) * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));
                 // F17b (A41): below y_prod only the candidate is replaced and the working line stays; at y_prod (or with ADMIT) every other line closes.
                 bool all = !yprod || YMin(row, d, t) >= _pp.YProd;
@@ -679,23 +682,31 @@ public sealed partial class PolicySystem
         return false;
     }
 
+    private void PutInt(IntColumn c, int row, bool next, int v)
+    {
+        if (next)
+            c.Next[row] = v;
+        else
+            SetCurrent(c, row, v);
+    }
+
+    private void PutLong(LongColumn c, int row, bool next, long v)
+    {
+        if (next)
+            c.Next[row] = v;
+        else
+            SetCurrent(c, row, v);
+    }
+
     // next = true inside the compute (writes Next); false before tick 0 (loads Current).
     private void Commit(int row, Decisions dec, int stamp, bool next)
     {
-        void setInt(IntColumn c, int v)
-        {
-            if (next)
-                c.Next[row] = v;
-            else
-                SetCurrent(c, row, v);
-        }
-        void setLong(LongColumn c, long v)
-        {
-            if (next)
-                c.Next[row] = v;
-            else
-                SetCurrent(c, row, v);
-        }
+        void setInt(IntColumn c, int v) => PutInt(c, row, next, v);
+        void setLong(LongColumn c, long v) => PutLong(c, row, next, v);
+
+        // An adviser actor gets proposals instead of line decisions (TASK-0153).
+        if (IsAdviser(row))
+            Advise(row, dec, stamp, next);
 
         if (dec.Design.Count > DesignSlots)
             throw new PolicyInvariantException(stamp, row, $"{dec.Design.Count} design commands for {DesignSlots} slots");

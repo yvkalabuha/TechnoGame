@@ -28,4 +28,28 @@ public interface IKnowledgeInputs
     /// <c>lic_knows</c> diagnostic (§6.7), applied in the merge of month t.
     /// </summary>
     ReadOnlySpan<int> LicensedEngines(int actorRow, long month);
+
+    /// <summary>
+    /// The priority goals of the actor in month t (research-institutes-priorities §4): node rows in slot order with the speed multiplier of the institute
+    /// level in the area of each. Returns the count (at most the length of the spans); 0 = no priorities, the knowledge layer then runs its old path.
+    /// Used only by a system built with priority parameters.
+    /// </summary>
+    int PriorityGoals(int actorRow, long month, Span<int> nodeRows, Span<Fx6> multipliers) => 0;
+
+    /// <summary>
+    /// The theft discount of the actor on the node in month t, a share of the node cost (<c>s_steal</c>, INTELLIGENCE.md §2.2); zero without intelligence.
+    /// It enters <c>c_eff</c> as <c>max(k_diff·known, s_steal)</c> and nowhere else (O-051).
+    /// </summary>
+    Fx6 StealShare(int actorRow, int nodeRow, long month) => Fx6.Zero;
+
+    /// <summary>
+    /// The one-off programme of the actor in month t (the player's <c>fund_programme</c> paid from the reserve): node row and the amount, already
+    /// cut to the reserve balance of the snapshot. False when there is none. Used only by a system built with programmes.
+    /// </summary>
+    bool FundProgramme(int actorRow, long month, out int nodeRow, out Fx6 amount)
+    {
+        nodeRow = -1;
+        amount = Fx6.Zero;
+        return false;
+    }
 }

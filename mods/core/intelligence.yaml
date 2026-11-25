@@ -1,0 +1,41 @@
+# Intelligence v1 (docs/game-design/INTELLIGENCE.md rev 3, owner #515, O-051). Every number is a placeholder of the design ([Предп.]; Lab I-1...I-6).
+# Rates are yearly norms (ADR-0027): the core takes a twelfth per month. Shares are shares of the actor's budget (stand-in for a share of GDP).
+kind: intelligence
+define:
+  - id: intel_v1
+    growth_per_year: 0.60        # a network grows towards its target size
+    decay_per_year: 0.50         # and shrinks back when it has no money or no mode
+    maturity_per_year: 0.35      # maturity A follows the size N
+    net_share_ref: 0.015         # share of the budget in the net part that builds a full network (per target)
+    ci_share: 0.30               # part of the security item that is counter-intelligence
+    ci_share_ref: 0.012          # share of the budget in counter-intelligence for ci_eff = 1
+    ci_growth_cut: 0.50          # k: a full counter-intelligence halves the growth target of a foreign network
+    ci_hazard_gain: 0.50         # g: and raises the exposure hazard by half
+    hazard_base_per_year: 0.20   # a0: yearly exposure hazard at N*A = 1 and activity 1 (a mature network; a young one is hard to see)
+    hazard_cap_per_year: 0.25    # the word "high" is at most 25 % a year (gate item 6)
+    act_observe: 0.40            # observing is risky too: there is no safe mode
+    act_steal: 1.00
+    act_false_trails: 0.70
+    trace_decay_per_year: 0.30
+    trace_some: 0.03             # accumulated monthly hazard that turns the trace word to "some"
+    trace_many: 0.10             # and to "many"
+    risk_noticeable: 0.05        # yearly hazard words: low below, noticeable from here, high from risk_high
+    risk_high: 0.15
+    loss_keep_n: 0.25            # an exposed network keeps a quarter of its size
+    loss_keep_a: 0.20            # and a fifth of its maturity
+    sigma: 1.50                  # multiplier of the theft channel
+    s_max: 0.70                  # own ceiling of the theft channel (share of node cost, below 1 so that c_eff stays positive); outside the +-15 % corridor (O-051)
+    sources_max: 6               # S_max: independent sources of a full network
+    conf_visible: 0.30           # the estimate layer is shown from this confidence
+    range_min: 0.10              # smallest half-width of an estimate range
+    kappa: 1.00                  # false trails corrupt kappa*N of the sources of the target's observer
+    bias_max: 0.30               # bias of a corrupted estimate
+    preset_low: 0.010            # the security item as a share of the budget: three words
+    preset_normal: 0.020
+    preset_strong: 0.030
+    turn_on_exposure: 0.30       # an exposed network is turned by the target instead of lost
+    turn_detect_per_year: 0.46   # a turned network is found out (about 5 % a month)
+    trace_certain: 0.30          # a trace this high makes exposure certain within 1-12 months (the draw picks the date)
+    leak_off_dir: 0.10           # theft outside the direction (discipline) of the network keeps a tenth of its discount
+    dir_change_keep_a: 0.50      # a network that changes direction keeps half of its maturity
+    sens_licence: 0.80           # sens of the hidden licence event: intel_conf = conf * sens

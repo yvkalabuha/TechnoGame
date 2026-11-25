@@ -69,7 +69,11 @@ public sealed partial class TechTree : Control
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
         top.AddChild(_viewSwitch);
         var reset = Ui.Btn("tree.reset", ResetView); reset.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
-        var close = Ui.Btn("tree.close", () => Closed?.Invoke()); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        var close = Ui.Btn("tree.close", () => Closed?.Invoke(), focusable: true); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        // A heavy 3 du frame in every state, so that the button stays the most visible one; focus keeps the two-tone ring of CaptionButton (A6, A7).
+        close.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 3, 10));
+        close.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 3, 10));
+        close.AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Ink, Ui.Ink, 3, 10));
         top.AddChild(reset); top.AddChild(close);
         AddChild(_view);
         _view.Draw += PaintView;
@@ -753,16 +757,12 @@ public sealed partial class TechTree : Control
         // Pass 0: the goal, the selected node and the root are named first, so that every lower-priority label yields to their plates (spec 2.5; TASK-0136 review).
         int calloutNode = _selected >= 0 ? _selected : _goal;
         foreach (int i in order) if (NamedNode(i)) Place(i, Names.Node(nodes.Id[i]), FontKind.Text, true, i == calloutNode);
-        // Pass 1: the number tag of every other frontier node (short, same in both languages); pass 2: names where there is room (a name replaces its own tag).
-        foreach (int i in order) if (_state[i] == St.Frontier && !placed.ContainsKey(i)) Place(i, "№" + nodes.Number[i], FontKind.Mono);
+        // Names where there is room; a node without room stays a bare marker (no «№N» tags on the map, #482).
         foreach (int i in order)
         {
             if (NamedNode(i) && placed.ContainsKey(i)) continue;
             if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
-            if (placed.TryGetValue(i, out var tag)) occupied.Remove(tag.pad);
-            if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text, NamedNode(i))) continue;
-            if (tag.text != null) { occupied.Add(tag.pad); placed[i] = tag; }
-            else Place(i, "№" + nodes.Number[i], FontKind.Mono);
+            Place(i, Names.Node(nodes.Id[i]), FontKind.Text, NamedNode(i));
         }
         // Drawn from the lowest priority to the highest, so that a named node's plate is always on top.
         for (int rank = 3; rank >= 0; rank--)
@@ -1122,8 +1122,7 @@ public sealed partial class TechTree : Control
             if (row == _selected) _cv.DrawRect(rr, Ui.Hover);
             var col = _route[row] ? Ui.Command : Ui.Ink;
             float ty = y + rowH * 0.5f + 5;
-            Text(new Vector2(x0, ty), Fit(Names.Node(nodes.Id[row]), nameW - 56, 14), 14, col);
-            Text(new Vector2(x0 + nameW - 50, ty), "№" + nodes.Number[row], 14, Ui.Ink2, FontKind.Mono, HorizontalAlignment.Right, 46);
+            Text(new Vector2(x0, ty), Fit(Names.Node(nodes.Id[row]), nameW - 6, 14), 14, col);
             float bx = gx + _depth[row] * cellW;
             var rect = new Rect2(bx, y + 4 * sy, cellW - 12, rowH - 10 * sy);
             if (_state[row] == St.Frontier) { _cv.DrawRect(rect, new Color(col, 0.18f)); _cv.DrawRect(rect, col, false, 1.4f); }
@@ -1285,7 +1284,7 @@ public sealed partial class TechTree : Control
         int hit = HitAt(atPosition, 12f);
         if (hit < 0) return "";
         var nodes = _host.Data.Nodes;
-        return $"{Names.Node(nodes.Id[hit])} · №{nodes.Number[hit]}";   // the localized name, never the raw id
+        return Names.Node(nodes.Id[hit]);   // the localized name, never the raw id or a number
     }
 
     // ---------------- inset ----------------
@@ -1299,9 +1298,10 @@ public sealed partial class TechTree : Control
         {
             Sec("inset.node");
             int i = _selected;
-            var nm = Ui.Lbl(Names.Node(nodes.Id[i]), 18); nm.TooltipText = $"{nodes.Id[i]} · №{nodes.Number[i]}"; nm.MouseFilter = MouseFilterEnum.Pass;
+            var nm = Ui.Lbl(Names.Node(nodes.Id[i]), 18); nm.MouseFilter = MouseFilterEnum.Pass;
             _inset.AddChild(nm);
-            _inset.AddChild(Ui.Wrap($"№{nodes.Number[i]} · {Loc.T("ntype." + (int)nodes.Type[i])} · {Loc.T("ui.tree.gen", nodes.Gen[i])} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
+            _inset.AddChild(Ui.Wrap(Loc.T("card.index", nodes.Number[i], nodes.Count), 14, Ui.Ink3));
+            _inset.AddChild(Ui.Wrap($"{Loc.T("ntype." + (int)nodes.Type[i])} · {Loc.T("ui.tree.gen", nodes.Gen[i])} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
             string anchor = Names.NodeAnchor(nodes.Id[i]), before = nodes.AnchorBefore[i] ? Loc.T("inset.before") : "";
             string est = nodes.AnchorEstimated[i] ? ".est" : "";   // the data flag: an estimated year is said to be one
             var anc = Ui.Wrap(anchor == "" ? Loc.T("ui.tree.anchor" + est, nodes.AnchorYear[i], before) : Loc.T("ui.tree.anchor.named" + est, nodes.AnchorYear[i], before, anchor), 14, Ui.Ink3);
@@ -1333,17 +1333,20 @@ public sealed partial class TechTree : Control
 
         _inset.AddChild(new HSeparator());
         bool whyOpen = _whyOpen || _selected < 0;   // collapsed while a node card is shown, so the card stays above the fold
-        _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + Loc.T("inset.why"), () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
+        string whyHead = _goal >= 0 ? Loc.T("inset.why", Names.Node(nodes.Id[_goal])) : Loc.T("inset.why.nogoal");   // the heading names its goal (spec 2б.5)
+        _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + whyHead, () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
         _whyShown = whyOpen;
         if (whyOpen) BuildWhy(s, _host.Data);
 
         Sec("inset.focus");
+        _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.help"), 14, Ui.Ink2));
         _inset.AddChild(Ui.Wrap(_focus.Count == 0 ? Loc.T("inset.focus.empty") : string.Join(" → ", _focus.Select(f => Names.Node(_host.Data, f))), 14, _focus.Count == 0 ? Ui.Ink2 : Ui.Ink));
         var send = Ui.Btn("inset.focus.send", () => { if (_actor == Player) _host.Submit(new SetEffortFocus(_actor, ImmutableArray.CreateRange(_focus)), "cmd.focus"); }, 14, _focus.Count > 0);
         send.Disabled = _focus.Count == 0 || _actor != Player;
         send.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
         if (!send.Disabled) send.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Command, Ui.Ink, 2, 10));   // spec 2.9: the one enabled main button has a 2 du frame
         _inset.AddChild(send);
+        if (_focus.Count == 0 && _actor == Player) _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.nothing"), 16, Ui.Ink));   // C4: a grey button says why, right under it, at a readable size
         if (s.Last.Status != CmdStatus.None && TreeClarity.ShowsCommand(s.Last.LabelKey))
         {
             string what = Loc.T(s.Last.LabelKey, s.Last.LabelArg);
@@ -1367,7 +1370,7 @@ public sealed partial class TechTree : Control
             int n = 0;
             foreach (var l in s.Links.Where(l => l.Layer == WhyNotLayer.Knowledge).Take(4))
             {
-                string text = $"{Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {Names.Node(data, l.SubjectId)}" + (l.EtaMonths is int m ? Loc.T("inset.eta", m) : "");
+                string text = string.Join(" ", new[] { Loc.T("why.line", Loc.TOr("cause." + l.Cause, l.Cause.ToString()), ": " + Names.Node(data, l.SubjectId)), Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble())), l.EtaMonths is int m ? Loc.T("why.eta", m) : "" }.Select(x => x.Trim()).Where(x => x != ""));
                 var lab = Ui.Wrap(text);
                 _inset.AddChild(n++ == 0 ? RootRow(lab) : lab);
             }
@@ -1485,7 +1488,7 @@ public sealed partial class TechTree : Control
         var next = new List<Control>();
         var dep = _dep[i].OrderBy(x => nodes.Number[x]).ToList();
         foreach (int x in dep.Take(6))
-            next.Add(Ui.Wrap((_state[x] == St.Known ? "● " : _state[x] == St.Frontier ? "◐ " : "○ ") + Names.Node(nodes.Id[x]) + $" · №{nodes.Number[x]}", 14, Ui.Ink));
+            next.Add(Ui.Wrap((_state[x] == St.Known ? "● " : _state[x] == St.Frontier ? "◐ " : "○ ") + Names.Node(nodes.Id[x]), 14, Ui.Ink));
         if (dep.Count > 6) next.Add(Ui.Wrap(Loc.T("card.more", dep.Count - 6), 14, Ui.Ink2));
         if (dep.Count == 0) next.Add(Ui.Wrap(Loc.T("card.end"), 14, Ui.Ink2));
         _inset.AddChild(Block(CardIcon.Kind.Opens, "card.unlocks", next.ToArray()));

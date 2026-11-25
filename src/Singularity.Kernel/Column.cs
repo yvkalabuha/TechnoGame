@@ -35,6 +35,18 @@ public abstract class Column
     /// <summary>Drops the open flag without swapping (a tick aborted by an exception).</summary>
     internal abstract void Close();
 
+    /// <summary>Opens <c>Next</c> (copy-on-write) now; the scheduler calls it single-threaded before a system's compute (ADR-0029 п. 5).</summary>
+    internal abstract void OpenNext();
+
+    private int _declared;
+
+    /// <summary>True while the system that listed this column in WrittenColumns computes; set by the runner, cleared by <see cref="Close"/> too.</summary>
+    internal bool Declared
+    {
+        get => Volatile.Read(ref _declared) != 0;
+        set => Volatile.Write(ref _declared, value ? 1 : 0);
+    }
+
     /// <summary>Full-copy test mode: copies <c>Current</c> to <c>Next</c> and opens the column.</summary>
     internal abstract void CopyCurrentToNext();
 
@@ -63,6 +75,9 @@ public abstract class Column<T> : Column where T : unmanaged
     private T[] _current;
     private T[] _next;
     private bool _open;   // fast-path flag: true only when no trace is active
+    /// <summary>Test diagnostic: how many times Next was filled from Current by an opening (not by full-copy mode).</summary>
+    internal int CopyCount { get; private set; }
+
     private bool _copied;  // Next holds the copy of Current (guarded by _openLock / sequential phases)
     private readonly object _openLock = new();
 
@@ -85,10 +100,45 @@ public abstract class Column<T> : Column where T : unmanaged
     {
         get
         {
-            if (!Volatile.Read(ref _open))
-                Open();
-            return _next;
+            if (Owner is { InCompute: true })
+                throw new InvalidOperationException($"Column '{Name}': Next of a child table or of a table other than the chunk table is not allowed in compute; use NextRange or write in Merge (ADR-0029 п. 5).");
+            return NextCore();
         }
+    }
+
+    private Span<T> NextCore()
+    {
+        if (!Volatile.Read(ref _open))
+            Open();
+        return _next;
+    }
+
+    /// <summary>
+    /// Child tables: exactly the rows of this chunk's parent rows, [offset[rowStart], offset[rowEnd]) (ADR-0029 п. 5). Pass the context of the
+    /// system whose chunk table is the parent. Empty for an empty parent. Opens <c>Next</c> if it is not open yet; no allocation.
+    /// </summary>
+    public Span<T> NextRange(in TickContext context, int chunk)
+    {
+        Table? parent = Owner?.Parent;
+        if (parent is null || Owner!.Offsets is not { } offsets)
+            throw new InvalidOperationException($"Column '{Name}': NextRange needs a column of a child table.");
+        if (!ReferenceEquals(context.Table, parent))
+            throw new InvalidOperationException($"Column '{Name}': the chunk table of the context is not the parent of its table.");
+        if (context.ChunkSize < 1)
+            throw new InvalidOperationException("The context has no chunk size.");
+        if (parent.RowCount == 0)
+            return Span<T>.Empty;
+        // Opening here would happen on a worker thread: the system must list the column in WrittenColumns (ADR-0029 п. 5).
+        if (context.Chunk >= 0 && context.Chunk != chunk)
+            throw new ArgumentException($"Column '{Name}': chunk {chunk} is not the chunk {context.Chunk} this callback computes.", nameof(chunk));
+        if (Owner.InCompute && !Declared)
+            throw new InvalidOperationException($"Column '{Name}': not opened before compute; list it in ITickSystem.WrittenColumns.");
+        long start = (long)chunk * context.ChunkSize;
+        if (chunk < 0 || start >= parent.RowCount)
+            throw new ArgumentOutOfRangeException(nameof(chunk));
+        int end = (int)Math.Min(start + context.ChunkSize, parent.RowCount);
+        int lo = offsets[(int)start];
+        return NextCore().Slice(lo, offsets[end] - lo);
     }
 
     // Idempotent: whichever thread opens the column, Next equals Current until the first write, and a writer
@@ -101,11 +151,12 @@ public abstract class Column<T> : Column where T : unmanaged
         {
             if (Volatile.Read(ref _open))
                 return;
-            Owner?.Trace?.Record(Owner.TraceSystemId, Name);
+            Owner?.Trace?.Record(Owner.TraceSystemId, Owner.TraceName is null ? Name : Owner.TraceName + "." + Name);
             if (!_copied)
             {
                 _current.CopyTo(_next, 0);
                 _copied = true;
+                CopyCount++;
             }
             // With a trace on, _open stays false so every Next access is recorded.
             if (Owner?.Trace is null)
@@ -125,8 +176,15 @@ public abstract class Column<T> : Column where T : unmanaged
         Owner?.BumpVersion();
     }
 
+    internal override void OpenNext()
+    {
+        if (!Volatile.Read(ref _open))
+            Open();
+    }
+
     internal override void Close()
     {
+        Declared = false;
         _copied = false;
         Volatile.Write(ref _open, false);
     }

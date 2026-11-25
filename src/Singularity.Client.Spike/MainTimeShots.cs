@@ -56,7 +56,7 @@ public sealed partial class Main
         var img = GetViewport().GetTexture().GetImage(); var m = _signal.Clock.MeterRect; int mx = (int)MathF.Round(m.Position.X * s), my = (int)MathF.Round(m.Position.Y * s);
         if (s == 1f) TimeCheck(m.Position == new Vector2(mx, my) && m.Size == new Vector2(60, 32), $"{tag} gauge on whole pixels, 60 x 32 (at {m.Position}, {m.Size})");
         float mid = (Lum(Ui.Ink) + Lum(img.GetPixel(mx + 1, my + 1))) / 2; int active = _signal.Clock.Selected - 1; int W2 = (int)MathF.Round(60 * s), H2 = (int)MathF.Round(32 * s);
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < TimeGaugeGeometry.Bars; i++)
         {
             var e = i == active ? TimeGaugeGeometry.Frame(i) : TimeGaugeGeometry.Bar(i); var b = TimeGaugeGeometry.Bar(i);
             int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
@@ -99,17 +99,17 @@ public sealed partial class Main
         void W(double sec, Action a) { double t = 0; _timeQ.Add(dt => { t += dt; if (t < sec) return false; a(); return true; }); }
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
-        var names = new[] { "pause", "day", "week", "month" };
+        var names = new[] { "pause", "day", "days3", "week", "month" };
         void Frames(string name, string sfx, int w, int h) { SaveShot($"time_{name}{sfx}.png", null, true); SaveShot($"time_{name}_bar{sfx}.png", new Rect2I(0, 0, w, h)); }
         W(1.0, () => _signal.SetSpeed(1));
         W(0.6, () => { });
-        foreach (int s in new[] { 1, 2, 3, 0 })
+        foreach (int s in new[] { 1, 2, 3, 4, 0 })
         {
             W(0.1, () => _signal.SetSpeed(s));
             W(0.5, () => { string tag = $"100% {names[s]}"; TimeCentres(tag); TimeGauge(tag); Frames(names[s], "_100", 640, 64); });
         }
-        // Pressed state of each button by real mouse events (released outside, nothing acts), at speed 2 where all three are enabled.
-        W(0.1, () => _signal.SetSpeed(2));
+        // Pressed state of each button by real mouse events (released outside, nothing acts), at speed 3 (1 week/s) where all three are enabled.
+        W(0.1, () => _signal.SetSpeed(3));
         foreach (var k in new[] { TimeControl.Kind.Pause, TimeControl.Kind.Slower, TimeControl.Kind.Faster })
         {
             Vector2 c = default;
@@ -117,7 +117,7 @@ public sealed partial class Main
             W(0.3, () => Mouse(c, true));
             W(0.3, () => { TimeCentres($"100% pressed {k}"); if (k == TimeControl.Kind.Pause) SaveShot("time_pressed_100.png", new Rect2I(0, 0, 640, 64)); Mouse(c + new Vector2(0, 600), null); Mouse(c + new Vector2(0, 600), false); });
         }
-        W(0.3, () => TimeCheck(_host.Speed == 2 && _signal.Clock.Selected == 2, $"pressed-and-released-outside changed nothing (session speed {_host.Speed})"));
+        W(0.3, () => TimeCheck(_host.Speed == 3 && _signal.Clock.Selected == 3, $"pressed-and-released-outside changed nothing (session speed {_host.Speed})"));
         // Keyboard: Tab-order focus on «faster», Enter raises the live session speed; Space pauses even with a button focused.
         // The pointer leaves for the map in several moves, so that Godot drops the tooltip of the last hovered button (the synthetic jump left one at the old spot).
         for (int i = 1; i <= 6; i++) { int k = i; W(0.15, () => { var p = new Vector2(200 + k * 150, 100 + k * 100); Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p, Relative = new Vector2(150, 100) }); }); }
@@ -132,38 +132,38 @@ public sealed partial class Main
         });
         W(0.5, () =>
         {
-            TimeCheck(_host.Speed == 3 && _signal.Clock.Selected == 3 && _host.Snap.Speed == 3, $"Enter on the focused faster button: session speed {_host.Speed}, snapshot {_host.Snap.Speed} (expected 3)");
+            TimeCheck(_host.Speed == 4 && _signal.Clock.Selected == 4 && _host.Snap.Speed == 4, $"Enter on the focused faster button: session speed {_host.Speed}, snapshot {_host.Snap.Speed} (expected 4)");
             TimeCheck(_signal.Clock.HasButtonFocus(TimeControl.Kind.Pause), "faster became disabled at the top speed: the focus moved to pause");
         });
         W(0.1, () => { PressKey(Key.Space); PressKey(Key.Space, false); });
         W(0.4, () => TimeCheck(_host.Speed == 0, $"Space with a button focused: session speed {_host.Speed} (expected 0)"));
         W(0.1, () => { _signal.Clock.FocusButton(TimeControl.Kind.Slower); PressKey(Key.Enter); PressKey(Key.Enter, false); });
         W(0.4, () => TimeCheck(_signal.Clock.Selected == 0 && _host.Speed == 0, "Enter on slower while paused only changes the resume tempo (stays paused)"));
-        W(0.1, () => _signal.SetSpeed(2));
+        W(0.1, () => _signal.SetSpeed(3));
         // A click on «faster» that reaches the top speed disables it: the focus moves to pause quietly, with no ring and no key tip.
-        W(0.1, () => _signal.SetSpeed(2));
+        W(0.1, () => _signal.SetSpeed(3));
         Vector2 fc = default;
         W(0.3, () => { fc = _signal.Clock.ButtonRect(TimeControl.Kind.Faster).GetCenter(); Mouse(fc, null); Mouse(fc, true); Mouse(fc, false); });
-        W(0.5, () => TimeCheck(_host.Speed == 3 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Pause) && !_signal.Clock.RingShown(TimeControl.Kind.Pause) && _signal.Clock.KeyTipRect.Size.X == 0, $"mouse click took faster to the limit: focus on pause without ring or key tip (speed {_host.Speed})"));
-        W(0.1, () => _signal.SetSpeed(2));
+        W(0.5, () => TimeCheck(_host.Speed == 4 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Pause) && !_signal.Clock.RingShown(TimeControl.Kind.Pause) && _signal.Clock.KeyTipRect.Size.X == 0, $"mouse click took faster to the limit: focus on pause without ring or key tip (speed {_host.Speed})"));
+        W(0.1, () => _signal.SetSpeed(3));
         // Mouse to keyboard on a button that is already focused: ring and key tip (with the speed) come back.
         W(0.1, () => _signal.SetSpeed(1));
         Vector2 mk = default;
         W(0.3, () => { mk = _signal.Clock.ButtonRect(TimeControl.Kind.Faster).GetCenter(); Mouse(mk, null); Mouse(mk, true); Mouse(mk, false); });
         W(0.5, () => TimeCheck(_host.Speed == 2 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Faster) && !_signal.Clock.RingShown(TimeControl.Kind.Faster) && _signal.Clock.KeyTipRect.Size.X == 0, $"after a click faster has focus, no ring, no key tip (speed {_host.Speed})"));
         W(0.1, () => { PressKey(Key.Shift); PressKey(Key.Shift, false); });
-        W(0.5, () => { var tip = _signal.Clock.KeyTipRect; TimeCheck(_signal.Clock.RingShown(TimeControl.Kind.Faster) && tip.Size.X > 0 && _signal.Clock.KeyTipText.Contains(Loc.T("time.gauge.name", Loc.T("speed.week"))), $"mouse to keyboard on the focused faster button: ring {_signal.Clock.RingShown(TimeControl.Kind.Faster)}, key tip {tip.Size.X > 0}, text {_signal.Clock.KeyTipText.Replace('\n', '|')}"); Mouse(new Vector2(1100, 700), null); });
-        W(0.1, () => _signal.SetSpeed(2));
+        W(0.5, () => { var tip = _signal.Clock.KeyTipRect; TimeCheck(_signal.Clock.RingShown(TimeControl.Kind.Faster) && tip.Size.X > 0 && _signal.Clock.KeyTipText.Contains(Loc.T("time.gauge.name", Loc.T("speed.days3"))), $"mouse to keyboard on the focused faster button: ring {_signal.Clock.RingShown(TimeControl.Kind.Faster)}, key tip {tip.Size.X > 0}, text {_signal.Clock.KeyTipText.Replace('\n', '|')}"); Mouse(new Vector2(1100, 700), null); });
+        W(0.1, () => _signal.SetSpeed(3));
         // A mouse click leaves the focus but no ring and no key tip; a second click resumes.
         Vector2 pc = default;
         W(0.3, () => { pc = _signal.Clock.ButtonRect(TimeControl.Kind.Pause).GetCenter(); Mouse(pc, null); Mouse(pc, true); Mouse(pc, false); });
         W(0.5, () => { TimeFocusRing(TimeControl.Kind.Pause, false); TimeCheck(_signal.Clock.KeyTipRect.Size.X == 0 && !_signal.Clock.RingShown(TimeControl.Kind.Pause) && _host.Speed == 0, $"click on pause: paused (speed {_host.Speed}), no key tip"); Mouse(pc, true); Mouse(pc, false); });
-        W(0.4, () => { TimeCheck(_host.Speed == 2, $"second click resumes at the remembered speed (session speed {_host.Speed})"); Mouse(new Vector2(1100, 700), null); });
+        W(0.4, () => { TimeCheck(_host.Speed == 3, $"second click resumes at the remembered speed (session speed {_host.Speed})"); Mouse(new Vector2(1100, 700), null); });
         // 125 % and 150 %.
         foreach (int pct in new[] { 125, 150 })
         {
             W(0.1, () => { Settings.Current.UiScale = pct; Settings.Apply(Settings.Current, GetWindow(), false); });
-            foreach (int s in new[] { 1, 2, 3, 0 })
+            foreach (int s in new[] { 1, 2, 3, 4, 0 })
             {
                 W(0.6, () => _signal.SetSpeed(s));
                 W(0.5, () => { string tag = $"{pct}% {names[s]}"; TimeCentres(tag, pct / 100f); TimeGauge(tag, pct / 100f); Frames(names[s], $"_{pct}", pct * 640 / 100, pct * 64 / 100); });
@@ -172,6 +172,7 @@ public sealed partial class Main
         W(0.1, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); });
         W(0.6, () =>
         {
+            CheckOnlyResult();
             _shotLog += $"time shot run result: {(_shotFailed ? "FAILED" : "OK")}\n";
             try { File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); } catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }
             GD.Print(_shotLog); GetTree().Quit(_shotFailed ? 1 : 0);

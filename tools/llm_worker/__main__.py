@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import config, gitleaks, report, review as review_mod, sketch as sketch_mod, visual as visual_mod
+from . import codexsketch, config, gitleaks, report, review as review_mod, sketch as sketch_mod, visual as visual_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
@@ -61,6 +61,7 @@ def main(argv=None):
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--confirmed", action="store_true")
     g.add_argument("--rejected", action="store_true")
+    p.add_argument("--reason", help="why the finding is rejected; later reviews of the task see it")
     p = sub.add_parser("gate", help="DeepSeek as the third voice of a gate")
     p.add_argument("--item", required=True, help="repository-relative path of the document")
     p.add_argument("--stance", choices=["third"], required=True)
@@ -82,6 +83,9 @@ def main(argv=None):
     p.add_argument("--prompt-file", type=Path, required=True, help="Markdown brief inside the repository")
     p.add_argument("--ref", type=Path, action="append", default=[], help="reference frame from shots-out/ (repeatable)")
     p.add_argument("--count", type=int, default=1)
+    p.add_argument("--engine", choices=codexsketch.ENGINES, default="auto",
+                   help="auto: Gemini (agy), Codex only when Gemini has no quota; codex makes one image per call")
+    p.add_argument("--codex-daily-cap", type=int, default=codexsketch.DEFAULT_DAILY_CAP, help="Codex sketch attempts per day")
     p.add_argument("--timeout", type=int, default=sketch_mod.DEFAULT_TIMEOUT_S, help="seconds for agy")
     p.add_argument("--parallel", action="store_true", help="run the image sub-agents at once (default: one after another)")
     p.add_argument("--with-visual", action="store_true", help="also run 'visual --mode design' on the --ref frames")
@@ -143,7 +147,7 @@ def main(argv=None):
         return 0
     if a.cmd == "review-confirm":
         try:
-            n = review_mod.mark_finding(a.record, a.finding, a.confirmed)
+            n = review_mod.mark_finding(a.record, a.finding, a.confirmed, a.reason)
         except review_mod.ReviewError as e:
             print(f"error: {e}")
             return 5
@@ -230,11 +234,13 @@ def _sketch(a):
                                    dry_run=a.dry_run, mode="design", allow_small=a.allow_small)
         rc = _visual(a_vis)
     try:
-        path, md, rec = sketch_mod.run_sketch(a.task, a.prompt_file, a.ref, a.count, runs_dir=a.runs,
-                                              timeout_s=a.timeout, dry_run=a.dry_run, parallel=a.parallel)
+        path, md, rec = codexsketch.run_engine(a.engine, a.task, a.prompt_file, a.ref, a.count, runs_dir=a.runs,
+                                                 timeout_s=a.timeout, dry_run=a.dry_run, parallel=a.parallel,
+                                                 codex_kw={"daily_cap": a.codex_daily_cap, "timeout_s": max(a.timeout, 600)})
     except visual_mod.VisualError as e:
         refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in",
-                                    "agy_quota", "agy_capacity", "agent_tool_violation")
+                                    "agy_quota", "agy_capacity", "agent_tool_violation", "codex_quota",
+                                    "codex_daily_cap", "land_in_progress")
         print(f"refused: {e}" if refused else f"error: {e}")
         return 4 if refused else 5
     if a.dry_run:

@@ -195,6 +195,17 @@ class SketchTest(unittest.TestCase):
             sketch.run_sketch("bad", self.prompt, root=self.root)
         self.assertEqual(c.exception.code, "bad_task")
 
+    def test_task_and_count_checked_before_sandbox(self):
+        def no_box(*a, **k):
+            raise sketch.SketchError("sandbox_unavailable", "test")
+        with mock.patch.object(sketch, "private_box", no_box):
+            with self.assertRaises(sketch.SketchError) as c:
+                sketch.run_sketch("bad", self.prompt, root=self.root)
+            self.assertEqual(c.exception.code, "bad_task")
+            with self.assertRaises(sketch.SketchError) as c:
+                sketch.run_sketch("TASK-0141", self.prompt, root=self.root, count=9)
+            self.assertEqual(c.exception.code, "bad_count")
+
     def test_rate_guard_refuses(self):
         guard = RateGuard(Path(self.tmp.name) / "u2.json", rpm=1, rpd=20)
         self.go(runner=self.runner(), guard=guard)
@@ -381,8 +392,8 @@ class SketchTest(unittest.TestCase):
         rec = {"conversation_id": MAIN, "files": [{"path": "a.jpg"}], "partial": True, "requested": 2, "attribution": [],
                "quota": {"got": 1, "requested": 2, "reset_at": "2026-11-24T15:45:43+00:00"}}
         a = mock.Mock(with_visual=False, dry_run=False, ref=[], count=2, runs=self.runs, timeout=1, parallel=False,
-                      task="TASK-0141", prompt_file=self.prompt)
-        with mock.patch.object(cli.sketch_mod, "run_sketch", return_value=(Path("r.json"), Path("r.md"), rec)):
+                      task="TASK-0141", prompt_file=self.prompt, engine="gemini", codex_daily_cap=4)
+        with mock.patch.object(cli.codexsketch, "run_gemini", return_value=(Path("r.json"), Path("r.md"), rec)):
             self.assertEqual(cli._sketch(a), 4)
 
     def test_send_message_only_to_conversations_of_this_run(self):

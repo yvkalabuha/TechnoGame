@@ -82,4 +82,13 @@ public interface IPolicyProducts
 
     /// <summary><c>G_front</c> of the snapshot (contract §9.1, #146).</summary>
     int GFront(long month) => 0;
+
+    /// <summary>
+    /// The slot generation of the project whose open (or <paramref name="close"/>) proposal the player refused, consumed at <c>month</c> (TASK-0153); 0 = no refusal.
+    /// A build without an adviser says 0.
+    /// </summary>
+    int ProposalRefusal(int actorRow, int design, bool close, long month) => 0;
+
+    /// <summary>The player's <c>start_series</c> for the design is consumed at <c>month</c> (TASK-0153): on an AI line it hands the line over to the player.</summary>
+    bool PlayerSeries(int actorRow, int design, long month) => false;
 }

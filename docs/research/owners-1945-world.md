@@ -74,8 +74,8 @@
 | malaysia | GBR | GBR | K1, K3 | H | Малайя: Федерированные/Нефедерированные штаты и Straits; BMA с 1945-09-12; протектораты по правилу п. 2 |
 | malaysia_borneo | GBR | AUS | K3, K9 | M | Лабуан, Сабах (Северное Борнео, Chartered Company), Саравак (раджи Брук): Борнео приняли австралийцы; BMA с 1945-10, Саравак — к британской Короне 1946-07-01 |
 | maldives | GBR | GBR | K1 | M | протекторат с 1887; [Предл.] GBR |
-| mongolia_govi_altay | ROC | MNG | K6 C34 | M | МНР де-факто с 1921; ROC признала независимость 1946-01-05 → на 1945-10-01 owner ROC, controller MNG; [Факт] (RR-0020 C34) |
-| mongolia_mn_govi | ROC | MNG | K6 C34 | M | то же |
+| mongolia_govi_altay | MNG | MNG | K6 C34, #550 | M | МНР де-факто независима с 1921; ROC признала независимость 1946-01-05 [Факт: FRUS 1946 vol. X, doc. 961, https://history.state.gov/historicaldocuments/frus1946v10/d961, дата обращения 2026-11-25: "the notification of Chinese recognition of independence was originally made on January 5, 1946"]. На 1945-10-01 owner MNG по решению владельца #550 (де-факто, не де-юре) |
+| mongolia_mn_govi | MNG | MNG | K6 C34, #550 | M | то же |
 | myanmar | GBR | GBR | K1, K3 | H | Британская Бирма, военная администрация до 1945-10-16 |
 | nepal | NPL | NPL | K2 | H | суверен |
 | pakistan | GBR | GBR | K6 B04 | H | Британская Индия (Северо-Запад, Синд, Белуджистан, Западный Пенджаб); независимость 1947-08-15 |
