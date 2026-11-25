@@ -157,7 +157,7 @@ internal sealed class SliceWorld
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber,
             adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));   // O-040: the second word only for data whose licensable PRC need it
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
-            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])), adviser: Policy.Adviser is not null);
+            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])), adviserActors: Policy.Adviser?.Rows ?? default);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
         RegisterRunColumns();

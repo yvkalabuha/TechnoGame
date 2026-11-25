@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Core.Data;
 using Singularity.Core.WhyNot;
@@ -195,10 +196,22 @@ public sealed partial class SliceSession
         int lines = 0;
         for (int d = 0; d < _world.ProductsLayout.Designs; d++)
         {
-            if (d != s.Design.Slot && (_world.Products.Stage(s.Actor, d) == DesignStage.Series || StartQueued(s.Actor, d)))
+            // A start applied at a tick boundary waits in the command columns for the monthly step: it counts as a line too, or starts sent on different days would pass.
+            if (d != s.Design.Slot && (_world.Products.Stage(s.Actor, d) == DesignStage.Series || StartQueued(s.Actor, d) || _world.Commands.Series(s.Actor, d, NextMonth()) is not null))
                 lines++;
         }
         return lines >= plan.MaxLines;
+    }
+
+    // The proposal the player refuses is the one the view of that month showed (same kind, same project).
+    private bool Proposed(RefuseProposal r, long month)
+    {
+        foreach (AdviserProposal p in _world.Policy.AdviserProposals(r.Actor, month))
+        {
+            if (p.Design == r.Design.Slot && p.Handle == r.Design && p.Kind == (r.Close ? ProposalKind.Close : ProposalKind.Open))
+                return true;
+        }
+        return false;
     }
 
     private bool StartQueued(int actor, int design) => _pending.Exists(p => p.Command is StartSeries q && q.Actor == actor && q.Design.Slot == design);
@@ -617,6 +630,8 @@ public sealed partial class SliceSession
             CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
             if (v.Accepted && c.Command is StartMasteryProgramme start)
                 v = MasteryVerdict(start, month);
+            if (v.Accepted && c.Command is RefuseProposal refuse && _world.Policy.IsAdviser(refuse.Actor) && !Proposed(refuse, month))
+                v = CommandVerdict.Refuse(CommandRefusal.NoProposal, $"no {(refuse.Close ? "close" : "open")} proposal for design {refuse.Design.Slot} generation {refuse.Design.Generation} in month {month}");
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.

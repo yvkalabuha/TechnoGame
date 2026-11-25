@@ -68,7 +68,9 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public int GFront(long month) => world.Products.GFront(month - 1);
 
-    public int ProposalRefusals(int actorRow, int design, long month) => world.Commands.Refused(actorRow, design, month);
+    public int ProposalRefusal(int actorRow, int design, bool close, long month) => world.Commands.RefusedGen(actorRow, design, close, month);
+
+    public bool PlayerSeries(int actorRow, int design, long month) => world.Commands.Series(actorRow, design, month) is not null;
 
     public Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month) =>
         world.Products.CandidateValue(actorRow, alts, budget, month).Value;

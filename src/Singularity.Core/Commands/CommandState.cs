@@ -23,7 +23,9 @@ public sealed class CommandState
     private readonly IntColumn[][] _dAlt;
     private readonly IntColumn[] _sStamp, _sGen, _sForce, _cStamp, _cGen;
     private readonly LongColumn[] _sRate;
-    private readonly IntColumn[] _rStamp = [], _rKind = [];   // refuse_proposal per design; only in a run with an adviser
+    // refuse_proposal per design and kind (open, close); only in a run with an adviser. The generation is the project the refusal named.
+    private readonly IntColumn[] _rOpenStamp = [], _rOpenGen = [], _rCloseStamp = [], _rCloseGen = [];
+    private readonly ImmutableArray<int> _adviserActors;
     private readonly IntColumn[] _progCmd;
     private readonly ImmutableArray<int> _progNumbers;
     private readonly IntColumn[] _fKind, _fDesign, _fGen, _fN, _fStamp;
@@ -31,7 +33,7 @@ public sealed class CommandState
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
     /// <param name="programmeProcesses">Process numbers a mastery programme may run on (tier ≥ 5): one `cmd.prog.p{n}` column each.</param>
-    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, bool adviser = false)
+    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, ImmutableArray<int> adviserActors = default)
     {
         _progNumbers = programmeProcesses.IsDefault ? [] : programmeProcesses;
         _slots = CommandLimits.DesignSlots;
@@ -86,23 +88,31 @@ public sealed class CommandState
             _cStamp[d] = table.AddInt($"cmd.close.{d}.stamp");
             _cGen[d] = table.AddInt($"cmd.close.{d}.gen");
         }
-        if (!adviser)
+        _adviserActors = adviserActors.IsDefault ? [] : adviserActors;
+        if (_adviserActors.IsEmpty)
             return;
-        _rStamp = new IntColumn[designs];
-        _rKind = new IntColumn[designs];
+        _rOpenStamp = new IntColumn[designs];
+        _rOpenGen = new IntColumn[designs];
+        _rCloseStamp = new IntColumn[designs];
+        _rCloseGen = new IntColumn[designs];
         for (int d = 0; d < designs; d++)
         {
-            _rStamp[d] = table.AddInt($"cmd.refuse.{d}.stamp");
-            _rKind[d] = table.AddInt($"cmd.refuse.{d}.kind");
+            _rOpenStamp[d] = table.AddInt($"cmd.refuse.{d}.open.stamp");
+            _rOpenGen[d] = table.AddInt($"cmd.refuse.{d}.open.gen");
+            _rCloseStamp[d] = table.AddInt($"cmd.refuse.{d}.close.stamp");
+            _rCloseGen[d] = table.AddInt($"cmd.refuse.{d}.close.gen");
         }
     }
 
     /// <summary>
-    /// <c>refuse_proposal</c> consumed at <paramref name="month"/>: bit 0 = the proposal to open the line of the design was refused, bit 1 = the proposal to close it
-    /// (0 = none). Always 0 in a run without an adviser.
+    /// <c>refuse_proposal</c> consumed at <paramref name="month"/>: the slot generation of the project whose open (or close) proposal was refused, 0 = none.
+    /// Always 0 in a run without an adviser.
     /// </summary>
-    public int Refused(int actor, int design, long month) =>
-        _rStamp.Length == 0 || _rStamp[design].Current[actor] != Stamp(month) ? 0 : _rKind[design].Current[actor];
+    public int RefusedGen(int actor, int design, bool close, long month)
+    {
+        IntColumn[] stamp = close ? _rCloseStamp : _rOpenStamp;
+        return stamp.Length == 0 || stamp[design].Current[actor] != Stamp(month) ? 0 : (close ? _rCloseGen : _rOpenGen)[design].Current[actor];
+    }
 
     // ---- readers (snapshot: what is in force at the month step being computed)
 
@@ -238,12 +248,11 @@ public sealed class CommandState
                 Set(_cGen[l.Design.Slot], a, l.Design.Generation);
                 break;
             case RefuseProposal rp:
-                if (_rStamp.Length == 0)
-                    return CommandVerdict.Refuse(CommandRefusal.NoAdviser, "this run has no adviser: there is no proposal to refuse");
-                // Both kinds of one design in a month add up; the stamp keeps only this month's bits.
-                int bits = (_rStamp[rp.Design.Slot].Current[a] == stamp ? _rKind[rp.Design.Slot].Current[a] : 0) | (rp.Close ? 2 : 1);
-                Set(_rStamp[rp.Design.Slot], a, stamp);
-                Set(_rKind[rp.Design.Slot], a, bits);
+                if (!_adviserActors.Contains(a))
+                    return CommandVerdict.Refuse(CommandRefusal.NoAdviser, $"actor {a} has no adviser: there is no proposal to refuse");
+                // One entry per (actor, design, kind, month): the stamp keeps only this month's refusal.
+                Set(rp.Close ? _rCloseStamp[rp.Design.Slot] : _rOpenStamp[rp.Design.Slot], a, stamp);
+                Set(rp.Close ? _rCloseGen[rp.Design.Slot] : _rOpenGen[rp.Design.Slot], a, rp.Design.Generation);
                 break;
             case StartMasteryProgramme or CancelMasteryProgramme:
                 int number = command is StartMasteryProgramme sp ? sp.ProcessNumber : ((CancelMasteryProgramme)command).ProcessNumber;

@@ -45,6 +45,9 @@ public enum CommandRefusal
 
     /// <summary>The adviser's line limit: the actor already has the most lines (running or commanded) and the design is not one of them (levers doc 1.2).</summary>
     LineLimit,
+
+    /// <summary>A <c>refuse_proposal</c> names a project the adviser made no such proposal for in the month (TASK-0153).</summary>
+    NoProposal,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,

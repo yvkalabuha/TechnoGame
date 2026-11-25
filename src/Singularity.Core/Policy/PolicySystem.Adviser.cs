@@ -68,11 +68,16 @@ public sealed partial class PolicySystem
             long t = stamp - 2;
             for (int d = 0; d < _designs; d++)
             {
-                int refused = _prod!.ProposalRefusals(row, d, t);
-                if ((refused & 1) != 0)
+                // A refusal silences only a proposal that was made for that very project in this month's view.
+                int open = _prod!.ProposalRefusal(row, d, false, t);
+                if (open != 0 && _advOpen[d].Current[row] == stamp - 1 && _advOpenGen[d].Current[row] == open)
                     PutInt(_advNoOpen[d], row, true, stamp - 1 + _adv!.RefuseMonths);
-                if ((refused & 2) != 0)
+                int close = _prod.ProposalRefusal(row, d, true, t);
+                if (close != 0 && _advClose[d].Current[row] == stamp - 1 && _advCloseGen[d].Current[row] == close)
                     PutInt(_advNoClose[d], row, true, stamp - 1 + _adv!.RefuseMonths);
+                // The player's own start on a scenario-start line takes the rate from the AI for good (levers doc 1.2).
+                if (_line[d].Current[row] != 0 && _prod.PlayerSeries(row, d, t))
+                    PutInt(_line[d], row, true, 0);
             }
         }
         foreach ((int d, Fx6 rate) in dec.Starts)

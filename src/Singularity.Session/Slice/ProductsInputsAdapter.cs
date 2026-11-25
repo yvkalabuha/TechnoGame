@@ -103,8 +103,13 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 
     // Spec A41: a line the AI launched runs at r_AI = ⌊B_proc(t)/unit_cost_floor⌋, recomputed from the budget of the month; the training series adds
     // the capability item (B_proc + B_cap). A line started by a command keeps the rate of that command.
+    public bool PlayerRateCommands(int actorRow) => world.Policy.IsAdviser(actorRow);
+
     public Fx6? LineRate(int actorRow, int design, long month)
     {
+        // The player's start on the line of an advised actor takes the rate from the AI at once (the policy drops the AI flag from the next month).
+        if (world.Policy.IsAdviser(actorRow) && world.Commands.Series(actorRow, design, month) is not null)
+            return null;
         if (!world.Policy.AiLine(actorRow, design, world.Products.Generation(actorRow, design)))
             return null;
         BudgetShares shares = world.SharesOf(actorRow);
