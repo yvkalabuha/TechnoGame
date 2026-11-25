@@ -17,7 +17,7 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
     public Fx6 ResearchBudget(int actorRow, long month) =>
         world.Institutes is null
             ? world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow)
-            : world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow) * world.Institutes.BudgetFactor(actorRow);
+            : world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow) * world.Institutes.BudgetFactor(actorRow, month);
 
     public Fx6 Priority(int actorRow, int nodeRow, long month)
     {

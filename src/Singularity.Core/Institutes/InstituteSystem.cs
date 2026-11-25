@@ -149,8 +149,22 @@ public sealed class InstituteSystem : ITickSystem
     /// Share of the research money the running project takes per month; the price grows with the years from the opening year of the project to the historical year
     /// (opening on time = ×1, O-067).
     /// </summary>
-    public Fx6 BuildRate(InstituteHandle h, long startMonth) =>
-        InstituteMath.BuildRate(_l.TotalLevels(h), _l.RefYear(h) - _l.YearOf(startMonth + BuildMonths(h) - 1), _p);
+    public Fx6 BuildRate(InstituteHandle h, long month) =>
+        InstituteMath.BuildRate(_l.TotalLevels(h), _l.RefYear(h) - _l.YearOf(ExpectedOpening(h, month)), _p);
+
+    /// <summary>
+    /// Month the running project opens if it keeps the funding of the snapshot (step of <paramref name="month"/> included): the stretched project pays the price of this
+    /// year, not of the year it was started for, and the price follows the funding when it changes. Without funding it never opens: the price is the one of the historical year.
+    /// </summary>
+    public long ExpectedOpening(InstituteHandle h, long month)
+    {
+        Fx6 funding = _inputs.BuildFunding(h.Actor);
+        long left = BuildMonths(h) * (long)Fx6.One.Raw - _prog[h.Slot].Current[h.Actor];
+        if (funding <= Fx6.Zero)
+            return long.MaxValue / 4;
+        long steps = (left + funding.Raw - 1) / funding.Raw;
+        return month + (steps < 1 ? 1 : steps) - 1;
+    }
 
     /// <summary>Whether a project of the slot may start in the month (§8): not standing or running, inside the window, within the cap of a small country.</summary>
     public BuildCheck CanBuild(InstituteHandle h, long month)
@@ -168,12 +182,22 @@ public sealed class InstituteSystem : ITickSystem
 
     /// <summary>
     /// The factor on the research money of the actor: <c>(1 − running projects − upkeep of built institutes)·(1 + capacity of built institutes)</c>; exactly 1
-    /// without projects (the institutes of the start are in the base money).
-    /// </summary>
-    public Fx6 BudgetFactor(int actor)
+    /// without projects (the institutes of the start are in the base money).    /// </summary>
+    public Fx6 BudgetFactor(int actor, long month)
     {
-        Fx6 take = Fx6.Zero, give = Fx6.Zero;
-        bool any = false;
+        Fx6 take = Take(actor, month, out Fx6 give, out bool any);
+        if (!any)
+            return Fx6.One;
+        Fx6 keep = Fx6.One - take;
+        return keep > Fx6.Zero ? keep * (Fx6.One + give) : Fx6.Zero;
+    }
+
+    // The sum of the shares of the research money that running projects and upkeep take, and the capacity of the built institutes.
+    private Fx6 Take(int actor, long month, out Fx6 give, out bool any)
+    {
+        Fx6 take = Fx6.Zero;
+        give = Fx6.Zero;
+        any = false;
         for (int k = 0; k < _l.SlotCount(actor); k++)
         {
             var h = new InstituteHandle(actor, k);
@@ -186,14 +210,11 @@ public sealed class InstituteSystem : ITickSystem
             }
             else if (Building(h))
             {
-                take += BuildRate(h, BuildStart(h));
+                take += BuildRate(h, month);
                 any = true;
             }
         }
-        if (!any)
-            return Fx6.One;
-        Fx6 keep = Fx6.One - take;
-        return keep > Fx6.Zero ? keep * (Fx6.One + give) : Fx6.Zero;
+        return take;
     }
 
     /// <summary>Sum of the current levels of a built institute (they grow with experience; at the opening they equal the levels of the data).</summary>
@@ -305,7 +326,9 @@ public sealed class InstituteSystem : ITickSystem
         if (start >= 0)
         {
             // A month advances the project by the funded part of it; no money, no progress (the term stretches, rev 4 §8).
-            long paid = _prog[h.Slot].Current[h.Actor] + _inputs.BuildFunding(h.Actor).Raw;
+            // Safety rule: if the projects and the upkeep ever take more than all the money, every project slows by min(1, 1/sum of the shares).
+            Fx6 funding = _inputs.BuildFunding(h.Actor) * InstituteMath.OverloadScale(Take(h.Actor, t, out _, out _));
+            long paid = _prog[h.Slot].Current[h.Actor] + funding.Raw;
             if (paid < months * (long)Fx6.One.Raw)
             {
                 _prog[h.Slot].Next[h.Actor] = checked((int)paid);
