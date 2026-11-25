@@ -17,13 +17,15 @@ public class FleetRuleTests
     private sealed class Fixture
     {
         public required SliceSession Session;
+        /// <summary>The actor whose state the helpers write (USA unless a test needs a rival).</summary>
+        public int Actor = Usa;
         public SliceWorld World => Session.World;
         public ProductsSystem Products => World.Products;
 
-        public DesignHandle HandleOf(int d) => new(d, Products.Generation(Usa, d));
+        public DesignHandle HandleOf(int d) => new(d, Products.Generation(Actor, d));
 
-        public void Int(string name, int value) => Poke.Int(Session, name, Usa, value);
-        public void Long(string name, long value) => Poke.Long(Session, name, Usa, value);
+        public void Int(string name, int value) => Poke.Int(Session, name, Actor, value);
+        public void Long(string name, long value) => Poke.Long(Session, name, Actor, value);
 
         /// <summary>Sets a design: stage, platform generation, alternatives of the superior G<paramref name="gen"/> composition, cohorts by year index.</summary>
         public void Design(int d, DesignStage stage, int platformGen, int compositionGen, params double[] cohorts)
@@ -33,7 +35,7 @@ public class FleetRuleTests
             Assert.True(DesignRules.Superior(l, compositionGen, l.KnownUpTo(compositionGen), alts));
             Int($"prd.d{d}.stage", (int)stage);
             // An occupied slot has been taken at least once (ADR-0005 p. 3): the AI's commands then carry a real handle.
-            Int($"prd.d{d}.generation", Math.Max(1, Products.Generation(Usa, d)));
+            Int($"prd.d{d}.generation", Math.Max(1, Products.Generation(Actor, d)));
             foreach (string col in new[] { "d0", "hidden", "found", "open", "dGate", "work", "retroPool", "lossAcc", "rate", "replCredit" })
                 Long($"prd.d{d}.{col}", 0);
             Int($"prd.d{d}.forced", 0);
@@ -59,8 +61,8 @@ public class FleetRuleTests
 
         public void Master(int d)
         {
-            foreach (int p in Products.PrcSet(Usa, d))
-                Poke.Int(Session, $"ind.mr.{p}", Usa, 6);
+            foreach (int p in Products.PrcSet(Actor, d))
+                Poke.Int(Session, $"ind.mr.{p}", Actor, 6);
         }
 
         public IReadOnlyList<FleetCommand> Run(long monthToCompute)
@@ -340,7 +342,7 @@ public class FleetRuleTests
         f.Int("prd.d0.quotaBase", 120);
         IReadOnlyList<FleetCommand> cmds = f.Run(101);
         Assert.Equal(2, cmds.Count);
-        Assert.Equal(new FleetCommand(FleetCommandKind.Sell, f.HandleOf(0), 12), cmds[0]);
+        Assert.Equal(new FleetCommand(FleetCommandKind.Sell, f.HandleOf(0), 12, 2), cmds[0]);   // priced at G_front 2
         Assert.Equal(FleetCommandKind.Retire, cmds[1].Kind);
         Assert.Equal(f.HandleOf(0), cmds[1].Design);
         Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
@@ -352,6 +354,31 @@ public class FleetRuleTests
         Assert.Equal(promised, f.Products.SaleIncome(Usa));
         Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
         Assert.Equal(Fx6.FromInt(12), f.Products.Sold(Usa, 0));
+    }
+
+    [Fact]
+    public void ARivalFieldsANewerGenerationInTheDecisionMonth_TheSaleIsBookedAtTheDecisionGFront_Fl7Exact()
+    {
+        // TASK-0182 (FL7, seed 10 of the fleet runs): the sale is priced by G_front of the decision; another actor fielding G3 in the same month
+        // must not reprice it in the executing step.
+        Fixture f = Start();
+        f.Design(0, DesignStage.InService, 1, 1, HeavyPark(f));
+        f.Int("prd.d0.quotaBase", 120);
+        f.Design(2, DesignStage.Series, 2, 2, 60);
+        f.Master(2);
+        IReadOnlyList<FleetCommand> cmds = f.Run(101);
+        Assert.Contains(cmds, c => c.Kind == FleetCommandKind.Sell);
+        Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
+        Assert.True(promised > Fx6.Zero);
+        // The rival (row 1) fields a G3 line; USA keeps its G2 line fielded for the step.
+        var rival = new Fixture { Session = f.Session, Actor = 1 };
+        rival.Design(2, DesignStage.Series, 3, 3, 60);
+        rival.Master(2);
+        f.Master(2);
+        Assert.Equal(3, f.Products.GFront(101));   // the front moved; the priced one did not
+        f.Session.StepThroughMonth(102);
+        Assert.Equal(promised, f.Products.SaleIncome(Usa));
+        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
     }
 
     [Fact]
@@ -423,11 +450,11 @@ public class FleetRuleTests
     }
 
     [Fact]
-    public void FrontRunnerLostBetweenDecisionAndExecution_TheLayerRefusesTheSale_NotSurplus()
+    public void FrontRunnerLostBetweenDecisionAndExecution_TheSaleStillRunsAtTheDecisionGFront()
     {
-        // Current behaviour, fixed here (contract r7 will settle it): the AI decides the sale on G_front of the snapshot it reads, the layer checks
-        // G_front of the snapshot of the executing step. The merge of the deciding month recomputes mastered_run from the natural yields of USA
-        // (below 0,7), so the front runner is no longer fielded at execution and the sale is refused. No manual Master() between the months.
+        // The AI decides the sale on G_front of the snapshot it reads. The merge of the deciding month recomputes mastered_run from the natural
+        // yields of USA (below 0,7), so the front runner is no longer fielded at execution; the sale is still booked at the decision's G_front
+        // (TASK-0182), paying exactly the promised revenue instead of being refused as not surplus. No manual Master() between the months.
         Fixture f = Start();
         f.Design(0, DesignStage.InService, 1, 1, HeavyPark(f));
         f.Int("prd.d0.quotaBase", 120);
@@ -435,11 +462,11 @@ public class FleetRuleTests
         f.Master(2);
         IReadOnlyList<FleetCommand> cmds = f.Run(101);
         Assert.Contains(cmds, c => c.Kind == FleetCommandKind.Sell);
-        Assert.True(f.World.Policy.ExpectedSaleIncome(Usa) > Fx6.Zero);
+        Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
+        Assert.True(promised > Fx6.Zero);
         f.Session.StepThroughMonth(102);
-        Assert.True(f.Products.RejectionCount(Usa, CommandRejection.BadSellNotSurplus) >= 1);
-        Assert.Equal(Fx6.Zero, f.Products.SaleIncome(Usa));
-        Assert.Equal(Fx6.Zero, f.Products.Sold(Usa, 0));
+        Assert.Equal(0, f.Products.RejectionCount(Usa, CommandRejection.BadSellNotSurplus));
+        Assert.Equal(promised, f.Products.SaleIncome(Usa));
     }
 
     [Fact]

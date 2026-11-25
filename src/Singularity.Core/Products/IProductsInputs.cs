@@ -112,7 +112,11 @@ public enum FleetCommandKind
 }
 
 /// <summary><c>retire_cohort</c> / <c>sell_cohort</c> in force at month t, in command order (contract r6 §4.4f; ADR-0006, ADR-0014).</summary>
-public readonly record struct FleetCommand(FleetCommandKind Kind, DesignHandle Design, long N);
+/// <param name="Kind">Sell or retire.</param>
+/// <param name="Design">The project handle.</param>
+/// <param name="N">Units.</param>
+/// <param name="PricedGFront">The AI's sale: the G_front the decision priced it at, so that the booking uses the same value (FL7); -1 = price at the snapshot of the month.</param>
+public readonly record struct FleetCommand(FleetCommandKind Kind, DesignHandle Design, long N, int PricedGFront = -1);
 
 /// <summary>
 /// What the product layer reads from other layers and from commands in the compute of month t. Contract (as

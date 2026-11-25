@@ -521,7 +521,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
         // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
-        HashAssert.Equal("0cad8c130fe67ddb543eaa26be65be37d3257e5358a4d49ba1cb52c1f72fc5dd", a.LastHash);
+        HashAssert.Equal("3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68", a.LastHash);
     }
 
     [Fact]
