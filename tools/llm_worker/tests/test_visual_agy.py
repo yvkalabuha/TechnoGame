@@ -31,14 +31,17 @@ class Fake:
 
     brain = None
 
-    def __init__(self, out=None, rc=0, err="", reads=True):
-        self.out, self.rc, self.err, self.reads, self.calls = out if out is not None else stream(), rc, err, reads, []
+    def __init__(self, out=None, rc=0, err="", reads=True, media=True, tool="read_file"):
+        self.out, self.rc, self.err, self.reads, self.media, self.tool, self.calls = (
+            out if out is not None else stream(), rc, err, reads, media, tool, [])
 
     def write_transcript(self, cwd):
         log = self.brain / CID / ".system_generated" / "logs"
         log.mkdir(parents=True, exist_ok=True)
-        calls = [{"name": "read_file", "args": {"Path": json.dumps(str(p))}} for p in sorted(Path(cwd).iterdir())] if self.reads else []
-        (log / "transcript.jsonl").write_text(json.dumps({"tool_calls": calls}), encoding="utf-8")
+        files = sorted(Path(cwd).iterdir()) if self.reads else []
+        rows = [{"tool_calls": [{"name": self.tool, "args": {"Path": json.dumps(str(p))}} for p in files]}]
+        rows += [{"type": "GENERIC", "media": [{"mime_type": "image/png", "uri": "file:///x"}]} for _ in files if self.media]
+        (log / "transcript.jsonl").write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
 
     def __call__(self, cmd, cwd, timeout, stdin=None):
         self.calls.append((cmd, cwd, stdin, sorted(p.name for p in Path(cwd).iterdir())))
@@ -116,18 +119,32 @@ class AgyVisualTest(Base):
             self.run_it(Fake("\n".join([out[0], json.dumps(step), out[1]])), transcript=tr)
         self.assertEqual(c.exception.code, "agent_tool_violation")
 
-    def test_answer_without_reads_of_every_frame_is_not_published(self):
-        for fake in (Fake(reads=False), Fake()):
-            if fake.reads:  # reads only the first frame
-                fake.write_transcript = lambda cwd, f=fake: (
-                    (f.brain / CID / ".system_generated" / "logs").mkdir(parents=True, exist_ok=True),
-                    (f.brain / CID / ".system_generated" / "logs" / "transcript.jsonl").write_text(json.dumps(
-                        {"tool_calls": [{"name": "read_file", "args": {"Path": json.dumps(str(Path(cwd) / "frame01.png"))}}]})))
+    def test_answer_without_successful_reads_of_every_frame_is_not_published(self):
+        def only_first(f):  # reads one frame of two
+            def write(cwd):
+                log = f.brain / CID / ".system_generated" / "logs"
+                log.mkdir(parents=True, exist_ok=True)
+                (log / "transcript.jsonl").write_text("\n".join(json.dumps(r) for r in [
+                    {"tool_calls": [{"name": "read_file", "args": {"Path": json.dumps(str(Path(cwd) / "frame01.png"))}}]},
+                    {"media": [{"mime_type": "image/png"}]}]), encoding="utf-8")
+            f.write_transcript = write
+            return f
+        cases = (Fake(reads=False), only_first(Fake()), Fake(tool="find_by_name"), Fake(tool="list_dir"),
+                 Fake(media=False))  # nothing read; one frame; a search; a listing; reads that attached nothing
+        for fake in cases:
             with self.assertRaises(visual.VisualError) as c:
                 self.run_it(fake)
             self.assertEqual(c.exception.code, "agy_failed")
-            self.assertIn("no read of", str(c.exception))
+            self.assertIn("no successful read of", str(c.exception))
         self.assertFalse(self.runs.exists() and list(self.runs.glob("*.json")))
+
+    def test_capacity_error_in_result_response_is_not_counted(self):
+        guard = visual.RateGuard(self.tmp / "agy.json", rpm=100, rpd=100)
+        out = stream(status="ERROR").replace('"response": "x"', '"response": "503 No capacity available"')
+        with self.assertRaises(visual.VisualError) as c:
+            self.run_it(Fake(out, rc=1), guard=guard)
+        self.assertEqual(c.exception.code, "agy_capacity")
+        self.assertEqual(json.loads((self.tmp / "agy.json").read_text())["count"], 0)
 
     def test_refund_of_an_earlier_day_keeps_todays_count(self):
         day = 86400.0 * 20000
@@ -159,9 +176,9 @@ class AgyVisualTest(Base):
         self.assertEqual(c.exception.code, "agy_failed")
         st = json.loads((self.tmp / "agy.json").read_text())
         self.assertEqual((st["count"], len(st["recent"])), (1, 1))
-        # "capacity" in stdout alone is not an overload
+        # an ordinary failure text is not an overload
         with self.assertRaises(visual.VisualError) as c:
-            self.run_it(Fake(stream(status="ERROR").replace('"x"', '"no capacity talk"'), rc=1, err="boom"), guard=guard)
+            self.run_it(Fake(stream(status="ERROR").replace('"x"', '"the frames look fine"'), rc=1, err="boom"), guard=guard)
         self.assertEqual(c.exception.code, "agy_failed")
 
     def test_quota_text_is_agy_quota(self):
@@ -196,7 +213,8 @@ class AgyVisualTest(Base):
         with self.assertRaises(visual.VisualError) as c:
             visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, provider="nope")
         self.assertEqual(c.exception.code, "bad_provider")
-        _, _, rec = visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, provider="key", dry_run=True)
+        with mock.patch("tools.llm_worker.gitleaks.scan_text"):  # no gitleaks binary needed
+            _, _, rec = visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, provider="key", dry_run=True)
         self.assertEqual(rec["provider"], "gemini-flash")
 
 
