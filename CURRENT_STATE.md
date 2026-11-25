@@ -27,6 +27,7 @@
 - TASK-0164 [IN_PROGRESS] M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) (simulation-engineer)
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
 - TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
+- TASK-0169 [IN_PROGRESS] Red CI: sketch validates task id and count before opening the sandbox Box (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0154 [REVIEW] Data: alliances and blocs by year 1945-2030 for the licence buyer circle (research-scientist)
 - TASK-0155 [REVIEW] Data: constant 1990 US dollar display series and conversion from Core money unit (economy-analyst)

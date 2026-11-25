@@ -184,6 +184,7 @@
 | [TASK-0166](../development/tasks/TASK-0166-owners-1945-check.md) | IN_PROGRESS | M1: verify 1945 owners of 379 regions against sources (T-M1-10) | MS-M1 |
 | [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | APPROVED | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
 | [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | IN_PROGRESS | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
+| [TASK-0169](../development/tasks/TASK-0169-red-ci-sketch-order.md) | IN_PROGRESS | Red CI: sketch validates task id and count before opening the sandbox Box | MS-M0 |
 
 ## Гипотезы
 
