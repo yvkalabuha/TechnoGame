@@ -1356,14 +1356,14 @@ public sealed partial class TechTree : Control
             if (inFocus) _focus.Remove(selNum); else if (_focus.Count < 3) _focus.Add(selNum);
             _insetDirty = true;
         }));
-        if (!canAdd && _actor == Player) _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.addwhy"), 16, Ui.Ink));   // C4: a grey button says why
+        if (!canAdd) _inset.AddChild(Ui.Wrap(Loc.T(TreeClarity.FocusWhyKey(_actor == Player, canAdd, _focus.Count)), 16, Ui.Ink));   // C4: a grey button says why
         _inset.AddChild(Ui.Wrap(_focus.Count == 0 ? Loc.T("inset.focus.empty") : string.Join(" → ", _focus.Select(f => Names.Node(_host.Data, f))), 14, _focus.Count == 0 ? Ui.Ink2 : Ui.Ink));
         var send = Ui.Btn("inset.focus.send", () => { if (_actor == Player) _host.Submit(new SetEffortFocus(_actor, ImmutableArray.CreateRange(_focus)), "cmd.focus"); }, 14, _focus.Count > 0);
         send.Disabled = _focus.Count == 0 || _actor != Player;
         send.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
         if (!send.Disabled) send.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Command, Ui.Ink, 2, 10));   // spec 2.9: the one enabled main button has a 2 du frame
         _inset.AddChild(send);
-        if (_focus.Count == 0 && _actor == Player) _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.nothing"), 16, Ui.Ink));   // C4: a grey button says why, right under it, at a readable size
+        if (TreeClarity.SendWhyKey(_actor == Player, _focus.Count) is { } sendWhy) _inset.AddChild(Ui.Wrap(Loc.T(sendWhy), 16, Ui.Ink));   // C4: a grey button says why, right under it, at a readable size
         if (s.Last.Status != CmdStatus.None && TreeClarity.ShowsCommand(s.Last.LabelKey))
         {
             string what = Loc.T(s.Last.LabelKey, s.Last.LabelArg);

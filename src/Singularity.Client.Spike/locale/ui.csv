@@ -177,6 +177,7 @@ inset.process,Process: yield {0} · mastered {1} · admitted {2},Процесс:
 inset.focus,MASTERY FOCUS (up to 3 known processes),ФОКУС ОСВОЕНИЯ (до 3 известных процессов)
 inset.focus.add,Add to focus,В фокус освоения
 inset.focus.addwhy,"Nothing to add: select a known process (a square on the map).","Нечего добавлять: выберите на карте известный процесс (квадрат)."
+inset.focus.foreign,"Orders are given only for your own power; this is another power.","Приказы отдаются только своей державе; это чужая держава."
 inset.focus.remove,Remove from focus,Убрать из фокуса
 inset.focus.empty,"Pick a known process (a square on the map), press “Add to focus”, then “Give order: focus”; up to 3.","Выберите известный процесс (на карте он — квадрат), нажмите «В фокус освоения», затем «Отдать приказ: фокус»; можно до 3 процессов."
 inset.focus.send,Give order: focus,Отдать приказ: фокус

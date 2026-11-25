@@ -43,6 +43,12 @@ public static class TreeClarity
         return new[] { (-h, -h), (h - c, -h), (h, -h + c), (h, h), (-h, h) };
     }
 
+    /// <summary>Locale key of the reason under a disabled «add to focus» button (C4), or the one for a foreign power; the caller shows it only when the button cannot act.</summary>
+    public static string FocusWhyKey(bool ownPower, bool canAdd, int focusCount) => !ownPower ? "inset.focus.foreign" : "inset.focus.addwhy";
+
+    /// <summary>Locale key of the reason under a disabled «give order: focus» button, or null when the button is ready: orders are given only for the own power, and need at least one process.</summary>
+    public static string? SendWhyKey(bool ownPower, int focusCount) => !ownPower ? "inset.focus.foreign" : focusCount == 0 ? "inset.focus.nothing" : null;
+
     public enum ParamLine { Yield, ProductGeneration, KnowledgeStep, Capability }
 
     /// <summary>What the "what it raises" block shows for a node. Only lines the core has data for; the gain per parameter is not shown until the core provides it.</summary>

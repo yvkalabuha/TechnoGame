@@ -50,6 +50,18 @@ public class TreeWordsTests
     }
 
     [Fact]
+    public void EveryDisabledFocusButtonSaysWhy()
+    {
+        Assert.Equal("inset.focus.foreign", TreeClarity.SendWhyKey(false, 0));   // the USSR frame: a grey button used to have no reason
+        Assert.Equal("inset.focus.foreign", TreeClarity.SendWhyKey(false, 2));
+        Assert.Equal("inset.focus.nothing", TreeClarity.SendWhyKey(true, 0));
+        Assert.Null(TreeClarity.SendWhyKey(true, 1));
+        Assert.Equal("inset.focus.foreign", TreeClarity.FocusWhyKey(false, false, 0));
+        Assert.Equal("inset.focus.addwhy", TreeClarity.FocusWhyKey(true, false, 0));
+        Assert.Contains("inset.focus.foreign,", string.Join("\n", Lines()));
+    }
+
+    [Fact]
     public void ALongerTextMakesATallerSheet() =>
         Assert.True(LegendLayout.TreeLegendHeight(2, 2, 4, 2).Height > LegendLayout.TreeLegendHeight(2, 2, 1, 2).Height);
 
