@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -113,7 +114,29 @@ public sealed record ActorInputsView(
     ToolingLedgerView Tooling, CapabilityView Capability,
     ImmutableArray<DesignInputsView> Designs,
     RequirementView? Requirement,
-    ReserveView? Reserve = null);
+    ReserveView? Reserve = null,
+    IntelView? Intel = null);
+
+/// <summary>
+/// What intelligence shows an actor (null when the run has none; INTELLIGENCE.md §1, §3): the security item in words, the targets with the risk in words
+/// (the number only after an event, #367), estimates of the rivals as ranges with the confidence behind them, and what was caught.
+/// </summary>
+/// <param name="Security">The security item in force, a share of the budget.</param>
+/// <param name="Preset">The same in words; <c>Custom</c> when it matches no preset.</param>
+/// <param name="Targets">The plan in force, at most three.</param>
+/// <param name="NetworksLost">Networks of this actor that were exposed so far.</param>
+/// <param name="NetworksCaught">Foreign networks caught against this actor so far (the use of counter-intelligence).</param>
+/// <param name="ForeignTrace">The strongest trace of a foreign network in this actor, in words.</param>
+public sealed record IntelView(Fx6 Security, SecurityWord Preset, ImmutableArray<IntelTargetView> Targets, int NetworksLost, int NetworksCaught, TraceWord ForeignTrace);
+
+/// <summary>
+/// One target card. <c>LeadLow</c> and <c>LeadHigh</c> are the range of "nodes the target knows minus nodes the actor knows" (positive: the target is ahead), valid
+/// when <c>EstimateVisible</c>; the exact value is never in a view. <c>Confidence</c> is the figure of the help text (#260), derived from the sources.
+/// <c>Distorted</c> = the target's false trails corrupted the sources ("data distorted"). <c>LicenceSeen</c> = a hidden event of the target seen through
+/// intelligence (#508): its licence deal is in force; null while the estimate layer is not visible.
+/// </summary>
+public readonly record struct IntelTargetView(int Target, IntelMode Mode, NetworkWord Network, RiskWord Risk, TraceWord Trace, bool EstimateVisible,
+    int LeadLow, int LeadHigh, Fx6 Confidence, int Sources, bool Distorted, bool? LicenceSeen);
 
 /// <summary>
 /// The reserve account of an actor (null when the run has none): the balance, what the five items leave into it this month, and what the next step takes

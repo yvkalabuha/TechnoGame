@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -264,7 +265,37 @@ internal static class ViewBuilder
             designs.Add(DesignInputs(w, a, d, month));
         return new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
             new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month),
-            w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.ReserveShare(a) * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))));
+            w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.ReserveShare(a) * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))),
+            w.Intel is null ? null : IntelOf(w, w.Intel, a));
+    }
+
+    // The intelligence card of an actor: words and ranges only. The estimate of a rival is a range from IntelSystem.Estimate, never the exact count.
+    private static IntelView IntelOf(SliceWorld w, IntelSystem intel, int a)
+    {
+        int rows = w.Table.RowCount;
+        var targets = ImmutableArray.CreateBuilder<IntelTargetView>(IntelParams.MaxTargets);
+        int mine = w.Knowledge.KnownCount(a);
+        for (int k = 0; k < IntelParams.MaxTargets; k++)
+        {
+            if (!intel.Plan(a, k, out int t, out IntelMode mode))
+                continue;
+            IntelEstimate e = intel.Estimate(a, t);
+            targets.Add(new IntelTargetView(t, mode, intel.NetworkOf(a, t), intel.Risk(a, t), intel.TraceOf(a, t), e.Visible,
+                e.Visible ? e.Low - mine : 0, e.Visible ? e.High - mine : 0, e.Confidence, e.Sources, e.Distorted, e.Visible ? w.LicenceActive(t) : null));
+        }
+        int lost = 0, caught = 0;
+        TraceWord foreign = TraceWord.None;
+        for (int o = 0; o < rows; o++)
+        {
+            if (o != a)
+            {
+                caught += intel.Lost(o, a);
+                TraceWord tw = intel.TraceOf(o, a);
+                foreign = tw > foreign ? tw : foreign;
+            }
+            lost += o == a ? 0 : intel.Lost(a, o);
+        }
+        return new IntelView(w.SharesOf(a).Security, intel.SecurityWordOf(w.SharesOf(a).Security), targets.ToImmutable(), lost, caught, foreign);
     }
 
     // The variants of the yearly Requirement; FV is not read in the calibration mode (spec §8.2 п. 2). Initialize writes only pol.* columns,

@@ -198,6 +198,13 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool Reserve { get; init; }
 
+    /// <summary>
+    /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft
+    /// channel in <c>c_eff</c>, estimates with confidence. Needs the <c>intelligence</c> object in the data. Off = the table, the hash and every golden are those of
+    /// a build without it.
+    /// </summary>
+    public bool Intelligence { get; init; }
+
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
 
