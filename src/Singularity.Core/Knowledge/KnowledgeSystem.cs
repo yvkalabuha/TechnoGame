@@ -52,8 +52,6 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly ImmutableArray<long>? _due;
     private readonly bool _licKnows;
     private readonly int _n, _d, _actors;
-    // Weights of PriorityRate on a large graph: one slice of _n per actor, sized at construction (tick path, parallel by actor).
-    private readonly long[] _rateScratch;
 
     private readonly IntColumn[] _known;
     private readonly LongColumn[] _prog;
@@ -111,8 +109,6 @@ public sealed class KnowledgeSystem : ITickSystem
         _n = graph.Count;
         _d = graph.DisciplineNames.Length;
         _actors = start.ActorCount;
-        // One slice per actor (like _trace): PriorityRate runs on the tick path in parallel actor chunks and in parallel view building.
-        _rateScratch = _n > 512 ? new long[_actors * _n] : [];
         SystemId = systemId;
 
         _known = new IntColumn[_n];
@@ -299,7 +295,7 @@ public sealed class KnowledgeSystem : ITickSystem
     // ProgressRate with priority goals: the same allocation as the step (PlanOf, AllocOf), from the weights of the snapshot.
     private Fx6 PriorityRate(int a, int nodeRow, long t, ReadOnlySpan<int> goalRows, ReadOnlySpan<Fx6> goalMult)
     {
-        Span<long> w = _n <= 512 ? stackalloc long[_n] : _rateScratch.AsSpan(a * _n, _n);
+        Span<long> w = _n <= 512 ? stackalloc long[_n] : new long[_n]; // heap only above 512 nodes: callers include view building (WhyNot), so no shared scratch
         w.Clear();
         Fx6 wsum = Fx6.Zero;
         foreach (int r in _g.Order)
