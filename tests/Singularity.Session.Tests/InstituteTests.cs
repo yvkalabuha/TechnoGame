@@ -353,6 +353,7 @@ public class InstituteTests
             s.StepThroughMonth(t);
         Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetPriorityNode(0, 2, node)).Accepted);
         s.StepThroughMonth(8);
+        Assert.Equal(node, s.World.Institutes!.GoalNode(new InstituteHandle(0, 2)));   // the repeat was applied, not refused
         Assert.Equal(ordered, s.World.InstituteOrders.OrderMonth(new InstituteHandle(0, 2)));
     }
 
