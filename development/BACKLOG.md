@@ -176,7 +176,7 @@
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
 | [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | DONE | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
 | [TASK-0160](../development/tasks/TASK-0160-intelligence-v1-core.md) | DONE | Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) | MS-M05 |
-| [TASK-0161](../development/tasks/TASK-0161-tree-year-rings.md) | IN_PROGRESS | Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) | MS-M05 |
+| [TASK-0161](../development/tasks/TASK-0161-tree-year-rings.md) | REVIEW | Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) | MS-M05 |
 | [TASK-0162](../development/tasks/TASK-0162-k0-kernel-primitives.md) | DONE | K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5 | MS-M1 |
 | [TASK-0163](../development/tasks/TASK-0163-globe-country-labels.md) | IN_PROGRESS | Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) | MS-M05 |
 | [TASK-0164](../development/tasks/TASK-0164-m0-slice-tag.md) | DONE | M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) | MS-M1 |

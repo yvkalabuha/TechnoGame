@@ -21,7 +21,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
-- TASK-0161 [IN_PROGRESS] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0163 [IN_PROGRESS] Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) (developer)
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
 - TASK-0167 [IN_PROGRESS] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
@@ -30,6 +29,7 @@
 - TASK-0186 [IN_PROGRESS] Design: slot science model (manual node choice, queue, focus, research_speed, AI) for gate (#561-#568) (game-designer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0156 [REVIEW] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
+- TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0176 [REVIEW] Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) (simulation-engineer)
 - TASK-0178 [REVIEW] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [REVIEW] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
