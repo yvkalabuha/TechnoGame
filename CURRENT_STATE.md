@@ -35,6 +35,7 @@
 - TASK-0154 [REVIEW] Data: alliances and blocs by year 1945-2030 for the licence buyer circle (research-scientist)
 - TASK-0155 [REVIEW] Data: constant 1990 US dollar display series and conversion from Core money unit (economy-analyst)
 - TASK-0156 [APPROVED] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
+- TASK-0167 [APPROVED] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
