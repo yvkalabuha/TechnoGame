@@ -40,6 +40,9 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
+        // The table the market runs on goes into the config before anything reads it, so the fingerprint carries its identity (editing alliances.yaml changes it).
+        if (config.LicenceMarket && config.Alliances is null && data.AlliancesOf(data.Scenario(config.ScenarioId)) is { } scenarioAlliances)
+            config = config with { Alliances = scenarioAlliances };
         if (!Enum.IsDefined(config.Layer))
             throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
         // The canonical L_P product layer has no AdoptLicensedDesign step: a paid licence would never become a project.
@@ -166,7 +169,7 @@ internal sealed class SliceWorld
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber,
             securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero,   // O-040: the second word only for data whose licensable PRC need it
-            adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
+            adviser: config.EffectiveAdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.EffectiveAdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         if (config.Intelligence)

@@ -16,7 +16,7 @@ public class F17bTests(ITestOutputHelper output)
         int coexistence = 0, rateBound = 0, candidateProduces = 0;
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2 });
             SliceWorld w = s.World;
             Fx6 rKeep = w.IndustryParameters.RKeep;
             int designs = w.ProductsLayout.Designs;
@@ -60,7 +60,7 @@ public class F17bTests(ITestOutputHelper output)
     {
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = LineCloseRule.Admit });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, LineClose = LineCloseRule.Admit });
             SliceWorld w = s.World;
             for (long t = 0; t < 384; t++)
             {
@@ -118,7 +118,7 @@ public class F17bTests(ITestOutputHelper output)
     {
         // ADMIT is the pre-F17b build, whose tooling pass 2 was V0; YPROD runs under the default V5 (A39 «V5 default», #163).
         ToolingTargetSpec target = rule == LineCloseRule.Admit ? ToolingTargetSpec.Parse("V0") : new ToolingTargetSpec();
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
         for (long t = 0; t < 150; t++)
             s.StepThroughMonth(t);
         // StaleHandle is outside the old-column projections: prove here that the golden runs never hit it.
@@ -147,7 +147,7 @@ public class F17bTests(ITestOutputHelper output)
         int candidateL = 0;
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2 });
             SliceWorld w = s.World;
             int gens = w.ProductsLayout.Generations, designs = w.ProductsLayout.Designs;
             int n = w.Scenario.ActorCount;
@@ -189,6 +189,6 @@ public class F17bTests(ITestOutputHelper output)
         Assert.Equal(LineCloseRule.YProd, LineCloseRules.Parse("YPROD"));
         Assert.Equal(LineCloseRule.Admit, LineCloseRules.Parse("ADMIT"));
         Assert.Throws<ArgumentException>(() => LineCloseRules.Parse("yprod"));
-        Assert.Equal(LineCloseRule.YProd, new SliceRunConfig().LineClose);
+        Assert.Equal(LineCloseRule.YProd, SliceRunConfig.Legacy.LineClose);
     }
 }

@@ -100,7 +100,7 @@ public class FleetRuleTests
 
     private static Fixture Start(FleetLineCond cond = FleetLineCond.Gen, FleetArm arm = FleetArm.Main, int cell = 0, int threads = 1, int chunk = 1, long at = AtMonth)
     {
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = cell, FleetLineCond = cond, FleetArm = arm, Threads = threads, ChunkSize = chunk });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProfileCell = cell, FleetLineCond = cond, FleetArm = arm, Threads = threads, ChunkSize = chunk });
         s.StepThroughMonth(at);
         var f = new Fixture { Session = s };
         // The natural state of USA is not the subject: drop its other designs and the AI's pending decisions.
@@ -526,7 +526,7 @@ public class FleetRuleTests
     {
         // Month 189 decides for 190: the 1946 cohort (midyear 10) is 180 months old then. #431: it is not written off by age, so the AI may
         // still take its units; the layer must not refuse what the projection allowed.
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = 0, ToolingTarget = ToolingTargetSpec.Parse("V0") });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProfileCell = 0, ToolingTarget = ToolingTargetSpec.Parse("V0") });
         s.StepThroughMonth(188);
         var f = new Fixture { Session = s };
         for (int d = 0; d < s.World.ProductsLayout.Designs; d++)
@@ -549,7 +549,7 @@ public class FleetRuleTests
     public void Projection_AtTheStartOfAPolicyYear_TheSaleIsPricedAgainstTheNewQuotaBase()
     {
         // Month 191 decides for 192 = 16·12, a year start: quota_base is reset from the cohorts, and the old year's counters do not apply.
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = 0 });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProfileCell = 0 });
         s.StepThroughMonth(190);
         var f = new Fixture { Session = s };
         for (int d = 0; d < s.World.ProductsLayout.Designs; d++)

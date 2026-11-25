@@ -133,7 +133,7 @@ public sealed class LeverScriptTests
     private static (SliceSession S, LeverScript? L) Run(LeverSpec? spec, int months, Rows? sink = null)
     {
         GameData data = SliceData.Load(AppContext.BaseDirectory);
-        SliceSession s = SliceSession.Create(data, new SliceRunConfig { Seed = 1, Threads = 1, ChunkSize = 1 });
+        SliceSession s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 1, Threads = 1, ChunkSize = 1 });
         var calendar = new TickCalendar(s.Date);
         LeverScript? l = spec is null ? null : new LeverScript(s, spec, sink, sink is null ? -1 : 0);
         l?.Issue(0);

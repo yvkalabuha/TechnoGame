@@ -1,3 +1,4 @@
+using Singularity.Core.Policy;
 using System.Collections.Immutable;
 using Singularity.Core.Data.Yaml;
 
@@ -34,8 +35,10 @@ public static class ModLoader
         var institutes = new ObjectStore(InstituteKind);
         var intelligence = new ObjectStore(IntelligenceKind);
         var history = new ObjectStore(NodeHistoryKind);
+        var alliances = ImmutableArray.CreateBuilder<(string Directory, AllianceTable Table)>();
         foreach (ModManifest mod in mods)
         {
+            alliances.AddRange(LoadAlliances(mod.Directory));
             CheckUnlistedFiles(mod);
             var context = new ModContext(mod.Id, TransitiveDependencies(mod, mods));
             foreach (string file in mod.Files)
@@ -58,7 +61,17 @@ public static class ModLoader
         var warnings = new List<string>();
         NodeHistoryTable historyTable = NodeHistoryTable.Build(history.Objects(), nodeTable, nodes.IsDeleted, warnings);
         return new GameData(mods, nodeTable, classTable, scenarioList, historyTable, warnings.ToImmutableArray(), InstituteTable.Build(institutes.Objects()),
-            intel.Count == 1 ? IntelligenceData.Build(intel[0].Map) : null);
+            intel.Count == 1 ? IntelligenceData.Build(intel[0].Map) : null, alliances.ToImmutable());
+    }
+
+    /// <summary>The blocs files of a mod, one per scenario directory (<c>scenarios/&lt;dir&gt;/alliances.yaml</c>), in the order of the directory names.</summary>
+    private static IEnumerable<(string Directory, AllianceTable Table)> LoadAlliances(string modDirectory)
+    {
+        string scenarios = Path.Combine(modDirectory, "scenarios");
+        if (!Directory.Exists(scenarios))
+            return [];
+        return [.. Directory.GetDirectories(scenarios).Order(StringComparer.Ordinal).Where(d => File.Exists(Path.Combine(d, "alliances.yaml")))
+            .Select(d => (Path.GetFileName(d), AllianceTable.Load(Path.Combine(d, "alliances.yaml"))))];
     }
 
     private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios,

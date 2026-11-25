@@ -186,6 +186,20 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public System.Collections.Immutable.ImmutableArray<int> AdviserActors { get; init; }
 
+    /// <summary>
+    /// The adviser for <see cref="PlayerActor"/> when <see cref="AdviserActors"/> is empty (TASK-0171): on in main, and it does nothing in a run without a player.
+    /// </summary>
+    public bool AdviserForPlayer { get; init; } = true;
+
+    /// <summary>The adviser rows in force: the explicit list, else the player's row (with the product AI and <see cref="AdviserForPlayer"/>), else none.</summary>
+    internal System.Collections.Immutable.ImmutableArray<int> EffectiveAdviserActors =>
+        !AdviserActors.IsDefaultOrEmpty ? AdviserActors
+        : AdviserForPlayer && ProductAi && PlayerActor is { } p ? [p]
+        : default;
+
+    /// <summary>All five levers of wave 1 off: the build before TASK-0150..0160 (the hash and every old golden). Tests that pin old behaviour start from it.</summary>
+    public static SliceRunConfig Legacy => new() { Reserve = false, Institutes = false, Intelligence = false, LicenceMarket = false, AdviserForPlayer = false };
+
     /// <summary>How long a refused proposal stays silent, in years (a yearly norm; the policy turns it into months).</summary>
     public int AdviserRefuseYears { get; init; } = 1;
 
@@ -208,21 +222,21 @@ public sealed partial record SliceRunConfig
     /// The budget reserve account (#475, TASK-0150): shares may sum to less than 1, the remainder goes to <c>res.balance</c> (leaks about 10 % a year),
     /// and <c>fund_programme</c> pays from it. Off = the table, the hash and every golden are those of a build without the reserve.
     /// </summary>
-    public bool Reserve { get; init; }
+    public bool Reserve { get; init; } = true;
 
     /// <summary>
     /// Research priorities through institutes (TASK-0151, #484-#496): the institutes of the data stand in the table, <c>set_priority_node</c> gives a slot a goal
     /// (money first, institute bonus), the AI picks goals by the same rules. Off = no institute columns, the old knowledge path, the hash and every golden of a
     /// build without them.
     /// </summary>
-    public bool Institutes { get; init; }
+    public bool Institutes { get; init; } = true;
 
     /// <summary>
     /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft
     /// channel in <c>c_eff</c>, estimates with confidence. Needs the <c>intelligence</c> object in the data. Off = the table, the hash and every golden are those of
     /// a build without it.
     /// </summary>
-    public bool Intelligence { get; init; }
+    public bool Intelligence { get; init; } = true;
 
     /// <summary>
     /// The actor the player controls (null = none: Lab, tests, the views of the whole world). Not part of the data. With institutes the AI neither sets the priorities nor
@@ -255,9 +269,9 @@ public sealed partial record SliceRunConfig
 
     /// <summary>
     /// The licence market (TASK-0152; production-lines-and-licence-market.md §2): several licences per country keyed (seller, gen), a permanent catalogue,
-    /// <c>BuyLicence</c> / <c>OfferLicence</c>, AI buying by the rules of O-062. Off in main: with it off the world, the columns and the hash are those of main.
+    /// <c>BuyLicence</c> / <c>OfferLicence</c>, AI buying by the rules of O-062. On in main (TASK-0171); with it off the world, the columns and the hash are those of the build without it.
     /// </summary>
-    public bool LicenceMarket { get; init; }
+    public bool LicenceMarket { get; init; } = true;
 
     /// <summary>Actor rows whose licences move only by commands (the player's); the AI buys nothing for them and sells at m = 1. Empty = every actor is AI.</summary>
     public ImmutableArray<int> LicenceExternalActors { get; init; } = [];

@@ -69,14 +69,14 @@ public sealed class SimHost : IDisposable
     public SliceLayoutView Layout { get; private set; }
     public bool Ready => _snap != null;
 
-    readonly int _seed; readonly GameData _preloaded;
+    readonly int _seed; readonly GameData _preloaded; readonly string _playerActorId;
     /// <summary>Hash of the initial state (tick 0): two starts with the same seed and scenario must give the same value.</summary>
     public int Seed => _seed;
     public string StartHash { get; private set; } = "";
 
     /// <param name="seed">World seed (default 7, as the spikes before the menu).</param>
     /// <param name="data">Mods already loaded by the menu; null = load here.</param>
-    public SimHost(int seed = 7, GameData data = null) { _seed = seed; _preloaded = data; _thread = new Thread(Run) { IsBackground = true, Name = "sim" }; }
+    public SimHost(int seed = 7, GameData data = null, string playerActorId = null) { _seed = seed; _preloaded = data; _playerActorId = playerActorId; _thread = new Thread(Run) { IsBackground = true, Name = "sim" }; }
     public void Start() => _thread.Start();
 
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
@@ -131,7 +131,11 @@ public sealed class SimHost : IDisposable
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
             Data = _preloaded ?? ModLoader.Load(Path.Combine(root, "mods", "core"));
             _status = "status.session";
-            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed });
+            // The player's actor: the institutes and the product lines of it are only proposed by the AI (the adviser), its licences move by commands.
+            int player = _playerActorId == null ? -1 : Data.Scenario(SliceRunConfig.DefaultScenario).ActorIndex(_playerActorId);
+            var config = new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed };
+            if (player >= 0) config = config with { PlayerActor = player, LicenceExternalActors = [player] };
+            _session = SliceSession.Create(Data, config);
             Layout = _session.Layout;
             StartHash = _session.LastHash;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
