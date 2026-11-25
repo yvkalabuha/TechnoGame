@@ -211,6 +211,13 @@ public sealed partial record SliceRunConfig
     public bool Reserve { get; init; }
 
     /// <summary>
+    /// Research priorities through institutes (TASK-0151, #484-#496): the institutes of the data stand in the table, <c>set_priority_node</c> gives a slot a goal
+    /// (money first, institute bonus), the AI picks goals by the same rules. Off = no institute columns, the old knowledge path, the hash and every golden of a
+    /// build without them.
+    /// </summary>
+    public bool Institutes { get; init; }
+
+    /// <summary>
     /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft
     /// channel in <c>c_eff</c>, estimates with confidence. Needs the <c>intelligence</c> object in the data. Off = the table, the hash and every golden are those of
     /// a build without it.
@@ -218,9 +225,10 @@ public sealed partial record SliceRunConfig
     public bool Intelligence { get; init; }
 
     /// <summary>
-    /// Execution only (not state, not hashed): the actor whose eyes the read views are. With intelligence on, the licence of another actor is shown to it only
-    /// through intelligence (a visible estimate and the confidence of the hidden event, EVENTS_POLITICS.md §10); otherwise the view carries an empty licence.
-    /// <c>null</c> (Lab, tests) = the views of the whole world.
+    /// The actor the player controls (null = none: Lab, tests, the views of the whole world). Not part of the data. With institutes the AI neither sets the priorities nor
+    /// starts the projects of this actor: it only proposes (<c>InstituteView.ProposedGoal</c>, <c>ProposesBuild</c>), O-067, so it enters the fingerprint then. With
+    /// intelligence on, the licence of another actor is shown to it only through intelligence (a visible estimate and the confidence of the hidden event,
+    /// EVENTS_POLITICS.md §10); otherwise the view carries an empty licence.
     /// </summary>
     public int? PlayerActor { get; init; }
 

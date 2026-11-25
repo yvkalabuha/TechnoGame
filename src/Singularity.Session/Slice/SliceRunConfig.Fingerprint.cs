@@ -34,6 +34,7 @@ public sealed partial record SliceRunConfig
             ResearchWeightByDiscipline.IsDefault ? "-" : string.Join(',', ResearchWeightByDiscipline.OrderBy(w => w.Discipline, StringComparer.Ordinal).Select(w => w.Discipline + ":" + w.Weight.Raw.ToString(CultureInfo.InvariantCulture))),
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
             .. Reserve ? (string[])["reserve"] : [],
+            .. Institutes ? (string[])["institutes", (PlayerActor ?? -1).ToString(CultureInfo.InvariantCulture)] : [],
             .. Intelligence ? (string[])["intelligence"] : [],
         ];
         fields = [.. fields, LicenceMarket.ToString(), string.Join(',', LicenceExternalActors.IsDefault ? [] : LicenceExternalActors), Alliances?.Identity ?? "-"];

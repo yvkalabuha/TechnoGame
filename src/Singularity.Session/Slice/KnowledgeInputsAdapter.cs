@@ -13,7 +13,11 @@ namespace Singularity.Session;
 /// </summary>
 internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInputs
 {
-    public Fx6 ResearchBudget(int actorRow, long month) => world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow);
+    // With institutes the money is cut by the running projects and the upkeep and grown by the capacity of the built ones (rev 4 §8); the factor is exactly 1 without them.
+    public Fx6 ResearchBudget(int actorRow, long month) =>
+        world.Institutes is null
+            ? world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow)
+            : world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow) * world.Institutes.BudgetFactor(actorRow);
 
     public Fx6 Priority(int actorRow, int nodeRow, long month)
     {
@@ -22,6 +26,9 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
         int d = world.Graph.Discipline[nodeRow];
         return world.ResearchWeight.Length == 0 || d < 0 ? prio : prio * world.ResearchWeight[d];
     }
+
+    public int PriorityGoals(int actorRow, long month, Span<int> nodeRows, Span<Fx6> multipliers) =>
+        world.Institutes?.Goals(actorRow, nodeRows, multipliers) ?? 0;
 
     public Fx6 J(int actorRow, int nodeRow, long month) =>
         KnowledgeRng.J(world.Streams.Know, month == 0 ? 0 : (int)((month - 1) / 12), actorRow, world.Graph.Number[nodeRow]);

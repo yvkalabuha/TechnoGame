@@ -6,8 +6,9 @@ namespace Singularity.Core.Data;
 public sealed class GameData
 {
     internal GameData(ImmutableArray<ModManifest> mods, NodeTable nodes, ProductClassTable productClasses,
-        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history, ImmutableArray<string> warnings, IntelligenceData? intelligence = null)
+        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history, ImmutableArray<string> warnings, InstituteTable institutes, IntelligenceData? intelligence = null)
     {
+        Institutes = institutes;
         Intelligence = intelligence;
         Mods = mods;
         Nodes = nodes;
@@ -30,6 +31,8 @@ public sealed class GameData
     public NodeTable Nodes { get; }
     public ProductClassTable ProductClasses { get; }
 
+    /// <summary>Research institutes (own hash: not part of <see cref="DataHash"/>, so runs without them keep the data identity).</summary>
+    public InstituteTable Institutes { get; }
     /// <summary>Display-only node history (#486); not part of <see cref="DataHash"/>, no simulation reads it.</summary>
     public NodeHistoryTable History { get; }
 

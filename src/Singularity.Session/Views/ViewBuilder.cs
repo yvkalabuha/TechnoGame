@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Institutes;
 using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
@@ -80,7 +81,8 @@ internal static class ViewBuilder
             LicenceOf(w, a, refusals.MoveToImmutable()),
             new DisruptionView(disStart, disEnd), withNodes && !HiddenFromPlayer(w, a) ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
             Alloy(w, a, month), Research(w, a), HiddenFromPlayer(w, a) ? Math.Min(1, UnknownNodes(w, a)) : UnknownNodes(w, a),
-            w.Policy.MarketOn && !HiddenFromPlayer(w, a) ? Market(w, a, next) : null);
+            w.Policy.MarketOn && !HiddenFromPlayer(w, a) ? Market(w, a, next) : null,
+            Institutes(w, a, next));
     }
 
     // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.
@@ -112,6 +114,32 @@ internal static class ViewBuilder
         (BadLicence reason, int seller, int gen, int lastMonth) = pol.LastRefusal(a);
         return new LicenceMarketView(held.ToImmutable(), own.ToImmutable(), offers.ToImmutable(), world.MoveToImmutable(), reason, seller, gen, lastMonth,
             pol.LicenceIncome(a, month), pol.IsExternal(a) ? pol.IncomeCap(a) : Fx6.Zero, pol.IsExternal(a));
+    }
+
+    private static ImmutableArray<InstituteView> Institutes(SliceWorld w, int a, long month)
+    {
+        if (w.Institutes is not { } inst)
+            return [];
+        var list = ImmutableArray.CreateBuilder<InstituteView>(inst.Layout.SlotCount(a));
+        Span<int> goals = stackalloc int[InstituteSystem.MaxSlotsLimit];
+        Span<bool> builds = stackalloc bool[InstituteSystem.MaxSlotsLimit];
+        bool advise = w.Config.PlayerActor == a;
+        // A scheduled knowledge run refuses every priority order (PriorityNoEffect): propose builds only.
+        bool scheduled = w.Config.Layer is LayerControl.Lk or LayerControl.Lk0;
+        if (advise)
+            inst.Propose(a, month, goals, builds);
+        for (int k = 0; k < inst.Layout.SlotCount(a); k++)
+        {
+            var h = new InstituteHandle(a, k);
+            var levels = ImmutableArray.CreateBuilder<int>(inst.Layout.DisciplineNames.Length);
+            for (int d = 0; d < inst.Layout.DisciplineNames.Length; d++)
+                levels.Add(inst.Level(h, d));
+            long start = inst.BuildStart(h);
+            list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), HiddenFromPlayer(w, a) ? 0 : inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
+                start >= 0 ? inst.BuildRate(h, start) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
+                advise && !scheduled ? goals[k] : 0, advise && builds[k]));
+        }
+        return list.MoveToImmutable();
     }
 
     // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.

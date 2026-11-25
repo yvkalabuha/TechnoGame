@@ -62,6 +62,8 @@ public enum CommandKind
     BuyLicence = 12,
     OfferLicence = 13,
     RefuseProposal = 14,
+    SetPriorityNode = 15,
+    BuildInstitute = 16,
 }
 
 /// <summary>
@@ -202,6 +204,25 @@ public sealed record BuyLicence(int Actor, int Seller, int Gen) : SliceCommand(A
 public sealed record OfferLicence(int Actor, int Gen, Fx6 M, SaleCircle Circle) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.OfferLicence;
+}
+
+/// <summary>
+/// <c>set_priority_node(slot, node)</c> (research-institutes-priorities §4): the institute in <paramref name="Slot"/> of the actor works on the node first (money first, bonus of its
+/// level in the area). <paramref name="Slot"/> is the position of the institute among those of the actor (<see cref="Singularity.Core.Institutes.InstituteHandle"/>), <paramref name="Node"/> the node number of the data.
+/// A standing order: it stays until the node is known.
+/// </summary>
+public sealed record SetPriorityNode(int Actor, int Slot, int Node) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.SetPriorityNode;
+}
+
+/// <summary>
+/// <c>build_institute(slot)</c> (research-institutes-priorities §8, #491): starts the project of the candidate institute in <paramref name="Slot"/>. It takes a share of the research
+/// money while it runs and opens the institute (a slot, capacity, upkeep) after its months. Not before <c>ref_year − 10</c>; a small country builds at most 3 levels per project.
+/// </summary>
+public sealed record BuildInstitute(int Actor, int Slot) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.BuildInstitute;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

@@ -105,6 +105,12 @@ public static class CommandCodec
                 sb.Append(",\"node\":").Append(I(fp.Node)).Append(",\"amount\":");
                 Raw(sb, fp.Amount);
                 break;
+            case SetPriorityNode pn:
+                sb.Append(",\"slot\":").Append(I(pn.Slot)).Append(",\"node\":").Append(I(pn.Node));
+                break;
+            case BuildInstitute bi:
+                sb.Append(",\"slot\":").Append(I(bi.Slot));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -144,6 +150,8 @@ public static class CommandCodec
             "buy_licence" => new BuyLicence(actor, r.GetProperty("seller").GetInt32(), r.GetProperty("gen").GetInt32()),
             "offer_licence" => new OfferLicence(actor, r.GetProperty("gen").GetInt32(), ReadRaw(r.GetProperty("m")), (SaleCircle)r.GetProperty("circle").GetInt32()),
             "fund_programme" => new FundProgramme(actor, r.GetProperty("node").GetInt32(), ReadRaw(r.GetProperty("amount"))),
+            "set_priority_node" => new SetPriorityNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
+            "build_institute" => new BuildInstitute(actor, r.GetProperty("slot").GetInt32()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -201,6 +209,8 @@ public static class CommandCodec
         CommandKind.BuyLicence => "buy_licence",
         CommandKind.OfferLicence => "offer_licence",
         CommandKind.FundProgramme => "fund_programme",
+        CommandKind.SetPriorityNode => "set_priority_node",
+        CommandKind.BuildInstitute => "build_institute",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

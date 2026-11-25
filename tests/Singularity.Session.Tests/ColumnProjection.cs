@@ -47,6 +47,9 @@ internal static class ColumnProjection
         || IsDesignRefGenColumn(name) || IsHorizonColumn(name) || IsReplCreditColumn(name)
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
 
+    /// <summary>Columns of the institutes (TASK-0151): orders, AI goals, experience. Only in a run with <c>Institutes</c>.</summary>
+    public static bool IsInstituteColumn(string name) => name.StartsWith("inst.", StringComparison.Ordinal) || name.StartsWith("know.disc.", StringComparison.Ordinal);
+    
     /// <summary>Columns of intelligence (TASK-0160): networks, trace, losses, the AI plan, the player's security share and plan, and the run marks. Only in a run with <c>Intelligence</c>.</summary>
     public static bool IsIntelColumn(string name) =>
         name.StartsWith("int.", StringComparison.Ordinal) || name.StartsWith("run.intel", StringComparison.Ordinal) || name == "cmd.shares.security" || name == "cmd.shares.plan"

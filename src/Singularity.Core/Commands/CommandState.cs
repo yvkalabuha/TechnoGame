@@ -34,14 +34,17 @@ public sealed class CommandState
     private readonly IntColumn? _planSet;
     private readonly IntColumn[] _planTarget = [], _planMode = [];
     private readonly LongColumn? _fundAmount;
+    private readonly Singularity.Core.Institutes.InstituteOrders? _institutes;
 
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
     /// <param name="fundProgramme">The run has the reserve: adds the one-off slot <c>cmd.fund.*</c> (absent otherwise, so the table of other runs is unchanged).</param>
     /// <param name="intelligence">The run has intelligence: adds the security share and the target plan to the standing settings <c>cmd.shares.*</c> (absent otherwise).</param>
     /// <param name="programmeProcesses">Process numbers a mastery programme may run on (tier ≥ 5): one `cmd.prog.p{n}` column each.</param>
-    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, ImmutableArray<int> adviserActors = default, bool fundProgramme = false, bool intelligence = false)
+    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, ImmutableArray<int> adviserActors = default, bool fundProgramme = false, bool intelligence = false,
+        Singularity.Core.Institutes.InstituteOrders? institutes = null)
     {
+        _institutes = institutes;
         _progNumbers = programmeProcesses.IsDefault ? [] : programmeProcesses;
         _slots = CommandLimits.DesignSlots;
         _altSlots = altSlots;
@@ -324,6 +327,10 @@ public sealed class CommandState
                 Set(_fundAmount!, a, fp.Amount.Raw);
                 Set(_fundStamp, a, stamp);
                 break;
+            case SetPriorityNode pn:
+                return _institutes?.Apply(pn, consumedAtMonth) ?? CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+            case BuildInstitute bi:
+                return _institutes?.ApplyBuild(bi, consumedAtMonth) ?? CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command.GetType(), "Unknown command type.");
         }

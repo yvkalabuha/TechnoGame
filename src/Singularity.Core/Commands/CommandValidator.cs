@@ -76,6 +76,23 @@ public enum CommandRefusal
 
     /// <summary>A <c>refuse_proposal</c> names a project the adviser made no such proposal for in the month (TASK-0153).</summary>
     NoProposal,
+    /// <summary>A command needs the institutes and the run has none.</summary>
+    InstitutesOff,
+
+    /// <summary>The actor has no institute in that slot.</summary>
+    BadSlot,
+
+    /// <summary>At application: the node is known already, or another slot of the actor works on it.</summary>
+    PriorityNotAvailable,
+
+    /// <summary>At application: the slot got its node from the player less than the reassignment period ago.</summary>
+    PriorityTooSoon,
+
+    /// <summary>At application: the project cannot start (standing, running, before its window, above the cap of a small country).</summary>
+    BuildRefused,
+
+    /// <summary>A priority order in a run whose knowledge is a schedule (L_K, L_K0): the order cannot change research.</summary>
+    PriorityNoEffect,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -102,6 +119,12 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 
     /// <summary>Node numbers of the knowledge graph (for <c>fund_programme</c>).</summary>
     public ImmutableArray<int> NodeNumbers { get; init; } = [];
+
+    /// <summary>Institutes per actor row (<c>set_priority_node</c>); empty = the run has no institutes.</summary>
+    public ImmutableArray<int> InstituteSlots { get; init; } = [];
+
+    /// <summary>Knowledge is a schedule (L_K, L_K0): priority orders are refused.</summary>
+    public bool ScheduledKnowledge { get; init; }
 
     /// <summary><c>compose</c>/<c>derive</c>/<c>cancel</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
     public const int DesignSlots = 4;
@@ -167,6 +190,22 @@ public static class CommandValidator
                 return s.Shares.IsValid
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must each lie in [0, 1] and sum to exactly 1, got [{s.Shares.Research.Raw}, {s.Shares.Capability.Raw}, {s.Shares.Effort.Raw}, {s.Shares.Procurement.Raw}, {s.Shares.Quality.Raw}] (raw)");
+            case SetPriorityNode pn:
+                if (limits.InstituteSlots.IsDefaultOrEmpty)
+                    return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                if (limits.ScheduledKnowledge)
+                    return CommandVerdict.Refuse(CommandRefusal.PriorityNoEffect, "knowledge follows a schedule in this run: a priority cannot change research");
+                if ((uint)pn.Actor >= (uint)limits.InstituteSlots.Length || (uint)pn.Slot >= (uint)limits.InstituteSlots[pn.Actor])
+                    return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {pn.Actor} has no institute slot {pn.Slot}");
+                return limits.NodeNumbers.Contains(pn.Node)
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {pn.Node} is not in the graph");
+            case BuildInstitute bi:
+                if (limits.InstituteSlots.IsDefaultOrEmpty)
+                    return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                return (uint)bi.Actor < (uint)limits.InstituteSlots.Length && (uint)bi.Slot < (uint)limits.InstituteSlots[bi.Actor]
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {bi.Actor} has no institute slot {bi.Slot}");
             case FundProgramme fp:
                 if (!limits.ReserveEnabled || !limits.FundEnabled)
                     return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run cannot fund programmes (no reserve account, or the knowledge layer is a schedule)");

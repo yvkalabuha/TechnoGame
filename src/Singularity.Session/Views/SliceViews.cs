@@ -55,7 +55,16 @@ public sealed record ActorView(
     AlloyCoverage Alloy = default,
     ImmutableArray<ResearchView> Research = default,
     int UnknownNodes = 0,
-    LicenceMarketView? Market = null);
+    LicenceMarketView? Market = null,
+    ImmutableArray<InstituteView> Institutes = default);
+
+/// <summary>
+/// An institute of an actor (empty array without institutes): <see cref="Id"/> is the data ID, <see cref="Levels"/> the level 0..4 per discipline of the scenario (0 = hidden in the card, #489),
+/// <see cref="Goal"/> the node number it works on (0 = free or not built). A candidate has <see cref="Standing"/> false; <see cref="BuildStart"/> is the month its project started (−1 none)
+/// and <see cref="BuildMonths"/> its length, <see cref="ProposedGoal"/> / <see cref="ProposesBuild"/> what the AI would do (the adviser: filled for the actor of the player, whose slots the AI does not touch), <see cref="BuildRate"/> the share of the research money it takes per month while it runs, <see cref="RefYear"/> the historical year.
+/// </summary>
+public sealed record InstituteView(int Slot, string Id, bool Standing, int Goal, ImmutableArray<int> Levels, long BuildStart, int BuildMonths, Fx6 BuildRate, int RefYear, int TotalLevels,
+    int ProposedGoal = 0, bool ProposesBuild = false);
 
 /// <summary>A research in progress (TASK-0119): a frontier node with accumulated progress. <see cref="Have"/> against <see cref="Need"/> is the scale of the why_not link;
 /// <see cref="Threshold"/> is a hazard node at its threshold, where its discovery is a draw, not certain.</summary>

@@ -1,0 +1,82 @@
+using Singularity.Core.Data;
+using Singularity.Core.Data.Yaml;
+using Singularity.Core.Institutes;
+using Singularity.Core.Knowledge;
+using Singularity.Kernel;
+
+namespace Singularity.Core.Tests.Knowledge;
+
+/// <summary>TASK-0151 codex round 2: graph walk of the priority groups, the kappa cap, the canonical institute table.</summary>
+public class PriorityGraphTests
+{
+    private sealed class Inputs : IKnowledgeInputs
+    {
+        public int GoalRow = -1;
+        public Fx6 ResearchBudget(int actorRow, long month) => Fx6.FromInt(100_000);
+        public Fx6 Priority(int actorRow, int nodeRow, long month) => Fx6.One;
+        public Fx6 J(int actorRow, int nodeRow, long month) => Fx6.One;
+        public Fx6 DisciplineVolume(int actorRow, int discipline, long month) => Fx6.Zero;
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => [];
+
+        public int PriorityGoals(int actorRow, long month, Span<int> nodeRows, Span<Fx6> multipliers)
+        {
+            if (GoalRow < 0)
+                return 0;
+            nodeRows[0] = GoalRow;
+            multipliers[0] = Fx6.FromRaw(1_200_000);
+            return 1;
+        }
+    }
+
+    // A chain of diamonds: number 1 is the root, every level is two parallel nodes joined by one node; paths multiply by two per level.
+    [Fact]
+    public async Task DiamondChain_GoalAtTheTop_StepAndRateFinishQuickly()
+    {
+        const int depth = 45;
+        var specs = new List<KnowledgeNodeSpec> { new(1, NodeType.FND, 1, 0, false, Fx6.FromInt(1_000_000), []) };
+        int join = 1, next = 2;
+        for (int d = 0; d < depth; d++)
+        {
+            int a = next++, b = next++, j = next++;
+            specs.Add(new(a, NodeType.FND, 1, 0, false, Fx6.FromInt(1_000_000), [[join]]));
+            specs.Add(new(b, NodeType.FND, 1, 0, false, Fx6.FromInt(1_000_000), [[join]]));
+            specs.Add(new(j, NodeType.FND, 1, 0, false, Fx6.FromInt(1_000_000), [[a], [b]]));
+            join = j;
+        }
+        KnowledgeGraph g = KnowledgeGraph.Create(specs, ["prop"]);
+        var inputs = new Inputs { GoalRow = g.RowOf(join) };
+        var table = new Table(1);
+        var cal = new TickCalendar(new CivilDate(1945, 9, 1));
+        var sys = new KnowledgeSystem(table, g, new KnowledgeStart([0], specs.Count, 1), new KnowledgeParams(), inputs, new CounterRng(1), 1,
+            priorities: new InstituteParams());
+        var runner = new TickRunner(table, 1, [sys], 1, 1, cal);
+        var work = Task.Run(() =>
+        {
+            while (runner.Tick <= cal.TickOfMonth(3))
+                runner.RunTick();
+            return sys.ProgressRate(0, g.RowOf(1), 4);
+        });
+        Assert.Same(work, await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(20))));
+        Assert.True(work.IsCompletedSuccessfully, "the walk over shared prerequisites did not finish");
+    }
+
+    [Fact]
+    public void KappaEff_TinyGroupWeightDoesNotOverflow_AndGivesTheCap()
+    {
+        var p = new InstituteParams();
+        Fx6 k = InstituteMath.KappaEff(Fx6.FromInt(20_000_000), Fx6.FromRaw(1), p);
+        Assert.Equal(p.Kappa, k);
+    }
+
+    private static InstituteTable Table(string areas)
+    {
+        string yaml = $"id: x\ncountry: SUN\nfounded: 1940\nref_year: 1945\nsource: s\nareas:\n{areas}\n";
+        return InstituteTable.Build([("x", (YMap)StrictYaml.Parse(yaml, "t.yaml"))]);
+    }
+
+    [Fact]
+    public void InstituteTable_AreaKeyOrder_DoesNotChangeTheHash()
+    {
+        Assert.Equal(Table("  aero: 2\n  prop: 3").Hash, Table("  prop: 3\n  aero: 2").Hash);
+    }
+}

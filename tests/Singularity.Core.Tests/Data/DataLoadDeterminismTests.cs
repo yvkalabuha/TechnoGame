@@ -33,18 +33,18 @@ public class DataLoadDeterminismTests : IDisposable
     public void ManifestFileOrder_DoesNotChangeHash_WhenFilesAreIndependent()
     {
         string expected = ModLoader.Load(TestMods.CoreDir).DataHash;
-        string[] files = ["nodes.yaml", "product_classes.yaml", "node_history.yaml", "scenario_1945.yaml", "intelligence.yaml"];
+        string[] files = ["nodes.yaml", "product_classes.yaml", "node_history.yaml", "scenario_1945.yaml", "intelligence.yaml", "institutes.yaml"];
         int n = 0;
         foreach (string[] order in Permutations(files))
         {
             using var mods = new TestMods();
             string core = mods.CopyCore((name, text) => name == "mod.yaml"
-                ? TestMods.ReplaceOnce(text, "files: [nodes.yaml, product_classes.yaml, node_history.yaml, scenario_1945.yaml, intelligence.yaml]", $"files: [{string.Join(", ", order)}]")
+                ? TestMods.ReplaceOnce(text, "files: [nodes.yaml, product_classes.yaml, node_history.yaml, scenario_1945.yaml, intelligence.yaml, institutes.yaml]", $"files: [{string.Join(", ", order)}]")
                 : text);
             Assert.Equal(expected, ModLoader.Load(core).DataHash);
             n++;
         }
-        Assert.Equal(120, n);
+        Assert.Equal(720, n);
     }
 
     [Fact]

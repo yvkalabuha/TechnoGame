@@ -8,6 +8,7 @@ using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
+using Singularity.Core.Institutes;
 using Singularity.Core.Intelligence;
 using Singularity.Core.Reserve;
 using Singularity.Core.WhyNot;
@@ -175,13 +176,23 @@ internal sealed class SliceWorld
             Intel = new IntelSystem(Table, intel.Params, new IntelInputsAdapter(this), Streams.Events, scenario.ActorId);
             IntelDataHash = intel.Hash;
         }
+        InstituteOrders? orders = null;
+        if (config.Institutes)
+        {
+            var layout = InstituteLayout.FromData(data.Institutes, scenario, Graph, new InstituteParams());
+            orders = new InstituteOrders(Table, layout);
+            InstituteOrders = orders;
+            Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this));
+        }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
             ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
-            adviserActors: Policy.Adviser?.Rows ?? default, fundProgramme: config.Reserve, intelligence: config.Intelligence);
+            adviserActors: Policy.Adviser?.Rows ?? default, fundProgramme: config.Reserve, intelligence: config.Intelligence, institutes: orders);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
         {
             ReserveEnabled = config.Reserve,
+            InstituteSlots = Institutes is null ? [] : Institutes.Layout.SlotCounts,
+            ScheduledKnowledge = config.Layer is LayerControl.Lk or LayerControl.Lk0,
             IntelEnabled = config.Intelligence,
             FundEnabled = config.Reserve && config.Layer is not (LayerControl.Lk or LayerControl.Lk0),
             NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
@@ -194,6 +205,8 @@ internal sealed class SliceWorld
         Policy.Initialize();
         // The reserve runs last: it reads the same snapshot as the others and nothing reads its output within the step.
         var systems = new List<ITickSystem> { Knowledge, Industry, Products, Policy };
+        if (Institutes is not null)
+            systems.Add(Institutes);
         if (Reserve is not null)
             systems.Add(Reserve);
         if (Intel is not null)
@@ -282,7 +295,8 @@ internal sealed class SliceWorld
             default:
                 // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
-                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve);
+                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve,
+                    priorities: Config.Institutes ? new InstituteParams() : null);
         }
     }
 
@@ -370,6 +384,11 @@ internal sealed class SliceWorld
     /// <summary>The reserve account system; null when <see cref="SliceRunConfig.Reserve"/> is off.</summary>
     public ReserveSystem? Reserve { get; }
 
+    /// <summary>The institutes system; null when <see cref="SliceRunConfig.Institutes"/> is off.</summary>
+    public InstituteSystem? Institutes { get; }
+
+    /// <summary>The standing orders of the player to the institutes (the columns <c>set_priority_node</c> writes); null without institutes.</summary>
+    public InstituteOrders? InstituteOrders { get; }
     /// <summary>The intelligence system; null when <see cref="SliceRunConfig.Intelligence"/> is off.</summary>
     public IntelSystem? Intel { get; }
 
@@ -701,6 +720,13 @@ internal sealed class SliceWorld
         {
             Table.AddInt("run.intel").Load([.. Enumerable.Repeat(1, rows)]);
             Table.AddLong("run.intel.data").Load(Fill(rows, BitConverter.ToInt64(Convert.FromHexString(IntelDataHash)[..8])));
+        }
+        // Institutes: the flag is in the config fingerprint; their data hash is outside the data hash.
+        if (Config.Institutes)
+        {
+            Table.AddLong("run.inst.data").Load(Fill(rows, BitConverter.ToInt64(Convert.FromHexString(Data.Institutes.Hash)[..8])));
+            // The controlled actor changes whose institutes the AI runs, so it is part of the state identity from the first hash.
+            Table.AddInt("run.inst.player").Load([.. Enumerable.Repeat(Config.PlayerActor ?? -1, rows)]);
         }
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
