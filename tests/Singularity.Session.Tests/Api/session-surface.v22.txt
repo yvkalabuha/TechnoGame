@@ -1,8 +1,8 @@
 # TestApiVersion = 22
 type Singularity.Session.ActorInputsView [sealed class]
-  ctor(System.Int32 Actor, Singularity.Kernel.Fx6 Budget, Singularity.Core.Policy.BudgetShares Shares, Singularity.Kernel.Fx6 ProcurementBudget, Singularity.Session.ToolingLedgerView Tooling, Singularity.Session.CapabilityView Capability, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignInputsView] Designs, Singularity.Session.RequirementView? Requirement)
+  ctor(System.Int32 Actor, Singularity.Kernel.Fx6 Budget, Singularity.Core.Policy.BudgetShares Shares, Singularity.Kernel.Fx6 ProcurementBudget, Singularity.Session.ToolingLedgerView Tooling, Singularity.Session.CapabilityView Capability, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignInputsView] Designs, Singularity.Session.RequirementView? Requirement, System.Nullable`1[Singularity.Session.ReserveView] Reserve)
   method <Clone>$() : Singularity.Session.ActorInputsView
-  method Deconstruct(System.Int32& Actor, Singularity.Kernel.Fx6& Budget, Singularity.Core.Policy.BudgetShares& Shares, Singularity.Kernel.Fx6& ProcurementBudget, Singularity.Session.ToolingLedgerView& Tooling, Singularity.Session.CapabilityView& Capability, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignInputsView]& Designs, Singularity.Session.RequirementView&? Requirement) : System.Void
+  method Deconstruct(System.Int32& Actor, Singularity.Kernel.Fx6& Budget, Singularity.Core.Policy.BudgetShares& Shares, Singularity.Kernel.Fx6& ProcurementBudget, Singularity.Session.ToolingLedgerView& Tooling, Singularity.Session.CapabilityView& Capability, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignInputsView]& Designs, Singularity.Session.RequirementView&? Requirement, System.Nullable`1[Singularity.Session.ReserveView]&? Reserve) : System.Void
   method Equals(Singularity.Session.ActorInputsView? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method GetHashCode() : System.Int32
@@ -13,6 +13,7 @@ type Singularity.Session.ActorInputsView [sealed class]
   prop Designs : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignInputsView] { get; init; }
   prop ProcurementBudget : Singularity.Kernel.Fx6 { get; init; }
   prop Requirement : Singularity.Session.RequirementView? { get; init; }
+  prop Reserve : System.Nullable`1[Singularity.Session.ReserveView] { get; init; }
   prop Shares : Singularity.Core.Policy.BudgetShares { get; init; }
   prop Tooling : Singularity.Session.ToolingLedgerView { get; init; }
 type Singularity.Session.ActorStepView [sealed class]
@@ -307,7 +308,6 @@ type Singularity.Session.PolicyDecisionView [sealed class]
   prop Closes : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CloseView] { get; init; }
   prop DesignCommands : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignCommandView] { get; init; }
   prop Fleet : System.Collections.Immutable.ImmutableArray`1[Singularity.Core.Products.FleetCommand] { get; init; }
-  prop Proposals : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ProposalView] { get; init; }
   prop Repeats : System.Collections.Immutable.ImmutableArray`1[System.Int32] { get; init; }
   prop Starts : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.StartView] { get; init; }
 type Singularity.Session.ProcessView [struct]
@@ -323,20 +323,6 @@ type Singularity.Session.ProcessView [struct]
   prop UnitCostMult : Singularity.Kernel.Fx6 { get; init; }
   prop V : Singularity.Kernel.Fx6 { get; init; }
   prop Yield : Singularity.Kernel.Fx6 { get; init; }
-type Singularity.Session.ProposalView [struct]
-  ctor(Singularity.Core.Policy.ProposalKind Kind, System.Int32 Design, Singularity.Core.Products.DesignHandle Handle, Singularity.Kernel.Fx6 Rate, Singularity.Core.Policy.LineCloseReason Reason)
-  method Accept(System.Int32 actor) : Singularity.Core.Commands.SliceCommand
-  method Deconstruct(Singularity.Core.Policy.ProposalKind& Kind, System.Int32& Design, Singularity.Core.Products.DesignHandle& Handle, Singularity.Kernel.Fx6& Rate, Singularity.Core.Policy.LineCloseReason& Reason) : System.Void
-  method Equals(Singularity.Session.ProposalView other) : System.Boolean
-  method Equals(System.Object obj) : System.Boolean
-  method GetHashCode() : System.Int32
-  method Refuse(System.Int32 actor) : Singularity.Core.Commands.SliceCommand
-  method ToString() : System.String
-  prop Design : System.Int32 { get; init; }
-  prop Handle : Singularity.Core.Products.DesignHandle { get; init; }
-  prop Kind : Singularity.Core.Policy.ProposalKind { get; init; }
-  prop Rate : Singularity.Kernel.Fx6 { get; init; }
-  prop Reason : Singularity.Core.Policy.LineCloseReason { get; init; }
 type Singularity.Session.QualityView [struct]
   ctor(System.Boolean Active, System.Int32 Start, System.Int32 TriggerCount, System.Int32 TrainingTarget)
   method Deconstruct(System.Boolean& Active, System.Int32& Start, System.Int32& TriggerCount, System.Int32& TrainingTarget) : System.Void
@@ -374,6 +360,16 @@ type Singularity.Session.ResearchView [struct]
   prop Need : Singularity.Kernel.Fx6 { get; init; }
   prop Node : System.Int32 { get; init; }
   prop Threshold : System.Boolean { get; init; }
+type Singularity.Session.ReserveView [struct]
+  ctor(Singularity.Kernel.Fx6 Balance, Singularity.Kernel.Fx6 Inflow, Singularity.Kernel.Fx6 LeakNextMonth)
+  method Deconstruct(Singularity.Kernel.Fx6& Balance, Singularity.Kernel.Fx6& Inflow, Singularity.Kernel.Fx6& LeakNextMonth) : System.Void
+  method Equals(Singularity.Session.ReserveView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Balance : Singularity.Kernel.Fx6 { get; init; }
+  prop Inflow : Singularity.Kernel.Fx6 { get; init; }
+  prop LeakNextMonth : Singularity.Kernel.Fx6 { get; init; }
 type Singularity.Session.SaleArm [enum]
   field ChiOff : Singularity.Session.SaleArm = 5 static
   field None : Singularity.Session.SaleArm = 0 static
@@ -427,9 +423,6 @@ type Singularity.Session.SliceRunConfig [sealed class]
   method FixAll(System.UInt64 seed) : Singularity.Session.SliceRunConfig static
   method GetHashCode() : System.Int32
   method ToString() : System.String
-  prop AdviserActors : System.Collections.Immutable.ImmutableArray`1[System.Int32] { get; init; }
-  prop AdviserMaxLines : System.Int32 { get; init; }
-  prop AdviserRefuseYears : System.Int32 { get; init; }
   prop AheadCostK : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
   prop AheadCostMax : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
   prop AheadCostPow : System.Nullable`1[System.Int32] { get; init; }
@@ -471,6 +464,7 @@ type Singularity.Session.SliceRunConfig [sealed class]
   prop ProductAi : System.Boolean { get; init; }
   prop ProfileCell : System.Nullable`1[System.Int32] { get; init; }
   prop ResearchWeightByDiscipline : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DisciplineWeight] { get; init; }
+  prop Reserve : System.Boolean { get; init; }
   prop SaleArm : Singularity.Session.SaleArm { get; init; }
   prop ScenarioId : System.String { get; init; }
   prop Seed : System.UInt64 { get; init; }

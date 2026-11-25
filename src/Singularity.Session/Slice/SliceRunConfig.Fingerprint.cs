@@ -33,6 +33,7 @@ public sealed partial record SliceRunConfig
             XHalfByTier.IsDefault ? "-" : string.Join(',', XHalfByTier.Select(x => x.Raw.ToString(CultureInfo.InvariantCulture))),
             ResearchWeightByDiscipline.IsDefault ? "-" : string.Join(',', ResearchWeightByDiscipline.OrderBy(w => w.Discipline, StringComparer.Ordinal).Select(w => w.Discipline + ":" + w.Weight.Raw.ToString(CultureInfo.InvariantCulture))),
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
+            .. Reserve ? (string[])["reserve"] : [],
         ];
         // The adviser decides the trajectory but exists only when on: nothing is added for an off run, so its fingerprint stays what it was.
         if (!AdviserActors.IsDefaultOrEmpty || AdviserRefuseYears != 1 || AdviserMaxLines != 2)

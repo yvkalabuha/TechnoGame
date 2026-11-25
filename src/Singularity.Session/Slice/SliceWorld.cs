@@ -8,6 +8,7 @@ using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
+using Singularity.Core.Reserve;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
 
@@ -154,19 +155,32 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber,
-            adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));   // O-040: the second word only for data whose licensable PRC need it
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber,   // O-040: the second word only for data whose licensable PRC need it
+            adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
+        if (config.Reserve)
+            Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
-            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])), adviserActors: Policy.Adviser?.Rows ?? default);
+            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
+            adviserActors: Policy.Adviser?.Rows ?? default, fundProgramme: config.Reserve);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
-            [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
+            [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
+        {
+            ReserveEnabled = config.Reserve,
+            FundEnabled = config.Reserve && config.Layer is not (LayerControl.Lk or LayerControl.Lk0),
+            NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
+        };
         RegisterRunColumns();
         // why_not reads the three layers' snapshots only (contract §6); ProcessDevelopment is off in the EffortZero ablation (E_full = 0 makes it inert).
         WhyNot = new WhyNotAnalyzer(Graph, kp, Knowledge, Industry, Products, pp, new WhyNotInputsAdapter(this),
             new LeverRegistry(Enum.GetValues<Lever>().Where(l => l != Lever.ProcessDevelopment || !config.Channels.HasFlag(SliceChannels.EffortZero))));
 
         Policy.Initialize();
-        ITickSystem[] systems = config.DailyTickProbe ? [Knowledge, Industry, Products, Policy, new DailyProbeSystem()] : [Knowledge, Industry, Products, Policy];
+        // The reserve runs last: it reads the same snapshot as the others and nothing reads its output within the step.
+        var systems = new List<ITickSystem> { Knowledge, Industry, Products, Policy };
+        if (Reserve is not null)
+            systems.Add(Reserve);
+        if (config.DailyTickProbe)
+            systems.Add(new DailyProbeSystem());
         DailyViewNeutral = IsDailyViewNeutral(systems);
         Runner = new TickRunner(Table, config.Seed, systems, config.ChunkSize, config.Threads, Calendar);
     }
@@ -249,7 +263,7 @@ internal sealed class SliceWorld
             default:
                 // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
-                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp);
+                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve);
         }
     }
 
@@ -333,6 +347,9 @@ internal sealed class SliceWorld
     public ProductsSystem Products { get; }
     public PolicySystem Policy { get; }
     public CommandState Commands { get; }
+
+    /// <summary>The reserve account system; null when <see cref="SliceRunConfig.Reserve"/> is off.</summary>
+    public ReserveSystem? Reserve { get; }
     public WhyNotAnalyzer WhyNot { get; }
     public CommandLimits Limits { get; }
     public TickRunner Runner { get; }
@@ -342,6 +359,13 @@ internal sealed class SliceWorld
     public BudgetShares SharesOf(int actor) => Commands.SharesOverride(actor) ?? Policy.Shares(actor);
 
     /// <summary>Procurement budget of the month in force: <c>share_P·budget_a</c> (spec §3.3, §3.4); one definition for the product layer and <c>why_not</c>.</summary>
+    /// <summary>
+    /// The share of the budget that flows into the reserve account: the remainder the player left out, plus the share set on the quality item when the
+    /// player set the split (that item has no reader in the core, so its money is not lost but kept in the reserve). The AI's own split sums to 1 and
+    /// feeds nothing.
+    /// </summary>
+    public Fx6 ReserveShare(int actor) => Commands.SharesOverride(actor) is { } s ? s.Reserve + s.Quality : Fx6.Zero;
+
     public Fx6 ProcurementBudget(int actor) => ProcurementBase(actor) + LicenceFlow(actor);
 
     /// <summary><c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5).</summary>

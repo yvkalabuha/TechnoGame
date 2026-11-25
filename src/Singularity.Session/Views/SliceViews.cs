@@ -130,7 +130,14 @@ public sealed record ActorInputsView(
     int Actor, Fx6 Budget, BudgetShares Shares, Fx6 ProcurementBudget,
     ToolingLedgerView Tooling, CapabilityView Capability,
     ImmutableArray<DesignInputsView> Designs,
-    RequirementView? Requirement);
+    RequirementView? Requirement,
+    ReserveView? Reserve = null);
+
+/// <summary>
+/// The reserve account of an actor (null when the run has none): the balance, what the five items leave into it this month, and what the next step takes
+/// as the leak. Amounts are in budget-index units, as <c>Budget</c> is (not money in dollars); the display in 1990 dollars is the client's.
+/// </summary>
+public readonly record struct ReserveView(Fx6 Balance, Fx6 Inflow, Fx6 LeakNextMonth);
 
 /// <summary>The variants of the yearly Requirement of the AI (spec §5.5, §7 S1): null unless the month is a yearly one (month mod 12 = 0), and in <see cref="SliceViewMode.Calibration"/>.</summary>
 public sealed record RequirementView(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible,

@@ -57,7 +57,8 @@ public enum CommandKind
     SellCohort = 8,
     StartMasteryProgramme = 9,
     CancelMasteryProgramme = 10,
-    RefuseProposal = 11,
+    FundProgramme = 11,
+    RefuseProposal = 12,
 }
 
 /// <summary>
@@ -166,6 +167,16 @@ public sealed record StartMasteryProgramme(int Actor, int ProcessNumber, bool Ab
 public sealed record CancelMasteryProgramme(int Actor, int ProcessNumber) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CancelMasteryProgramme;
+}
+
+/// <summary>
+/// <c>fund_programme(node, amount)</c> (PLAYER_LEVERS_WAVE1 §A2, #471): a one-off payment from the reserve into the progress of a research node of the actor's
+/// frontier. It goes through the same <c>c_eff</c> as the monthly money (ahead-of-time multiplier included), with the return <c>1/(1+k)</c>, <c>k</c> = earlier
+/// programmes on the node. One per actor and month. <paramref name="Node"/> is the node number of the data.
+/// </summary>
+public sealed record FundProgramme(int Actor, int Node, Fx6 Amount) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.FundProgramme;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

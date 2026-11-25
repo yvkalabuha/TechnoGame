@@ -204,6 +204,12 @@ public sealed partial record SliceRunConfig
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <c>YPROD</c> in main; <c>ADMIT</c> is the rule before F17b (regression, diagnostics).</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
+    /// <summary>
+    /// The budget reserve account (#475, TASK-0150): shares may sum to less than 1, the remainder goes to <c>res.balance</c> (leaks about 10 % a year),
+    /// and <c>fund_programme</c> pays from it. Off = the table, the hash and every golden are those of a build without the reserve.
+    /// </summary>
+    public bool Reserve { get; init; }
+
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
 

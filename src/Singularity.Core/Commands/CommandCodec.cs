@@ -80,6 +80,10 @@ public static class CommandCodec
             case RefuseProposal rp:
                 Handle(sb, rp.Design).Append(",\"close\":").Append(rp.Close ? "true" : "false");
                 break;
+            case FundProgramme fp:
+                sb.Append(",\"node\":").Append(I(fp.Node)).Append(",\"amount\":");
+                Raw(sb, fp.Amount);
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -116,6 +120,7 @@ public static class CommandCodec
             "start_mastery_programme" => new StartMasteryProgramme(actor, r.GetProperty("process").GetInt32(), r.GetProperty("abroad").GetBoolean()),
             "cancel_mastery_programme" => new CancelMasteryProgramme(actor, r.GetProperty("process").GetInt32()),
             "refuse_proposal" => new RefuseProposal(actor, ReadHandle(r, "design"), r.GetProperty("close").GetBoolean()),
+            "fund_programme" => new FundProgramme(actor, r.GetProperty("node").GetInt32(), ReadRaw(r.GetProperty("amount"))),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -170,6 +175,7 @@ public static class CommandCodec
         CommandKind.StartMasteryProgramme => "start_mastery_programme",
         CommandKind.CancelMasteryProgramme => "cancel_mastery_programme",
         CommandKind.RefuseProposal => "refuse_proposal",
+        CommandKind.FundProgramme => "fund_programme",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

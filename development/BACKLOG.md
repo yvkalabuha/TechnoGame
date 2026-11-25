@@ -160,7 +160,7 @@
 | [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | DONE | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 | [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | DONE | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | DONE | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
-| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
+| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | IN_PROGRESS | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | DONE | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 | [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | DONE | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
@@ -175,6 +175,8 @@
 | [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | IN_PROGRESS | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
 | [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | DONE | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
+| [TASK-0160](../development/tasks/TASK-0160-intelligence-v1-core.md) | APPROVED | Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) | MS-M05 |
+| [TASK-0161](../development/tasks/TASK-0161-tree-year-rings.md) | IN_PROGRESS | Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) | MS-M05 |
 
 ## Гипотезы
 
@@ -229,6 +231,9 @@
 | [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
 | [ADR-0025](../docs/decisions/ADR-0025-view-snapshot-buffer-ring.md) | ACCEPTED | View snapshot: scoped client view |
 | [ADR-0026](../docs/decisions/ADR-0026-ai-generated-images.md) | ACCEPTED | AI-generated images as static illustrations (amendment to ADR-0009, #445) |
+| [ADR-0027](../docs/decisions/ADR-0027-daily-tick-228.md) | PROPOSED | Daily tick (#228): closable conditions of ADR-0019, decay and growth on Rate, parallel work with the player levers batch |
+| [ADR-0028](../docs/decisions/ADR-0028-m1-tick-budget.md) | PROPOSED | M1 tick budget: split revision after EXP-0007, one K_d definition, K4 thresholds for the 5-7 s speed floor, measurement ladder with pre-registered outcomes |
+| [ADR-0029](../docs/decisions/ADR-0029-entity-tables.md) | PROPOSED | Entity tables on the move to ADR-0020: which entities leave the actors table, child tables with parent-aligned chunks |
 
 ## Research Reports
 
