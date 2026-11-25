@@ -11,7 +11,7 @@ public class TwoWorldsSubscribedViewsTests
     private const long Months = 14;
 
     private static SliceSession Make(ulong seed, int threads) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = threads, ChunkSize = 1, HashEveryTick = true, ViewScope = ViewScope.Subscribed });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = threads, ChunkSize = 1, HashEveryTick = true, ViewScope = ViewScope.Subscribed });
 
     // Every month: the subscription changes, a command goes in, the hash and the dump of the view are recorded.
     private static string[] Run(ulong seed, int threads, int[] first, int[] second, Barrier? barrier)

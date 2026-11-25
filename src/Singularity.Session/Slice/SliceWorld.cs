@@ -91,7 +91,7 @@ internal sealed class SliceWorld
             LicOff = config.LicOff, T6dOff = config.T6dOff,
             LicenceMarket = config.LicenceMarket, LicenceExternalRows = config.LicenceExternalActors.IsDefault ? [] : config.LicenceExternalActors,
             MarketActorIds = config.LicenceMarket ? scenario.ActorId : [], MarketStartYear = scenario.StartYear, MarketStartMonth = scenario.StartMonth,
-            Alliances = config.LicenceMarket ? config.Alliances ?? throw new ArgumentException("The licence market needs the alliances table (AllianceTable.Load of scenarios/<id>/alliances.yaml): without it the Bloc and Friends circles are silently empty.", nameof(config)) : AllianceTable.Empty,
+            Alliances = config.LicenceMarket ? config.Alliances ?? data.Alliances ?? throw new ArgumentException("The licence market needs the alliances table (AllianceTable.Load of scenarios/<id>/alliances.yaml): without it the Bloc and Friends circles are silently empty.", nameof(config)) : AllianceTable.Empty,
             Mastery = pp.Mastery,
         };
         config.ToolingTarget.Validate();
@@ -166,7 +166,7 @@ internal sealed class SliceWorld
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber,
             securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero,   // O-040: the second word only for data whose licensable PRC need it
-            adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
+            adviser: config.EffectiveAdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.EffectiveAdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         if (config.Intelligence)

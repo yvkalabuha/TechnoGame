@@ -95,17 +95,17 @@ public class StreamKeyTests
     [Fact]
     public void Seeds_FollowFixFlags()
     {
-        SliceStreams none = SliceStreams.Create(new SliceRunConfig { Seed = 9 });
+        SliceStreams none = SliceStreams.Create(SliceRunConfig.Legacy with { Seed = 9 });
         Assert.Equal(9UL, none.Know.Seed);
         Assert.Equal(9UL, none.Events.Seed);
         Assert.Equal(9UL, none.Ai.Seed);
         Assert.Equal(9UL, none.Start.Seed);
 
-        SliceStreams k = SliceStreams.Create(new SliceRunConfig { Seed = 9, FixK = true });
+        SliceStreams k = SliceStreams.Create(SliceRunConfig.Legacy with { Seed = 9, FixK = true });
         Assert.Equal((SliceRunConfig.FixedSeed, 9UL, 9UL, 9UL), (k.Know.Seed, k.Events.Seed, k.Ai.Seed, k.Start.Seed));
-        SliceStreams e = SliceStreams.Create(new SliceRunConfig { Seed = 9, FixE = true });
+        SliceStreams e = SliceStreams.Create(SliceRunConfig.Legacy with { Seed = 9, FixE = true });
         Assert.Equal((9UL, SliceRunConfig.FixedSeed, 9UL, 9UL), (e.Know.Seed, e.Events.Seed, e.Ai.Seed, e.Start.Seed));
-        SliceStreams a = SliceStreams.Create(new SliceRunConfig { Seed = 9, FixA = true });
+        SliceStreams a = SliceStreams.Create(SliceRunConfig.Legacy with { Seed = 9, FixA = true });
         Assert.Equal((9UL, 9UL, SliceRunConfig.FixedSeed, 9UL), (a.Know.Seed, a.Events.Seed, a.Ai.Seed, a.Start.Seed));
         Assert.Equal(0x5EEDUL, SliceRunConfig.FixedSeed);
     }

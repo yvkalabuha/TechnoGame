@@ -9,7 +9,7 @@ public class A41OptionsTests
 
     private static SliceSession Run(ulong seed, int threads, int months, PilotForm form = PilotForm.Slot, PilotProfileSet set = PilotProfileSet.P2P3)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = threads, PilotForm = form, PilotProfiles = set });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = threads, PilotForm = form, PilotProfiles = set });
         for (long t = 0; t < months; t++)
             s.StepThroughMonth(t);
         return s;
@@ -18,8 +18,8 @@ public class A41OptionsTests
     [Fact]
     public void Default_IsSlotForP2AndP3_AndCarriesNoRunColumn()
     {
-        Assert.Equal(PilotForm.Slot, new SliceRunConfig().PilotForm);
-        Assert.Equal(PilotProfileSet.P2P3, new SliceRunConfig().PilotProfiles);
+        Assert.Equal(PilotForm.Slot, SliceRunConfig.Legacy.PilotForm);
+        Assert.Equal(PilotProfileSet.P2P3, SliceRunConfig.Legacy.PilotProfiles);
         Assert.DoesNotContain("run.a41", Run(1, 1, 1).World.Table.Columns.Select(c => c.Name));
         Assert.Contains("run.a41", Run(1, 1, 1, PilotForm.Whole).World.Table.Columns.Select(c => c.Name));
         Assert.Contains("run.a41", Run(1, 1, 1, set: PilotProfileSet.P3).World.Table.Columns.Select(c => c.Name));
@@ -28,14 +28,14 @@ public class A41OptionsTests
     [Fact]
     public void OutOfRangeOptions_AreRejected()
     {
-        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 1, PilotForm = (PilotForm)7 }));
-        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 1, PilotProfiles = (PilotProfileSet)9 }));
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, PilotForm = (PilotForm)7 }));
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, PilotProfiles = (PilotProfileSet)9 }));
     }
 
     // The compositions the AI chose (alternatives of every design of every actor, 384 months of snapshots): not affected by the run.a41 column.
     private static string Compositions(ulong seed, PilotForm form = PilotForm.Slot, PilotProfileSet set = PilotProfileSet.P2P3)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, PilotForm = form, PilotProfiles = set });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, PilotForm = form, PilotProfiles = set });
         var sb = new System.Text.StringBuilder();
         for (long t = 0; t < 384; t++)
         {

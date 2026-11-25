@@ -84,7 +84,7 @@ public class AssembledSliceProperties
         for (int scriptSeed = 1; scriptSeed <= 4; scriptSeed++)
         {
             List<List<Item>> script = Script(scriptSeed);
-            var config = new SliceRunConfig { Seed = 5 };
+            var config = SliceRunConfig.Legacy with { Seed = 5 };
             SliceSession reference = RunScript(script, 0, config, out List<string> refVerdicts);
             reference.StepTo(reference.Tick + 40);
             Assert.True(reference.CommandLog.Length > 0);
@@ -105,7 +105,7 @@ public class AssembledSliceProperties
     {
         for (int scriptSeed = 1; scriptSeed <= 6; scriptSeed++)
         {
-            SliceSession s = RunScript(Script(scriptSeed), scriptSeed, new SliceRunConfig { Seed = 2 }, out _);
+            SliceSession s = RunScript(Script(scriptSeed), scriptSeed, SliceRunConfig.Legacy with { Seed = 2 }, out _);
             s.Step(40);
             List<LoggedCommand> log = CommandCodec.DecodeLog(s.CommandLog);
             Assert.NotEmpty(log);
@@ -129,7 +129,7 @@ public class AssembledSliceProperties
     public void Replay_GivesTheSameHash_OnOtherThreads_AtOddTicks_AndAtAPrefix()
     {
         List<List<Item>> script = Script(9);
-        SliceSession original = RunScript(script, 3, new SliceRunConfig { Seed = 21, Threads = 1 }, out _);
+        SliceSession original = RunScript(script, 3, SliceRunConfig.Legacy with { Seed = 21, Threads = 1 }, out _);
         long mid = original.Tick;
         string midHash = original.LastHash;
         string midLog = original.CommandLog;
@@ -137,7 +137,7 @@ public class AssembledSliceProperties
 
         foreach ((int threads, int chunk) in new[] { (1, 1), (4, 1), (8, 3) })
         {
-            var cfg = new SliceRunConfig { Seed = 21, Threads = threads, ChunkSize = chunk };
+            var cfg = SliceRunConfig.Legacy with { Seed = 21, Threads = threads, ChunkSize = chunk };
             SliceSession full = SliceSession.Replay(SliceTestData.Data, cfg, original.CommandLog, original.Tick);
             HashAssert.Equal(original.LastHash, full.LastHash);
             Assert.Equal(original.CommandLog, full.CommandLog);
@@ -146,16 +146,16 @@ public class AssembledSliceProperties
             HashAssert.Equal(midHash, prefix.LastHash);
         }
         // Replaying a replay is a fixed point.
-        SliceSession again = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 21 }, original.CommandLog, original.Tick);
-        Assert.Equal(original.CommandLog, SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 21 }, again.CommandLog, again.Tick).CommandLog);
+        SliceSession again = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 21 }, original.CommandLog, original.Tick);
+        Assert.Equal(original.CommandLog, SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 21 }, again.CommandLog, again.Tick).CommandLog);
     }
 
     [Fact]
     public void Replay_WithAnotherSeed_DoesNotReproduceTheHash()
     {
-        SliceSession original = RunScript(Script(2), 1, new SliceRunConfig { Seed = 21 }, out _);
+        SliceSession original = RunScript(Script(2), 1, SliceRunConfig.Legacy with { Seed = 21 }, out _);
         original.Step(60);
-        SliceSession other = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 22 }, original.CommandLog, original.Tick);
+        SliceSession other = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 22 }, original.CommandLog, original.Tick);
         HashAssert.NotEqual(original.LastHash, other.LastHash);
     }
 
@@ -166,7 +166,7 @@ public class AssembledSliceProperties
         string? hash = null;
         foreach (int threads in new[] { 1, 4, 8 })
         {
-            SliceSession s = RunScript(script, 2, new SliceRunConfig { Seed = 13, Threads = threads, ChunkSize = threads }, out _);
+            SliceSession s = RunScript(script, 2, SliceRunConfig.Legacy with { Seed = 13, Threads = threads, ChunkSize = threads }, out _);
             s.Step(120);
             hash ??= s.LastHash;
             HashAssert.Equal(hash, s.LastHash);
@@ -211,7 +211,7 @@ public class AssembledSliceProperties
     [Fact]
     public void StartSym_IsSeedIndependent_AndEqualInTheWorld_FromTheStartAndAfterRun()
     {
-        var cfg = new SliceRunConfig { Seed = 1, Start = StartVariant.Symmetric, ProfileCell = 0 };
+        var cfg = SliceRunConfig.Legacy with { Seed = 1, Start = StartVariant.Symmetric, ProfileCell = 0 };
         SliceSession a = SliceTestData.Create(cfg);
         SliceSession b = SliceTestData.Create(cfg with { Seed = 2 });
         Assert.Equal(a.World.Scenario.Hash, b.World.Scenario.Hash);
@@ -244,7 +244,7 @@ public class AssembledSliceProperties
     public void FixFlags_SwitchExactlyTheirStreams(bool fixK, bool fixE, bool fixA)
     {
         const ulong seed = 77;
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, FixK = fixK, FixE = fixE, FixA = fixA });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, FixK = fixK, FixE = fixE, FixA = fixA });
         SliceStreams st = s.World.Streams;
         Assert.Equal(fixK ? SliceRunConfig.FixedSeed : seed, st.Know.Seed);
         Assert.Equal(fixE ? SliceRunConfig.FixedSeed : seed, st.Events.Seed);
@@ -257,8 +257,8 @@ public class AssembledSliceProperties
     {
         for (ulong seed = 1; seed <= 12; seed++)
         {
-            var free = SliceTestData.Create(new SliceRunConfig { Seed = seed });
-            foreach (SliceRunConfig c in new[] { new SliceRunConfig { Seed = seed, FixK = true }, new SliceRunConfig { Seed = seed, FixE = true } })
+            var free = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
+            foreach (SliceRunConfig c in new[] { SliceRunConfig.Legacy with { Seed = seed, FixK = true }, SliceRunConfig.Legacy with { Seed = seed, FixE = true } })
             {
                 SliceSession s = SliceTestData.Create(c);
                 for (int a = 0; a < 5; a++)
@@ -273,7 +273,7 @@ public class AssembledSliceProperties
         PolicyProfile[]? first = null;
         for (ulong seed = 1; seed <= 30; seed++)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, FixA = true });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, FixA = true });
             PolicyProfile[] p = [.. Enumerable.Range(0, 5).Select(a => s.World.Policy.Profile(a))];
             first ??= p;
             Assert.Equal(first, p);

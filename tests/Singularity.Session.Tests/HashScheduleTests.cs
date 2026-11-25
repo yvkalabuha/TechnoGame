@@ -9,7 +9,7 @@ public class HashScheduleTests
     private const int Days = 180;
 
     private static SliceSession Create(SliceRunConfig? config = null) =>
-        SliceSession.Create(SliceTestData.Data, config ?? new SliceRunConfig { Seed = 7 });
+        SliceSession.Create(SliceTestData.Data, config ?? SliceRunConfig.Legacy with { Seed = 7 });
 
     private static string Fresh(SliceSession s) => StateHash.ComputeHex(s.World.Table, SliceWorld.SchemaVersion);
 
@@ -52,7 +52,7 @@ public class HashScheduleTests
         HashAssert.NotEqual(before, s.LastHash);
         HashAssert.Equal(Fresh(s), s.LastHash);
 
-        SliceSession probe = Create(new SliceRunConfig { Seed = 7, DailyTickProbe = true });
+        SliceSession probe = Create(SliceRunConfig.Legacy with { Seed = 7, DailyTickProbe = true });
         probe.StepThroughMonth(0);
         long pv = probe.World.Table.Version;
         long computations = probe.HashComputations;
@@ -84,7 +84,7 @@ public class HashScheduleTests
     [Fact]
     public void ViewStateHash_IsNullOffTheSchedule_AndTheComputedHashOnIt()
     {
-        SliceSession s = Create(new SliceRunConfig { Seed = 7, DailyTickProbe = true });
+        SliceSession s = Create(SliceRunConfig.Legacy with { Seed = 7, DailyTickProbe = true });
         for (int day = 0; day < 70; day++)
         {
             s.Step(1);
@@ -94,7 +94,7 @@ public class HashScheduleTests
             else
                 Assert.Null(s.View.StateHash);
         }
-        SliceSession off = Create(new SliceRunConfig { Seed = 7, HashCheckpoints = false });
+        SliceSession off = Create(SliceRunConfig.Legacy with { Seed = 7, HashCheckpoints = false });
         off.StepThroughMonth(2);
         Assert.Null(off.View.StateHash);
         HashAssert.Equal(Fresh(off), off.LastHash);
@@ -103,7 +103,7 @@ public class HashScheduleTests
     [Fact]
     public void WithoutCheckpoints_AndWithoutReads_OnlyTheStartHashIsComputed()
     {
-        SliceSession s = Create(new SliceRunConfig { Seed = 7, HashCheckpoints = false });
+        SliceSession s = Create(SliceRunConfig.Legacy with { Seed = 7, HashCheckpoints = false });
         Assert.Equal(1, s.HashComputations);
         int local = 0;
         for (int day = 0; day < 100; day++)
@@ -122,7 +122,7 @@ public class HashScheduleTests
     [Fact]
     public void CopyOnWrite_EqualsTheFullCopyMode_OnEveryDay_WithCommands()
     {
-        var config = new SliceRunConfig { Seed = 7, HashEveryTick = true, DailyTickProbe = true };
+        var config = SliceRunConfig.Legacy with { Seed = 7, HashEveryTick = true, DailyTickProbe = true };
         SliceSession cow = Create(config), full = Create(config);
         full.World.Table.FullCopyMode = true;
         int local = 0;
@@ -149,7 +149,7 @@ public class HashScheduleTests
         {
             foreach (int chunk in new[] { 1, 8, 32 })
             {
-                SliceSession s = Create(new SliceRunConfig { Seed = 7, Threads = threads, ChunkSize = chunk, HashEveryTick = everyTick, DailyTickProbe = everyTick });
+                SliceSession s = Create(SliceRunConfig.Legacy with { Seed = 7, Threads = threads, ChunkSize = chunk, HashEveryTick = everyTick, DailyTickProbe = everyTick });
                 var hashes = new List<string?>();
                 for (int day = 0; day < 65; day++)
                 {
@@ -172,14 +172,14 @@ public class HashScheduleTests
     [Fact]
     public void Replay_EndsWithAHash_AndEqualsTheOriginalRun()
     {
-        SliceSession original = Create(new SliceRunConfig { Seed = 7, HashCheckpoints = false });
+        SliceSession original = Create(SliceRunConfig.Legacy with { Seed = 7, HashCheckpoints = false });
         original.Step(10);
         Assert.True(original.Submit(SourceClass.Player, 0, 0, new SetEffortFocus(0, [47])).Accepted);
         original.Step(80);
         string log = original.CommandLog;
         string expected = original.LastHash;
 
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, HashCheckpoints = false }, log, 90);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, HashCheckpoints = false }, log, 90);
         Assert.Equal(2, replay.HashComputations);            // the start and the end of the replay
         HashAssert.Equal(expected, replay.LastHash);
         Assert.Equal(2, replay.HashComputations);
@@ -206,7 +206,7 @@ public class HashScheduleTests
     public void HashEveryTick_HashesEveryNonEmptyTick_EvenWithoutAPublishedView()
     {
         // No probe: a day on which nothing runs is empty and computes nothing; every other day is hashed.
-        SliceSession s = Create(new SliceRunConfig { Seed = 7, HashEveryTick = true });
+        SliceSession s = Create(SliceRunConfig.Legacy with { Seed = 7, HashEveryTick = true });
         long expected = s.HashComputations;
         for (int day = 0; day < 70; day++)
         {

@@ -9,7 +9,7 @@ namespace Singularity.Session.Tests;
 public class PolicyAndConfigTests
 {
     private static SliceSession Make(ulong seed, Func<SliceRunConfig, SliceRunConfig>? edit = null) =>
-        SliceTestData.Create(edit?.Invoke(new SliceRunConfig { Seed = seed }) ?? new SliceRunConfig { Seed = seed });
+        SliceTestData.Create(edit?.Invoke(SliceRunConfig.Legacy with { Seed = seed }) ?? SliceRunConfig.Legacy with { Seed = seed });
 
     private static PolicyProfile[] Profiles(SliceSession s) =>
         [.. Enumerable.Range(0, 5).Select(a => s.World.Policy.Profile(a))];

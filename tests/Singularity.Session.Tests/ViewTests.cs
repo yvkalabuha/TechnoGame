@@ -23,8 +23,8 @@ public sealed class ViewWalk
         // Seed 1, and the A40 stress arm without effort money for the cancel (TASK-0058: with I-OC the main run gives no project up).
         SliceRunConfig[] configs =
         [
-            new() { Seed = 1, Threads = 2, LicKnows = true },
-            new() { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
+            SliceRunConfig.Legacy with { Seed = 1, Threads = 2, LicKnows = true },
+            SliceRunConfig.Legacy with { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
         ];
         foreach (SliceRunConfig config in configs)
         {
@@ -393,7 +393,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
     [Fact]
     public void SliceLayoutView_DescribesTheWorld()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
         SliceWorld w = s.World;
         SliceLayoutView l = s.Layout;
         Assert.True(w.Scenario.ActorId.SequenceEqual(l.ActorIds));
@@ -416,7 +416,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
     [Fact]
     public void View_BeforeTheFirstStep_IsTheInitialState()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
         SliceView v = s.View;
         Assert.Equal(-1, v.Month);
         Assert.Null(v.Inputs);
@@ -430,7 +430,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
     [Fact]
     public void View_IsReplacedByANonEmptyTickOnly()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
         s.StepThroughMonth(0);
         SliceView afterMonth = s.View;
         Assert.Equal(0, afterMonth.Month);
@@ -520,14 +520,15 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
         // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
         // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
-        HashAssert.Equal("7720220e04795975c4e9e8e7b11d50c51976106a68cb89f0464c416db3baa087", a.LastHash);
+        // Re-recorded in TASK-0171 (levers batch): the default config has Reserve, Institutes, LicenceMarket, Intelligence on; the Legacy config keeps 7720220e (SeriesSwitchTests).
+        HashAssert.Equal("d7c17b3db31dcf1f1b18584bcf82f1bafc9b6ef6f5edfd80e5d11a34e2ae25b8", a.LastHash);
     }
 
     [Fact]
     public void CalibrationMode_HasNoKeyNoFleetValue_AndNoWhyNot()
     {
-        SliceSession full = SliceTestData.Create(new SliceRunConfig { Seed = 2 });
-        SliceSession calib = SliceTestData.Create(new SliceRunConfig { Seed = 2, ViewMode = SliceViewMode.Calibration });
+        SliceSession full = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 2 });
+        SliceSession calib = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 2, ViewMode = SliceViewMode.Calibration });
         for (long t = 0; t < 61; t++)
         {
             full.StepThroughMonth(t);
@@ -552,7 +553,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
     public void DesignInputsView_GiveUp_IsNullWithoutTheProductAi()
     {
         // A scripted player drives the product layer alone: the AI's classifier has nothing to read, the views must still be built.
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProductAi = false });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProductAi = false });
         var player = new PlayerScript(s);
         bool prototype = false;
         for (long t = 0; t < 60; t++)

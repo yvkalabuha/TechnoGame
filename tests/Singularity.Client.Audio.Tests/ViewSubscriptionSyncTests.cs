@@ -23,7 +23,7 @@ public class ViewSubscriptionSyncTests
 
     private static SliceSession Paused()
     {
-        SliceSession s = SliceSession.Create(Data, new SliceRunConfig { Seed = 7, ViewScope = ViewScope.Subscribed });
+        SliceSession s = SliceSession.Create(Data, SliceRunConfig.Legacy with { Seed = 7, ViewScope = ViewScope.Subscribed });
         s.StepThroughMonth(2);
         return s;
     }

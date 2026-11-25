@@ -39,7 +39,7 @@ public class LinkedRunTests
     // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
-    private const string Golden60 = "7fd29c298e613998bfd1b5fde6493032e2dfd26f286cd2abd8529a7b9c358db8";
+    private const string Golden60 = "22a0c0e78a10b1e4914316cbe6049dc15757badeb77a46dbe01275c614f94c1f";   // re-recorded in TASK-0171 (levers batch on by default)
 
     private sealed class Run
     {

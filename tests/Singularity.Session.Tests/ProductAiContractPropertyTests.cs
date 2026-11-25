@@ -23,7 +23,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         int seriesMonths = 0, cancelled = 0, withdrawnServed = 0, inService = 0, idleSeen = 0, noOutputSeen = 0;
         foreach ((ulong seed, EffortShareArm arm) in Runs())
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, EffortShare = arm });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2, EffortShare = arm });
             SliceWorld w = s.World;
             // A series without output no longer stands in a main run (I-OC); the stress arm gets it from the FORCE proxy (a series started before admission).
             var force = arm == EffortShareArm.X0 ? new ForceProxy(s, 1) : null;
@@ -127,7 +127,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         int repeats = 0;
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
             SliceWorld w = s.World;
             int n = w.Scenario.ActorCount, gens = w.ProductsLayout.Generations;
             var prev = new int[n, gens + 1];
@@ -158,7 +158,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         int plannedNoOutput = 0, firstOutput = 0, firstOutputFlat = 0;
         foreach ((ulong seed, EffortShareArm arm) in Runs())
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3, EffortShare = arm });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, ChunkSize = 3, EffortShare = arm });
             SliceWorld w = s.World;
             // A series without output no longer stands in a main run (I-OC); the stress arm gets it from the FORCE proxy (a series started before admission).
             var force = arm == EffortShareArm.X0 ? new ForceProxy(s, 1) : null;
@@ -240,7 +240,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         int positive = 0;
         foreach (ulong seed in Seeds.Take(3))
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, ChunkSize = 3 });
             SliceWorld w = s.World;
             var il = w.IndustryLayout;
             for (long t = 0; t < Months; t++)
@@ -271,10 +271,10 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         {
             var runs = new[]
             {
-                SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 1, ChunkSize = 1 }),
-                SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 1, ChunkSize = 1 }),
-                SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 }),
-                SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 8, ChunkSize = 1 }),
+                SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 1, ChunkSize = 1 }),
+                SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 1, ChunkSize = 1 }),
+                SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2 }),
+                SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 8, ChunkSize = 1 }),
             };
             for (long t = 0; t < 300; t++)
             {

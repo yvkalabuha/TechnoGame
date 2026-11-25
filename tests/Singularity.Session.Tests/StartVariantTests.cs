@@ -176,9 +176,9 @@ public class StartVariantTests
     [Fact]
     public void Variants_RunInTheWorld_AndEnterTheHash()
     {
-        SliceSession main = SliceTestData.Create(new SliceRunConfig { Seed = 4 });
-        SliceSession pert = SliceTestData.Create(new SliceRunConfig { Seed = 4, Start = StartVariant.Perturbed });
-        SliceSession sym = SliceTestData.Create(new SliceRunConfig { Seed = 4, Start = StartVariant.Symmetric });
+        SliceSession main = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 4 });
+        SliceSession pert = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 4, Start = StartVariant.Perturbed });
+        SliceSession sym = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 4, Start = StartVariant.Symmetric });
         foreach (SliceSession s in new[] { main, pert, sym })
             s.StepThroughMonth(24);
         string[] finals = [main.LastHash, pert.LastHash, sym.LastHash];
