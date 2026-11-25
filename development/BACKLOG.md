@@ -205,6 +205,7 @@
 | [TASK-0187](../development/tasks/TASK-0187-core-slot-science-model-one-institute-one-node-que.md) | IN_PROGRESS | Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576) | MS-M0 |
 | [TASK-0188](../development/tasks/TASK-0188-research-data-expand-knowledge-tree-computing-mate.md) | IN_PROGRESS | Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) | MS-M0 |
 | [TASK-0189](../development/tasks/TASK-0189-data-node-and-institute-directions-into-mods-12-di.md) | IN_PROGRESS | Data: node and institute directions into mods (12 directions, O-091) | MS-M0 |
+| [TASK-0190](../development/tasks/TASK-0190-tooling-gemini-visual-review-through-agy-subscript.md) | APPROVED | Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key | MS-M0 |
 
 ## Гипотезы
 
