@@ -49,8 +49,9 @@ public class IntelligenceTests
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
         for (long t = 0; t < 36; t++)
             s.StepThroughMonth(t);
-        HashAssert.Equal("748ecfba48b81b37c6039ce7a8dbd831fd64f94ada40853fb9746930db3873b5", ColumnProjection.Hash(s, _ => true));
-        HashAssert.Equal("3c313261526ef0bc80dec30ff4c363c313c1f239f7e08d6ecd4f946a57ab5174", s.LastHash);
+        // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
+        HashAssert.Equal("e2868ee75c0d7d493f95dbe3d9a69850c7b3bba6d04ef7ed981d584416ead4bb", ColumnProjection.Hash(s, _ => true));
+        HashAssert.Equal("b51a46b4e3ff3bbf84eed557130d71356bb7db9afeefad44cdad4fb54f15423c", s.LastHash);
     }
 
     [Fact]

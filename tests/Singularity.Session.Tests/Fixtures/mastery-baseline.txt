@@ -1,6 +1,7 @@
 # TASK-0134: ColumnProjection.Hash over ALL columns at month 387 (Main config, current G5/G6 data), generated on the train-2 branch build before the Hcap(t)/mastery change (merge 53bfa8c).
 # The new columns of TASK-0134 (prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme) are left out by MasteryColumns.IsMasteryColumn.
 # Re-recorded in TASK-0147 (train 2): regenerated on the branch head with nodes 82-99 and the default ahead-of-time cost; the 81-node data of the old rows cannot be reproduced by design (O-052).
-1 387 5144d65744bbedb8d757c4d4687937d70c3bf5eae631dc8363e6f33ae3bb352c
-2 387 0127b529294611425fcd85c636a4183d572438bf18a24bd23fd4d1a17288ad71
-3 387 3abc35db947dd6a30a33ae02758975b819e88d19ebdf6c422c207dfd069ab1c0
+# Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes changed (data only); regenerated on the branch head.
+1 387 ffb95c71a805a0ff2b703299cea1c30cff87bb69c0563a1c97165a2d3edac9e6
+2 387 53a6eec27edd2aa2fcd9ae6687797dd819e0bf7a0354de388ec9da1803cb15e7
+3 387 12a53463d8fb86cf9e363a827356476bd68d68a0916aca3912a731b1636aa9ff
