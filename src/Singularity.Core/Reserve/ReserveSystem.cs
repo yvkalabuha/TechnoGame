@@ -83,6 +83,12 @@ public sealed class ReserveSystem : ITickSystem
     /// <summary>The balance in the snapshot.</summary>
     public Fx6 Balance(int actorRow) => Fx6.FromRaw(_balance.Current[actorRow]);
 
+    /// <summary>
+    /// What the month's step lets a programme take from the snapshot balance: the balance after this month's leak. The leak is paid first (I3), so money
+    /// already consumed by it cannot be spent; verdict and spend use this one function.
+    /// </summary>
+    public Fx6 Spendable(int actorRow) => Balance(actorRow) - LeakOf(Balance(actorRow));
+
     /// <summary>What the next monthly step takes from the current balance as the leak (before the new inflow): a pure read for the views.</summary>
     public Fx6 LeakOf(Fx6 balance) => balance * _leak;
 
@@ -93,8 +99,8 @@ public sealed class ReserveSystem : ITickSystem
         {
             Fx6 balance = Balance(a);
             Fx6 spend = _inputs.Spend(a, t);
-            if (spend > balance)
-                throw new ReserveInvariantException(t, a, $"spend {spend} exceeds the balance {balance} (I3)");
+            if (spend > Spendable(a))
+                throw new ReserveInvariantException(t, a, $"spend {spend} exceeds the balance {balance} after its leak (I3)");
             _balance.Next[a] = (balance - balance * _leak + _inputs.Inflow(a, t) - spend).Raw;
         }
     }

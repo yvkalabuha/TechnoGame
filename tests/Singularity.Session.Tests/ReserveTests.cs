@@ -53,6 +53,24 @@ public class ReserveTests
         Assert.DoesNotContain(off.World.Table.Columns, c => ColumnProjection.IsReserveColumn(c.Name));
     }
 
+    // Recorded from main before TASK-0150 (e011cbb), the same run (seed 7, 36 months, default config): the hash over ALL columns and the state hash.
+    private const string MainAllColumns = "748ecfba48b81b37c6039ce7a8dbd831fd64f94ada40853fb9746930db3873b5";
+    private const string MainStateHash = "3c313261526ef0bc80dec30ff4c363c313c1f239f7e08d6ecd4f946a57ab5174";
+
+    [Fact]
+    public void FlagOff_IsBitIdenticalToMainBeforeTheTask_AndFlagOnEqualsItOnTheOldColumns()
+    {
+        foreach (bool reserve in new[] { false, true })
+        {
+            SliceSession s = Make(reserve);
+            for (long t = 0; t < 36; t++)
+                s.StepThroughMonth(t);
+            Assert.Equal(MainAllColumns, ColumnProjection.Hash(s, n => !ColumnProjection.IsReserveColumn(n)));
+            if (!reserve)
+                Assert.Equal(MainStateHash, s.LastHash);
+        }
+    }
+
     [Fact]
     public void Validator_AcceptsLessThanOneOnlyWithTheReserve()
     {
@@ -197,6 +215,56 @@ public class ReserveTests
                 Assert.True(basis + s.World.Knowledge.ProgrammeGain(a, r, 6, cap) <= (basis > Fx6.One ? basis : Fx6.One), $"actor {a} node {r}");
             }
         }
+    }
+
+    [Fact]
+    public void FundProgramme_CannotSpendMoneyTheLeakHasTaken_BalanceNeverGoesNegative()
+    {
+        SliceSession s = Make(true);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, SetHalf()).Accepted);
+        s.StepThroughMonth(0);
+        s.StepThroughMonth(1);
+        int row = FrontierNode(s);
+        Fx6 balance = Balance(s), spendable = s.World.Reserve!.Spendable(0);
+        Assert.True(spendable < balance && spendable > Fx6.Zero);
+        // The whole balance is more than the month lets a programme take: refused, nothing is taken.
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new FundProgramme(0, s.World.Graph.Number[row], balance)).Accepted);
+        s.StepThroughMonth(2);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: ProgrammeNotFundable") && o.Contains("after its leak"));
+        // Exactly the spendable amount: allowed (if the node can take it), and the balance after the month is the inflow alone, never negative.
+        Fx6 b2 = Balance(s), sp2 = s.World.Reserve.Spendable(0);
+        Fx6 cap = s.World.Knowledge.ProgrammeCapacity(0, row, 3);
+        Fx6 amount = sp2 < cap ? sp2 : cap;
+        Fx6 inflow = s.World.SharesOf(0).Reserve * s.World.Policy.Budget(0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new FundProgramme(0, s.World.Graph.Number[row], amount)).Accepted);
+        s.StepThroughMonth(3);
+        Assert.Equal(b2 - b2 * s.World.Reserve.Parameters.LeakPerMonth + inflow - amount, Balance(s));
+        Assert.True(Balance(s) >= Fx6.Zero);
+    }
+
+    [Fact]
+    public void LicenceMoney_I1AndI2_HoldWithTheReserveOnAndProgrammesRunning()
+    {
+        SliceSession s = Make(true);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, SetHalf()).Accepted);
+        int licenceMonths = 0;
+        for (long t = 0; t < 120; t++)
+        {
+            s.StepThroughMonth(t);
+            Fx6 sum = Fx6.Zero;
+            for (int a = 0; a < s.World.Table.RowCount; a++)
+            {
+                Fx6 flow = s.World.Policy.LicenceFlow(a);
+                sum += flow;
+                // I2: the procurement item moves by exactly the flow (what the buyer pays is what the seller gets).
+                Assert.Equal(flow, s.World.ProcurementBudget(a) - s.World.ProcurementBase(a));
+                Assert.True(Balance(s) >= Fx6.Zero);
+            }
+            Assert.Equal(Fx6.Zero, sum);   // I1
+            if (Enumerable.Range(0, s.World.Table.RowCount).Any(a => s.World.Policy.LicenceFlow(a) != Fx6.Zero))
+                licenceMonths++;
+        }
+        Assert.True(licenceMonths > 0, "no licence deal in 120 months: the invariants were not exercised");
     }
 
     [Fact]
