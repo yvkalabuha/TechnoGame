@@ -210,6 +210,20 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool Reserve { get; init; }
 
+    /// <summary>
+    /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft
+    /// channel in <c>c_eff</c>, estimates with confidence. Needs the <c>intelligence</c> object in the data. Off = the table, the hash and every golden are those of
+    /// a build without it.
+    /// </summary>
+    public bool Intelligence { get; init; }
+
+    /// <summary>
+    /// Execution only (not state, not hashed): the actor whose eyes the read views are. With intelligence on, the licence of another actor is shown to it only
+    /// through intelligence (a visible estimate and the confidence of the hidden event, EVENTS_POLITICS.md §10); otherwise the view carries an empty licence.
+    /// <c>null</c> (Lab, tests) = the views of the whole world.
+    /// </summary>
+    public int? PlayerActor { get; init; }
+
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
 
@@ -230,6 +244,18 @@ public sealed partial record SliceRunConfig
 
     /// <summary><c>lic_knows</c> (spec §6.7, #47): a bought licence also makes known the seller's engine and the PRC of its mask with their closure. Diagnostic; off in main.</summary>
     public bool LicKnows { get; init; }
+
+    /// <summary>
+    /// The licence market (TASK-0152; production-lines-and-licence-market.md §2): several licences per country keyed (seller, gen), a permanent catalogue,
+    /// <c>BuyLicence</c> / <c>OfferLicence</c>, AI buying by the rules of O-062. Off in main: with it off the world, the columns and the hash are those of main.
+    /// </summary>
+    public bool LicenceMarket { get; init; }
+
+    /// <summary>Actor rows whose licences move only by commands (the player's); the AI buys nothing for them and sells at m = 1. Empty = every actor is AI.</summary>
+    public ImmutableArray<int> LicenceExternalActors { get; init; } = [];
+
+    /// <summary>Blocs and friends by year for the buyer circle (O-056), loaded from <c>mods/core/scenarios/1945/alliances.yaml</c> by the host; null = none.</summary>
+    public AllianceTable? Alliances { get; init; }
 
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;

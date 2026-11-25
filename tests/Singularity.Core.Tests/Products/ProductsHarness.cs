@@ -94,6 +94,9 @@ internal sealed class ProductsHarness
     /// <summary>Explicit commands of the script, applied after the one derived from <see cref="Order"/>.</summary>
     public Func<int, long, IReadOnlyList<DesignCommand>> Commands { get; set; } = (_, _) => [];
 
+    /// <summary>The licence that begins in month t for the actor (scenario actor index): (seller row, engine generation), or null.</summary>
+    public Func<int, long, (int Seller, int Gen)?> Licences { get; set; } = (_, _) => null;
+
     /// <summary>Explicit <c>start_series</c> of the script; when it returns null, <see cref="Launch"/> and <see cref="Rate"/> decide.</summary>
     public Func<int, int, long, ScriptedStart?> Series { get; set; } = (_, _, _) => null;
     /// <summary>
@@ -218,6 +221,14 @@ internal sealed class ProductsHarness
 
         // A scripted order becomes a compose_design for the newest APP the actor knows (the validator's g*), with the preset
         // composition of the order's variant; the order's generation is only a trigger.
+        public int NewLicences(int actorRow, long month, Span<(int Seller, int Gen)> into)
+        {
+            if (h.Licences(A(actorRow), month) is not { } licence)
+                return 0;
+            into[0] = licence;
+            return 1;
+        }
+
         public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month)
         {
             var list = new List<DesignCommand>();

@@ -381,8 +381,8 @@ class SketchTest(unittest.TestCase):
         rec = {"conversation_id": MAIN, "files": [{"path": "a.jpg"}], "partial": True, "requested": 2, "attribution": [],
                "quota": {"got": 1, "requested": 2, "reset_at": "2026-11-24T15:45:43+00:00"}}
         a = mock.Mock(with_visual=False, dry_run=False, ref=[], count=2, runs=self.runs, timeout=1, parallel=False,
-                      task="TASK-0141", prompt_file=self.prompt)
-        with mock.patch.object(cli.sketch_mod, "run_sketch", return_value=(Path("r.json"), Path("r.md"), rec)):
+                      task="TASK-0141", prompt_file=self.prompt, engine="gemini", codex_daily_cap=4)
+        with mock.patch.object(cli.codexsketch, "run_gemini", return_value=(Path("r.json"), Path("r.md"), rec)):
             self.assertEqual(cli._sketch(a), 4)
 
     def test_send_message_only_to_conversations_of_this_run(self):

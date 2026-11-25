@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -53,7 +54,8 @@ public sealed record ActorView(
     PolicyDecisionView Decisions,
     AlloyCoverage Alloy = default,
     ImmutableArray<ResearchView> Research = default,
-    int UnknownNodes = 0);
+    int UnknownNodes = 0,
+    LicenceMarketView? Market = null);
 
 /// <summary>A research in progress (TASK-0119): a frontier node with accumulated progress. <see cref="Have"/> against <see cref="Need"/> is the scale of the why_not link;
 /// <see cref="Threshold"/> is a hazard node at its threshold, where its discovery is a draw, not certain.</summary>
@@ -76,7 +78,7 @@ public sealed record DesignView(
     int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
     bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
     Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
-    ImmutableArray<int> PrcSet, int SlotGeneration = 0)
+    ImmutableArray<int> PrcSet, int SlotGeneration = 0, int LicensedFrom = -1)
 {
     /// <summary>The handle UI and clients put into commands about this project: never computed on the client side (ADR-0005 p. 3).</summary>
     public DesignHandle Handle => new(Design, SlotGeneration);
@@ -89,6 +91,26 @@ public readonly record struct QualityView(bool Active, int Start, int TriggerCou
 public sealed record LicenceView(int Gen, int Seller, int Start, LicenceMask Mask, LicenceMask OfferMask, Fx6 Flow, ImmutableArray<long> Refusals, bool Active);
 
 public readonly record struct DisruptionView(int Start, int End);
+
+/// <summary>A licence the actor holds (key (Seller, Gen)); <see cref="Start"/> is the month it began.</summary>
+public readonly record struct LicenceHeldView(int Seller, int Gen, int Start);
+
+/// <summary>
+/// A line of a catalogue: the seller's own serial project of the generation, the reference price, the multiplier, the asking price (core units) and the circle.
+/// <see cref="Refusal"/> is what the buyer of the view would meet now (None = the deal goes), the reason to show before the button is pressed.
+/// </summary>
+public readonly record struct CatalogueLineView(int Seller, int Gen, Fx6 Reference, Fx6 M, Fx6 Price, SaleCircle Circle, BadLicence Refusal);
+
+/// <summary>World price of a generation: the average of the AI catalogues, null while fewer than two sellers (then only the reference is shown, «мало предложений»).</summary>
+public readonly record struct WorldPriceView(int Gen, Fx6? Average, int Sellers);
+
+/// <summary>
+/// The licence market as the actor sees it (TASK-0152; null in a run without the market): the licences held, the own catalogue, the lines of the other sellers
+/// with the refusal now, the world prices, the last refused deal, the licence income of the year against its cap.
+/// </summary>
+public sealed record LicenceMarketView(
+    ImmutableArray<LicenceHeldView> Held, ImmutableArray<CatalogueLineView> Own, ImmutableArray<CatalogueLineView> Offers, ImmutableArray<WorldPriceView> WorldPrices,
+    BadLicence LastRefusal, int LastRefusalSeller, int LastRefusalGen, int LastRefusalMonth, Fx6 IncomeThisYear, Fx6 IncomeCap, bool External);
 
 /// <summary>The AI decisions of compute <c>Month</c>; they act from <c>Month + 1</c>.</summary>
 public sealed record PolicyDecisionView(
@@ -131,7 +153,43 @@ public sealed record ActorInputsView(
     ToolingLedgerView Tooling, CapabilityView Capability,
     ImmutableArray<DesignInputsView> Designs,
     RequirementView? Requirement,
-    ReserveView? Reserve = null);
+    ReserveView? Reserve = null,
+    IntelView? Intel = null);
+
+/// <summary>
+/// What intelligence shows an actor (null when the run has none; INTELLIGENCE.md §1, §3): the security item in words, the targets with the risk in words
+/// (the number only after an event, #367), estimates of the rivals as ranges with the confidence behind them, and what was caught.
+/// </summary>
+/// <param name="Security">The security item in force, a share of the budget.</param>
+/// <param name="Preset">The same in words; <c>Custom</c> when it matches no preset.</param>
+/// <param name="Targets">The plan in force, at most three.</param>
+/// <param name="NetworksLost">Networks of this actor that were exposed so far.</param>
+/// <param name="NetworksCaught">Foreign networks caught against this actor so far (the use of counter-intelligence).</param>
+/// <param name="ForeignTrace">The strongest trace of a foreign network in this actor, in words.</param>
+/// <param name="Exposures">The post-event report of this actor's own lost networks, one per target (#367): month, the yearly risk the network had ("the risk was about 4 % a year"), outcome. A turned network is not here: its owner does not know.</param>
+/// <param name="CaughtAtMe">The last foreign network caught against this actor, per foreign actor: who, when, lost or turned.</param>
+public sealed record IntelView(Fx6 Security, SecurityWord Preset, ImmutableArray<IntelTargetView> Targets, int NetworksLost, int NetworksCaught, TraceWord ForeignTrace,
+    ImmutableArray<ExposureReportView> Exposures, ImmutableArray<CaughtView> CaughtAtMe);
+
+/// <summary>An exposed network of the actor: its target, the month, the yearly risk it had at that month and the outcome (always <see cref="ExposureOutcome.Lost"/> in a view).</summary>
+public readonly record struct ExposureReportView(int Target, long Month, Fx6 RiskPerYear, ExposureOutcome Outcome);
+
+/// <summary>A foreign network caught in this actor: the owner, the month and what was done with it.</summary>
+public readonly record struct CaughtView(int Foreign, long Month, ExposureOutcome Outcome);
+
+/// <summary>A hidden event of the target seen only through intelligence (#508, EVENTS_POLITICS.md §10): the licence deal in force. <c>Confidence = intel_conf·sens</c>, shown at 0.3 and above.</summary>
+public readonly record struct HiddenEventView(HiddenEventKind Kind, int Seller, int Gen, int StartMonth, Fx6 Confidence);
+
+public enum HiddenEventKind { Licence = 1 }
+
+/// <summary>
+/// One target card. <c>LeadLow</c> and <c>LeadHigh</c> are the range of "nodes the target knows minus nodes the actor knows" (positive: the target is ahead), valid
+/// when <c>EstimateVisible</c>; the exact value is never in a view. <c>Confidence</c> is the figure of the help text (#260), derived from the sources.
+/// <c>Distorted</c> = the target's false trails corrupted the sources ("data distorted"). <c>HiddenEvents</c> = hidden events of the target seen through intelligence,
+/// each with its own confidence (empty while the layer is not visible).
+/// </summary>
+public readonly record struct IntelTargetView(int Target, IntelMode Mode, NetworkWord Network, RiskWord Risk, TraceWord Trace, bool EstimateVisible,
+    int LeadLow, int LeadHigh, Fx6 Confidence, int Sources, bool Distorted, ImmutableArray<HiddenEventView> HiddenEvents);
 
 /// <summary>
 /// The reserve account of an actor (null when the run has none): the balance, what the five items leave into it this month, and what the next step takes

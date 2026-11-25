@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 
 namespace Singularity.Core.Commands;
@@ -40,6 +41,15 @@ public enum CommandRefusal
     /// <summary>The mastery programme check refused the start; <see cref="CommandVerdict.Mastery"/> is the <c>why_not</c> code.</summary>
     ProgrammeRefused,
 
+    /// <summary>A licence command of an actor that is not under external control, or with the market off.</summary>
+    LicenceNotAllowed,
+
+    /// <summary><c>buy_licence</c> would be refused now: <see cref="CommandVerdict.Licence"/> is the reason (Self, Empty, Gen, Money, Circle, Capacity, Cap).</summary>
+    LicenceRefused,
+
+    /// <summary><c>offer_licence</c> was refused: <see cref="CommandVerdict.Offer"/> is the reason.</summary>
+    BadOffer,
+
     /// <summary>A command needs the reserve account and the run has none (<see cref="CommandLimits.ReserveEnabled"/> is false).</summary>
     ReserveOff,
 
@@ -52,6 +62,12 @@ public enum CommandRefusal
     /// <summary>At application: the reserve holds less than the amount, or the node is not in the frontier of the actor.</summary>
     ProgrammeNotFundable,
 
+    /// <summary>A security share or a target plan in a run without intelligence.</summary>
+    IntelOff,
+
+    /// <summary>The target plan is malformed: more than three targets, a repeat, the actor itself, an unknown actor or an unknown mode.</summary>
+    BadTargets,
+
     /// <summary>A proposal command came to a run without an adviser for the actor (TASK-0153).</summary>
     NoAdviser,
 
@@ -63,7 +79,7 @@ public enum CommandRefusal
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
-    MasteryRefusal Mastery = MasteryRefusal.None, int MasteryDetail = 0)
+    MasteryRefusal Mastery = MasteryRefusal.None, int MasteryDetail = 0, BadLicence Licence = BadLicence.None, OfferRefusal Offer = OfferRefusal.None)
 {
     public bool Accepted => Reason == CommandRefusal.None;
 
@@ -80,6 +96,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 
     /// <summary>Programmes can run: the reserve is on and the knowledge layer is the full model (a schedule has no progress to fund).</summary>
     public bool FundEnabled { get; init; }
+
+    /// <summary>The run has intelligence (TASK-0160): the security share and a target plan are accepted.</summary>
+    public bool IntelEnabled { get; init; }
 
     /// <summary>Node numbers of the knowledge graph (for <c>fund_programme</c>).</summary>
     public ImmutableArray<int> NodeNumbers { get; init; } = [];
@@ -99,6 +118,27 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 /// </summary>
 public static class CommandValidator
 {
+    // At most three distinct targets other than the actor, each a known actor with a real mode; null when the plan is well formed.
+    private static string? TargetsRefusal(SetBudgetShares s, CommandLimits limits)
+    {
+        if (s.Targets.Length > Singularity.Core.Intelligence.IntelParams.MaxTargets)
+            return $"at most {Singularity.Core.Intelligence.IntelParams.MaxTargets} targets";
+        for (int i = 0; i < s.Targets.Length; i++)
+        {
+            Singularity.Core.Intelligence.IntelTarget t = s.Targets[i];
+            if (t.Target < 0 || t.Target >= limits.ActorCount || t.Target == s.Actor)
+                return $"target {t.Target} is not another actor";
+            if (t.Mode is not (Singularity.Core.Intelligence.IntelMode.Observe or Singularity.Core.Intelligence.IntelMode.Steal or Singularity.Core.Intelligence.IntelMode.FalseTrails))
+                return $"mode {(int)t.Mode} of target {t.Target} is not observe, steal or false trails";
+            for (int j = 0; j < i; j++)
+            {
+                if (s.Targets[j].Target == t.Target)
+                    return $"target {t.Target} is named twice";
+            }
+        }
+        return null;
+    }
+
     public static CommandVerdict CheckForm(in LoggedCommand logged, CommandLimits limits)
     {
         SliceCommand c = logged.Command;
@@ -113,6 +153,10 @@ public static class CommandValidator
         switch (c)
         {
             case SetBudgetShares s:
+                if (!limits.IntelEnabled && (s.Shares.Security != Singularity.Kernel.Fx6.Zero || !s.Targets.IsDefault))
+                    return CommandVerdict.Refuse(CommandRefusal.IntelOff, "this run has no intelligence: no security share and no targets");
+                if (!s.Targets.IsDefault && TargetsRefusal(s, limits) is { } bad)
+                    return CommandVerdict.Refuse(CommandRefusal.BadTargets, bad);
                 if (limits.ReserveEnabled)
                 {
                     // The quality item has no reader in the core: with the reserve its share is kept in the reserve (SliceWorld.ReserveShare), so it stays valid.
@@ -175,6 +219,14 @@ public static class CommandValidator
                 return limits.ProcessNumbers.Contains(sp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {sp.ProcessNumber} is not in the layout");
             case CancelMasteryProgramme cp:
                 return limits.ProcessNumbers.Contains(cp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {cp.ProcessNumber} is not in the layout");
+            case BuyLicence b:
+                return b.Gen < 1 || b.Seller < 0 || b.Seller >= limits.ActorCount
+                    ? CommandVerdict.Refuse(CommandRefusal.UnknownActor, $"buy_licence names seller {b.Seller} generation {b.Gen}")
+                    : CommandVerdict.Ok;
+            case OfferLicence o:
+                return o.Gen < 1 || o.M <= Kernel.Fx6.Zero || !Enum.IsDefined(o.Circle)
+                    ? CommandVerdict.Refuse(CommandRefusal.BadOffer, "offer_licence needs generation ≥ 1, a positive multiplier and a defined circle")
+                    : CommandVerdict.Ok;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }

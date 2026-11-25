@@ -34,7 +34,9 @@ public sealed partial record SliceRunConfig
             ResearchWeightByDiscipline.IsDefault ? "-" : string.Join(',', ResearchWeightByDiscipline.OrderBy(w => w.Discipline, StringComparer.Ordinal).Select(w => w.Discipline + ":" + w.Weight.Raw.ToString(CultureInfo.InvariantCulture))),
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
             .. Reserve ? (string[])["reserve"] : [],
+            .. Intelligence ? (string[])["intelligence"] : [],
         ];
+        fields = [.. fields, LicenceMarket.ToString(), string.Join(',', LicenceExternalActors.IsDefault ? [] : LicenceExternalActors), Alliances?.Identity ?? "-"];
         // The adviser decides the trajectory but exists only when on: nothing is added for an off run, so its fingerprint stays what it was.
         if (!AdviserActors.IsDefaultOrEmpty || AdviserRefuseYears != 1 || AdviserMaxLines != 2)
             fields = [.. fields, "adviser", AdviserActors.IsDefault ? "-" : string.Join(',', AdviserActors), AdviserRefuseYears.ToString(CultureInfo.InvariantCulture), AdviserMaxLines.ToString(CultureInfo.InvariantCulture)];

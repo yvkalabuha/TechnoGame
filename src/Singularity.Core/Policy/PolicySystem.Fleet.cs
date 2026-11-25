@@ -117,7 +117,7 @@ public sealed partial class PolicySystem
         // B_base of the year reset comes from the AI's own shares (Shares(row)), not from a player's set_budget_shares override: for an actor
         // driven by the player with the AI on, the ceiling may differ from the one the layer sets (deviation 11 of TASK-0028).
         if (t % 12 == 0)
-            book.ResetYear(Shares(row).Procurement * Budget(row));
+            book.ResetYear(PlannedProcurement(Shares(row)) * Budget(row));
         book.NewMonth();
         IReadOnlyList<FleetCommand> pending = AiFleetCommands(row, t);
         foreach (FleetCommandKind kind in (ReadOnlySpan<FleetCommandKind>)[FleetCommandKind.Sell, FleetCommandKind.Retire])
@@ -129,7 +129,7 @@ public sealed partial class PolicySystem
             }
         }
         book.ExpendCredit(t + 1);
-        Fx6 baseNext = sharesNext.Procurement * budgetNext;
+        Fx6 baseNext = PlannedProcurement(sharesNext) * budgetNext;
         if ((t + 1) % 12 == 0)
             book.ResetYear(baseNext);
         book.NewMonth();

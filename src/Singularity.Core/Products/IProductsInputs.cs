@@ -209,6 +209,12 @@ public interface IProductsInputs
     /// </summary>
     int ProgrammeCommands(int actorRow, long month, Span<ProgrammeCommand> into) => 0;
 
+    /// <summary>
+    /// The licences that begin in month t (the licence market, TASK-0152): (seller row, engine generation), written to <paramref name="into"/>; returns the count.
+    /// The layer makes each a project of the actor (<c>AdoptLicensedDesign</c>). Allocates nothing; 0 without the market.
+    /// </summary>
+    int NewLicences(int actorRow, long month, Span<(int Seller, int Gen)> into) => 0;
+
     /// <summary>Whether a programme may start on the process now (<c>why_not</c> of the command): a pure function of the snapshot.</summary>
     ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) => new(MasteryRefusal.OutOfScope);
 

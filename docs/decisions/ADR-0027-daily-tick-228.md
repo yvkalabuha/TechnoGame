@@ -1,14 +1,14 @@
 ---
 id: ADR-0027
 title: "Daily tick (#228): closable conditions of ADR-0019, decay and growth on Rate, parallel work with the player levers batch"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-25
 supersedes:              # пусто намеренно: замена частичная, см. «Частично заменяет»
 superseded_by:
 related: [ADR-0028, ADR-0029, ADR-0003, ADR-0005, ADR-0006, ADR-0014, ADR-0016, ADR-0017, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0025, MS-M1, EXP-0007, TASK-0086, TASK-0089, TASK-0090, TASK-0148, TASK-0150, TASK-0151, TASK-0152, TASK-0153]
-approved_by:
-approved_at:
-approval_ref:            # условие кода — #503; параллельная работа — #504; #512–#514 учтены; сам ADR ещё не утверждён
+approved_by: owner
+approved_at: 2026-11-25
+approval_ref: "#516"
 ---
 
 # ADR-0027 — Дневной тик (#228): выполнимые условия ADR-0019, распад и рост на `Rate`, параллельная работа с пакетом рычагов

@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -76,10 +77,41 @@ internal static class ViewBuilder
             full && month >= 0 && month % 12 == 0 ? w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next) : null,
             bureaus.MoveToImmutable(),
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
-            new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
-                w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
-            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a));
+            LicenceOf(w, a, refusals.MoveToImmutable()),
+            new DisruptionView(disStart, disEnd), withNodes && !HiddenFromPlayer(w, a) ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
+            Alloy(w, a, month), Research(w, a), HiddenFromPlayer(w, a) ? Math.Min(1, UnknownNodes(w, a)) : UnknownNodes(w, a),
+            w.Policy.MarketOn && !HiddenFromPlayer(w, a) ? Market(w, a, next) : null);
+    }
+
+    // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.
+    private static LicenceMarketView Market(SliceWorld w, int a, long month)
+    {
+        PolicySystem pol = w.Policy;
+        Fx6 funds = w.LicenceFunds(a, month);
+        var held = ImmutableArray.CreateBuilder<LicenceHeldView>();
+        foreach (LicenceRecord r in pol.Licences(a))
+            held.Add(new LicenceHeldView(r.Seller, r.Gen, r.Start));
+        var own = ImmutableArray.CreateBuilder<CatalogueLineView>();
+        var offers = ImmutableArray.CreateBuilder<CatalogueLineView>();
+        int gens = w.ProductsLayout.Generations;
+        var world = ImmutableArray.CreateBuilder<WorldPriceView>(gens);
+        for (int g = 1; g <= gens; g++)
+        {
+            (Fx6? average, int sellers) = pol.WorldPrice(g, month);
+            world.Add(new WorldPriceView(g, average, sellers));
+            for (int s = 0; s < w.Scenario.ActorCount; s++)
+            {
+                if (pol.Offer(s, g, month) is not { } o)
+                    continue;
+                if (s == a)
+                    own.Add(new CatalogueLineView(s, g, o.Reference, o.M, o.Price, o.Circle, BadLicence.None));
+                else
+                    offers.Add(new CatalogueLineView(s, g, o.Reference, o.M, o.Price, o.Circle, pol.CheckBuy(a, s, g, month, funds, out _)));
+            }
+        }
+        (BadLicence reason, int seller, int gen, int lastMonth) = pol.LastRefusal(a);
+        return new LicenceMarketView(held.ToImmutable(), own.ToImmutable(), offers.ToImmutable(), world.MoveToImmutable(), reason, seller, gen, lastMonth,
+            pol.LicenceIncome(a, month), pol.IsExternal(a) ? pol.IncomeCap(a) : Fx6.Zero, pol.IsExternal(a));
     }
 
     // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.
@@ -175,7 +207,7 @@ internal static class ViewBuilder
         return new DesignView(d, stage, p.PlatformGen(a, d), exists ? p.Gen(a, d) : 0, p.LiveParent(a, d), p.StageOMonth(a, d),
             p.BuiltAny(a, d), p.Cancelled(a, d), p.Rate(a, d), p.UnitCost(a, d), exists ? p.UnitCostFloor(a, d) : Fx6.Zero,
             p.InService(a, d), exists ? p.Readiness(a, d, next) : Fx6.Zero, exists ? p.Perf(a, d) : Fx6.Zero, p.Bind(a, d), w.Policy.AiLine(a, d, p.Generation(a, d)),
-            [.. p.PrcSet(a, d)], p.Generation(a, d));
+            [.. p.PrcSet(a, d)], p.Generation(a, d), p.LicensedFrom(a, d));
     }
 
     private static PolicyDecisionView Decisions(SliceWorld w, int a, long next, bool stepped)
@@ -278,7 +310,66 @@ internal static class ViewBuilder
             designs.Add(DesignInputs(w, a, d, month));
         return new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
             new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month),
-            w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.ReserveShare(a) * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))));
+            w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.ReserveShare(a) * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))),
+            w.Intel is null || HiddenFromPlayer(w, a) ? null : IntelOf(w, w.Intel, a));
+    }
+
+    // With intelligence and a named player, what another actor knows is not the player's to read: its node block is not carried, the count of its unknown nodes
+    // shrinks to "some left or none" (the exact count is what the estimate of the intelligence card gives as a range), and its own intelligence card is not published.
+    private static bool HiddenFromPlayer(SliceWorld w, int a) => w.Intel is not null && w.Config.PlayerActor is int viewer && viewer != a;
+
+    // The licence of an actor. For the player's own eyes another actor's deal is a hidden event: it is shown only when intelligence sees it (#508), else empty.
+    private static LicenceView LicenceOf(SliceWorld w, int a, ImmutableArray<long> refusals)
+    {
+        if (w.Intel is { } intel && w.Config.PlayerActor is int viewer && viewer != a && HiddenEvents(w, intel, a, intel.Estimate(viewer, a)).IsEmpty)
+            return new LicenceView(0, -1, 0, default, default, Fx6.Zero, default, false);
+        return new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
+            w.Policy.LicenceFlow(a), refusals, w.LicenceActive(a));
+    }
+
+    // The intelligence card of an actor: words and ranges only. The estimate of a rival is a range from IntelSystem.Estimate, never the exact count.
+    private static IntelView IntelOf(SliceWorld w, IntelSystem intel, int a)
+    {
+        int rows = w.Table.RowCount;
+        var targets = ImmutableArray.CreateBuilder<IntelTargetView>(IntelParams.MaxTargets);
+        int mine = w.Knowledge.KnownCount(a);
+        for (int k = 0; k < IntelParams.MaxTargets; k++)
+        {
+            if (!intel.Plan(a, k, out int t, out IntelMode mode))
+                continue;
+            IntelEstimate e = intel.Estimate(a, t);
+            targets.Add(new IntelTargetView(t, mode, intel.NetworkOf(a, t), intel.Risk(a, t), intel.TraceOf(a, t), e.Visible,
+                e.Visible ? e.Low - mine : 0, e.Visible ? e.High - mine : 0, e.Confidence, e.Sources, e.Distorted, HiddenEvents(w, intel, t, e)));
+        }
+        int lost = 0, caught = 0;
+        TraceWord foreign = TraceWord.None;
+        var exposures = ImmutableArray.CreateBuilder<ExposureReportView>();
+        var caughtAt = ImmutableArray.CreateBuilder<CaughtView>();
+        for (int o = 0; o < rows; o++)
+        {
+            if (o == a)
+                continue;
+            caught += intel.CaughtOf(o, a);
+            TraceWord tw = intel.TraceOf(o, a);
+            foreign = tw > foreign ? tw : foreign;
+            lost += intel.Lost(a, o);
+            if (intel.LastExposure(o, a) is { } theirs)
+                caughtAt.Add(new CaughtView(o, theirs.Month, theirs.Outcome));
+            // A turned network is not reported to its owner; one found out later is (the record then says Lost).
+            if (intel.LastExposure(a, o) is { Outcome: ExposureOutcome.Lost } own)
+                exposures.Add(new ExposureReportView(o, own.Month, own.RiskPerYear, own.Outcome));
+        }
+        return new IntelView(w.SharesOf(a).Security, intel.SecurityWordOf(w.SharesOf(a).Security), targets.ToImmutable(), lost, caught, foreign,
+            exposures.ToImmutable(), caughtAt.ToImmutable());
+    }
+
+    // Hidden events of a target through intelligence (#508): only above the visibility of the layer, each with intel_conf·sens of its own.
+    private static ImmutableArray<HiddenEventView> HiddenEvents(SliceWorld w, IntelSystem intel, int target, IntelEstimate e)
+    {
+        Fx6 conf = e.Confidence * intel.Parameters.SensLicence;
+        if (!e.Visible || conf < intel.Parameters.ConfVisible || !w.LicenceActive(target))
+            return [];
+        return [new HiddenEventView(HiddenEventKind.Licence, w.Policy.LicenceSeller(target), w.Policy.LicenceGen(target), w.Policy.LicenceStart(target), conf)];
     }
 
     // The variants of the yearly Requirement; FV is not read in the calibration mode (spec §8.2 п. 2). Initialize writes only pol.* columns,

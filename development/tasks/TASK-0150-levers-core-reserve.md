@@ -1,7 +1,7 @@
 ---
 id: TASK-0150
 title: "Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0148, TASK-0156]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
+review_ref: "reviewer: APPROVE (a0ece5a re-review); codex: waived after 3 returns (#432); landed 9d7d3a3; DEBT-0099"
 created: 2026-11-24
 ---
 

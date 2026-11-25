@@ -28,9 +28,9 @@ type Singularity.Session.ActorStepView [sealed class]
   prop LicenceMoneyRefusals : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.LicenceRefusalView] { get; init; }
   prop Money : Singularity.Session.MoneyStepView? { get; init; }
 type Singularity.Session.ActorView [sealed class]
-  ctor(System.Int32 Actor, Singularity.Core.Policy.PolicyProfile Profile, System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6] KD, System.Int32 FieldedGen, System.Nullable`1[Singularity.Core.Products.TechKey] Key, System.Nullable`1[Singularity.Kernel.Fx6] FleetValue, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.BureauView] Bureaus, Singularity.Session.QualityView Quality, Singularity.Session.LicenceView Licence, Singularity.Session.DisruptionView Disruption, Singularity.Session.NodeList Nodes, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignView] Designs, Singularity.Session.PolicyDecisionView Decisions, Singularity.Core.Products.AlloyCoverage Alloy, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ResearchView] Research, System.Int32 UnknownNodes)
+  ctor(System.Int32 Actor, Singularity.Core.Policy.PolicyProfile Profile, System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6] KD, System.Int32 FieldedGen, System.Nullable`1[Singularity.Core.Products.TechKey] Key, System.Nullable`1[Singularity.Kernel.Fx6] FleetValue, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.BureauView] Bureaus, Singularity.Session.QualityView Quality, Singularity.Session.LicenceView Licence, Singularity.Session.DisruptionView Disruption, Singularity.Session.NodeList Nodes, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignView] Designs, Singularity.Session.PolicyDecisionView Decisions, Singularity.Core.Products.AlloyCoverage Alloy, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ResearchView] Research, System.Int32 UnknownNodes, Singularity.Session.LicenceMarketView? Market)
   method <Clone>$() : Singularity.Session.ActorView
-  method Deconstruct(System.Int32& Actor, Singularity.Core.Policy.PolicyProfile& Profile, System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6]& KD, System.Int32& FieldedGen, System.Nullable`1[Singularity.Core.Products.TechKey]&? Key, System.Nullable`1[Singularity.Kernel.Fx6]&? FleetValue, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.BureauView]& Bureaus, Singularity.Session.QualityView& Quality, Singularity.Session.LicenceView& Licence, Singularity.Session.DisruptionView& Disruption, Singularity.Session.NodeList& Nodes, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignView]& Designs, Singularity.Session.PolicyDecisionView& Decisions, Singularity.Core.Products.AlloyCoverage& Alloy, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ResearchView]& Research, System.Int32& UnknownNodes) : System.Void
+  method Deconstruct(System.Int32& Actor, Singularity.Core.Policy.PolicyProfile& Profile, System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6]& KD, System.Int32& FieldedGen, System.Nullable`1[Singularity.Core.Products.TechKey]&? Key, System.Nullable`1[Singularity.Kernel.Fx6]&? FleetValue, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.BureauView]& Bureaus, Singularity.Session.QualityView& Quality, Singularity.Session.LicenceView& Licence, Singularity.Session.DisruptionView& Disruption, Singularity.Session.NodeList& Nodes, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignView]& Designs, Singularity.Session.PolicyDecisionView& Decisions, Singularity.Core.Products.AlloyCoverage& Alloy, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ResearchView]& Research, System.Int32& UnknownNodes, Singularity.Session.LicenceMarketView&? Market) : System.Void
   method Equals(Singularity.Session.ActorView? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method GetHashCode() : System.Int32
@@ -46,6 +46,7 @@ type Singularity.Session.ActorView [sealed class]
   prop KD : System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6] { get; init; }
   prop Key : System.Nullable`1[Singularity.Core.Products.TechKey] { get; init; }
   prop Licence : Singularity.Session.LicenceView { get; init; }
+  prop Market : Singularity.Session.LicenceMarketView? { get; init; }
   prop Nodes : Singularity.Session.NodeList { get; init; }
   prop Profile : Singularity.Core.Policy.PolicyProfile { get; init; }
   prop Quality : Singularity.Session.QualityView { get; init; }
@@ -82,6 +83,20 @@ type Singularity.Session.CapabilityView [struct]
   method ToString() : System.String
   prop AlloyDeficit : Singularity.Kernel.Fx6 { get; init; }
   prop AlloySupply : Singularity.Kernel.Fx6 { get; init; }
+type Singularity.Session.CatalogueLineView [struct]
+  ctor(System.Int32 Seller, System.Int32 Gen, Singularity.Kernel.Fx6 Reference, Singularity.Kernel.Fx6 M, Singularity.Kernel.Fx6 Price, Singularity.Core.Policy.SaleCircle Circle, Singularity.Core.Policy.BadLicence Refusal)
+  method Deconstruct(System.Int32& Seller, System.Int32& Gen, Singularity.Kernel.Fx6& Reference, Singularity.Kernel.Fx6& M, Singularity.Kernel.Fx6& Price, Singularity.Core.Policy.SaleCircle& Circle, Singularity.Core.Policy.BadLicence& Refusal) : System.Void
+  method Equals(Singularity.Session.CatalogueLineView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Circle : Singularity.Core.Policy.SaleCircle { get; init; }
+  prop Gen : System.Int32 { get; init; }
+  prop M : Singularity.Kernel.Fx6 { get; init; }
+  prop Price : Singularity.Kernel.Fx6 { get; init; }
+  prop Reference : Singularity.Kernel.Fx6 { get; init; }
+  prop Refusal : Singularity.Core.Policy.BadLicence { get; init; }
+  prop Seller : System.Int32 { get; init; }
 type Singularity.Session.CloseView [struct]
   ctor(System.Int32 Design, Singularity.Core.Policy.LineCloseReason Reason, Singularity.Core.Products.DesignHandle Handle)
   method Deconstruct(System.Int32& Design, Singularity.Core.Policy.LineCloseReason& Reason, Singularity.Core.Products.DesignHandle& Handle) : System.Void
@@ -121,9 +136,9 @@ type Singularity.Session.DesignInputsView [struct]
   prop Stage : Singularity.Core.Products.DesignStage { get; init; }
   prop YMin : Singularity.Kernel.Fx6 { get; init; }
 type Singularity.Session.DesignView [sealed class]
-  ctor(System.Int32 Design, Singularity.Core.Products.DesignStage Stage, System.Int32 PlatformGen, System.Int32 Gen, System.Int32 Parent, System.Int32 StageOMonth, System.Boolean BuiltAny, System.Boolean Cancelled, Singularity.Kernel.Fx6 Rate, Singularity.Kernel.Fx6 UnitCost, Singularity.Kernel.Fx6 UnitCostFloor, Singularity.Kernel.Fx6 InService, Singularity.Kernel.Fx6 Readiness, Singularity.Kernel.Fx6 Perf, Singularity.Core.Products.LineBind Bind, System.Boolean AiLine, System.Collections.Immutable.ImmutableArray`1[System.Int32] PrcSet, System.Int32 SlotGeneration)
+  ctor(System.Int32 Design, Singularity.Core.Products.DesignStage Stage, System.Int32 PlatformGen, System.Int32 Gen, System.Int32 Parent, System.Int32 StageOMonth, System.Boolean BuiltAny, System.Boolean Cancelled, Singularity.Kernel.Fx6 Rate, Singularity.Kernel.Fx6 UnitCost, Singularity.Kernel.Fx6 UnitCostFloor, Singularity.Kernel.Fx6 InService, Singularity.Kernel.Fx6 Readiness, Singularity.Kernel.Fx6 Perf, Singularity.Core.Products.LineBind Bind, System.Boolean AiLine, System.Collections.Immutable.ImmutableArray`1[System.Int32] PrcSet, System.Int32 SlotGeneration, System.Int32 LicensedFrom)
   method <Clone>$() : Singularity.Session.DesignView
-  method Deconstruct(System.Int32& Design, Singularity.Core.Products.DesignStage& Stage, System.Int32& PlatformGen, System.Int32& Gen, System.Int32& Parent, System.Int32& StageOMonth, System.Boolean& BuiltAny, System.Boolean& Cancelled, Singularity.Kernel.Fx6& Rate, Singularity.Kernel.Fx6& UnitCost, Singularity.Kernel.Fx6& UnitCostFloor, Singularity.Kernel.Fx6& InService, Singularity.Kernel.Fx6& Readiness, Singularity.Kernel.Fx6& Perf, Singularity.Core.Products.LineBind& Bind, System.Boolean& AiLine, System.Collections.Immutable.ImmutableArray`1[System.Int32]& PrcSet, System.Int32& SlotGeneration) : System.Void
+  method Deconstruct(System.Int32& Design, Singularity.Core.Products.DesignStage& Stage, System.Int32& PlatformGen, System.Int32& Gen, System.Int32& Parent, System.Int32& StageOMonth, System.Boolean& BuiltAny, System.Boolean& Cancelled, Singularity.Kernel.Fx6& Rate, Singularity.Kernel.Fx6& UnitCost, Singularity.Kernel.Fx6& UnitCostFloor, Singularity.Kernel.Fx6& InService, Singularity.Kernel.Fx6& Readiness, Singularity.Kernel.Fx6& Perf, Singularity.Core.Products.LineBind& Bind, System.Boolean& AiLine, System.Collections.Immutable.ImmutableArray`1[System.Int32]& PrcSet, System.Int32& SlotGeneration, System.Int32& LicensedFrom) : System.Void
   method Equals(Singularity.Session.DesignView? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method GetHashCode() : System.Int32
@@ -136,6 +151,7 @@ type Singularity.Session.DesignView [sealed class]
   prop Gen : System.Int32 { get; init; }
   prop Handle : Singularity.Core.Products.DesignHandle { get; }
   prop InService : Singularity.Kernel.Fx6 { get; init; }
+  prop LicensedFrom : System.Int32 { get; init; }
   prop Parent : System.Int32 { get; init; }
   prop Perf : Singularity.Kernel.Fx6 { get; init; }
   prop PlatformGen : System.Int32 { get; init; }
@@ -200,6 +216,35 @@ type Singularity.Session.LayerControl [enum]
   field Lk0 : Singularity.Session.LayerControl = 2 static
   field Lp : Singularity.Session.LayerControl = 5 static
   field value__ : System.Int32
+type Singularity.Session.LicenceHeldView [struct]
+  ctor(System.Int32 Seller, System.Int32 Gen, System.Int32 Start)
+  method Deconstruct(System.Int32& Seller, System.Int32& Gen, System.Int32& Start) : System.Void
+  method Equals(Singularity.Session.LicenceHeldView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Gen : System.Int32 { get; init; }
+  prop Seller : System.Int32 { get; init; }
+  prop Start : System.Int32 { get; init; }
+type Singularity.Session.LicenceMarketView [sealed class]
+  ctor(System.Collections.Immutable.ImmutableArray`1[Singularity.Session.LicenceHeldView] Held, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CatalogueLineView] Own, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CatalogueLineView] Offers, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.WorldPriceView] WorldPrices, Singularity.Core.Policy.BadLicence LastRefusal, System.Int32 LastRefusalSeller, System.Int32 LastRefusalGen, System.Int32 LastRefusalMonth, Singularity.Kernel.Fx6 IncomeThisYear, Singularity.Kernel.Fx6 IncomeCap, System.Boolean External)
+  method <Clone>$() : Singularity.Session.LicenceMarketView
+  method Deconstruct(System.Collections.Immutable.ImmutableArray`1[Singularity.Session.LicenceHeldView]& Held, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CatalogueLineView]& Own, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CatalogueLineView]& Offers, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.WorldPriceView]& WorldPrices, Singularity.Core.Policy.BadLicence& LastRefusal, System.Int32& LastRefusalSeller, System.Int32& LastRefusalGen, System.Int32& LastRefusalMonth, Singularity.Kernel.Fx6& IncomeThisYear, Singularity.Kernel.Fx6& IncomeCap, System.Boolean& External) : System.Void
+  method Equals(Singularity.Session.LicenceMarketView? other) : System.Boolean
+  method Equals(System.Object? obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop External : System.Boolean { get; init; }
+  prop Held : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.LicenceHeldView] { get; init; }
+  prop IncomeCap : Singularity.Kernel.Fx6 { get; init; }
+  prop IncomeThisYear : Singularity.Kernel.Fx6 { get; init; }
+  prop LastRefusal : Singularity.Core.Policy.BadLicence { get; init; }
+  prop LastRefusalGen : System.Int32 { get; init; }
+  prop LastRefusalMonth : System.Int32 { get; init; }
+  prop LastRefusalSeller : System.Int32 { get; init; }
+  prop Offers : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CatalogueLineView] { get; init; }
+  prop Own : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CatalogueLineView] { get; init; }
+  prop WorldPrices : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.WorldPriceView] { get; init; }
 type Singularity.Session.LicenceRefusalView [struct]
   ctor(System.Int32 Seller, System.Int32 Gen, Singularity.Kernel.Fx6 Price, Singularity.Kernel.Fx6 Room)
   method Deconstruct(System.Int32& Seller, System.Int32& Gen, Singularity.Kernel.Fx6& Price, Singularity.Kernel.Fx6& Room) : System.Void
@@ -308,7 +353,6 @@ type Singularity.Session.PolicyDecisionView [sealed class]
   prop Closes : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CloseView] { get; init; }
   prop DesignCommands : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignCommandView] { get; init; }
   prop Fleet : System.Collections.Immutable.ImmutableArray`1[Singularity.Core.Products.FleetCommand] { get; init; }
-  prop Proposals : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ProposalView] { get; init; }
   prop Repeats : System.Collections.Immutable.ImmutableArray`1[System.Int32] { get; init; }
   prop Starts : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.StartView] { get; init; }
 type Singularity.Session.ProcessView [struct]
@@ -324,20 +368,6 @@ type Singularity.Session.ProcessView [struct]
   prop UnitCostMult : Singularity.Kernel.Fx6 { get; init; }
   prop V : Singularity.Kernel.Fx6 { get; init; }
   prop Yield : Singularity.Kernel.Fx6 { get; init; }
-type Singularity.Session.ProposalView [struct]
-  ctor(Singularity.Core.Policy.ProposalKind Kind, System.Int32 Design, Singularity.Core.Products.DesignHandle Handle, Singularity.Kernel.Fx6 Rate, Singularity.Core.Policy.LineCloseReason Reason)
-  method Accept(System.Int32 actor) : Singularity.Core.Commands.SliceCommand
-  method Deconstruct(Singularity.Core.Policy.ProposalKind& Kind, System.Int32& Design, Singularity.Core.Products.DesignHandle& Handle, Singularity.Kernel.Fx6& Rate, Singularity.Core.Policy.LineCloseReason& Reason) : System.Void
-  method Equals(Singularity.Session.ProposalView other) : System.Boolean
-  method Equals(System.Object obj) : System.Boolean
-  method GetHashCode() : System.Int32
-  method Refuse(System.Int32 actor) : Singularity.Core.Commands.SliceCommand
-  method ToString() : System.String
-  prop Design : System.Int32 { get; init; }
-  prop Handle : Singularity.Core.Products.DesignHandle { get; init; }
-  prop Kind : Singularity.Core.Policy.ProposalKind { get; init; }
-  prop Rate : Singularity.Kernel.Fx6 { get; init; }
-  prop Reason : Singularity.Core.Policy.LineCloseReason { get; init; }
 type Singularity.Session.QualityView [struct]
   ctor(System.Boolean Active, System.Int32 Start, System.Int32 TriggerCount, System.Int32 TrainingTarget)
   method Deconstruct(System.Boolean& Active, System.Int32& Start, System.Int32& TriggerCount, System.Int32& TrainingTarget) : System.Void
@@ -438,12 +468,10 @@ type Singularity.Session.SliceRunConfig [sealed class]
   method FixAll(System.UInt64 seed) : Singularity.Session.SliceRunConfig static
   method GetHashCode() : System.Int32
   method ToString() : System.String
-  prop AdviserActors : System.Collections.Immutable.ImmutableArray`1[System.Int32] { get; init; }
-  prop AdviserMaxLines : System.Int32 { get; init; }
-  prop AdviserRefuseYears : System.Int32 { get; init; }
   prop AheadCostK : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
   prop AheadCostMax : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
   prop AheadCostPow : System.Nullable`1[System.Int32] { get; init; }
+  prop Alliances : Singularity.Core.Policy.AllianceTable? { get; init; }
   prop Alpha : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
   prop BudgetRule : Singularity.Core.Policy.BudgetRule { get; init; }
   prop CM : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
@@ -472,6 +500,8 @@ type Singularity.Session.SliceRunConfig [sealed class]
   prop Layer : Singularity.Session.LayerControl { get; init; }
   prop LicKnows : System.Boolean { get; init; }
   prop LicOff : System.Boolean { get; init; }
+  prop LicenceExternalActors : System.Collections.Immutable.ImmutableArray`1[System.Int32] { get; init; }
+  prop LicenceMarket : System.Boolean { get; init; }
   prop LineClose : Singularity.Core.Policy.LineCloseRule { get; init; }
   prop LkTables : Singularity.Core.Knowledge.LkTables? { get; init; }
   prop MasteryRules : Singularity.Core.Products.MasteryRules { get; init; }
@@ -583,3 +613,13 @@ type Singularity.Session.ViewScope [enum]
   field All : Singularity.Session.ViewScope = 0 static
   field Subscribed : Singularity.Session.ViewScope = 1 static
   field value__ : System.Int32
+type Singularity.Session.WorldPriceView [struct]
+  ctor(System.Int32 Gen, System.Nullable`1[Singularity.Kernel.Fx6] Average, System.Int32 Sellers)
+  method Deconstruct(System.Int32& Gen, System.Nullable`1[Singularity.Kernel.Fx6]&? Average, System.Int32& Sellers) : System.Void
+  method Equals(Singularity.Session.WorldPriceView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Average : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
+  prop Gen : System.Int32 { get; init; }
+  prop Sellers : System.Int32 { get; init; }

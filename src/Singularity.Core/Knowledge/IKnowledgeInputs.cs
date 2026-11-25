@@ -30,6 +30,12 @@ public interface IKnowledgeInputs
     ReadOnlySpan<int> LicensedEngines(int actorRow, long month);
 
     /// <summary>
+    /// The theft discount of the actor on the node in month t, a share of the node cost (<c>s_steal</c>, INTELLIGENCE.md §2.2); zero without intelligence.
+    /// It enters <c>c_eff</c> as <c>max(k_diff·known, s_steal)</c> and nowhere else (O-051).
+    /// </summary>
+    Fx6 StealShare(int actorRow, int nodeRow, long month) => Fx6.Zero;
+
+    /// <summary>
     /// The one-off programme of the actor in month t (the player's <c>fund_programme</c> paid from the reserve): node row and the amount, already
     /// cut to the reserve balance of the snapshot. False when there is none. Used only by a system built with programmes.
     /// </summary>
