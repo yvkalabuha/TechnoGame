@@ -159,6 +159,7 @@ public class NoMutableStaticsTests
 
     private static readonly Dictionary<string, (int Count, string Reason)> UnsafeUses = new(StringComparer.Ordinal)
     {
+        ["Singularity.Kernel.DetMath.Apportion -> MemoryMarshal.Cast"] = (1, "reinterprets the caller's output span as long only to test overlap with the weights; nothing is written through it"),
         ["Singularity.Kernel.Column`1.AppendCurrentTo -> MemoryMarshal.AsBytes"] = (1, "read-only byte view of the column's own current array, passed to IncrementalHash.AppendData (a ReadOnlySpan sink); no write"),
         ["Singularity.Core.Policy.ToolingPlan.Compute -> CollectionsMarshal.AsSpan"] = (2, "sorts in place the thread-bound scratch list t.Cells of the plan (DEBT-0070), cleared and refilled each call; no static or world storage"),
         // Methods that wrap Enumerable.ToArray results; counts are exact, so a new use or a new callee in these methods fails.
