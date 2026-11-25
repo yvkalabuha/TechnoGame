@@ -42,7 +42,7 @@
           "minItems": 2,
           "maxItems": 4,
           "uniqueItems": true,
-          "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord"] }
+          "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord", "space"] }
         },
         "informs": {
           "type": "array",
