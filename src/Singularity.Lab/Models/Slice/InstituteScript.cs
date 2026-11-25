@@ -342,9 +342,9 @@ internal sealed class InstituteScript
         int months = _inst.BuildMonths(h);
         int refYear = l.RefYear(h);
         int planned = start >= 0 ? l.YearOf(start + months - 1) : 0;
-        // The rate the project pays all its run is priced on the planned opening year (start + nominal months), whatever the funding (DEBT-0107 round 3 #2).
-        Fx6 premium = start >= 0 ? InstituteMath.AheadMultiplier(refYear - planned, _inst.Parameters) : Fx6.Zero;
         int openYear = opened >= 0 ? l.YearOf(opened) : 0;
+        // Since TASK-0175 the price follows the expected opening year at the current funding: the premium is the one of the actual opening year.
+        Fx6 premium = start >= 0 && opened >= 0 ? InstituteMath.AheadMultiplier(refYear - openYear, _inst.Parameters) : Fx6.Zero;
         Fx6 actual = opened >= 0 ? InstituteMath.AheadMultiplier(refYear - openYear, _inst.Parameters) : Fx6.Zero;
         _sink!.Row(_buildTable, _s.Layout.ActorIds[h.Actor], MetricFormat.Int(h.Slot), l.IdOf(h), MetricFormat.Int(refYear), MetricFormat.Int(l.TotalLevels(h)),
             MetricFormat.Int(start), MetricFormat.Int(months), MetricFormat.Int(opened), MetricFormat.Int(openYear), MetricFormat.Int(planned),
