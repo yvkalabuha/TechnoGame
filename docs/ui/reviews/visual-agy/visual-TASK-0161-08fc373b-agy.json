@@ -47,143 +47,136 @@
   "mode": "criteria",
   "model": "gemini-4-neon-high",
   "provider": "agy",
-  "response_sha256": "a3ef7dfc8b57634f669b350c7091496aeb18b3649eb2ba97cd9bb95f8e053bc6",
+  "response_sha256": "06d3f87c672b780d3796c51c19918c7c0bac0a7c6c594ff221e7789563d1c8f7",
   "result": {
     "findings": [
       {
         "criterion": "A2",
-        "fix": "Increase overview planisphere node icon sizes to at least 16x16 px (or cluster/simplify dense inner rings with >= 4 px spacing) so node type shapes and internal glyphs remain distinguishable at 100% scale without zooming in.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
-        "location": "Planisphere disk, especially inner rings (1950-1980) in Аэродинамика and Силовые установки where node icons are ~10-13 px wide and internal glyphs collapse",
-        "severity": "high"
-      },
-      {
-        "criterion": "A10",
-        "fix": "Ensure clickable node targets on the planisphere are at least 24x24 du with >= 4 du gaps between adjacent targets (or provide cluster expansion/spacing at Step 1 overview so dense nodes do not crowd each other).",
-        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
-        "location": "Dense node clusters in Аэродинамика (1950-1980) and Силовые установки (1950-1975) where adjacent nodes are ~10-13 px wide with < 4 px separation",
-        "severity": "high"
-      },
-      {
-        "criterion": "A9",
-        "fix": "Add label-to-node collision avoidance so callout boxes never cover nearby node icons; offset «Плёночное охлаждение» to the left or below its node instead of across the adjacent pentagon.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step3_1920x1080.png",
-        "location": "Center of planisphere, label «Плёночное охлаждение» occluding the lower half of the pentagon node icon («Охлаждаемая лопатка (компонент)») directly above it",
-        "severity": "high"
-      },
-      {
-        "criterion": "A9",
-        "fix": "Define a safe margin around the bottom-left zoom HUD («-», «+», «Весь диск», «Шаг 2 из 6») so sector labels are repositioned or clipped with >= 12 px clearance instead of abutting the HUD text.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png",
-        "location": "Bottom-left corner, where the sector label «Металлы 10/15» sits flush against the zoom HUD label «Шаг 2 из 6»",
-        "severity": "medium"
-      },
-      {
-        "criterion": "C5",
-        "fix": "Place «Узлов: 99 · открыто 51» on an opaque HUD pill/background above the canvas, and give per-node year labels an opaque light halo/plate or merge them into the node label box so hatching and dependency lines never cross behind text.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step5_1920x1080.png",
-        "location": "Top-left counter «Узлов: 99 · открыто 51» (crossed by diagonal graph edges) and unboxed per-node year labels («1944», «≈1950», «≈1951», «1952», «≈1960», «≈1970», «≈1982») drawn directly over sector hatching and edges",
-        "severity": "high"
-      },
-      {
-        "criterion": "C5",
-        "fix": "Lower decorative sector hatch contrast to <= 1.6:1 against the paper background, increase hatch spacing or soften it behind graph elements, and visually prioritize dependency edges and node outlines above the hatch pattern.",
+        "fix": "Enforce a minimum 16x16 px footprint for significant node icons at 100% scale (1920x1080) or group dense overview nodes into clear clusters, and increase minimum separation so polygons and inner type glyphs remain distinct without overlapping.",
         "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080_grey.png",
-        "location": "Full planisphere disk across all five hatched sectors (especially Механика cross-hatch, Аэродинамика vertical hatch, and Силовые установки horizontal hatch), where dense hatching visually competes with thin edges and small nodes",
+        "location": "Planisphere overview disk (Шаг 1 из 6), especially dense node clusters in Аэродинамика and Силовые установки (1950-1980 rings) and the goal diamond (same in frame02.png).",
+        "severity": "high"
+      },
+      {
+        "criterion": "C5",
+        "fix": "Place 'Узлов: 99 · открыто 51' inside an opaque HUD pill or move it into the sub-header strip next to the tabs so map edges, nodes, and sector hatching never pass behind or through the text.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step5_1920x1080_grey.png",
+        "location": "Top-left of the Planisphere canvas, 'Узлов: 99 · открыто 51' counter directly slashed by map connector lines and ТРД node graphics (also over hatching in frame03.png-frame06.png and frame08.png).",
+        "severity": "high"
+      },
+      {
+        "criterion": "A9",
+        "fix": "Place the bottom-left zoom toolbar ('-', '+', 'Весь диск', 'Шаг N из 6') inside an opaque container and clamp or offset map sector labels outside the HUD safe zone so text never collides.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png",
+        "location": "Bottom-left corner where 'Шаг 2 из 6' directly collides with the 'Металлы 10/15' sector label with zero spacing over diagonal hatching (same in frame03.png).",
+        "severity": "high"
+      },
+      {
+        "criterion": "C5",
+        "fix": "Add an opaque light halo or pill background behind node year annotations and offset them from connector lines so sector hatching and edges do not cross through the numbers.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step5_1920x1080.png",
+        "location": "Node year labels ('1944', '1952', '≈1950', '≈1951', '≈1960', '≈1970', '≈1982') across the zoomed Planisphere (Шаг 5 из 6), especially '≈1950' and '≈1960' crossed by diagonal edges (same in frame07.png).",
         "severity": "high"
       },
       {
         "criterion": "A3",
-        "fix": "Render per-node year labels in dark ink (>= 7:1 contrast) on an opaque light background plate or inside the node label pill so they remain >= 4.5:1 legible over hatched sectors in both color and greyscale.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step5_1920x1080_grey.png",
-        "location": "Per-node year labels («1944», «≈1950», «≈1951», «1952», «≈1960», «≈1970», «≈1982») rendered in muted grey directly over grey sector hatching and crossing lines",
+        "fix": "Darken the ink color of node year annotations and place them on a clean light halo/pill so small digits meet at least 4.5:1 contrast (7:1 for data) against their background.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step5_1920x1080.png",
+        "location": "Node year labels ('1944', '1952', '≈1950', '≈1951', '≈1960', '≈1970', '≈1982') rendered in pale gray over pink/gray sector hatching (same in frame07.png).",
         "severity": "high"
       },
       {
         "criterion": "A4",
-        "fix": "Increase the stroke contrast of unselected dependency edges and «неизвестен» node outlines to >= 3:1 against their underlying sector tints and hatch patterns (and lighten the background sector fill/hatch).",
+        "fix": "Reduce decorative sector hatching contrast to <= 1.6:1 (C5), give nodes an opaque background fill/halo separating them from hatching, and darken 'неизвестен' outlines and thin connector edges to >= 3:1 contrast.",
         "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
-        "location": "Outer rings (1980-2020) across Химия, Механика, Аэродинамика, and Силовые установки, where thin ~1 px dependency lines and pale «неизвестен» node outlines blend into the hatched tinted sectors",
+        "location": "Outer rings of the Planisphere (Химия, Металлы, Силовые установки, Аэродинамика) where pale 'неизвестен' node outlines and edges blend into sector hatching (also in frame01.png and frame03.png-frame06.png).",
+        "severity": "high"
+      },
+      {
+        "criterion": "C3",
+        "fix": "Add a numeric speed value and unit (e.g. '1 мес/с' or 'x1') in at least 13 px (type.m) next to the 4-bar speed gauge, and widen/space the bars to meet A2 minimums.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
+        "location": "Top HUD bar, 4-bar simulation speed gauge immediately to the right of the '>>' button (present on frame01.png-frame08.png).",
         "severity": "high"
       },
       {
         "criterion": "C2",
-        "fix": "Remove the contradictory «(кольцо 3)» wording from the node inspector (e.g., use «Слой: инженерия (ступень 3)») so «кольцо» unambiguously means only the 10-year radial timeline rings defined in the legend.",
+        "fix": "Rename '(кольцо 3)' in the node card to '(уровень 3)' or '(ступень 3)' so 'кольцо' uniquely refers to the 10-year radial rings defined in the legend.",
         "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png",
-        "location": "Right inspector panel («ЧТО ЗАТРАГИВАЕТ → Слой: инженерия (кольцо 3)») contradicting the bottom-right legend («Радиус = год; кольцо = 10 лет»)",
+        "location": "Right node card ('ЧТО ЗАТРАГИВАЕТ' -> 'Слой: инженерия (кольцо 3)') contradicting the bottom-right legend ('Радиус = год; кольцо = 10 лет') (present on frame03.png-frame08.png).",
         "severity": "high"
       },
       {
-        "criterion": "C3",
-        "fix": "Keep decade ring year labels («1950», «1960», «1970», «1980», etc.) anchored along visible ring arcs inside the viewport at Step 3 so the radial time scale always shows numeric year markings.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step3_1920x1080.png",
-        "location": "Concentric decade rings across the planisphere viewport at Шаг 3 из 6, where all decade year labels disappear leaving only «Сейчас: 1978»",
-        "severity": "high"
-      },
-      {
-        "criterion": "C3",
-        "fix": "Add an explicit numeric value with unit (e.g., «1 дн/с» or «3 мес/с») next to the 4-bar speed indicator in the top HUD bar, and widen interactive speed controls to >= 24x24 du if clickable.",
+        "criterion": "A7",
+        "fix": "Implement and visually demonstrate a >= 2 px unobstructed keyboard focus ring (>= 3:1 contrast against both adjacent backgrounds) on interactive HUD/Planisphere controls in the 1920x1080 capture set.",
         "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
-        "location": "Top HUD bar, 4-bar vertical speed/level indicator immediately to the right of the playback buttons (||, <<, >>)",
+        "location": "Entire screen — no keyboard focus frame is visible on any focusable control across frame01.png-frame08.png.",
         "severity": "high"
+      },
+      {
+        "criterion": "C1",
+        "fix": "Add clear labeling, counts, or explicit state indicators to the top-bar status/filter chips so their meaning, dashed-vs-solid border semantics, and click action are readable within 5 seconds without a tooltip.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
+        "location": "Top HUD bar chip row ('СПЛАВ', 'ЛИЦЕНЗИЯ', 'ОТКАЗ', 'ЦЕЛЬ', 'РАЗРЫВ', 'ВОЙНА', '■ СБОЙ'), present on frame01.png-frame08.png.",
+        "severity": "medium"
+      },
+      {
+        "criterion": "A3",
+        "fix": "Increase text contrast of the pale gray top-bar chip labels on the textured beige header to >= 4.5:1 for readable/interactive states, or visually differentiate inactive states without low-contrast active-looking chips.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
+        "location": "Top HUD bar labels 'СПЛАВ', 'ЛИЦЕНЗИЯ', 'ОТКАЗ', 'ЦЕЛЬ', 'РАЗРЫВ', 'ВОЙНА' on textured beige background (present on frame01.png-frame08.png).",
+        "severity": "medium"
       },
       {
         "criterion": "C2",
-        "fix": "Reserve the blue rectangular callout border exclusively for the Goal node, style the selected node callout with a thick dark outline matching the «выбран» legend ring, and replace dashed borders on top-bar chips so dashed outlines uniquely mean «можно открыть».",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step3_1920x1080.png",
-        "location": "Selected node callout «Охлаждаемая лопатка турбины» reusing the same blue border as the Goal callout in overview, and top-bar chips («ЦЕЛЬ», «РАЗРЫВ», «ВОЙНА») reusing the dashed border style of «можно открыть (пунктир)» nodes",
+        "fix": "Draw the 'выбран' selection halo conforming to the node's own polygon shape (like 'Цель') or offset outside the node perimeter with >= 3 px clearance so the underlying node type shape remains recognizable at intermediate zooms.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080_grey.png",
+        "location": "Selected node 'Охлаждаемая лопатка турбины' on the Planisphere (Шаг 2 из 6, also in frame04.png-frame06.png) and 'выбран' legend icon, where the thick circular selection ring hides the hexagon ('инженерия') shape and mimics 'принцип'.",
         "severity": "medium"
       },
       {
         "criterion": "A5",
-        "fix": "Add a non-color visual channel to the selected node label box (e.g., thicker >= 2 px border or selection marker) and fill the active speed bar in solid dark ink so active/selected states remain distinguishable from «Сейчас: 1978» and inactive bars in greyscale.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step3_1920x1080_grey.png",
-        "location": "Selected node callout «Охлаждаемая лопатка турбины» (whose blue border collapses to the same thin dark frame as «Сейчас: 1978» in greyscale) and the active cyan bar in the top-bar 4-bar meter",
+        "fix": "Give 'неизвестен' a distinct non-color graphic cue (e.g. dotted stroke or muted fill/glyph) separate from 'известен', and increase the outer offset/thickness of the 'Цель' double frame so both remain unmistakable in grayscale.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080_grey.png",
+        "location": "Grayscale Planisphere nodes ('неизвестен' vs 'известен' and 'Цель' double diamond) and bottom-right legend 'Состояния узла' (also in frame03.png and frame05.png).",
         "severity": "medium"
       },
       {
-        "criterion": "A1",
-        "fix": "Increase map year label font sizes (both radial ring years and per-node year tags) to >= 12-13 du so physical cap height of value-bearing digits is >= 9 px at 100% 1920x1080.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step5_1920x1080.png",
-        "location": "Per-node year labels («1944», «≈1950», «≈1951», «1952», «≈1960», «≈1970», «≈1982») and overview/step2 ring year labels («1950»-«2030»), which render noticeably smaller than main text (~7-8 px physical cap height)",
+        "criterion": "C5",
+        "fix": "Offset node label pills away from active 'Связи выбранного узла' paths and clamp floating labels inside viewport margins so labels neither hide highlighted edges nor clip at the left border.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step3_1920x1080.png",
+        "location": "Label pill 'Плёночное охлаждение' covering highlighted black connection edges and left-edge clipped labels 'Высокотемпературная ползучесть' and 'Вакуумная индукционная плавка' (similar edge cover in frame05.png, frame07.png, frame08.png; left clip in frame03.png-frame04.png).",
         "severity": "medium"
       },
       {
-        "criterion": "C1",
-        "fix": "Clarify the top HUD chips («СПЛАВ», «ЛИЦЕНЗИЯ», «ОТКАЗ», «ЦЕЛЬ», «РАЗРЫВ», «ВОЙНА», «■ СБОЙ») with a concise group/state cue and >= 4.5:1 text contrast on muted items so players can tell within 5 seconds what each state means and whether the chips are actionable without hovering.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png",
-        "location": "Top HUD bar status/category chips between the speed bars and right-side icons",
+        "criterion": "A9",
+        "fix": "Display the full sector title 'Силовые установки' (wrapping onto two lines if needed) instead of truncating it to 'Силов.' when ample whitespace is available.",
+        "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png",
+        "location": "Right side of the Planisphere disk, truncated sector label 'Силов. 17/28' (same in frame03.png).",
         "severity": "medium"
       },
       {
         "criterion": "C6",
-        "fix": "Replace the unexplained term «фронтир» with a plain word matching the legend states (or add an inline gloss), and wrap the full sector name «Силовые установки» on two lines instead of truncating to «Силов.».",
+        "fix": "Replace the unexplained jargon word 'фронтир' with the plain-language state term used in the legend (e.g. 'можно открыть'), and expand technical abbreviations ('ТРД', 'ТРДД', 'NiCr') inline or in the node card.",
         "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png",
-        "location": "Right inspector subtitle («инженерия · поколение 4 · Силовые установки · фронтир») and right-side sector label («Силов. 17/28»)",
-        "severity": "low"
-      },
-      {
-        "criterion": "C8",
-        "fix": "Add a visible «← К обзору / Снять выбор» control in the node inspector header to return to the «Фокус освоения» view without closing the whole screen, and surface any primary node action above the fold.",
-        "frame": "shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png",
-        "location": "Right node inspector panel («США · знание → УЗЕЛ: Охлаждаемая лопатка турбины»), which shows no return-to-overview button or primary action above the scroll fold",
-        "severity": "low"
+        "location": "Right node card metadata line ('инженерия · поколение 4 · Силовые установки · фронтир') and map abbreviations ('ТРДД', 'ТРД', 'NiCr-сплава') across frame03.png-frame08.png.",
+        "severity": "medium"
       }
     ],
     "opinion": "fail",
-    "summary": "Fail: while the radial Knowledge Tree has strong fundamentals (clear legend with multi-channel shapes and sector hatching, C4 why_not explanation on the disabled focus button, A12 scrollbar with clipped continuation line, crisp zoom controls, and visible Esc exit), multiple blocking clarity and accessibility criteria fail at 100% 1920x1080 scale. Key defects include < 16x16 px crowded node icons and < 24x24 du targets at overview (A2, A10), label-over-node occlusion of «Охлаждаемая лопатка (компонент)» by «Плёночное охлаждение» at Step 3 and «Металлы 10/15» colliding with «Шаг 2 из 6» at Step 2 (A9), unboxed text («Узлов: 99 · открыто 51» and Step 5 year labels) crossed by edges and hatching with low contrast (C5, A3), dense hatching competing with low-contrast dependency edges and unknown nodes (C5, A4), missing year scale numbers at Step 3 and an unlabeled 4-bar HUD meter (C3), and conflicting visual/terminology signals such as «кольцо 3» vs «кольцо = 10 лет» and reused blue/dashed borders (C2, A5). Note that 150% scaling (A9), keyboard focus/navigation (A6, A7), reduced motion (A8), and Settings fallback (C7) cannot be verified from these static 100% frames."
+    "summary": "Review of TASK-0161 (Planisphere Knowledge Tree, 1920x1080 at 100% in color and grayscale across zoom steps 1, 2, 3, and 5). Strengths: sector hatching works well as a grayscale secondary channel (A5), the disabled 'Отдать приказ: фокус' button displays an explicit inline reason (C4), 'Цель' and 'Фокус освоения' are explained inline (C6), 'Закрыть x (Esc)' is clearly visible (C8), the scrollable node card has a high-contrast >= 8 px scrollbar with a clipped bottom continuation cue (A12), and node icons/glyphs are crisp at Шаг 5. However, multiple blocking (§12 ⛔) defects are visible at 100% scale: overview nodes at Шаг 1 are < 16x16 px with unreadable inner glyphs (A2); unbacked HUD/map texts ('Узлов: 99 · открыто 51', 'Шаг 2/3 из 6', and Шаг 5 year labels) are crossed by map hatching, edges, and nodes (C5) with low-contrast pale gray year digits and top-bar chip labels (A3) and pale 'неизвестен' outlines/edges over busy hatching (A4); 'Шаг 2 из 6' collides directly with 'Металлы 10/15' (A9); the top-bar 4-bar speed gauge lacks a numeric value and unit (C3); 'кольцо' has contradictory meanings between card ('кольцо 3') and legend ('кольцо = 10 лет') while the circular 'выбран' ring masks the node's hexagon at Шаг 2-3 (C2); top-bar chips lack 5-second clarity (C1); 'фронтир' and abbreviations ('ТРД', 'ТРДД', 'NiCr') are unexplained (C6); and no keyboard focus frame is shown (A7). Note: dynamic/settings criteria (A6 keyboard traversal, A8 reduced motion, A9 125%/150% scale, A11 colorblindness simulation, C7 settings fallback) cannot be verified from static 100% screenshots alone."
   },
   "task": "TASK-0161",
   "tokens": {
-    "completion": 31708,
-    "prompt": 24282,
-    "thinking": 28173
+    "completion": 27422,
+    "prompt": 23447,
+    "thinking": 24353
   },
   "usage": {
-    "cache_read_tokens": 13370,
-    "input_tokens": 24282,
-    "output_tokens": 31708,
-    "thinking_tokens": 28173,
-    "total_tokens": 55990
+    "cache_read_tokens": 13091,
+    "input_tokens": 23447,
+    "output_tokens": 27422,
+    "thinking_tokens": 24353,
+    "total_tokens": 50869
   }
 }

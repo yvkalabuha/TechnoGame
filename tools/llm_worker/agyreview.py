@@ -96,7 +96,7 @@ def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOU
         raise AgyFailed(f"agy could not start: {e}") from None
 
 
-def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_brain, runner, which):
+def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_brain, runner, which, must_read=()):
     """brain_dir: where this process finds the brain folders; inside_brain: how agy names that folder."""
     from . import sketch
 
@@ -131,6 +131,11 @@ def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_
         if OVERLOAD_RE.search(err or "") or (result and OVERLOAD_RE.search(str(result.get("status")))):
             raise AgyOverloaded(f"agy exited {rc}: {sketch.one_line(err or out, 300)}")
         raise AgyFailed(f"agy exited {rc}: {sketch.one_line(err or out, 300)}")
+    # agy writes string args as JSON-quoted text
+    opened = {Path(p.strip().strip('"')).name for name, paths in calls if name in REVIEW_PATH_TOOLS for p in paths}
+    unread = [f for f in must_read if f not in opened]  # an answer without evidence of reading is not published
+    if unread:
+        raise AgyFailed(f"the transcript shows no read of: {', '.join(unread)}")
     answer = extract_answer(result)
     if not answer.strip():
         raise AgyFailed("agy returned an empty answer")

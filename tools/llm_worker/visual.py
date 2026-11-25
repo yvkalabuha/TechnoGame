@@ -134,7 +134,8 @@ class RateGuard:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
                 st = json.loads(self.path.read_text(encoding="utf-8"))
-                st["count"] = max(0, int(st["count"]) - 1)
+                if datetime.fromtimestamp(stamp, timezone.utc).strftime("%Y-%m-%d") == st["day"]:
+                    st["count"] = max(0, int(st["count"]) - 1)  # an attempt of an earlier day is not in today's count
                 st["recent"] = [t for t in st["recent"] if t != stamp]
             except (OSError, ValueError, KeyError, TypeError):
                 return
@@ -352,6 +353,11 @@ def _run_agy(record, task, loaded, criteria, direction, model, schema_path, runs
     except review.ReviewError as e:
         review.write_run(runs_dir, stem + "-invalid.json", {**record, "error": str(e), "raw": answer})
         raise VisualError("schema_invalid", str(e)) from None
+    names = agyvisual.frame_names(loaded)
+    for f in data["findings"]:
+        f["frame"] = names.get(f["frame"], f["frame"])  # the model saw neutral file names
+    for p in data.get("proposals", []):
+        p["frames"] = [names.get(x, x) for x in p["frames"]]
     mark_unverified(data, criteria, [n for n, _, _ in loaded])
     record["result"] = data
     path, md = write_pair(runs_dir, stem, record)

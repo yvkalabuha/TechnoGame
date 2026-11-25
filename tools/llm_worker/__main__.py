@@ -91,6 +91,8 @@ def main(argv=None):
     p.add_argument("--timeout", type=int, default=sketch_mod.DEFAULT_TIMEOUT_S, help="seconds for agy")
     p.add_argument("--parallel", action="store_true", help="run the image sub-agents at once (default: one after another)")
     p.add_argument("--with-visual", action="store_true", help="also run 'visual --mode design' on the --ref frames")
+    p.add_argument("--visual-provider", choices=visual_mod.PROVIDERS, default="agy",
+                   help="provider of the --with-visual run: agy (subscription, default) or key (AI Studio key)")
     p.add_argument("--allow-small", action="store_true", help="with --with-visual: send frames below 1920x1080")
     p.add_argument("--dry-run", action="store_true", help="check inputs, run nothing")
     sub.add_parser("status", help="list tasks and states")
@@ -236,7 +238,8 @@ def _sketch(a):
             print("error: --with-visual needs --ref frames")
             return 5
         a_vis = argparse.Namespace(task=a.task, frames=a.ref, criteria=visual_mod.DEFAULT_CRITERIA, runs=a.runs, model=None,
-                                   dry_run=a.dry_run, mode="design", allow_small=a.allow_small)
+                                   dry_run=a.dry_run, mode="design", allow_small=a.allow_small,
+                                   provider=a.visual_provider)
         rc = _visual(a_vis)
     try:
         path, md, rec = codexsketch.run_engine(a.engine, a.task, a.prompt_file, a.ref, a.count, runs_dir=a.runs,

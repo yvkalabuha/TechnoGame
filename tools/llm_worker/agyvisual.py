@@ -25,14 +25,21 @@ def workspace_files(frames):
 
 
 def build_prompt(system, task, criteria, files, ws, direction=None):
+    """Only neutral frameNN names go into the prompt (a caller's file name is never sent); see frame_names for the way back."""
     lines = [system, "", f"Task: {task}",
-             "Open every frame with the file viewer (read_file) before you answer. Frame files (path = frame name to use in findings):"]
-    lines += [f"- {ws}/{f} = {name}" for f, name in files]
+             "Open every frame with the file viewer (read_file) before you answer. Frame files; in findings and "
+             "proposals name a frame by its file name, for example frame01.png:"]
+    lines += [f"- {ws}/{f}" for f, _ in files]
     lines += ["", "Criteria:", criteria]
     if direction is not None:
         lines += ["", "Visual direction:", direction]
     lines += ["", "Do not use any other tool. Answer only with the JSON object of the schema."]
     return "\n".join(lines)
+
+
+def frame_names(frames):
+    """{frameNN.ext: the frame name of the caller}."""
+    return {f: name for f, name in workspace_files(frames)}
 
 
 def run(prompt, frames, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, runner=None, brain_dir=None,
@@ -53,10 +60,11 @@ def run(prompt, frames, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, r
         try:
             if runner is not None:
                 return agyreview._run_agy(text, ws, schema_file, model, timeout_s, brain_dir or sketch.BRAIN_DIR, None,
-                                          runner, which)
+                                          runner, which, must_read=[f for f, _ in files])
             with sketch.private_box(cwd_writable=False) as (box, private_brain):
                 return agyreview._run_agy(text, ws, schema_file, model, timeout_s, private_brain, sketch.BRAIN_DIR,
-                                          functools.partial(sketch.default_runner, box=box), which)
+                                          functools.partial(sketch.default_runner, box=box), which,
+                                          must_read=[f for f, _ in files])
         except sketch.SketchError as e:
             if e.code == "sandbox_unavailable":
                 raise SandboxUnavailable(str(e)) from None
