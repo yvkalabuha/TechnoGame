@@ -105,8 +105,8 @@ public class InstituteTests
                 Fx6 wsum = Fx6.FromInt(w), group = Fx6.FromInt(g);
                 Fx6 k = InstituteMath.KappaEff(wsum, group, P);
                 Assert.True(k >= Fx6.One && k <= P.Kappa);
-                if (k > Fx6.One)   // n = w shares, each rounded by at most 1e-6
-                    Assert.True(Fx6.One - k * group / wsum >= P.Rho - Fx6.FromRaw(w), $"w {w} g {g} kappa {k}");
+                if (k > Fx6.One)   // one expression k*group/wsum: rounding error ≤ 3e-6 whatever w (reviewer TASK-0174)
+                    Assert.True(Fx6.One - k * group / wsum >= P.Rho - Fx6.FromRaw(3), $"w {w} g {g} kappa {k}");
             }
         }
     }
