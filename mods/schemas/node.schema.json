@@ -42,16 +42,26 @@
           "minItems": 2,
           "maxItems": 4,
           "uniqueItems": true,
-          "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord"] }
+          "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord", "space"] }
         },
-        "research_speed": {
-          "description": "A knowledge effect: bonus to the research speed of the directions (all when none are given); bonuses add up (#562, #568).",
-          "type": "object",
-          "required": ["bonus"],
-          "additionalProperties": false,
-          "properties": {
-            "bonus": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.08 },
-            "directions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord"] } }
+        "mil_value": { "description": "Military value word (SCIENCE_SLOTS §3.2).", "enum": ["none", "base", "prep", "direct"] },
+        "effects": {
+          "description": "research_speed effects (SCIENCE_SLOTS §3.2, §6); read, not used until TASK-0187.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "dirs", "bonus"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "const": "research_speed" },
+              "dirs": {
+                "oneOf": [
+                  { "const": "all" },
+                  { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord", "space"] } }
+                ]
+              },
+              "bonus": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.08 }
+            }
           }
         },
         "informs": {

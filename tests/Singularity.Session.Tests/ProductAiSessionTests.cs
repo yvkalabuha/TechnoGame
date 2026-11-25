@@ -217,7 +217,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                 }
             }
             Assert.True(money > Fx6.Zero, "no process-development money was distributed: the fixture does not test «T_ab expires with money»");
-            Observed o = Observe(config, 384);
+            Observed o = Observe(config, 480);   // 384 before #575: the product chain opens ~70 months later
             output.WriteLine($"seed {seed}: branch О {o.OFirings} (processes {o.OProcesses})");
             fired += o.OProcesses;
         }
@@ -275,7 +275,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
             var proxy = new ForceProxy(s, divisor);
             SliceWorld w = s.World;
-            for (long t = 0; t < 240; t++)
+            for (long t = 0; t < 360; t++)   // 240 before #575: projects reach О ~70 months later
             {
                 s.StepThroughMonth(t);
                 proxy.Issue(t);
@@ -453,6 +453,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-    private const string Golden150 = "b6a9c7b0bb2371abc4aa7609ec8a9755c7289e2c1a6ffaa333e18b3cc5d4870b";
+    private const string Golden150 = "9fd85e0390e0a56cbac36e3cf8477100715de3e7f744f0d20550bc20f41cf79b";
     // Earlier records:
 }

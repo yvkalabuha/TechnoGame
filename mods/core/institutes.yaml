@@ -2,7 +2,7 @@
 # Only entries with a confirmed founding year are listed (Rolls-Royce Derby and the other unconfirmed rows wait for a source; fra_cnes has a wikidata P571 date).
 # country = actor ID of the scenario; areas = discipline: level 1..4 [estimate, calibrated in Lab]. ref_year = the historical year (the price of a later project).
 # Rows with founded after the start of the scenario are build candidates (BuildInstitute); their levels are estimates, and for a small country (FRA, SWE) the sum of levels of a project is at most 3.
-# directions = direction: level 1..5 (12 directions, docs/research/notes/directions-nodes-institutes.md, O-091); read but not used by the core yet.
+# directions = direction: level 1..5 (13 directions, docs/research/notes/directions-nodes-institutes.md, O-091); read but not used by the core yet.
 # One institute = one priority slot (#485). Not part of the data hash of the nodes and scenarios (own hash, InstituteTable.Hash).
 kind: institute
 define:

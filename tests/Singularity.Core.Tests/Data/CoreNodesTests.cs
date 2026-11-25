@@ -23,13 +23,13 @@ public class CoreNodesTests
     private static Fx6 Fx(string text) => Fx6.FromRaw((long)(decimal.Parse(text, System.Globalization.CultureInfo.InvariantCulture) * Fx6.Scale));
 
     [Fact]
-    public void Core_Has99NodesWithTypeCounts()
+    public void Core_Has156NodesWithTypeCounts()
     {
         NodeTable n = Data.Nodes;
-        Assert.Equal(99, n.Count);
+        Assert.Equal(156, n.Count);
         int[] counts = [.. Enum.GetValues<NodeType>().Select(t => n.Type.Count(x => x == t))];
-        Assert.Equal([10, 22, 22, 15, 24, 6], counts);   // FND PRN ENG CMP PRC APP (61 of TASK-0011 + 20 of G5/G6 + 18 intermediate steps of TASK-0147)
-        Assert.Equal(Enumerable.Range(1, 99), n.Number.ToArray());
+        Assert.Equal([12, 33, 48, 24, 33, 6], counts);   // FND PRN ENG CMP PRC APP (61 of TASK-0011 + 20 of G5/G6 + 18 of TASK-0147 + 57 of #575)
+        Assert.Equal(Enumerable.Range(1, 156), n.Number.ToArray());
     }
 
     [Fact]
@@ -65,7 +65,8 @@ public class CoreNodesTests
         var loaded = new List<string>();
         for (int r = 0; r < n.Count; r++)
             for (int e = n.InformsStart[r]; e < n.InformsStart[r + 1]; e++)
-                loaded.Add($"{n.Id[r]}>{n.Id[n.InformsTo[e]]}={n.InformsWeight[e]}");
+                if (n.Number[r] <= 99)   // nodes 100-156 (#575) are checked in ExpandedTreeTests
+                    loaded.Add($"{n.Id[r]}>{n.Id[n.InformsTo[e]]}={n.InformsWeight[e]}");
         // 6 edges of nodes 62-81 (TASK-0133): only FND -> ENG/PRC of the same discipline pass the validator; the rest of the doc's edges are dropped.
         string[] added = [.. loaded.Where(s => s.Contains("fly_by_wire") || s.Contains("aesa_sensor") || s.Contains("low_observable_airframe") || s.Contains("integrated_avionics"))];
         Assert.Equal(5, added.Length);

@@ -319,19 +319,22 @@ public class SlotScienceTests
     }
 
     [Fact]
-    public void AStartTheMoneyDoesNotCover_NeedsConfirmation_AndTheAcknowledgedOneGoes()
+    public void AStartThatDropsTheCoverageBelow60Percent_NeedsConfirmationAtSubmit_AStartWhenItIsBelowAlreadyGoesWithAWarning_O096()
     {
         SliceSession s = Make(2, player: 0);
         BudgetShares sh = s.World.SharesOf(0);
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, new BudgetShares(Fx6.Zero, sh.Capability, sh.Effort, sh.Procurement, sh.Quality, sh.Security))).Accepted);
         s.StepThroughMonth(0);
         int[] f = Frontier(s, 0);
-        Assert.True(s.Submit(SourceClass.Player, 0, 1, new AssignNode(0, 0, f[0])).Accepted);
+        CommandVerdict asked = s.Submit(SourceClass.Player, 0, 1, new AssignNode(0, 0, f[0]));
+        Assert.Equal(CommandRefusal.NeedsConfirmation, asked.Reason);   // nothing was queued
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
         s.StepThroughMonth(1);
-        Assert.Contains(s.Outcomes, o => o.Contains("rejected: NeedsConfirmation"));
-        Assert.True(s.Submit(SourceClass.Player, 0, 2, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
-        s.StepThroughMonth(2);
-        Assert.Equal(f[0], Resolved(s, 0, 3)[0]);
+        Assert.Equal(f[0], Resolved(s, 0, 2)[0]);
+        // The coverage is below 60 % now: the next start only warns.
+        CommandVerdict second = s.Submit(SourceClass.Player, 0, 2, new AssignNode(0, 1, f[1]));
+        Assert.True(second.Accepted);
+        Assert.Contains("covers only", second.Message);
     }
 
     [Fact]

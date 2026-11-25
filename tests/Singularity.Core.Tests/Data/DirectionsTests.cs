@@ -61,6 +61,15 @@ public class DirectionsTests
         Assert.Throws<DataLoadException>(() => Directions.ReadForNode(Field(yaml), "n"));
 
     [Fact]
+    public void SpaceDirection_IsKnown_AndUsedByTheSpaceNodes()
+    {
+        int space = Directions.Ids.IndexOf("space");
+        Assert.Equal(12, space);
+        Assert.Contains(space, Data.Nodes.Direction);
+        Assert.Equal([space, 0], Directions.ReadForNode(((Singularity.Core.Data.Yaml.YMap)Singularity.Core.Data.Yaml.StrictYaml.Parse("d: [space, aero]\n", "t.yaml")).Entries[0].Value, "n"));
+    }
+
+    [Fact]
     public void NodeEntry_KeepsTheFileOrder_MainFirst()
     {
         Assert.Equal([9, 0], Directions.ReadForNode(Field("[ctrl, aero]"), "n"));

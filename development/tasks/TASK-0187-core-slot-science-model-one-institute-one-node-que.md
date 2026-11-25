@@ -1,7 +1,7 @@
 ---
 id: TASK-0187
 title: "Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer

@@ -4,7 +4,7 @@ using Singularity.Core.Data.Yaml;
 namespace Singularity.Core.Data;
 
 /// <summary>
-/// The 12 science directions (docs/research/notes/directions-nodes-institutes.md, O-091) and the checks of the <c>directions</c> field of nodes and institutes.
+/// The 13 science directions (docs/research/notes/directions-nodes-institutes.md, O-091) and the checks of the <c>directions</c> field of nodes and institutes.
 /// Data only: the core does not read the field yet. An absent field is an empty list (a mod may omit it); a present one is validated.
 /// </summary>
 public static class Directions
@@ -15,7 +15,7 @@ public static class Directions
 
     /// <summary>Direction IDs; the index in this array is the direction number.</summary>
     public static readonly ImmutableArray<string> Ids =
-        ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord"];
+        ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord", "space"];
 
     /// <summary>Node field: a list of 2..4 distinct known direction IDs, the main one first. Returns direction numbers in file order.</summary>
     internal static int[] ReadForNode(YNode? node, string owner)

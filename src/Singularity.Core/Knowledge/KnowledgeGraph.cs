@@ -6,7 +6,7 @@ namespace Singularity.Core.Knowledge;
 
 /// <summary>One node for <see cref="KnowledgeGraph.Create"/>; requirements are groups of node numbers (AND of OR-groups).</summary>
 public sealed record KnowledgeNodeSpec(int Number, NodeType Type, int Gen, int Discipline, bool Hazard, Fx6 CostN,
-    int[][] Requires, (int From, Fx6 Weight)[]? InformedBy = null, int AnchorYear = 0, int[]? Directions = null, Fx6 SpeedBonus = default, int[]? SpeedDirections = null);
+    int[][] Requires, (int From, Fx6 Weight)[]? InformedBy = null, int AnchorYear = 0, int[]? Directions = null, (int Mask, Fx6 Bonus)[]? Speed = null);
 
 /// <summary>
 /// What the knowledge layer needs from the node data, by storage row. <see cref="Number"/> is the
@@ -39,8 +39,7 @@ public sealed class KnowledgeGraph
     public required ImmutableArray<string> DirectionNames { get; init; }
 
     /// <summary>research_speed effect of the node (#562): the bonus (0 = none) and the directions it counts for (empty = all).</summary>
-    public required ImmutableArray<Fx6> SpeedBonus { get; init; }
-    public required ImmutableArray<ImmutableArray<int>> SpeedDirections { get; init; }
+    public required ImmutableArray<ImmutableArray<(int Mask, Fx6 Bonus)>> SpeedEffects { get; init; }
 
     /// <summary>Rows of the nodes with a research_speed effect, ascending by node number.</summary>
     public required ImmutableArray<int> SpeedNodes { get; init; }
@@ -102,8 +101,8 @@ public sealed class KnowledgeGraph
                     dirs[k] = nodes.DirectionAt(r, k);
             }
             specs[r] = new KnowledgeNodeSpec(nodes.Number[r], nodes.Type[r], nodes.Gen[r], disc, nodes.Hazard[r] != Hazard.None,
-                p.CostN(nodes.Type[r], nodes.Gen[r]), groups, [.. informed[r]], nodes.AnchorYear[r], dirs, nodes.SpeedBonus[r],
-                [.. Enumerable.Range(nodes.SpeedDirStart[r], nodes.SpeedDirStart[r + 1] - nodes.SpeedDirStart[r]).Select(k => nodes.SpeedDir[k])]);
+                p.CostN(nodes.Type[r], nodes.Gen[r]), groups, [.. informed[r]], nodes.AnchorYear[r], dirs,
+                [.. Enumerable.Range(nodes.SpeedStart[r], nodes.SpeedStart[r + 1] - nodes.SpeedStart[r]).Select(k => (nodes.SpeedMask[k], nodes.SpeedBonus[k]))]);
         }
         string[] names = new string[disciplines.Count];
         for (int d = 0; d < names.Length; d++)
@@ -190,9 +189,8 @@ public sealed class KnowledgeGraph
             InformedWeight = [.. informedWeight],
             DisciplineNames = [.. disciplineNames],
             DirectionNames = [.. directionNames ?? disciplineNames],
-            SpeedBonus = ImmutableArray.CreateRange(nodes.Select(s => s.SpeedBonus)),
-            SpeedDirections = ImmutableArray.CreateRange(nodes.Select(s => s.SpeedDirections is { } d ? ImmutableArray.Create(d) : ImmutableArray<int>.Empty)),
-            SpeedNodes = ImmutableArray.CreateRange(order.Where(r => nodes[r].SpeedBonus != Fx6.Zero)),
+            SpeedEffects = ImmutableArray.CreateRange(nodes.Select(s => s.Speed is { } e ? ImmutableArray.Create(e) : ImmutableArray<(int Mask, Fx6 Bonus)>.Empty)),
+            SpeedNodes = ImmutableArray.CreateRange(order.Where(r => nodes[r].Speed is { Length: > 0 })),
             Order = [.. order],
         };
     }

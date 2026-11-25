@@ -184,10 +184,19 @@ public sealed partial class SliceSession
         if (command is RetireCohort { Acknowledged: false } retire && NeedsConfirmation(retire) is { } warning)
             return warning;
 
+        string? warning = null;
+        if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
+        {
+            string percent = $"{after.Raw * 100 / Fx6.Scale} %";
+            if (before >= _world.Institutes.SlotParameters.UnderfundedBelow && !assign.Acknowledged)
+                return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {percent} of what the institutes ask (now {before.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to start anyway");
+            warning = $"accepted; the money covers only {percent} of what the institutes ask after the start";
+        }
+
         int at = _pending.FindIndex(p => p.Key > logged.Key);
         _pending.Insert(at < 0 ? _pending.Count : at, logged);
         RememberLocal(source, sourceId, localN);
-        return CommandVerdict.Ok;
+        return warning is null ? CommandVerdict.Ok : new CommandVerdict(CommandRefusal.None, warning);
     }
 
     // Levers doc 1.2: a player actor under an adviser runs at most MaxLines lines. A start on a design that is already a line only changes its rate.
@@ -700,20 +709,22 @@ public sealed partial class SliceSession
         return CommandVerdict.Ok;
     }
 
-    // §1.2: a node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the money would cover less than 60 % of the asks.
-    private bool StartIsUnderfunded(InstituteSystem institutes, AssignNode a, long month, out Fx6 coverage)
+    // §1.2, O-096: a node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the start moves the coverage of the money from
+    // 60 % or more to less; when the money already covers less, the start goes with a warning. Returns the coverage after the start, or null when the node would not start now.
+    private Fx6? StartCoverage(AssignNode a, long month, out Fx6 before)
     {
-        coverage = Fx6.One;
+        before = Fx6.One;
+        InstituteSystem institutes = _world.Institutes!;
         int row = _world.Graph.RowOf(a.Node);
-        var h = new InstituteHandle(a.Actor, a.Slot);
-        if (row < 0 || !_world.Knowledge.InFrontier(a.Actor, row) || _world.Knowledge.Released(a.Actor, row))
-            return false;
+        if (!_world.SlotsOn || row < 0 || (uint)a.Slot >= (uint)institutes.Layout.SlotCount(a.Actor) || !institutes.Standing(new InstituteHandle(a.Actor, a.Slot))
+            || !_world.Knowledge.InFrontier(a.Actor, row) || _world.Knowledge.Released(a.Actor, row))
+            return null;
         var node = new int[institutes.Layout.SlotCount(a.Actor)];
         institutes.Resolve(a.Actor, month, node, new byte[node.Length]);
         if (node[a.Slot] != 0 || node.Contains(a.Node))
-            return false;
-        coverage = _world.Knowledge.CoverageWith(a.Actor, month, new SlotWork(a.Slot, row, institutes.InstituteMultiplier(h, row), 0));
-        return coverage < institutes.SlotParameters.UnderfundedBelow;
+            return null;
+        before = _world.Knowledge.CoverageWith(a.Actor, month, null);
+        return _world.Knowledge.CoverageWith(a.Actor, month, new SlotWork(a.Slot, row, institutes.InstituteMultiplier(new InstituteHandle(a.Actor, a.Slot), row), 0));
     }
 
     private long NextStepMonth => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));
@@ -769,8 +780,6 @@ public sealed partial class SliceSession
             if (row < 0 || _world.Knowledge.IsKnown(a.Actor, row))
                 return CommandVerdict.Refuse(CommandRefusal.NodeKnown, $"node {a.Node} is already known to actor {a.Actor}");
         }
-        if (command is AssignNode { Acknowledged: false } start && StartIsUnderfunded(institutes, start, month, out Fx6 coverage))
-            return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {coverage.Raw * 100 / Fx6.Scale} % of what the institutes ask: send the command with Acknowledged to start anyway");
         if (command is SetFocus f && f.Level > 0 && !institutes.Standing(new InstituteHandle(f.Actor, f.Slot)))
             return CommandVerdict.Refuse(CommandRefusal.NoActiveNode, $"the institute in slot {f.Slot} is not built");
         return CommandVerdict.Ok;

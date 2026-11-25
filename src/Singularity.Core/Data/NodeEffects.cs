@@ -29,7 +29,7 @@ public enum NodeEffectKind
     /// <summary>The node is one of several alternative ways (an any_of group) to the requirement of another node; Node = that node.</summary>
     AlternativePathFor,
 
-    /// <summary>The node speeds up research (#562): Value = the bonus added to the research speed of the directions it names (all when none).</summary>
+    /// <summary>The node speeds up research (#562): Value = the bonus added to the research speed of the directions in the bit mask <c>MinRank</c> (bit = direction number).</summary>
     ResearchSpeed,
 }
 
@@ -72,8 +72,8 @@ public static class NodeEffects
         }
 
         NodeTable n = data.Nodes;
-        if (n.SpeedBonus[nodeRow] != Fx6.Zero)
-            into.Add(new NodeEffect(NodeEffectKind.ResearchSpeed, -1, -1, -1, n.SpeedBonus[nodeRow], Fx6.Zero, false));
+        for (int k = n.SpeedStart[nodeRow]; k < n.SpeedStart[nodeRow + 1]; k++)
+            into.Add(new NodeEffect(NodeEffectKind.ResearchSpeed, -1, -1, -1, n.SpeedBonus[k], Fx6.Zero, false, MinRank: n.SpeedMask[k]));
         for (int e = n.InformsStart[nodeRow]; e < n.InformsStart[nodeRow + 1]; e++)
             into.Add(new NodeEffect(NodeEffectKind.Informs, -1, -1, -1, n.InformsWeight[e], Fx6.Zero, false, n.InformsTo[e]));
         for (int o = 0; o < n.Count; o++)

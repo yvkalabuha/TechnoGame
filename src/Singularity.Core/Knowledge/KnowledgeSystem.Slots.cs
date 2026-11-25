@@ -60,14 +60,14 @@ public sealed partial class KnowledgeSystem
     public bool Released(int actorRow, int nodeRow) => _g.IsHazard[nodeRow] && Prog(actorRow, nodeRow) >= _p.ProgCap;
 
     /// <summary>
-    /// <c>R = 1 + Σ bonus</c> of the research_speed nodes the actor knows, weighted like the overlap level (main direction 0.5, the rest share 0.5, O-090): a node without
-    /// directions list counts for every direction. Bonuses add up, the sum stops at <see cref="SlotParams.ResearchSpeedCap"/>. Exactly 1 while the data has no such node.
+    /// <c>R = 1 + Σ bonus</c> of the research_speed nodes the actor knows, weighted like the overlap level (main direction 0.5, the rest share 0.5, O-090): an effect for all directions counts for every node. Bonuses add up, the sum stops at <see cref="SlotParams.ResearchSpeedCap"/>. Exactly 1 while the data has no such node.
     /// </summary>
     public Fx6 ResearchFactor(int a, int nodeRow)
     {
         if (_g.SpeedNodes.IsEmpty)
             return Fx6.One;
         var dirs = _g.Directions[nodeRow];
+        int allDirections = (1 << _g.DirectionNames.Length) - 1;
         Fx6 allBonus = Fx6.Zero;
         Span<Fx6> perDir = stackalloc Fx6[dirs.Length];
         perDir.Clear();
@@ -75,14 +75,16 @@ public sealed partial class KnowledgeSystem
         {
             if (!IsKnown(a, s))
                 continue;
-            var covers = _g.SpeedDirections[s];
-            if (covers.IsEmpty)
+            foreach ((int mask, Fx6 bonus) in _g.SpeedEffects[s])
             {
-                allBonus += _g.SpeedBonus[s];
-                continue;
+                if (mask == allDirections)
+                {
+                    allBonus += bonus;
+                    continue;
+                }
+                for (int i = 0; i < dirs.Length; i++)
+                    perDir[i] += (mask & (1 << dirs[i])) != 0 ? bonus : Fx6.Zero;
             }
-            for (int i = 0; i < dirs.Length; i++)
-                perDir[i] += covers.Contains(dirs[i]) ? _g.SpeedBonus[s] : Fx6.Zero;
         }
         Fx6 sum = allBonus;
         for (int i = 0; i < dirs.Length; i++)
@@ -153,13 +155,14 @@ public sealed partial class KnowledgeSystem
     }
 
     /// <summary>
-    /// The coverage <c>u</c> the actor's slots would have in month t if one more slot worked on <paramref name="extra"/> (the check before a start the money does not cover, §1.2).
+    /// The coverage <c>u</c> the actor's slots would have in month t if one more slot worked on <paramref name="extra"/> (null: as they are; the check before a start the money does not cover, §1.2).
     /// </summary>
-    public Fx6 CoverageWith(int a, long t, SlotWork extra)
+    public Fx6 CoverageWith(int a, long t, SlotWork? extra)
     {
         Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit + 1];
         int n = _inputs.SlotWork(a, t, work[..InstituteSystem.MaxSlotsLimit]);
-        work[n++] = extra;
+        if (extra is { } more)
+            work[n++] = more;
         Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
         Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
         return SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);

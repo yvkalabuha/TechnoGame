@@ -32,13 +32,14 @@ public sealed partial class NodeTable
     public required ImmutableArray<int> DirectionStart { get; init; }
     public required ImmutableArray<int> Direction { get; init; }
 
-    /// <summary>Largest research_speed bonus of one node (SCIENCE_SLOTS §6).</summary>
-    public static readonly Fx6 MaxSpeedBonus = Fx6.FromRaw(80_000);
+    /// <summary>Military value word of the node (SCIENCE_SLOTS §3.2); <see cref="MilValue.None"/> when the mod gives none. Not part of the data hash yet.</summary>
+    public required ImmutableArray<MilValue> MilValue { get; init; }
 
-    /// <summary>research_speed bonus of row r (0 = none) and its directions <c>SpeedDirStart[r]..SpeedDirStart[r+1]</c> (empty = every direction).</summary>
+    /// <summary>research_speed effects of row r: <c>SpeedStart[r]..SpeedStart[r+1]</c>, bit mask of directions and bonus (<see cref="ResearchSpeedEffects"/>). Read but unused until TASK-0187; not hashed yet.</summary>
+    public required ImmutableArray<int> SpeedStart { get; init; }
+    public required ImmutableArray<int> SpeedMask { get; init; }
     public required ImmutableArray<Fx6> SpeedBonus { get; init; }
-    public required ImmutableArray<int> SpeedDirStart { get; init; }
-    public required ImmutableArray<int> SpeedDir { get; init; }
+
     public required RequirementLists Requires { get; init; }
 
     /// <summary>informs edges of row r: <c>InformsStart[r]..InformsStart[r+1]</c>, targets ascending.</summary>
@@ -128,18 +129,20 @@ public sealed partial class NodeTable
         }
 
         var speedStart = new List<int> { 0 };
-        var speedDirs = new List<int>();
+        var speedMask = new List<int>();
+        var speedBonus = new List<Fx6>();
         foreach (RawNode node in raw)
         {
-            speedDirs.AddRange(node.SpeedDirs);
-            speedStart.Add(speedDirs.Count);
+            foreach ((int mask, Fx6 bonus) in node.Speed)
+            {
+                speedMask.Add(mask);
+                speedBonus.Add(bonus);
+            }
+            speedStart.Add(speedMask.Count);
         }
 
         var table = new NodeTable
         {
-            SpeedBonus = [.. raw.Select(r => r.SpeedBonus)],
-            SpeedDirStart = speedStart.ToImmutableArray(),
-            SpeedDir = speedDirs.ToImmutableArray(),
             Id = [.. raw.Select(r => r.Id)],
             Number = [.. raw.Select(r => r.Number)],
             Type = [.. raw.Select(r => r.Type)],
@@ -154,6 +157,10 @@ public sealed partial class NodeTable
             Hazard = [.. raw.Select(r => r.Hazard)],
             DirectionStart = directionStart.ToImmutableArray(),
             Direction = directions.ToImmutableArray(),
+            MilValue = [.. raw.Select(r => r.MilValue)],
+            SpeedStart = speedStart.ToImmutableArray(),
+            SpeedMask = speedMask.ToImmutableArray(),
+            SpeedBonus = speedBonus.ToImmutableArray(),
             Requires = RequirementLists.Build(requires),
             InformsStart = [.. informsStart],
             InformsTo = [.. informsTo],
