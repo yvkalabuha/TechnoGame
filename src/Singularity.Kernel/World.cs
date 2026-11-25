@@ -11,6 +11,8 @@ public sealed class World
 {
     private readonly List<Table> _tables = new();
     private readonly List<string> _names = new();
+    private readonly IReadOnlyList<Table> _tablesView;
+    private readonly IReadOnlyList<string> _namesView;
     private ColumnWriteTrace? _trace;
 
     /// <summary>Test-only one-writer trace shared by every root table of the world (child tables follow their parent). Set it before the first table is added or the first tick.</summary>
@@ -25,9 +27,16 @@ public sealed class World
         }
     }
 
-    public IReadOnlyList<Table> Tables => _tables;
+    public World()
+    {
+        // Read-only wrappers: a cast to IList cannot change the registered set behind the registration lock.
+        _tablesView = _tables.AsReadOnly();
+        _namesView = _names.AsReadOnly();
+    }
 
-    public IReadOnlyList<string> Names => _names;
+    public IReadOnlyList<Table> Tables => _tablesView;
+
+    public IReadOnlyList<string> Names => _namesView;
 
     public Table AddTable(string name, int rowCount, int schemaVersion = 1)
     {

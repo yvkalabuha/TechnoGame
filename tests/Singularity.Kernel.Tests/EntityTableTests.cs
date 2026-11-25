@@ -143,8 +143,10 @@ public class EntityTableTests
         Table child = world.AddChildTable("c", parent, 3);
         LongColumn col = child.AddLong("x");
         Assert.Equal(0, child.RowCount);
-        var ctx = new TickContext(parent, new CounterRng(1), 0, null, 4);
-        Assert.Equal(0, col.NextRange(ctx, 0).Length);
+        int length = -1;
+        var runner = new TickRunner(world, parent, 1, [new DelegateSystem((_, _) => { }, ctx => length = col.NextRange(ctx, 0).Length)], 4, 1);
+        runner.RunTick();
+        Assert.Equal(0, length);
     }
 
     private sealed class DelegateSystem(Action<TickContext, int> compute, Action<TickContext>? merge = null, params Column[] written) : ITickSystem
@@ -180,14 +182,44 @@ public class EntityTableTests
     }
 
     [Fact]
-    public void NextRange_WithForeignContext_Throws()
+    public void NextRange_ContextCannotBeForged_AndDefaultContextThrows()
     {
         Toy t = Build(8, 2, false);
-        Table other = new World().AddTable("o", 8);
-        var runner = new TickRunner(t.World, t.Actors, 1,
-            [new DelegateSystem((ctx, chunk) => t.Val.NextRange(new TickContext(other, ctx.Rng, ctx.Tick, null, 2), chunk))], 2, 1);
-        Assert.IsType<InvalidOperationException>(Assert.Throws<TickComputeException>(runner.RunTick).InnerException);
+        // A callback must not build its own context (chunk -1 or a different chunk size would widen its slice).
+        Assert.Empty(typeof(TickContext).GetConstructors(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance));
         Assert.Throws<InvalidOperationException>(() => t.Score.NextRange(default, 0));
+    }
+
+    [Fact]
+    public void NextOfOtherRootTable_InCompute_Throws_ButChunkTableAndMergeWork()
+    {
+        var world = new World();
+        Table a = world.AddTable("a", 4);
+        Table b = world.AddTable("b", 4);
+        LongColumn ax = a.AddLong("x");
+        LongColumn bx = b.AddLong("x");
+        var bad = new DelegateSystem((_, _) => bx.Next[0] = 1, null, bx);
+        Assert.IsType<InvalidOperationException>(Assert.Throws<TickComputeException>(new TickRunner(world, a, 1, [bad], 2, 1).RunTick).InnerException);
+
+        var w2 = new World();
+        Table a2 = w2.AddTable("a", 4);
+        Table b2 = w2.AddTable("b", 4);
+        LongColumn ax2 = a2.AddLong("x");
+        LongColumn bx2 = b2.AddLong("x");
+        var ok = new DelegateSystem((_, c) => ax2.Next[c * 2] = 5, _ => bx2.Next[1] = 7);
+        new TickRunner(w2, a2, 1, [ok], 2, 1).RunTick();
+        Assert.Equal(5, ax2.Current[0]);
+        Assert.Equal(7, bx2.Current[1]);
+    }
+
+    [Fact]
+    public void WorldCollections_CannotBeMutatedThroughCast()
+    {
+        var world = new World();
+        world.AddTable("a", 1);
+        Assert.Throws<NotSupportedException>(() => ((IList<string>)world.Names).RemoveAt(0));
+        Assert.Throws<NotSupportedException>(() => ((IList<Table>)world.Tables).RemoveAt(0));
+        Assert.Single(world.Names);
     }
 
     [Fact]

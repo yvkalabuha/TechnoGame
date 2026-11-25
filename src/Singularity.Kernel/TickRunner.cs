@@ -5,7 +5,8 @@ namespace Singularity.Kernel;
 /// <summary>What a system sees during one phase of a tick.</summary>
 public readonly struct TickContext
 {
-    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null, int chunkSize = 0, int chunk = -1)
+    // Internal: only the runner builds a context, so a callback cannot forge the chunk or chunk size that NextRange trusts.
+    internal TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null, int chunkSize = 0, int chunk = -1)
     {
         Chunk = chunk;
         ChunkSize = chunkSize;
@@ -19,10 +20,10 @@ public readonly struct TickContext
     public Table Table { get; }
     public CounterRng Rng { get; }
 
-    /// <summary>The chunk of this Compute callback (-1 outside compute or in a hand-built context); <c>NextRange</c> accepts only this chunk.</summary>
+    /// <summary>The chunk of this Compute callback (-1 outside compute); <c>NextRange</c> accepts only this chunk.</summary>
     public int Chunk { get; }
 
-    /// <summary>Rows of the chunk table per chunk (0 when the context was built by hand); <c>NextRange</c> needs it.</summary>
+    /// <summary>Rows of the chunk table per chunk (0 in <c>default</c>); <c>NextRange</c> needs it.</summary>
     public int ChunkSize { get; }
 
     /// <summary>
@@ -278,7 +279,7 @@ public sealed class TickRunner
                         written[c].OpenNext();
                         written[c].Declared = true;
                     }
-                    SetCompute(true);
+                    SetCompute(true, _chunkTables[s]);
                     if (_parallel.MaxDegreeOfParallelism == 1)
                     {
                         for (int chunk = 0; chunk < chunkCount; chunk++)
@@ -307,7 +308,7 @@ public sealed class TickRunner
                                 ExceptionDispatchInfo.Capture(failure).Throw();
                         }
                     }
-                    SetCompute(false);
+                    SetCompute(false, _chunkTables[s]);
                     for (int c = 0; c < written.Count; c++)
                         written[c].Declared = false;
                 }
@@ -355,10 +356,11 @@ public sealed class TickRunner
         }
     }
 
-    private void SetCompute(bool on)
+    // In compute only the chunk table may use Next (its own rows); every other table is written in Merge (ADR-0029 п. 5, ADR-0020).
+    private void SetCompute(bool on, Table chunkTable)
     {
-        for (int t = 0; t < _childTables.Length; t++)
-            _childTables[t].InCompute = on;
+        for (int t = 0; t < _tables.Length; t++)
+            _tables[t].InCompute = on && (_tables[t].Parent is not null || !ReferenceEquals(_tables[t], chunkTable));
     }
 
     // After a tick at which systems ran: their next due tick is the first due tick from the new Tick on.

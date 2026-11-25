@@ -101,7 +101,7 @@ public abstract class Column<T> : Column where T : unmanaged
         get
         {
             if (Owner is { InCompute: true })
-                throw new InvalidOperationException($"Column '{Name}': Next of a child table is not allowed in compute; use NextRange (ADR-0029 п. 5).");
+                throw new InvalidOperationException($"Column '{Name}': Next of a child table or of a table other than the chunk table is not allowed in compute; use NextRange or write in Merge (ADR-0029 п. 5).");
             return NextCore();
         }
     }
