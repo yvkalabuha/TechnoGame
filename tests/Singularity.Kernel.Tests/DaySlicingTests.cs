@@ -251,13 +251,14 @@ public class DaySlicingTests
     [Theory]
     [InlineData(-1_000_000L, 1)] // 100 % in one step
     [InlineData(-2_000_000L, 1)]
-    [InlineData(-1_000_000L, 0)]
+    [InlineData(-3_000_000L, 2)] // 1+δ = 4 = 2²: exactly 100 % a step
     public void DayRate_RefusesGrowthOf100PercentOrMorePerStep(long d, int y) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.FromRaw(d), y));
 
     [Theory]
     [InlineData(-2_000_000L, 12)] // 200 % a year is about 9.6 % a step
     [InlineData(-128_746_338L, 12)]
+    [InlineData(-999_999L, 1)]
     [InlineData(-1_000_000L, 2)]
     [InlineData(-9_000_000_000_000L, 366)]
     public void DayRate_AcceptsGrowthBelow100PercentPerStep(long d, int y)
@@ -306,6 +307,50 @@ public class DaySlicingTests
             Assert.True(d >= 0 ? scaled >= 0 : scaled <= 0, $"d={d} y={y} x0={x0}");
             Assert.True(BigInteger.Abs(scaled) <= (BigInteger)S * (y + 4 * (BigInteger)y * x0 / Rate.One + 1), $"d={d} y={y} x0={x0}");
         }
+    }
+
+    [Fact]
+    public void ApplyDayRate_StrongGrowth_StaysWithinTheBoundScaledByOnePlusDelta()
+    {
+        var rng = new Random(77);
+        for (int n = 0; n < 150; n++)
+        {
+            long d = -rng.NextInt64(1_000_001, 60_000_000);
+            int y = Lengths[rng.Next(3)];
+            long x0 = rng.Next(3) == 0 ? rng.NextInt64(1, 100_000) : rng.NextInt64(1, 100_000_000_000_000);
+            Rate r = DetMath.DayRate(Fx6.FromRaw(d), y);
+            Fx6 x = Fx6.FromRaw(x0);
+            long rem = 0;
+            for (int i = 0; i < y; i++)
+                x = DetMath.ApplyDayRate(x, r, ref rem);
+            BigInteger scaled = (BigInteger)x.Raw * S - (BigInteger)x0 * (S - d);
+            Assert.True(scaled <= 0, $"d={d} y={y} x0={x0}");
+            // Bound in raw: Y + 4·Y·x0·(1+|δ|)/2^53 + 1, with (1+|δ|) = (S − d)/S.
+            BigInteger limit = (BigInteger)S * (y + 1) + 4 * (BigInteger)y * x0 * (S - d) / Rate.One;
+            Assert.True(BigInteger.Abs(scaled) <= limit, $"d={d} y={y} x0={x0}");
+        }
+    }
+
+    [Fact]
+    public void ApplyDayRate_GrowthThenDecay_DoesNotRaiseTheStock()
+    {
+        Rate g = DetMath.DayRate(Fx6.FromRaw(-50_000), 365);
+        long rem = 0;
+        Fx6 x = DetMath.ApplyDayRate(Fx6.FromRaw(1_000), g, ref rem);
+        Assert.True(rem > 1_000);
+        Fx6 after = DetMath.ApplyDayRate(x, Rate.FromRaw(1), ref rem);
+        Assert.True(after.Raw <= x.Raw, $"decay raised the stock {x.Raw} -> {after.Raw}");
+    }
+
+    [Fact]
+    public void ApplyDayRate_DecayThenGrowth_DoesNotLowerTheStock()
+    {
+        Rate dec = DetMath.DayRate(Fx6.FromRaw(50_000), 365);
+        long rem = 0;
+        Fx6 x = DetMath.ApplyDayRate(Fx6.FromRaw(1_000), dec, ref rem);
+        Assert.True(rem < -1_000);
+        Fx6 after = DetMath.ApplyDayRate(x, Rate.FromRaw(-1), ref rem);
+        Assert.True(after.Raw >= x.Raw, $"growth lowered the stock {x.Raw} -> {after.Raw}");
     }
 
     [Fact]

@@ -132,9 +132,11 @@ public static partial class DetMath
     /// floor of <c>V·|r|</c>, decay downwards and growth (negative r) upwards, so V never moves faster than
     /// the exact rate. Then x is rounded the slower way: up for decay (<c>remainder ≤ 0</c>), down for
     /// growth (<c>remainder ≥ 0</c>). Hence after Y steps from a constant annual δ the stock is on the slow
-    /// side of <c>x₀·(1−δ)</c> and within Y raw of it plus the DayRate quantization (about 4·Y·x₀/2^53 raw),
+    /// side of <c>x₀·(1−δ)</c> and within Y raw of it plus the DayRate quantization (about
+    /// 4·Y·x₀·(1+|δ|)/2^53 raw: the rate error is up to Y·(1+|δ|) units of 2^-53, O-070),
     /// provided the rate came from <see cref="DayRate"/> (Y ≤ 366, growth below 100 % a step).
-    /// Callers use this, never <c>x −= r.MulFloor(x)</c>. The remainder is written only when the step
+    /// The visible stock never moves against the sign of the rate (decay never rises, growth never falls),
+    /// even when the rate changes sign on the same row (O-078). Callers use this, never <c>x −= r.MulFloor(x)</c>. The remainder is written only when the step
     /// succeeds. Preconditions: <c>stock ≥ 0</c>, <c>|remainder| &lt; 2^53</c>, <c>V ≥ 0</c>, <c>|r| ≤ 2^53</c>.
     /// </summary>
     public static Fx6 ApplyDayRate(Fx6 stock, Rate rate, ref long remainder)
@@ -151,7 +153,10 @@ public static partial class DetMath
         Int128 change = (Int128)stock.Raw * abs + (((Int128)remainder * abs) >> Rate.FracBits);
         Int128 next = growth ? v + change : v - change;
         Debug.Assert(next >= 0, "The rate must not exceed 100 % a day.");
-        Int128 whole = growth ? next >> Rate.FracBits : (next + (Rate.One - 1)) >> Rate.FracBits;
+        // Clamp: a leftover remainder of the other sign must not move the stock against the rate (O-078).
+        Int128 whole = growth
+            ? Int128.Max(next >> Rate.FracBits, stock.Raw)
+            : Int128.Min((next + (Rate.One - 1)) >> Rate.FracBits, stock.Raw);
         long newStock = checked((long)whole);
         remainder = (long)(next - (whole << Rate.FracBits));
         return Fx6.FromRaw(newStock);
