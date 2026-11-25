@@ -1298,7 +1298,8 @@ public sealed partial class TechTree : Control
         for (int w = 0; w < _nSec; w++)
         {
             var r = _sumRects[w];
-            if (_sumText[w] == null || r.Size.X <= 0) return $"summary {w} not drawn";
+            if (_sumText[w] == null) return $"summary {w} not drawn";
+            if (r.Size.X <= 0) { if (baseView) return $"summary {w} hidden at the base view"; continue; }   // a label that would stand far from its sector is hidden by design (TreeLabelRules)
             bool inside = Area.Encloses(r) && Area.Encloses(WedgeLabel(w).rect);
             if (inside) inView++;
             else if (baseView) return $"summary {w} {r} is not fully inside the chart area {Area}";

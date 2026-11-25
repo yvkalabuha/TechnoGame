@@ -1085,8 +1085,9 @@ public sealed partial class Main : Node3D
                     string chrome = _tree.ShotChromeCheck(); bool ok = chrome == null && _tree.ShotStep == 1;
                     _shotLog += $"tree year rings overview {sfx}: step {_tree.ShotStep} of 6, {(chrome ?? "close button 40 du, zoom bar and legend in place")}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree year rings overview {sfx}: {chrome}");
                     SaveShot($"tree_year_overview{sfx}.png", null, scale == 100);
-                    yrRow = PickRow(); _tree.Select(yrRow); _tree.ShotZoom(ZoomSteps.Scales[2], yrRow);
+                    yrRow = PickRow(); _tree.Select(yrRow); _tree.ShotZoom(ZoomSteps.Scales[1], yrRow);
                 });
+                Q(0.8, () => { bool ok = _tree.ShotStep == 2; _shotLog += $"tree year rings step 2 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 2"); SaveShot($"tree_year_step2{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[2], yrRow); });
                 Q(0.8, () => { bool ok = _tree.ShotStep == 3; _shotLog += $"tree year rings step 3 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 3"); SaveShot($"tree_year_step3{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[4], yrRow); });
                 Q(0.8, () => { bool ok = _tree.ShotStep == 5; _shotLog += $"tree year rings step 5 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 5"); SaveShot($"tree_year_step5{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[5], yrRow); });
                 Q(0.8, () => { bool ok = _tree.ShotStep == 6; _shotLog += $"tree year rings step 6 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 6"); SaveShot($"tree_year_step6{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[2], yrRow); });
