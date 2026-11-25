@@ -26,7 +26,6 @@
 - TASK-0162 [IN_PROGRESS] K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5 (developer)
 - TASK-0163 [IN_PROGRESS] Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) (developer)
 - TASK-0164 [IN_PROGRESS] M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) (simulation-engineer)
-- TASK-0165 [IN_PROGRESS] M1: Kernel entity tables mechanism (ADR-0029, T-M1-03), no golden change (developer)
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
 - TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)

@@ -1,7 +1,7 @@
 ---
 id: TASK-0165
 title: "M1: Kernel entity tables mechanism (ADR-0029, T-M1-03), no golden change"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M1
 agent: developer
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "owner answer 2026-11-25 (M1 parallel); docs/architecture/notes/m1-task-plan.md"
+review_ref: "reviewer: APPROVE after merge (process slip: landed before reviewer), merge 8f42f61; second review agy-sonnet accept (codex limit), rest in DEBT-0104"
 created: 2026-11-25
 ---
 
