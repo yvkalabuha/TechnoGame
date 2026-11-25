@@ -156,7 +156,8 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber,
+            securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero);   // O-040: the second word only for data whose licensable PRC need it
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         if (config.Intelligence)
@@ -382,16 +383,7 @@ internal sealed class SliceWorld
     /// The sum stays 1, so the AI invariants and the reserve (which the AI feeds nothing) are those of a run without intelligence. [Предп., O-NNN: economy-analyst
     /// decides the source of the item, INTELLIGENCE.md OPEN 3.]
     /// </summary>
-    private static BudgetShares WithSecurity(BudgetShares s, Fx6 security)
-    {
-        // Never a negative share: an item the AI cannot pay from quality and procurement is clamped (the data presets keep this unreachable).
-        System.Diagnostics.Debug.Assert(security <= s.Quality + s.Procurement, "the AI cannot pay the security item");
-        Fx6 room = s.Quality + s.Procurement;
-        if (security > room)
-            security = room;
-        Fx6 fromQuality = security < s.Quality ? security : s.Quality;
-        return s with { Quality = s.Quality - fromQuality, Procurement = s.Procurement - (security - fromQuality), Security = security };
-    }
+    private static BudgetShares WithSecurity(BudgetShares s, Fx6 security) => s.WithSecurity(security);
 
     /// <summary>Procurement budget of the month in force: <c>share_P·budget_a</c> (spec §3.3, §3.4); one definition for the product layer and <c>why_not</c>.</summary>
     /// <summary>

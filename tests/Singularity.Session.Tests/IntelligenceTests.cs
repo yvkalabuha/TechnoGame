@@ -217,12 +217,14 @@ public class IntelligenceTests
                         expected[o, t] = CounterRng.Chance(events.NextU64(m, IntelSystem.SystemTurn, key, 1), IntelMath.MonthlyFromYearly(p.TurnDetectPerYear));
                         lostInc[o, t] = expected[o, t];
                     }
-                    else if (Intel(s).ModeAgainst(o, t) != IntelMode.None && Intel(s).Network(o, t) > Fx6.Zero)
+                    else
                     {
-                        risk[o, t] = Intel(s).HazardPerYear(o, t);
+                        bool active = Intel(s).ModeAgainst(o, t) != IntelMode.None && Intel(s).Network(o, t) > Fx6.Zero;
+                        risk[o, t] = active ? Intel(s).HazardPerYear(o, t) : Fx6.Zero;
                         Fx6 hm = IntelMath.MonthlyFromYearly(risk[o, t]);
                         int dl = Intel(s).Deadline(o, t);
-                        expected[o, t] = CounterRng.Chance(events.NextU64(m, IntelSystem.SystemExpose, key, 0), hm) || (dl != 0 && dl - 1 <= m);
+                        // The deadline holds also for a network whose target was dropped from the plan.
+                        expected[o, t] = (active && CounterRng.Chance(events.NextU64(m, IntelSystem.SystemExpose, key, 0), hm)) || (dl != 0 && dl - 1 <= m && Intel(s).Network(o, t) > Fx6.Zero);
                         bool turnsNow = expected[o, t] && CounterRng.Chance(events.NextU64(m, IntelSystem.SystemTurn, key, 0), p.TurnOnExposure);
                         lostInc[o, t] = expected[o, t] && !turnsNow;   // a secret turn is not a loss its owner knows of
                     }
@@ -426,6 +428,49 @@ public class IntelligenceTests
     }
 
     [Fact]
+    public void PlayerView_DoesNotCarryTheKnowledgeOrTheIntelligenceOfOtherActors()
+    {
+        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, Intelligence = true, PlayerActor = Gbr });
+        for (long m = 0; m < 30; m++)
+            s.StepThroughMonth(m);
+        for (int a = 0; a < s.World.Table.RowCount; a++)
+        {
+            ActorView view = s.View.Actors[a];
+            IntelView? card = s.View.Inputs!.Actors[a].Intel;
+            if (a == Gbr)
+            {
+                Assert.NotNull(card);
+                Assert.True(view.Nodes.IsPresent);
+                Assert.Equal(Enumerable.Range(0, s.World.Graph.Count).Count(r => !s.World.Knowledge.IsKnown(a, r)), view.UnknownNodes);
+            }
+            else
+            {
+                Assert.Null(card);                      // the cards (hidden events, who caught whom) of other actors are theirs
+                Assert.False(view.Nodes.IsPresent);     // no node block of a rival
+                Assert.InRange(view.UnknownNodes, 0, 1); // "some left", not the exact count the estimate gives as a range
+            }
+        }
+    }
+
+    [Fact]
+    public void WithSecurity_KeepsTheSumAndNeverGoesNegative_AndTheRefusalCodesStayPut()
+    {
+        var shares = new BudgetShares(Fx6.FromRaw(350_000), Fx6.FromRaw(120_000), Fx6.FromRaw(80_000), Fx6.FromRaw(400_000), Fx6.FromRaw(50_000));
+        BudgetShares fromQuality = shares.WithSecurity(Fx6.FromRaw(20_000));
+        Assert.Equal((Fx6.FromRaw(30_000), Fx6.FromRaw(400_000), Fx6.FromRaw(20_000)), (fromQuality.Quality, fromQuality.Procurement, fromQuality.Security));
+        BudgetShares fromBoth = (shares with { Quality = Fx6.Zero }).WithSecurity(Fx6.FromRaw(20_000));
+        Assert.Equal(Fx6.FromRaw(380_000), fromBoth.Procurement);
+        BudgetShares clamped = new BudgetShares(Fx6.FromRaw(990_000), Fx6.Zero, Fx6.Zero, Fx6.FromRaw(5_000), Fx6.FromRaw(5_000)).WithSecurity(Fx6.FromRaw(50_000));
+        Assert.True(clamped.Procurement >= Fx6.Zero && clamped.Quality >= Fx6.Zero);
+        Assert.Equal(Fx6.One, clamped.Sum);
+        Assert.Equal(shares, shares.WithSecurity(Fx6.Zero));   // a run without intelligence is untouched
+        // Public refusal codes of earlier builds are not renumbered; the new ones come after them.
+        Assert.Equal(23, (int)CommandRefusal.ProgrammeNotFundable);
+        Assert.Equal(24, (int)CommandRefusal.IntelOff);
+        Assert.Equal(25, (int)CommandRefusal.BadTargets);
+    }
+
+    [Fact]
     public void Trace_PastTheThreshold_MakesTheExposureCertainWithinTwelveMonths()
     {
         // Turning off, so that every exposure is a loss; the hazard is the real one, only the base is raised so that traces reach the threshold.
@@ -437,6 +482,9 @@ public class IntelligenceTests
         for (long m = 0; m < 240; m++)
         {
             s.StepThroughMonth(m);
+            // The player drops the observed target for good: an exposure already scheduled on it must still come.
+            if (m == 40)
+                Assert.True(s.Submit(SourceClass.Player, 0, 1, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal))).Accepted);
             for (int o = 0; o < rows; o++)
             {
                 for (int t = 0; t < rows; t++)

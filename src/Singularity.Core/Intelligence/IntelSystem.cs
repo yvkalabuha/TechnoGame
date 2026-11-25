@@ -294,15 +294,24 @@ public sealed class IntelSystem : ITickSystem
                 risk = _p.TurnDetectPerYear;
                 found = CounterRng.Chance(IntelRng.Turn(_events, month, key, 1), detectM);
             }
-            else if (mode != IntelMode.None && n > Fx6.Zero)
+            else
             {
-                risk = IntelMath.HazardPerYear(_p, n, a, IntelMath.Act(_p, mode), ci);
-                Fx6 hm = IntelMath.MonthlyFromYearly(risk);
-                tr2 += hm;
-                // The draw may bring the exposure earlier; the trace past the threshold fixes the latest date (window of 1 to 12 months, picked by a draw).
-                exposed = CounterRng.Chance(IntelRng.Expose(_events, month, key), hm) || (deadline != 0 && deadline - 1 <= month);
-                if (!exposed && deadline == 0 && tr2 >= _p.TraceCertain)
-                    deadline = (int)month + 2 + CounterRng.Index(IntelRng.Window(_events, month, key), 12);
+                if (mode != IntelMode.None && n > Fx6.Zero)
+                {
+                    risk = IntelMath.HazardPerYear(_p, n, a, IntelMath.Act(_p, mode), ci);
+                    Fx6 hm = IntelMath.MonthlyFromYearly(risk);
+                    tr2 += hm;
+                    // The draw may bring the exposure earlier; the trace past the threshold fixes the latest date (window of 1 to 12 months, picked by a draw).
+                    exposed = CounterRng.Chance(IntelRng.Expose(_events, month, key), hm);
+                    if (!exposed && deadline == 0 && tr2 >= _p.TraceCertain)
+                        deadline = (int)month + 2 + CounterRng.Index(IntelRng.Window(_events, month, key), 12);
+                }
+                // A scheduled exposure does not depend on the plan: dropping the target does not postpone it (the trace is in the target already).
+                if (deadline != 0 && deadline - 1 <= month)
+                {
+                    exposed |= n > Fx6.Zero;
+                    deadline = n > Fx6.Zero ? deadline : 0;
+                }
             }
             bool turnNow = exposed && CounterRng.Chance(IntelRng.Turn(_events, month, key, 0), _p.TurnOnExposure);
             if (exposed || found)

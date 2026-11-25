@@ -92,6 +92,21 @@ public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Eff
     /// <summary>Every share is non-negative and the sum is exactly 1 in <see cref="Fx6"/> (the <c>set_budget_shares</c> validator).</summary>
     public bool IsValid => InRange && Sum == Fx6.One;
 
+    /// <summary>
+    /// The split with the seventh item taken out for the AI (TASK-0160): the preset is paid first from the quality item (it has no reader in the core), the rest from
+    /// procurement; clamped to what both hold, so no share goes negative. Zero security returns the split unchanged. The sum stays what it was.
+    /// </summary>
+    public BudgetShares WithSecurity(Fx6 security)
+    {
+        if (security <= Fx6.Zero)
+            return this;
+        Fx6 room = Quality + Procurement;
+        if (security > room)
+            security = room;
+        Fx6 fromQuality = security < Quality ? security : Quality;
+        return this with { Quality = Quality - fromQuality, Procurement = Procurement - (security - fromQuality), Security = Security + security };
+    }
+
     /// <summary>What the five items leave: the share that goes to the reserve account (zero when the sum is 1).</summary>
     public Fx6 Reserve => Fx6.One - Sum;
 

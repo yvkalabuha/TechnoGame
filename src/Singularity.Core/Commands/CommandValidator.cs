@@ -49,14 +49,14 @@ public enum CommandRefusal
     /// <summary>A programme amount must be positive.</summary>
     BadAmount,
 
+    /// <summary>At application: the reserve holds less than the amount, or the node is not in the frontier of the actor.</summary>
+    ProgrammeNotFundable,
+
     /// <summary>A security share or a target plan in a run without intelligence.</summary>
     IntelOff,
 
     /// <summary>The target plan is malformed: more than three targets, a repeat, the actor itself, an unknown actor or an unknown mode.</summary>
     BadTargets,
-
-    /// <summary>At application: the reserve holds less than the amount, or the node is not in the frontier of the actor.</summary>
-    ProgrammeNotFundable,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,

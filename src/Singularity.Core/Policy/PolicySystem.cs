@@ -62,8 +62,9 @@ public sealed partial class PolicySystem : ITickSystem
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
         int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default,
-        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null, bool wideLicenceMask = false)
+        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null, bool wideLicenceMask = false, Fx6 securityPreset = default)
     {
+        _securityPreset = securityPreset;
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(mailbox);
         ArgumentOutOfRangeException.ThrowIfNegative(qpRequesterId);
@@ -118,6 +119,11 @@ public sealed partial class PolicySystem : ITickSystem
     public int SystemId { get; }
 
     public Cadence Cadence => Cadence.Monthly;
+
+    // The AI item "security" of a run with intelligence (zero otherwise): the planning of procurement works on what is left after it, as the money does.
+    private readonly Fx6 _securityPreset;
+
+    private Fx6 PlannedProcurement(BudgetShares s) => s.WithSecurity(_securityPreset).Procurement;
 
     public PolicyProfile Profile(int actorRow) => (PolicyProfile)_profile.Current[actorRow];
 

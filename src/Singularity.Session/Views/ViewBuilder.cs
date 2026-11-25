@@ -78,8 +78,8 @@ internal static class ViewBuilder
             bureaus.MoveToImmutable(),
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             LicenceOf(w, a, refusals.MoveToImmutable()),
-            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a));
+            new DisruptionView(disStart, disEnd), withNodes && !HiddenFromPlayer(w, a) ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
+            Alloy(w, a, month), Research(w, a), HiddenFromPlayer(w, a) ? Math.Min(1, UnknownNodes(w, a)) : UnknownNodes(w, a));
     }
 
     // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.
@@ -265,8 +265,12 @@ internal static class ViewBuilder
         return new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
             new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month),
             w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.ReserveShare(a) * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))),
-            w.Intel is null ? null : IntelOf(w, w.Intel, a));
+            w.Intel is null || HiddenFromPlayer(w, a) ? null : IntelOf(w, w.Intel, a));
     }
+
+    // With intelligence and a named player, what another actor knows is not the player's to read: its node block is not carried, the count of its unknown nodes
+    // shrinks to "some left or none" (the exact count is what the estimate of the intelligence card gives as a range), and its own intelligence card is not published.
+    private static bool HiddenFromPlayer(SliceWorld w, int a) => w.Intel is not null && w.Config.PlayerActor is int viewer && viewer != a;
 
     // The licence of an actor. For the player's own eyes another actor's deal is a hidden event: it is shown only when intelligence sees it (#508), else empty.
     private static LicenceView LicenceOf(SliceWorld w, int a, ImmutableArray<long> refusals)

@@ -198,7 +198,7 @@ public sealed partial class PolicySystem
         int gBuyer = _ev.EngineGen(row, t), held = _licGen.Current[row];
         LicenceMask unaccepted = default;
         bool taken = false;
-        Fx6 baseNext = sharesNext.Procurement * budgetNext;
+        Fx6 baseNext = PlannedProcurement(sharesNext) * budgetNext;
         // The money left after the upkeep of the book of t+1 (A43.3 (б)): computed once, only if an offer exists.
         Fx6? room = null;
         for (int s = 0; s < _actorNumber.Length; s++)
