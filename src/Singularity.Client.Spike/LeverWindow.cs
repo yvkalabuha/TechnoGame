@@ -465,6 +465,17 @@ public sealed partial class LeverWindow : PanelContainer
         return true;
     }
 
+    /// <summary>Shot run: at 100 % every item stands at its limit and every «+» is inactive; one point is taken off the last item so that the first «+» can be focused.</summary>
+    CaptionButton MakeRoomForPlus()
+    {
+        var p = _plus.FirstOrDefault(x => !x.Disabled);
+        if (p != null) return p;
+        OnSlider(Procurement(), Math.Max(0, _pct[Procurement()] - 1));
+        return _plus.FirstOrDefault(x => !x.Disabled);
+    }
+
+    static int Procurement() => BudgetWindowModel.Procurement;
+
     /// <summary>Shot run (A7): puts the keyboard focus on a control and tells whether it exists in this state. what: slider, plus, tab, pick, buy, accept.</summary>
     public string ShotFocus(string what)
     {
@@ -472,8 +483,8 @@ public sealed partial class LeverWindow : PanelContainer
         // an inactive control cannot take the focus: the nearest active one of the same kind stands in, and the name of what got it is returned
         Control c = what switch
         {
-            "slider" => _sl[0],
-            "plus" => _plus.FirstOrDefault(Usable),
+            "slider" => _sl[1],   // the base frame already carries the focus of the first slider (ShowTab), so the next one makes the frame differ
+            "plus" => MakeRoomForPlus(),
             "tab" => _tabBtn[_tab],
             "pick" => _firstPick,
             "buy" => Usable(_buyBtn) ? _buyBtn : _firstOffer,
@@ -482,7 +493,7 @@ public sealed partial class LeverWindow : PanelContainer
         };
         if (!Usable(c)) return "";
         c.GrabFocus();
-        return c == _buyBtn || c == _acceptBtn || c == _firstPick || c == _tabBtn[_tab] || c == _sl[0] ? what : what + " (stand-in: " + c.GetType().Name + " " + (c as Button)?.Text + ")";
+        return c == _buyBtn || c == _acceptBtn || c == _firstPick || c == _tabBtn[_tab] || c == _sl[1] ? what : what + " (stand-in: " + c.GetType().Name + " " + (c as Button)?.Text + ")";
     }
 
     /// <summary>Shot run: the window as a player opens it, without a click.</summary>

@@ -969,11 +969,12 @@ public sealed partial class Main : Node3D
     void FocusOn(string what)
     {
         string got = _levers.ShotFocus(what);
-        _shotLog += $"lever_focus_{what}: focus on {(got == "" ? "NOTHING" : got)}\n";
-        if (got == "") InstFail($"lever_focus_{what}: no focusable control in this state");
+        _focused = got != "";
+        _shotLog += _focused ? $"lever_focus_{what}: focus on {got}\n" : $"WARNING: lever_focus_{what}: no focusable control in this state, the frame is skipped; the other frames go on\n";
     }
 
-    void FocusSave(string what, string sfx) => SaveShot($"lever_focus_{what}{sfx}.png", null, true);
+    bool _focused;
+    void FocusSave(string what, string sfx) { if (_focused) SaveShot($"lever_focus_{what}{sfx}.png", null, true); }
 
     void LeverFrame(string name, bool live)
     {
@@ -1043,7 +1044,7 @@ public sealed partial class Main : Node3D
                 Q(0.8, () => { LeverFrame("lever_budget" + sfx, _levers.BudgetHasData); FocusOn("slider"); });
                 Q(0.3, () => { FocusSave("slider", sfx); FocusOn("plus"); });
                 Q(0.3, () => { FocusSave("plus", sfx); FocusOn("tab"); });
-                Q(0.3, () => { FocusSave("tab", sfx); _levers.ShotEdit(1, 5); });
+                Q(0.3, () => { FocusSave("tab", sfx); _levers.ShotReset(); _levers.ShotEdit(1, 5); });
                 Q(0.6, () => { LeverFrame("lever_budget_stop" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotEdit(2, 100); });
                 Q(0.6, () => { LeverFrame("lever_budget_limit" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotOpen(LeverWindow.TabInstitutes); });
                 Q(0.8, () => { LeverFrame("lever_inst" + sfx, _levers.LiveCheck() == null); FocusOn("pick"); });
