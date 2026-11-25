@@ -34,6 +34,7 @@ public sealed class IntelligenceData
             ConfVisible = F("conf_visible"), RangeMin = F("range_min"), Kappa = F("kappa"), BiasMax = F("bias_max"),
             PresetLow = F("preset_low"), PresetNormal = F("preset_normal"), PresetStrong = F("preset_strong"),
             TurnOnExposure = F("turn_on_exposure"), TurnDetectPerYear = F("turn_detect_per_year"), SensLicence = F("sens_licence"),
+            TraceCertain = F("trace_certain"), LeakOffDir = F("leak_off_dir"), DirChangeKeepA = F("dir_change_keep_a"),
         };
         m.End();
         Validate(p, map);
@@ -43,8 +44,8 @@ public sealed class IntelligenceData
     private static void Validate(IntelParams p, YMap at)
     {
         Fx6[] unit = [p.GrowthPerYear, p.DecayPerYear, p.MaturityPerYear, p.CiShare, p.CiGrowthCut, p.HazardBasePerYear, p.HazardCapPerYear, p.TraceDecayPerYear,
-            p.LossKeepN, p.LossKeepA, p.SMax, p.ConfVisible, p.RangeMin, p.Kappa, p.BiasMax, p.PresetLow, p.PresetNormal, p.PresetStrong, p.ActObserve, p.ActSteal, p.ActFalseTrails, p.TurnOnExposure, p.TurnDetectPerYear, p.SensLicence];
-        if (unit.Any(v => v < Fx6.Zero || v > Fx6.One) || p.HazardCapPerYear >= Fx6.One || p.SMax >= Fx6.One || p.TurnDetectPerYear >= Fx6.One || p.CiHazardGain < Fx6.Zero || p.Sigma < Fx6.Zero || p.TraceSome < Fx6.Zero || p.TraceMany < p.TraceSome
+            p.LossKeepN, p.LossKeepA, p.SMax, p.ConfVisible, p.RangeMin, p.Kappa, p.BiasMax, p.PresetLow, p.PresetNormal, p.PresetStrong, p.ActObserve, p.ActSteal, p.ActFalseTrails, p.TurnOnExposure, p.TurnDetectPerYear, p.SensLicence, p.LeakOffDir, p.DirChangeKeepA];
+        if (unit.Any(v => v < Fx6.Zero || v > Fx6.One) || p.HazardCapPerYear >= Fx6.One || p.SMax >= Fx6.One || p.TurnDetectPerYear >= Fx6.One || p.CiHazardGain < Fx6.Zero || p.Sigma < Fx6.Zero || p.TraceSome < Fx6.Zero || p.TraceCertain <= Fx6.Zero || p.TraceMany < p.TraceSome
             || p.RiskNoticeable < Fx6.Zero || p.RiskHigh < p.RiskNoticeable)
             throw DataLoadException.At(at, "intelligence: rates and shares lie in [0, 1], the hazard cap below 1, the word thresholds in order");
         if (p.NetShareRef <= Fx6.Zero || p.CiShareRef <= Fx6.Zero || p.SourcesMax < 1 || !(p.PresetLow <= p.PresetNormal && p.PresetNormal <= p.PresetStrong))
@@ -57,7 +58,7 @@ public sealed class IntelligenceData
         w.Str("singularity-intelligence/1");
         foreach (Fx6 v in (Fx6[])[p.GrowthPerYear, p.DecayPerYear, p.MaturityPerYear, p.NetShareRef, p.CiShare, p.CiShareRef, p.CiGrowthCut, p.CiHazardGain,
             p.HazardBasePerYear, p.HazardCapPerYear, p.ActObserve, p.ActSteal, p.ActFalseTrails, p.TraceDecayPerYear, p.TraceSome, p.TraceMany, p.RiskNoticeable,
-            p.RiskHigh, p.LossKeepN, p.LossKeepA, p.Sigma, p.SMax, p.ConfVisible, p.RangeMin, p.Kappa, p.BiasMax, p.PresetLow, p.PresetNormal, p.PresetStrong, p.TurnOnExposure, p.TurnDetectPerYear, p.SensLicence])
+            p.RiskHigh, p.LossKeepN, p.LossKeepA, p.Sigma, p.SMax, p.ConfVisible, p.RangeMin, p.Kappa, p.BiasMax, p.PresetLow, p.PresetNormal, p.PresetStrong, p.TurnOnExposure, p.TurnDetectPerYear, p.SensLicence, p.TraceCertain, p.LeakOffDir, p.DirChangeKeepA])
             w.Fixed(v);
         w.Int(p.SourcesMax);
         return w.FinishHex();

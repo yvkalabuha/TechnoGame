@@ -17,6 +17,14 @@ public interface IIntelInputs
     /// <summary>Number of knowledge nodes the actor knows.</summary>
     int KnownCount(int actorRow);
 
+    /// <summary>Number of knowledge nodes and of disciplines (the directions of a network).</summary>
+    int NodeCount { get; }
+
+    int DisciplineCount { get; }
+
+    /// <summary>The discipline of the node, −1 for a node without one.</summary>
+    int DisciplineOf(int nodeRow);
+
     /// <summary>The actor knows the node.</summary>
     bool Knows(int actorRow, int nodeRow);
 }

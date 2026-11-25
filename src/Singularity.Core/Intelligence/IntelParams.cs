@@ -127,6 +127,15 @@ public sealed record IntelParams
     /// <summary><c>sens</c> of the hidden licence event: <c>intel_conf = conf·sens</c> (EVENTS_POLITICS.md §10).</summary>
     public required Fx6 SensLicence { get; init; }
 
+    /// <summary>A trace at or above this makes the exposure certain within a window of 1 to 12 months (INTELLIGENCE.md §3, gate item 6); the draw only picks the date.</summary>
+    public required Fx6 TraceCertain { get; init; }
+
+    /// <summary>Theft outside the direction of the network keeps this share of its discount (INTELLIGENCE.md §2.2 item 3: 0.1).</summary>
+    public required Fx6 LeakOffDir { get; init; }
+
+    /// <summary>A change of the direction of a network keeps this share of its maturity (INTELLIGENCE.md §2.2 item 3: 50 % reset).</summary>
+    public required Fx6 DirChangeKeepA { get; init; }
+
     /// <summary>Most targets an actor may have (#214).</summary>
     public const int MaxTargets = 3;
 }

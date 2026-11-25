@@ -534,6 +534,7 @@ type Singularity.Session.SliceRunConfig [sealed class]
   prop MasteryXProg : System.Nullable`1[Singularity.Kernel.Fx6] { get; init; }
   prop PilotForm : Singularity.Core.Policy.PilotForm { get; init; }
   prop PilotProfiles : Singularity.Core.Policy.PilotProfileSet { get; init; }
+  prop PlayerActor : System.Nullable`1[System.Int32] { get; init; }
   prop ProductAi : System.Boolean { get; init; }
   prop ProfileCell : System.Nullable`1[System.Int32] { get; init; }
   prop ResearchWeightByDiscipline : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DisciplineWeight] { get; init; }

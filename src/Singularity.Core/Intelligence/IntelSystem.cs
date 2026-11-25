@@ -33,7 +33,7 @@ public sealed class IntelSystem : ITickSystem
     private readonly CounterRng _events;
     private readonly int _rows;
     private readonly LongColumn[] _n, _a, _trace;
-    private readonly IntColumn[] _lost, _turned, _xMonth, _xKind;
+    private readonly IntColumn[] _lost, _found, _turnedCount, _turned, _xMonth, _xKind, _dir, _deadline;
     private readonly LongColumn[] _xRisk;
     private readonly ImmutableArray<int> _key;
     private readonly IntColumn[] _aiTarget, _aiMode;
@@ -47,20 +47,7 @@ public sealed class IntelSystem : ITickSystem
         _rows = table.RowCount;
         if (actorIds.Length != _rows)
             throw new ArgumentException("One stable actor id per row is required.", nameof(actorIds));
-        var keys = new int[_rows * _rows];
-        for (int o = 0; o < _rows; o++)
-        {
-            for (int t = 0; t < _rows; t++)
-                keys[o * _rows + t] = IntelRng.NetworkKey(actorIds[o], actorIds[t]);
-        }
-        _key = ImmutableArray.Create(keys);
-        int[] sorted = [.. keys];
-        Array.Sort(sorted);
-        for (int i = 1; i < sorted.Length; i++)
-        {
-            if (sorted[i] == sorted[i - 1])
-                throw new ArgumentException("Two networks share one RNG key: actor ids must give distinct keys.", nameof(actorIds));
-        }
+        _key = ImmutableArray.Create(IntelRng.NetworkKeys(actorIds));
         _growthM = IntelMath.PerMonth(parameters.GrowthPerYear);
         _decayM = IntelMath.PerMonth(parameters.DecayPerYear);
         _matM = IntelMath.PerMonth(parameters.MaturityPerYear);
@@ -69,6 +56,10 @@ public sealed class IntelSystem : ITickSystem
         _a = new LongColumn[_rows];
         _trace = new LongColumn[_rows];
         _lost = new IntColumn[_rows];
+        _found = new IntColumn[_rows];
+        _turnedCount = new IntColumn[_rows];
+        _dir = new IntColumn[_rows];
+        _deadline = new IntColumn[_rows];
         _turned = new IntColumn[_rows];
         _xMonth = new IntColumn[_rows];
         _xKind = new IntColumn[_rows];
@@ -80,6 +71,10 @@ public sealed class IntelSystem : ITickSystem
             _trace[t] = table.AddLong($"int.tr.{t}");
             _lost[t] = table.AddInt($"int.lost.{t}");
             _turned[t] = table.AddInt($"int.turn.{t}");
+            _found[t] = table.AddInt($"int.found.{t}");
+            _turnedCount[t] = table.AddInt($"int.turnc.{t}");
+            _dir[t] = table.AddInt($"int.dir.{t}");           // direction (discipline + 1) of the network, 0 = none yet
+            _deadline[t] = table.AddInt($"int.dl.{t}");       // month + 1 by which the exposure is certain (the trace passed the threshold), 0 = none
             // The last exposure of the network (the post-event report, #367): month + 1 (0 = never), the yearly risk it had, and the outcome.
             _xMonth[t] = table.AddInt($"int.xm.{t}");
             _xRisk[t] = table.AddLong($"int.xr.{t}");
@@ -109,8 +104,20 @@ public sealed class IntelSystem : ITickSystem
 
     public Fx6 Trace(int o, int t) => Fx6.FromRaw(_trace[t].Current[o]);
 
-    /// <summary>How many times the network of <c>o</c> in <c>t</c> was exposed.</summary>
+    /// <summary>
+    /// How many times the network of <c>o</c> in <c>t</c> was lost: exposed and destroyed, or a turned one found out. A secret turn is not counted: its owner does not know
+    /// (see <see cref="CaughtOf"/> for the side of the target).
+    /// </summary>
     public int Lost(int o, int t) => _lost[t].Current[o];
+
+    /// <summary>Networks of <c>o</c> that <c>t</c> caught so far: destroyed or turned (a turned one found out later is the same catch).</summary>
+    public int CaughtOf(int o, int t) => _lost[t].Current[o] - _found[t].Current[o] + _turnedCount[t].Current[o];
+
+    /// <summary>Month + 1 by which the exposure of the network is certain, 0 when the trace has not passed the threshold.</summary>
+    public int Deadline(int o, int t) => _deadline[t].Current[o];
+
+    /// <summary>The direction (discipline) of the network of <c>o</c> in <c>t</c>, −1 while it has none.</summary>
+    public int Direction(int o, int t) => _dir[t].Current[o] - 1;
 
     /// <summary>The network of <c>o</c> in <c>t</c> was turned: <c>t</c> controls it (hidden from <c>o</c>).</summary>
     public bool Turned(int o, int t) => _turned[t].Current[o] != 0;
@@ -164,6 +171,9 @@ public sealed class IntelSystem : ITickSystem
             if (!Plan(actorRow, k, out int t, out IntelMode m) || m != IntelMode.Steal || Turned(actorRow, t) || !_in.Knows(t, nodeRow))
                 continue;
             Fx6 s = IntelMath.StealShare(_p, Network(actorRow, t), Maturity(actorRow, t));
+            // Outside the direction of the network only a tenth of the discount leaks through (INTELLIGENCE.md §2.2 item 3).
+            if (_in.DisciplineOf(nodeRow) != Direction(actorRow, t))
+                s *= _p.LeakOffDir;
             if (s > best)
                 best = s;
         }
@@ -273,6 +283,9 @@ public sealed class IntelSystem : ITickSystem
             Fx6 a2 = a + _matM * (n - a);
             Fx6 tr2 = tr - tr * _traceDecayM;
             int key = _key[o * _rows + t];
+            int deadline = Deadline(o, t);
+            if (month % 12 == 0 && mode != IntelMode.None)
+                a2 = Redirect(o, t, a2);
             bool exposed = false, found = false;
             Fx6 risk = Fx6.Zero;
             if (turned)
@@ -286,29 +299,61 @@ public sealed class IntelSystem : ITickSystem
                 risk = IntelMath.HazardPerYear(_p, n, a, IntelMath.Act(_p, mode), ci);
                 Fx6 hm = IntelMath.MonthlyFromYearly(risk);
                 tr2 += hm;
-                exposed = CounterRng.Chance(IntelRng.Expose(_events, month, key), hm);
+                // The draw may bring the exposure earlier; the trace past the threshold fixes the latest date (window of 1 to 12 months, picked by a draw).
+                exposed = CounterRng.Chance(IntelRng.Expose(_events, month, key), hm) || (deadline != 0 && deadline - 1 <= month);
+                if (!exposed && deadline == 0 && tr2 >= _p.TraceCertain)
+                    deadline = (int)month + 2 + CounterRng.Index(IntelRng.Window(_events, month, key), 12);
             }
             bool turnNow = exposed && CounterRng.Chance(IntelRng.Turn(_events, month, key, 0), _p.TurnOnExposure);
             if (exposed || found)
             {
-                _lost[t].Next[o] = _lost[t].Current[o] + 1;
                 _xMonth[t].Next[o] = (int)month + 1;
                 _xRisk[t].Next[o] = risk.Raw;
                 tr2 = Fx6.Zero;
+                deadline = 0;
                 if (turnNow)
+                {
+                    _turnedCount[t].Next[o] = _turnedCount[t].Current[o] + 1;
                     _xKind[t].Next[o] = (int)ExposureOutcome.Turned;
+                }
                 else
                 {
+                    // A secret turn is not a loss its owner knows of; the destroyed network and the turned one found out are.
+                    _lost[t].Next[o] = _lost[t].Current[o] + 1;
+                    _found[t].Next[o] = _found[t].Current[o] + (found ? 1 : 0);
                     n2 *= _p.LossKeepN;
                     a2 *= _p.LossKeepA;
                     _xKind[t].Next[o] = (int)ExposureOutcome.Lost;
                 }
             }
+            _deadline[t].Next[o] = deadline;
             _turned[t].Next[o] = turnNow || (turned && !found) ? 1 : 0;
             _n[t].Next[o] = n2.Raw;
             _a[t].Next[o] = a2.Raw;
             _trace[t].Next[o] = tr2.Raw;
         }
+    }
+
+    // The direction of a network, chosen each year: the discipline where the target knows most nodes the owner lacks (ties: the lowest). A change keeps a part
+    // of the maturity (INTELLIGENCE.md §2.2 item 3). Returns the maturity after the check.
+    private Fx6 Redirect(int o, int t, Fx6 maturity)
+    {
+        int disciplines = _in.DisciplineCount;
+        if (disciplines <= 0)
+            return maturity;
+        Span<int> gap = stackalloc int[disciplines];
+        for (int r = 0; r < _in.NodeCount; r++)
+        {
+            int d = _in.DisciplineOf(r);
+            if (d >= 0 && d < disciplines && _in.Knows(t, r) && !_in.Knows(o, r))
+                gap[d]++;
+        }
+        int best = 0;
+        for (int d = 1; d < disciplines; d++)
+            best = gap[d] > gap[best] ? d : best;
+        int current = _dir[t].Current[o];
+        _dir[t].Next[o] = best + 1;
+        return current != 0 && current != best + 1 ? maturity * _p.DirChangeKeepA : maturity;
     }
 
     // The AI plan of the actor, the same rule for every actor: the leaders (more known nodes) in order of lead, at most three, to steal from; with no

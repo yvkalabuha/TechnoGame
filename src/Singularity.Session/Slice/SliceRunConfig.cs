@@ -205,6 +205,13 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool Intelligence { get; init; }
 
+    /// <summary>
+    /// Execution only (not state, not hashed): the actor whose eyes the read views are. With intelligence on, the licence of another actor is shown to it only
+    /// through intelligence (a visible estimate and the confidence of the hidden event, EVENTS_POLITICS.md §10); otherwise the view carries an empty licence.
+    /// <c>null</c> (Lab, tests) = the views of the whole world.
+    /// </summary>
+    public int? PlayerActor { get; init; }
+
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
 

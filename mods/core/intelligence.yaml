@@ -35,4 +35,7 @@ define:
     preset_strong: 0.030
     turn_on_exposure: 0.30       # an exposed network is turned by the target instead of lost
     turn_detect_per_year: 0.46   # a turned network is found out (about 5 % a month)
+    trace_certain: 0.30          # a trace this high makes exposure certain within 1-12 months (the draw picks the date)
+    leak_off_dir: 0.10           # theft outside the direction (discipline) of the network keeps a tenth of its discount
+    dir_change_keep_a: 0.50      # a network that changes direction keeps half of its maturity
     sens_licence: 0.80           # sens of the hidden licence event: intel_conf = conf * sens

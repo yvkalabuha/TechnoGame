@@ -200,6 +200,7 @@ public class IntelligenceTests
         {
             int rows = s.World.Table.RowCount;
             var expected = new bool[rows, rows];
+            var lostInc = new bool[rows, rows];
             var risk = new Fx6[rows, rows];
             var before = new int[rows, rows];
             for (int o = 0; o < rows; o++)
@@ -209,17 +210,21 @@ public class IntelligenceTests
                     if (o == t)
                         continue;
                     before[o, t] = Intel(s).Lost(o, t);
-                    int key = IntelRng.NetworkKey(ids[o], ids[t]);   // the stable ids, not the rows
+                    int key = IntelRng.NetworkKeys(ids)[o * rows + t];   // the stable ids, not the rows
                     if (Intel(s).Turned(o, t))
                     {
                         risk[o, t] = p.TurnDetectPerYear;
                         expected[o, t] = CounterRng.Chance(events.NextU64(m, IntelSystem.SystemTurn, key, 1), IntelMath.MonthlyFromYearly(p.TurnDetectPerYear));
+                        lostInc[o, t] = expected[o, t];
                     }
-                    else
+                    else if (Intel(s).ModeAgainst(o, t) != IntelMode.None && Intel(s).Network(o, t) > Fx6.Zero)
                     {
                         risk[o, t] = Intel(s).HazardPerYear(o, t);
                         Fx6 hm = IntelMath.MonthlyFromYearly(risk[o, t]);
-                        expected[o, t] = hm > Fx6.Zero && CounterRng.Chance(events.NextU64(m, IntelSystem.SystemExpose, key, 0), hm);
+                        int dl = Intel(s).Deadline(o, t);
+                        expected[o, t] = CounterRng.Chance(events.NextU64(m, IntelSystem.SystemExpose, key, 0), hm) || (dl != 0 && dl - 1 <= m);
+                        bool turnsNow = expected[o, t] && CounterRng.Chance(events.NextU64(m, IntelSystem.SystemTurn, key, 0), p.TurnOnExposure);
+                        lostInc[o, t] = expected[o, t] && !turnsNow;   // a secret turn is not a loss its owner knows of
                     }
                 }
             }
@@ -230,7 +235,7 @@ public class IntelligenceTests
                 {
                     if (o == t)
                         continue;
-                    Assert.Equal(expected[o, t] ? 1 : 0, Intel(s).Lost(o, t) - before[o, t]);
+                    Assert.Equal(lostInc[o, t] ? 1 : 0, Intel(s).Lost(o, t) - before[o, t]);
                     if (!expected[o, t])
                         continue;
                     exposures++;
@@ -316,7 +321,7 @@ public class IntelligenceTests
         for (long m = 0; m < 240; m++)
         {
             bool wasTurned = Intel(s).Turned(Sun, Usa);
-            int lost = Intel(s).Lost(Sun, Usa);
+            int lost = Intel(s).Lost(Sun, Usa), caught = Intel(s).CaughtOf(Sun, Usa);
             s.StepThroughMonth(m);
             // The view of a step shows the state before it: the events of month m-1 are in the inputs of month m.
             if (turnedAt == m - 1 && turnedAt >= 0)
@@ -335,6 +340,8 @@ public class IntelligenceTests
                 if (!wasTurned)
                 {
                     Assert.Equal(ExposureOutcome.Turned, Intel(s).LastExposure(Sun, Usa)!.Value.Outcome);
+                    Assert.Equal(lost, Intel(s).Lost(Sun, Usa));          // the owner's loss counter does not move at a secret turn
+                    Assert.Equal(caught + 1, Intel(s).CaughtOf(Sun, Usa)); // the target counts the catch
                     turnedAt = m;
                 }
             }
@@ -343,6 +350,7 @@ public class IntelligenceTests
                 sawFoundOut = true;
                 foundAt = m;
                 Assert.Equal(lost + 1, Intel(s).Lost(Sun, Usa));
+                Assert.Equal(caught, Intel(s).CaughtOf(Sun, Usa));   // finding out a turned network is not a second catch
                 Assert.Equal(ExposureOutcome.Lost, Intel(s).LastExposure(Sun, Usa)!.Value.Outcome);
             }
         }
@@ -372,26 +380,131 @@ public class IntelligenceTests
     }
 
     [Fact]
-    public void HiddenEvents_AreShownOnlyThroughAVisibleEstimate_WithTheirOwnConfidence()
+    public void HiddenEvents_AreEmittedAboveTheThreshold_AndTheOrdinaryViewDoesNotLeakThem()
     {
-        SliceSession s = Make();
+        // GBR watches USA and SUN with a full network; the ordinary view is the one of GBR (PlayerActor).
+        var config = new SliceRunConfig { Seed = 7, Intelligence = true, PlayerActor = Gbr };
+        SliceSession s = SliceSession.Create(SliceTestData.Data, config);
         Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Gbr, 30_000, T(Usa, IntelMode.Observe), T(Sun, IntelMode.Observe))).Accepted);
         IntelParams p = Intel(s).Parameters;
-        for (long m = 0; m < 180; m++)
+        int emitted = 0, activeSeen = 0;
+        for (long m = 0; m < 240; m++)
         {
             s.StepThroughMonth(m);
-            foreach (IntelTargetView card in s.View.Inputs!.Actors[Gbr].Intel!.Targets)
+            ActorView[] actors = [.. s.View.Actors];
+            IntelTargetView[] cards = [.. s.View.Inputs!.Actors[Gbr].Intel!.Targets];
+            foreach (IntelTargetView card in cards)
             {
-                if (!card.EstimateVisible)
+                if (!card.EstimateVisible || card.Confidence * p.SensLicence < p.ConfVisible)
                     Assert.Empty(card.HiddenEvents);
-                foreach (HiddenEventView h in card.HiddenEvents)
+                if (card.HiddenEvents.Length == 1)
                 {
-                    Assert.True(h.Confidence >= p.ConfVisible);
-                    Assert.Equal(card.Confidence * p.SensLicence, h.Confidence);
+                    emitted++;
                     Assert.True(s.World.LicenceActive(card.Target));
+                    Assert.Equal(card.Confidence * p.SensLicence, card.HiddenEvents[0].Confidence);
+                    Assert.True(card.HiddenEvents[0].Confidence >= p.ConfVisible);
+                }
+            }
+            foreach (ActorView a in actors)
+            {
+                if (a.Actor == Gbr)
+                {
+                    Assert.Equal(s.World.LicenceActive(Gbr), a.Licence.Active);   // one's own licence is not hidden
+                    continue;
+                }
+                activeSeen += s.World.LicenceActive(a.Actor) ? 1 : 0;
+                // The view of the actors is the state after the step: the gate is the same function of it (the cards above are of the step before).
+                IntelEstimate e = Intel(s).Estimate(Gbr, a.Actor);
+                bool seen = e.Visible && e.Confidence * p.SensLicence >= p.ConfVisible && s.World.LicenceActive(a.Actor);
+                Assert.Equal(seen, a.Licence.Active);   // a foreign licence reaches the ordinary view only through intelligence
+                if (!seen)
+                    Assert.True(a.Licence.Seller < 0 && a.Licence.Gen == 0, "a foreign licence leaked through the ordinary view");
+            }
+        }
+        Assert.True(activeSeen > 0, "no foreign licence in twenty years: the fixture proves nothing");
+        Assert.True(emitted > 0, "intelligence never emitted a hidden event although foreign licences existed");
+    }
+
+    [Fact]
+    public void Trace_PastTheThreshold_MakesTheExposureCertainWithinTwelveMonths()
+    {
+        // Turning off, so that every exposure is a loss; the hazard is the real one, only the base is raised so that traces reach the threshold.
+        SliceSession s = SliceSession.Create(DataWith(("turn_on_exposure: 0.30", "turn_on_exposure: 0.00"), ("hazard_base_per_year: 0.20", "hazard_base_per_year: 1.00")), new SliceRunConfig { Seed = 7, Intelligence = true });
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal), T(Gbr, IntelMode.Observe))).Accepted);
+        int rows = s.World.Table.RowCount, windows = 0;
+        var due = new long[rows, rows];
+        var lost = new int[rows, rows];
+        for (long m = 0; m < 240; m++)
+        {
+            s.StepThroughMonth(m);
+            for (int o = 0; o < rows; o++)
+            {
+                for (int t = 0; t < rows; t++)
+                {
+                    if (o == t)
+                        continue;
+                    if (Intel(s).Lost(o, t) > lost[o, t])
+                    {
+                        lost[o, t] = Intel(s).Lost(o, t);
+                        due[o, t] = 0;
+                    }
+                    int dl = Intel(s).Deadline(o, t);
+                    if (dl != 0 && due[o, t] == 0)
+                    {
+                        due[o, t] = dl - 1;
+                        windows++;
+                        Assert.InRange(dl - 1 - m, 1, 12);   // set at month m: the exposure is due in 1 to 12 months
+                    }
+                    Assert.True(due[o, t] == 0 || m <= due[o, t], $"network {o}>{t} was not exposed by its deadline {due[o, t]} (month {m})");
                 }
             }
         }
+        Assert.True(windows > 0, "no trace passed the threshold: the test proves nothing");
+    }
+
+    [Fact]
+    public void TheftOutsideTheDirectionOfTheNetwork_KeepsATenth()
+    {
+        SliceSession s = Make();
+        IntelParams p = Intel(s).Parameters;
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal))).Accepted);
+        int on = 0, off = 0;
+        for (long m = 0; m < 96; m++)
+        {
+            s.StepThroughMonth(m);
+            int dir = Intel(s).Direction(Sun, Usa);
+            if (dir < 0)
+                continue;
+            Fx6 full = IntelMath.StealShare(p, Intel(s).Network(Sun, Usa), Intel(s).Maturity(Sun, Usa));
+            for (int r = 0; r < s.World.Graph.Count; r++)
+            {
+                if (!s.World.Knowledge.IsKnown(Usa, r))
+                    continue;
+                bool inDir = s.World.Graph.Discipline[r] == dir;
+                Assert.Equal(inDir ? full : full * p.LeakOffDir, Intel(s).StealShare(Sun, r));
+                on += inDir && full > Fx6.Zero ? 1 : 0;
+                off += !inDir && full > Fx6.Zero ? 1 : 0;
+            }
+        }
+        Assert.True(on > 0 && off > 0, $"both sides of the direction must occur (on {on}, off {off})");
+    }
+
+    [Fact]
+    public void NetworkKeys_NeverCollide_AndDoNotDependOnTheRowOrder()
+    {
+        // AEM>EAY and AKF>ZJJ are valid ids with the same 32-bit hash: the keys are made distinct, by the ids only.
+        Assert.Equal(IntelRng.NetworkKey("AEM", "EAY"), IntelRng.NetworkKey("AKF", "ZJJ"));
+        System.Collections.Immutable.ImmutableArray<string> ids = ["AEM", "EAY", "AKF", "ZJJ"], shuffled = ["ZJJ", "AKF", "EAY", "AEM"];
+        int[] a = IntelRng.NetworkKeys(ids), b = IntelRng.NetworkKeys(shuffled);
+        Assert.Equal(a.Length, a.Distinct().Count());
+        for (int o = 0; o < 4; o++)
+        {
+            for (int t = 0; t < 4; t++)
+                Assert.Equal(a[o * 4 + t], b[(3 - o) * 4 + (3 - t)]);
+        }
+        // Without a collision the key is the plain hash of the pair.
+        System.Collections.Immutable.ImmutableArray<string> plain = ["USA", "SUN", "GBR"];
+        Assert.Equal(IntelRng.NetworkKey("USA", "SUN"), IntelRng.NetworkKeys(plain)[1]);
     }
 
     [Fact]

@@ -77,8 +77,7 @@ internal static class ViewBuilder
             full && month >= 0 && month % 12 == 0 ? w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next) : null,
             bureaus.MoveToImmutable(),
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
-            new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
-                w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
+            LicenceOf(w, a, refusals.MoveToImmutable()),
             new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
             Alloy(w, a, month), Research(w, a), UnknownNodes(w, a));
     }
@@ -269,6 +268,15 @@ internal static class ViewBuilder
             w.Intel is null ? null : IntelOf(w, w.Intel, a));
     }
 
+    // The licence of an actor. For the player's own eyes another actor's deal is a hidden event: it is shown only when intelligence sees it (#508), else empty.
+    private static LicenceView LicenceOf(SliceWorld w, int a, ImmutableArray<long> refusals)
+    {
+        if (w.Intel is { } intel && w.Config.PlayerActor is int viewer && viewer != a && HiddenEvents(w, intel, a, intel.Estimate(viewer, a)).IsEmpty)
+            return new LicenceView(0, -1, 0, default, default, Fx6.Zero, default, false);
+        return new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
+            w.Policy.LicenceFlow(a), refusals, w.LicenceActive(a));
+    }
+
     // The intelligence card of an actor: words and ranges only. The estimate of a rival is a range from IntelSystem.Estimate, never the exact count.
     private static IntelView IntelOf(SliceWorld w, IntelSystem intel, int a)
     {
@@ -291,7 +299,7 @@ internal static class ViewBuilder
         {
             if (o == a)
                 continue;
-            caught += intel.Lost(o, a);
+            caught += intel.CaughtOf(o, a);
             TraceWord tw = intel.TraceOf(o, a);
             foreign = tw > foreign ? tw : foreign;
             lost += intel.Lost(a, o);
