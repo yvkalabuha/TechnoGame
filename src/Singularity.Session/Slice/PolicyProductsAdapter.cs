@@ -70,7 +70,9 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public int ProposalRefusal(int actorRow, int design, bool close, long month) => world.Commands.RefusedGen(actorRow, design, close, month);
 
-    public bool PlayerSeries(int actorRow, int design, long month) => world.Commands.Series(actorRow, design, month) is not null;
+    // A command with a stale handle is refused by the layer and changes nothing: it must not take the line from the AI either.
+    public bool PlayerSeries(int actorRow, int design, long month) =>
+        world.Commands.Series(actorRow, design, month) is { } s && world.Products.Resolves(actorRow, s.Design);
 
     public Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month) =>
         world.Products.CandidateValue(actorRow, alts, budget, month).Value;

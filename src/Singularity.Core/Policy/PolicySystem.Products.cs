@@ -344,6 +344,8 @@ public sealed partial class PolicySystem
         var profile = (PolicyProfile)_profile.Current[row];
         Decisions dec = t_decisions ??= new Decisions();
         dec.Reset(_gens, _designs);
+        if (monthly && IsAdviser(row))
+            ReadOrders(row, t);
         PolicyDesign[] designs = dec.Designs;
         for (int d = 0; d < _designs; d++)
             designs[d] = prod.Design(row, d, t);
@@ -478,7 +480,8 @@ public sealed partial class PolicySystem
                 // A project cancelled this month or whose cancel is still pending does not launch.
                 if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > launchLimit || cancelNow[d]
                     || CancelPending(row, t, x.HandleOf(d))
-                    || !prod.Admitted(row, d, t) || GateBlocks(row, d, t))
+                    || !prod.Admitted(row, d, t) || GateBlocks(row, d, t)
+                    || monthly && IsAdviser(row) && OpenSilenced(row, d, t))   // a refused project does not hold the only opening: the next eligible one is proposed
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));

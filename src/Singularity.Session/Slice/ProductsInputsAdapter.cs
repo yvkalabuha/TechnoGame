@@ -108,7 +108,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     public Fx6? LineRate(int actorRow, int design, long month)
     {
         // The player's start on the line of an advised actor takes the rate from the AI at once (the policy drops the AI flag from the next month).
-        if (world.Policy.IsAdviser(actorRow) && world.Commands.Series(actorRow, design, month) is not null)
+        if (world.Policy.IsAdviser(actorRow) && world.Commands.Series(actorRow, design, month) is { } series && world.Products.Resolves(actorRow, series.Design))
             return null;
         if (!world.Policy.AiLine(actorRow, design, world.Products.Generation(actorRow, design)))
             return null;

@@ -212,6 +212,8 @@ public class AdviserTests
             Assert.False(Offered(refused, m), $"month {m}: the refused proposal must stay silent");
             refused.StepThroughMonth(m);
         }
+        // The proposal is back for the month the cooldown ends at: the AI still wants the project, nothing else silences it.
+        Assert.True(Offered(refused, first.Month + 12), "the refused proposal must return in month 12");
         Assert.Equal(first.Month + 12, refused.World.Policy.ProposalSilentUntil(first.Actor, first.Design, ProposalKind.Open));
         // The refusal is in the commands log, so a replay gives the same state.
         SliceSession replay = SliceSession.Replay(SliceTestData.Data, Base with { AdviserActors = [first.Actor] }, refused.CommandLog, refused.Tick);
@@ -277,6 +279,30 @@ public class AdviserTests
         Assert.False(player.World.Policy.AiLine(actor, line, player.World.Products.Generation(actor, line)));
         Assert.True(control.World.Products.Rate(actor, line) > low, "the AI runs the scenario line above the small rate");
         Assert.Equal(low, player.World.Products.Rate(actor, line));   // the line runs at the player's rate, not at zero and not at the AI's
+    }
+
+    [Fact]
+    public void StaleStartHandle_NeverStopsAScenarioLine()
+    {
+        (int actor, int line) = StartLine();
+        SliceSession control = Advised(actor);
+        SliceSession stale = Advised(actor);
+        DesignHandle h = stale.View.Actors[actor].Designs[line].Handle;
+        Assert.True(stale.Submit(SourceClass.Player, 0, 1, new StartSeries(actor, new DesignHandle(h.Slot, h.Generation + 7), Fx6.FromRaw(Fx6.One.Raw / 100), false)).Accepted);
+        control.StepThroughMonth(6);
+        stale.StepThroughMonth(6);
+        Assert.True(stale.World.Policy.AiLine(actor, line, stale.World.Products.Generation(actor, line)), "a stale command must not take the line from the AI");
+        Assert.True(control.World.Products.Rate(actor, line) > Fx6.Zero);
+        Assert.Equal(control.World.Products.Rate(actor, line), stale.World.Products.Rate(actor, line));
+        Assert.Contains("StaleHandle", string.Join("|", stale.Outcomes));
+    }
+
+    [Fact]
+    public void LineLimitAboveTwo_IsRefusedAtLoad_UnderTheDefaultRule()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Advised(0, maxLines: 3));
+        // With the DERIV arm the policy allows more lines, so the limit may be raised.
+        _ = SliceTestData.Create(Base with { AdviserActors = [0], AdviserMaxLines = 3, Derive = true });
     }
 
     [Fact]
