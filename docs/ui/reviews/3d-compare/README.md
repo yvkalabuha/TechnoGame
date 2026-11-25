@@ -14,3 +14,6 @@
 Режим запуска Gemini — только Blender MCP разрешён: `agy -p "…" --model gemini-4-neon-high --sandbox --settings '{"permissions":{"allow":["mcp(blender)"]}}'`.
 
 Модели в GLB (только свои детали, без камеры и света): `assets/models3d/g4_compare/claude_g4.glb` (17 деталей), `assets/models3d/g4_compare/gemini_g4.glb` (41 деталь). Экспорт без окна: `blender -b <файл.blend> --python export_g4.py`.
+
+## Набор частей G4 (Gemini, 2026-11-25)
+Бриф: `docs/ui/specs/3d-kit-g4-brief.md`. Gemini: 6 вызовов, 4,5 мин. Пять частей по слотам проекта: `assets/models3d/g4_kit/g4_{fuselage,wing,tail,engine,afterburner}.glb`. В фюзеляже точки крепления `ATTACH_wing`, `ATTACH_tail`, `ATTACH_engine`; в двигателе `ATTACH_afterburner`. Корень каждой части ставится в свою точку — сборка совпадает с моделью Gemini_G4 до 0 мм (проверка Gemini). Кадры: `gemini_g4_kit_assembled.png`, `gemini_g4_kit_exploded.png`.
