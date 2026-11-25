@@ -465,9 +465,9 @@ public class IntelligenceTests
         Assert.Equal(Fx6.One, clamped.Sum);
         Assert.Equal(shares, shares.WithSecurity(Fx6.Zero));   // a run without intelligence is untouched
         // Public refusal codes of earlier builds are not renumbered; the new ones come after them.
-        Assert.Equal(23, (int)CommandRefusal.ProgrammeNotFundable);
-        Assert.Equal(24, (int)CommandRefusal.IntelOff);
-        Assert.Equal(25, (int)CommandRefusal.BadTargets);
+        Assert.Equal(26, (int)CommandRefusal.ProgrammeNotFundable);
+        Assert.Equal(27, (int)CommandRefusal.IntelOff);
+        Assert.Equal(28, (int)CommandRefusal.BadTargets);
     }
 
     [Fact]

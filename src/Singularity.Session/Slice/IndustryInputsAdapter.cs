@@ -38,8 +38,9 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 
     public bool KnowsProcess(int siteRow, int processRow, long month)
     {
-        int row = world.Graph.RowOf(world.IndustryLayout.Number[processRow]);
-        return row >= 0 && world.Knowledge.IsKnown(siteRow, row);
+        int number = world.IndustryLayout.Number[processRow];
+        int row = world.Graph.RowOf(number);
+        return row >= 0 && world.Knowledge.IsKnown(siteRow, row) || world.ProductionLicensed(world.IndustryLayout.SiteOwner[siteRow], number);
     }
 
     public Fx6 W(int siteRow, int cluster, long month) => world.Scenario.W[siteRow];

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Core.Data;
 using Singularity.Core.WhyNot;
@@ -16,8 +17,8 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 23 (TASK-0160) adds <c>SliceRunConfig.Intelligence</c>, <c>ActorInputsView.Intel</c> (<c>IntelView</c>, <c>IntelTargetView</c>), the seventh item <c>BudgetShares.Security</c> and <c>SetBudgetShares.Targets</c> with their refusals; 22 (TASK-0150) adds <c>SliceRunConfig.Reserve</c>, <c>ActorInputsView.Reserve</c> (<c>ReserveView</c>) and the command <c>FundProgramme</c> with its refusals; 21 (TASK-0119) adds <c>ActorView.Alloy</c> (<c>AlloyCoverage</c>) and <c>ActorView.Research</c> (<c>ResearchView</c>); 20 (TASK-0147) adds <c>SliceRunConfig.ResearchWeightByDiscipline</c> and <c>DisciplineWeight</c>; 19 (TASK-0147) adds <c>SliceRunConfig.AheadCostK</c>, <c>AheadCostPow</c>, <c>AheadCostMax</c> (ahead-of-time cost of a node, #458); 18 (TASK-0134) adds <c>SliceRunConfig.HcapGrowthPerYear</c>, <c>HcapGrowthMax</c>, <c>MasteryXProg</c>, <c>MasteryUpkeepMult</c>, <c>MasteryRules</c> and the commands <c>StartMasteryProgramme</c>/<c>CancelMasteryProgramme</c> (<c>CommandVerdict.Mastery</c> carries the <c>why_not</c> code); 17 (TASK-0131) adds <c>SliceRunConfig.CostMultG5</c> and <c>CostMultG6</c> (c_n multipliers of generations 5 and 6, a calibration parameter); 16 (TASK-0131) makes <c>LicenceView.Mask</c> and <c>OfferMask</c> a two-word <c>LicenceMask</c> (nodes 1…127); 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
-    public const int TestApiVersion = 23;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 24 (TASK-0160) adds <c>SliceRunConfig.Intelligence</c>, <c>ActorInputsView.Intel</c> (<c>IntelView</c>, <c>IntelTargetView</c>), the seventh item <c>BudgetShares.Security</c> and <c>SetBudgetShares.Targets</c> with their refusals; 23 (TASK-0152) adds the licence market: <see cref="SliceRunConfig.LicenceMarket"/>, <c>LicenceExternalActors</c>, <c>Alliances</c>, the commands <c>BuyLicence</c>/<c>OfferLicence</c> (<c>CommandVerdict.Licence</c>, <c>Offer</c>), <c>ActorView.Market</c> (<c>LicenceMarketView</c>) and <c>DesignView.LicensedFrom</c>; 22 (TASK-0150) adds <c>SliceRunConfig.Reserve</c>, <c>ActorInputsView.Reserve</c> (<c>ReserveView</c>) and the command <c>FundProgramme</c> with its refusals; 21 (TASK-0119) adds <c>ActorView.Alloy</c> (<c>AlloyCoverage</c>) and <c>ActorView.Research</c> (<c>ResearchView</c>); 20 (TASK-0147) adds <c>SliceRunConfig.ResearchWeightByDiscipline</c> and <c>DisciplineWeight</c>; 19 (TASK-0147) adds <c>SliceRunConfig.AheadCostK</c>, <c>AheadCostPow</c>, <c>AheadCostMax</c> (ahead-of-time cost of a node, #458); 18 (TASK-0134) adds <c>SliceRunConfig.HcapGrowthPerYear</c>, <c>HcapGrowthMax</c>, <c>MasteryXProg</c>, <c>MasteryUpkeepMult</c>, <c>MasteryRules</c> and the commands <c>StartMasteryProgramme</c>/<c>CancelMasteryProgramme</c> (<c>CommandVerdict.Mastery</c> carries the <c>why_not</c> code); 17 (TASK-0131) adds <c>SliceRunConfig.CostMultG5</c> and <c>CostMultG6</c> (c_n multipliers of generations 5 and 6, a calibration parameter); 16 (TASK-0131) makes <c>LicenceView.Mask</c> and <c>OfferMask</c> a two-word <c>LicenceMask</c> (nodes 1…127); 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 24;
 
     private SliceView _view = null!;
     private long _month = -1;
@@ -555,7 +556,7 @@ public sealed partial class SliceSession
         if (monthly)
         {
             long month = _world.Calendar.MonthIndex(tick);
-            _world.Policy.ApplyDeals(month, _world.ProcurementBase);
+            _world.Policy.ApplyDeals(month, a => _world.LicenceFunds(a, month));
             // The inputs of the step as its compute will see them: after the deals and the commands, before the step.
             inputs = ViewBuilder.Inputs(_world, month);
             _month = month;
@@ -610,7 +611,7 @@ public sealed partial class SliceSession
                     v0 = MasteryVerdict(start, month);
                 if (v0.Accepted && command is FundProgramme fund)
                     v0 = FundVerdict(fund, month);
-                verdicts[i] = v0.Accepted ? _world.Commands.Apply(command, month) : v0;
+                verdicts[i] = !v0.Accepted ? v0 : command is BuyLicence or OfferLicence ? LicenceVerdict(command, month) : _world.Commands.Apply(command, month);
             }
         }
         for (int i = 0; i < _pending.Count; i++)
@@ -629,6 +630,32 @@ public sealed partial class SliceSession
         return true;
     }
 
+    // The licence commands act on the policy (the deal queue and the catalogue), not on cmd.* columns: written between ticks, so the deal is in the queue when
+    // ApplyDeals runs at the start of the month, which pays it or counts its refusal. A refusal that can be known now is returned now.
+    private CommandVerdict LicenceVerdict(SliceCommand command, long month)
+    {
+        PolicySystem policy = _world.Policy;
+        if (!policy.MarketOn || !policy.IsExternal(command.Actor))
+            return CommandVerdict.Refuse(CommandRefusal.LicenceNotAllowed, $"actor {command.Actor} is not under external control of a run with the licence market");
+        if (_world.Reserve is null)
+            return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "the licence market of the player pays and earns through the reserve (O-055): the run has none");
+        if (command is OfferLicence o)
+        {
+            OfferRefusal refusal = policy.SetOffer(o.Actor, o.Gen, o.M, o.Circle, month);
+            return refusal == OfferRefusal.None ? CommandVerdict.Ok
+                : new CommandVerdict(CommandRefusal.BadOffer, $"offer of generation {o.Gen} refused: {refusal}", Offer: refusal);
+        }
+        var b = (BuyLicence)command;
+        // One deal waits per buyer; a second would replace the first and leave its outcome «accepted» for a purchase that never settles.
+        if (policy.HasQueuedDeal(b.Actor))
+            return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {b.Actor} already has a licence deal queued for the start of the month");
+        BadLicence reason = policy.CheckBuy(b.Actor, b.Seller, b.Gen, month, _world.LicenceFunds(b.Actor, month), out _);
+        if (reason != BadLicence.None)
+            return new CommandVerdict(CommandRefusal.LicenceRefused, $"licence of generation {b.Gen} from {b.Seller} refused: {reason}", Licence: reason);
+        policy.QueueBuy(b.Actor, b.Seller, b.Gen, month);
+        return CommandVerdict.Ok;
+    }
+
     // fund_programme needs the node in the frontier and the money in the reserve now; the layer repeats both on the snapshot of its step, so a late change costs nothing.
     private CommandVerdict FundVerdict(FundProgramme f, long month)
     {
@@ -639,7 +666,8 @@ public sealed partial class SliceSession
             return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"node {f.Node} cannot take more progress this month");
         if (_world.Knowledge.ProgrammeGain(f.Actor, row, month, f.Amount) <= Fx6.Zero)
             return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"the amount {f.Amount} is too small to move node {f.Node}");
-        Fx6 balance = _world.Reserve?.Spendable(f.Actor) ?? Fx6.Zero;
+        // A licence deal accepted earlier in the month keeps its price in the reserve: the programme may not take it (the deal would be refused for money at settlement).
+        Fx6 balance = (_world.Reserve?.Spendable(f.Actor) ?? Fx6.Zero) - (_world.FlowViaReserve(f.Actor) ? _world.Policy.QueuedPrice(f.Actor) : Fx6.Zero);
         return balance >= f.Amount
             ? CommandVerdict.Ok
             : CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"the reserve can pay {balance} this month (after its leak), the programme needs {f.Amount}");

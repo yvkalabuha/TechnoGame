@@ -160,14 +160,14 @@
 | [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | DONE | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 | [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | DONE | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | DONE | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
-| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | IN_PROGRESS | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
+| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | DONE | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | DONE | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 | [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | DONE | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
 | [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | DONE | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
 | [TASK-0150](../development/tasks/TASK-0150-levers-core-reserve.md) | DONE | Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme | MS-M05 |
 | [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | IN_PROGRESS | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
-| [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | IN_PROGRESS | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
+| [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | DONE | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
 | [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | IN_PROGRESS | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
 | [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | REVIEW | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
 | [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | REVIEW | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
@@ -182,6 +182,8 @@
 | [TASK-0164](../development/tasks/TASK-0164-m0-slice-tag.md) | IN_PROGRESS | M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) | MS-M1 |
 | [TASK-0165](../development/tasks/TASK-0165-kernel-entity-tables.md) | IN_PROGRESS | M1: Kernel entity tables mechanism (ADR-0029, T-M1-03), no golden change | MS-M1 |
 | [TASK-0166](../development/tasks/TASK-0166-owners-1945-check.md) | IN_PROGRESS | M1: verify 1945 owners of 379 regions against sources (T-M1-10) | MS-M1 |
+| [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | APPROVED | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
+| [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | IN_PROGRESS | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
 
 ## Гипотезы
 

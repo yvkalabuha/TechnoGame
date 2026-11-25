@@ -59,6 +59,13 @@ public class SliceRunConfigFingerprintGuardTests
             var a = (ImmutableArray<Fx6>)current!;
             return a.IsDefault ? ImmutableArray.Create(Fx6.One) : a.Add(Fx6.One);
         }
+        if (type == typeof(ImmutableArray<int>))
+        {
+            var a = (ImmutableArray<int>)current!;
+            return a.IsDefault ? ImmutableArray.Create(1) : a.Add(1);
+        }
+        if (type == typeof(AllianceTable))
+            return AllianceTable.Parse("schema: 1\nblocs: []\nfriends:\n  - {a: AAA, b: BBB, from: 1945}\n", "guard.yaml");
         if (type == typeof(ImmutableArray<DisciplineWeight>))
         {
             var a = (ImmutableArray<DisciplineWeight>)current!;
