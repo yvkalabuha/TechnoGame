@@ -34,3 +34,6 @@ created: 2026-11-25
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+- Сделано: команда `MapBuilder terrain` (GMTED2010, GLWD v2, ESA WorldCover из кэша, SHA-256 в sources.lock.yaml) пишет `mods/core/map/terrain.yaml` (3124 провинции, целые числа, промилле). Реки Natural Earth: атрибут `border_river` (ранг 1-4) третьим числом пар в `adjacency.yaml` (220 пар), судоходные реки в `rivers.yaml` (5 рек). 27 правок 1945 в `tools/map/spec/terrain_1945.yaml` (Арал, Чад, водохранилища) с источником и датой; разбивка по провинциям и исходный класс земли помечены [Предп.].
+- Проверка: `dotnet test tests/Singularity.MapBuilder.Tests` 120/120; `tools/map/check_determinism.sh` OK (terrain.yaml исключён: источники 4,3 ГБ вне CI).
+- Не проверено: тест на падение без правки не запускался; Зёйдерзее, Месопотамские болота, Амазония не поправлены; Зюйд-Холланд классифицирован как swamp (GLWD включает торфяники).

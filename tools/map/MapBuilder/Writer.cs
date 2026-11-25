@@ -133,6 +133,10 @@ internal static class Writer
             foreach (var g in kv.Value.Attributions.Select(a => a.Split('|')).GroupBy(p => (Lic: p[0], Credit: p[1])).OrderBy(g => g.Key.Lic, StringComparer.Ordinal).ThenBy(g => g.Key.Credit, StringComparer.Ordinal))
                 lines.Add($"- {g.Key.Credit}, {g.Key.Lic}: {string.Join(", ", g.Select(p => p[2]))}; snapshot {kv.Key}, https://www.openhistoricalmap.org");
         sb.Append(lines.Count == 0 ? "None.\n" : string.Join("\n", lines) + "\n");
+        sb.Append("\n## Terrain (terrain.yaml, derived statistics)\n\n");
+        sb.Append("- ESA WorldCover 2021 v200, CC BY 4.0: Zanaga et al., https://doi.org/10.5281/zenodo.7254221\n");
+        sb.Append("- Global Lakes and Wetlands Database v2.0, CC BY 4.0: Lehner et al., https://doi.org/10.6084/m9.figshare.28519994.v1\n");
+        sb.Append("- GMTED2010 (USGS EROS) and Natural Earth rivers are public domain.\n");
         return Text(sb.ToString());
     }
 

@@ -12,5 +12,5 @@ for i in 1 2; do
 done
 diff -r "$tmp/out1" "$tmp/out2"
 cmp "$tmp/render1.png" "$tmp/render2.png"
-diff -r "$tmp/out1" "$here/../../mods/core/map" --exclude=.gitignore --exclude=arcs.bin
+diff -r "$tmp/out1" "$here/../../mods/core/map" --exclude=.gitignore --exclude=arcs.bin --exclude=terrain.yaml
 echo "determinism OK: two runs are byte-identical and match the committed tables"

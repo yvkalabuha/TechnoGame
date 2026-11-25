@@ -328,7 +328,7 @@ terrain:
   - {id: brazil_amazonas.amazonas_16, class: forest, elev_m: 125, rugged_m: 5, mountains: 0, hills: 2, forest: 854, swamp: 86, steppe: 55, farm: 0, desert: 0, tundra: 0, ice: 0, water: 5}
   - {id: brazil_amazonas.amazonas_2, class: forest, elev_m: 120, rugged_m: 9, mountains: 11, hills: 38, forest: 812, swamp: 171, steppe: 2, farm: 0, desert: 0, tundra: 0, ice: 0, water: 15}
   - {id: brazil_amazonas.amazonas_3, class: forest, elev_m: 125, rugged_m: 6, mountains: 1, hills: 5, forest: 845, swamp: 145, steppe: 0, farm: 0, desert: 0, tundra: 0, ice: 0, water: 10}
-  - {id: brazil_amazonas.amazonas_4, class: forest, elev_m: 95, rugged_m: 12, mountains: 0, hills: 36, forest: 772, swamp: 159, steppe: 8, farm: 2, desert: 0, tundra: 0, ice: 0, water: 59}
+  - {id: brazil_amazonas.amazonas_4, class: forest, elev_m: 95, rugged_m: 12, mountains: 0, hills: 36, forest: 795, swamp: 159, steppe: 8, farm: 2, desert: 0, tundra: 0, ice: 0, water: 36}
   - {id: brazil_amazonas.amazonas_5, class: swamp, elev_m: 55, rugged_m: 3, mountains: 0, hills: 0, forest: 664, swamp: 306, steppe: 6, farm: 0, desert: 0, tundra: 0, ice: 0, water: 24}
   - {id: brazil_amazonas.amazonas_6, class: swamp, elev_m: 73, rugged_m: 4, mountains: 0, hills: 0, forest: 631, swamp: 322, steppe: 7, farm: 0, desert: 0, tundra: 0, ice: 0, water: 40}
   - {id: brazil_amazonas.amazonas_7, class: swamp, elev_m: 53, rugged_m: 9, mountains: 0, hills: 1, forest: 549, swamp: 314, steppe: 51, farm: 0, desert: 0, tundra: 0, ice: 0, water: 86}
@@ -486,7 +486,7 @@ terrain:
   - {id: cameroon.adamaoua, class: forest, elev_m: 1004, rugged_m: 17, mountains: 4, hills: 88, forest: 583, swamp: 15, steppe: 381, farm: 17, desert: 0, tundra: 0, ice: 0, water: 4}
   - {id: cameroon.centre, class: forest, elev_m: 654, rugged_m: 13, mountains: 2, hills: 45, forest: 843, swamp: 16, steppe: 133, farm: 5, desert: 0, tundra: 0, ice: 0, water: 3}
   - {id: cameroon.est, class: forest, elev_m: 653, rugged_m: 13, mountains: 0, hills: 14, forest: 907, swamp: 15, steppe: 74, farm: 1, desert: 0, tundra: 0, ice: 0, water: 3}
-  - {id: cameroon.extr_me_nord, class: swamp, elev_m: 394, rugged_m: 6, mountains: 1, hills: 40, forest: 0, swamp: 255, steppe: 441, farm: 288, desert: 1, tundra: 0, ice: 0, water: 15}
+  - {id: cameroon.extr_me_nord, class: swamp, elev_m: 394, rugged_m: 6, mountains: 1, hills: 40, forest: 0, swamp: 255, steppe: 355, farm: 288, desert: 1, tundra: 0, ice: 0, water: 101}
   - {id: cameroon.littoral, class: forest, elev_m: 284, rugged_m: 22, mountains: 13, hills: 182, forest: 851, swamp: 100, steppe: 20, farm: 13, desert: 0, tundra: 0, ice: 0, water: 16}
   - {id: cameroon.nord, class: steppe, elev_m: 506, rugged_m: 14, mountains: 12, hills: 93, forest: 211, swamp: 28, steppe: 568, farm: 185, desert: 1, tundra: 0, ice: 0, water: 7}
   - {id: cameroon.ouest, class: forest, elev_m: 1080, rugged_m: 24, mountains: 10, hills: 193, forest: 564, swamp: 33, steppe: 331, farm: 55, desert: 0, tundra: 0, ice: 0, water: 17}
@@ -504,14 +504,14 @@ terrain:
   - {id: canada_british_columbia.british_columbia_10, class: hills, elev_m: 1198, rugged_m: 58, mountains: 180, hills: 443, forest: 694, swamp: 32, steppe: 161, farm: 13, desert: 47, tundra: 12, ice: 12, water: 29}
   - {id: canada_british_columbia.british_columbia_2, class: forest, elev_m: 757, rugged_m: 19, mountains: 33, hills: 134, forest: 656, swamp: 196, steppe: 94, farm: 2, desert: 32, tundra: 9, ice: 2, water: 9}
   - {id: canada_british_columbia.british_columbia_3, class: hills, elev_m: 1315, rugged_m: 52, mountains: 106, hills: 501, forest: 624, swamp: 15, steppe: 149, farm: 0, desert: 103, tundra: 91, ice: 7, water: 11}
-  - {id: canada_british_columbia.british_columbia_4, class: forest, elev_m: 1038, rugged_m: 33, mountains: 41, hills: 320, forest: 752, swamp: 54, steppe: 108, farm: 16, desert: 14, tundra: 21, ice: 1, water: 34}
+  - {id: canada_british_columbia.british_columbia_4, class: forest, elev_m: 1038, rugged_m: 33, mountains: 41, hills: 320, forest: 768, swamp: 54, steppe: 108, farm: 16, desert: 14, tundra: 21, ice: 1, water: 18}
   - {id: canada_british_columbia.british_columbia_5, class: hills, elev_m: 925, rugged_m: 63, mountains: 207, hills: 461, forest: 636, swamp: 66, steppe: 83, farm: 0, desert: 64, tundra: 59, ice: 66, water: 26}
   - {id: canada_british_columbia.british_columbia_6, class: forest, elev_m: 1025, rugged_m: 50, mountains: 185, hills: 243, forest: 675, swamp: 66, steppe: 80, farm: 1, desert: 55, tundra: 40, ice: 33, water: 50}
   - {id: canada_british_columbia.british_columbia_7, class: forest, elev_m: 1299, rugged_m: 49, mountains: 138, hills: 359, forest: 720, swamp: 34, steppe: 122, farm: 1, desert: 50, tundra: 21, ice: 28, water: 24}
   - {id: canada_british_columbia.british_columbia_8, class: hills, elev_m: 887, rugged_m: 78, mountains: 332, hills: 411, forest: 648, swamp: 59, steppe: 59, farm: 1, desert: 80, tundra: 19, ice: 90, water: 44}
   - {id: canada_british_columbia.british_columbia_9, class: hills, elev_m: 1544, rugged_m: 74, mountains: 265, hills: 539, forest: 729, swamp: 18, steppe: 85, farm: 4, desert: 95, tundra: 22, ice: 23, water: 24}
   - {id: canada_newfoundland.newfoundland_and_labrador_1, class: plain, elev_m: 388, rugged_m: 29, mountains: 38, hills: 250, forest: 9, swamp: 157, steppe: 318, farm: 0, desert: 60, tundra: 357, ice: 5, water: 94}
-  - {id: canada_newfoundland.newfoundland_and_labrador_2, class: swamp, elev_m: 510, rugged_m: 9, mountains: 0, hills: 23, forest: 388, swamp: 275, steppe: 128, farm: 0, desert: 1, tundra: 27, ice: 2, water: 179}
+  - {id: canada_newfoundland.newfoundland_and_labrador_2, class: swamp, elev_m: 510, rugged_m: 9, mountains: 0, hills: 23, forest: 442, swamp: 275, steppe: 128, farm: 0, desert: 1, tundra: 27, ice: 2, water: 125}
   - {id: canada_newfoundland.newfoundland_and_labrador_3, class: forest, elev_m: 291, rugged_m: 12, mountains: 0, hills: 41, forest: 571, swamp: 152, steppe: 188, farm: 0, desert: 0, tundra: 16, ice: 0, water: 73}
   - {id: canada_newfoundland.newfoundland_and_labrador_4, class: plain, elev_m: 264, rugged_m: 15, mountains: 5, hills: 82, forest: 286, swamp: 248, steppe: 360, farm: 0, desert: 3, tundra: 2, ice: 0, water: 101}
   - {id: canada_newfoundland.newfoundland_and_labrador_5, class: swamp, elev_m: 142, rugged_m: 10, mountains: 0, hills: 26, forest: 158, swamp: 276, steppe: 451, farm: 1, desert: 0, tundra: 0, ice: 0, water: 114}
@@ -597,7 +597,7 @@ terrain:
   - {id: canada_qu_bec.qu_bec_6, class: swamp, elev_m: 510, rugged_m: 8, mountains: 0, hills: 7, forest: 224, swamp: 345, steppe: 161, farm: 0, desert: 0, tundra: 38, ice: 1, water: 231}
   - {id: canada_qu_bec.qu_bec_7, class: swamp, elev_m: 234, rugged_m: 8, mountains: 0, hills: 4, forest: 201, swamp: 250, steppe: 334, farm: 0, desert: 0, tundra: 32, ice: 0, water: 183}
   - {id: canada_qu_bec.qu_bec_8, class: forest, elev_m: 536, rugged_m: 9, mountains: 0, hills: 17, forest: 406, swamp: 205, steppe: 232, farm: 0, desert: 0, tundra: 24, ice: 0, water: 133}
-  - {id: canada_qu_bec.qu_bec_9, class: forest, elev_m: 535, rugged_m: 19, mountains: 1, hills: 123, forest: 689, swamp: 139, steppe: 68, farm: 0, desert: 1, tundra: 6, ice: 0, water: 97}
+  - {id: canada_qu_bec.qu_bec_9, class: forest, elev_m: 535, rugged_m: 19, mountains: 1, hills: 123, forest: 709, swamp: 139, steppe: 68, farm: 0, desert: 1, tundra: 6, ice: 0, water: 77}
   - {id: cape_verde.boa_vista, class: hills, elev_m: 343, rugged_m: 43, mountains: 86, hills: 414, forest: 0, swamp: 14, steppe: 503, farm: 21, desert: 388, tundra: 0, ice: 0, water: 74}
   - {id: caribbean_netherlands.bonaire, class: steppe, elev_m: 37, rugged_m: 12, mountains: 17, hills: 45, forest: 180, swamp: 39, steppe: 506, farm: 47, desert: 43, tundra: 0, ice: 0, water: 185}
   - {id: cayman_islands.cayman_islands, class: swamp, elev_m: 6, rugged_m: 2, mountains: 0, hills: 0, forest: 203, swamp: 412, steppe: 66, farm: 91, desert: 2, tundra: 0, ice: 0, water: 226}
@@ -621,9 +621,9 @@ terrain:
   - {id: chad_batha.batha, class: steppe, elev_m: 344, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 42, steppe: 782, farm: 10, desert: 163, tundra: 0, ice: 0, water: 3}
   - {id: chad_batha.chari_baguirmi, class: steppe, elev_m: 324, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 100, steppe: 853, farm: 40, desert: 0, tundra: 0, ice: 0, water: 7}
   - {id: chad_batha.gu_ra, class: steppe, elev_m: 424, rugged_m: 5, mountains: 2, hills: 26, forest: 20, swamp: 16, steppe: 953, farm: 11, desert: 0, tundra: 0, ice: 0, water: 0}
-  - {id: chad_batha.hadjer_lamis, class: steppe, elev_m: 298, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 105, steppe: 838, farm: 50, desert: 3, tundra: 0, ice: 0, water: 4}
+  - {id: chad_batha.hadjer_lamis, class: steppe, elev_m: 298, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 105, steppe: 739, farm: 50, desert: 3, tundra: 0, ice: 0, water: 103}
   - {id: chad_batha.kanem, class: desert, elev_m: 319, rugged_m: 6, mountains: 0, hills: 0, forest: 0, swamp: 3, steppe: 341, farm: 0, desert: 656, tundra: 0, ice: 0, water: 0}
-  - {id: chad_batha.lac, class: swamp, elev_m: 287, rugged_m: 3, mountains: 0, hills: 0, forest: 25, swamp: 262, steppe: 503, farm: 1, desert: 123, tundra: 0, ice: 0, water: 86}
+  - {id: chad_batha.lac, class: swamp, elev_m: 287, rugged_m: 3, mountains: 0, hills: 0, forest: 25, swamp: 262, steppe: 160, farm: 1, desert: 123, tundra: 0, ice: 0, water: 429}
   - {id: chad_batha.logone_occidental, class: plain, elev_m: 440, rugged_m: 4, mountains: 0, hills: 0, forest: 0, swamp: 47, steppe: 194, farm: 757, desert: 0, tundra: 0, ice: 0, water: 2}
   - {id: chad_batha.logone_oriental, class: steppe, elev_m: 462, rugged_m: 5, mountains: 0, hills: 12, forest: 237, swamp: 37, steppe: 423, farm: 299, desert: 0, tundra: 0, ice: 0, water: 4}
   - {id: chad_batha.mandoul, class: steppe, elev_m: 401, rugged_m: 3, mountains: 0, hills: 0, forest: 227, swamp: 33, steppe: 430, farm: 308, desert: 0, tundra: 0, ice: 0, water: 2}
@@ -903,7 +903,7 @@ terrain:
   - {id: egypt_al_wadi_at_jadid.al_wadi_at_jadid_3, class: desert, elev_m: 285, rugged_m: 5, mountains: 0, hills: 12, forest: 0, swamp: 50, steppe: 0, farm: 0, desert: 930, tundra: 0, ice: 0, water: 20}
   - {id: egypt_al_wadi_at_jadid.al_wadi_at_jadid_4, class: desert, elev_m: 660, rugged_m: 8, mountains: 0, hills: 26, forest: 0, swamp: 0, steppe: 0, farm: 0, desert: 1000, tundra: 0, ice: 0, water: 0}
   - {id: egypt_al_wadi_at_jadid.al_wadi_at_jadid_5, class: desert, elev_m: 300, rugged_m: 4, mountains: 0, hills: 0, forest: 0, swamp: 0, steppe: 1, farm: 10, desert: 989, tundra: 0, ice: 0, water: 0}
-  - {id: egypt_al_wadi_at_jadid.aswan, class: desert, elev_m: 194, rugged_m: 8, mountains: 0, hills: 14, forest: 0, swamp: 59, steppe: 0, farm: 3, desert: 604, tundra: 0, ice: 0, water: 334}
+  - {id: egypt_al_wadi_at_jadid.aswan, class: desert, elev_m: 194, rugged_m: 8, mountains: 0, hills: 14, forest: 0, swamp: 59, steppe: 0, farm: 227, desert: 604, tundra: 0, ice: 0, water: 110}
   - {id: egypt_al_wadi_at_jadid.qina, class: swamp, elev_m: 104, rugged_m: 7, mountains: 1, hills: 46, forest: 0, swamp: 566, steppe: 0, farm: 53, desert: 349, tundra: 0, ice: 0, water: 32}
   - {id: egypt_matruh.ad_daqahliyah, class: swamp, elev_m: 3, rugged_m: 1, mountains: 0, hills: 0, forest: 0, swamp: 600, steppe: 0, farm: 291, desert: 49, tundra: 0, ice: 0, water: 60}
   - {id: egypt_matruh.al_buhayrah, class: plain, elev_m: 42, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 205, steppe: 0, farm: 467, desert: 305, tundra: 0, ice: 0, water: 23}
@@ -1092,13 +1092,13 @@ terrain:
   - {id: germany_us_zone.bayern_us_zone, class: forest, elev_m: 515, rugged_m: 17, mountains: 16, hills: 82, forest: 426, swamp: 26, steppe: 192, farm: 344, desert: 2, tundra: 0, ice: 0, water: 10}
   - {id: germany_us_zone.hessen, class: forest, elev_m: 303, rugged_m: 18, mountains: 0, hills: 92, forest: 501, swamp: 22, steppe: 188, farm: 285, desert: 0, tundra: 0, ice: 0, water: 4}
   - {id: ghana.ashanti, class: forest, elev_m: 222, rugged_m: 11, mountains: 0, hills: 49, forest: 609, swamp: 18, steppe: 288, farm: 80, desert: 2, tundra: 0, ice: 0, water: 3}
-  - {id: ghana.brong_ahafo, class: steppe, elev_m: 198, rugged_m: 7, mountains: 0, hills: 5, forest: 305, swamp: 43, steppe: 536, farm: 75, desert: 0, tundra: 0, ice: 0, water: 41}
+  - {id: ghana.brong_ahafo, class: steppe, elev_m: 198, rugged_m: 7, mountains: 0, hills: 5, forest: 305, swamp: 43, steppe: 571, farm: 75, desert: 0, tundra: 0, ice: 0, water: 6}
   - {id: ghana.central, class: forest, elev_m: 85, rugged_m: 8, mountains: 0, hills: 7, forest: 599, swamp: 77, steppe: 175, farm: 120, desert: 6, tundra: 0, ice: 0, water: 23}
-  - {id: ghana.eastern, class: forest, elev_m: 188, rugged_m: 13, mountains: 1, hills: 86, forest: 441, swamp: 131, steppe: 277, farm: 32, desert: 1, tundra: 0, ice: 0, water: 118}
-  - {id: ghana.northern, class: steppe, elev_m: 173, rugged_m: 5, mountains: 0, hills: 3, forest: 0, swamp: 40, steppe: 647, farm: 298, desert: 0, tundra: 0, ice: 0, water: 15}
+  - {id: ghana.eastern, class: forest, elev_m: 188, rugged_m: 13, mountains: 1, hills: 86, forest: 545, swamp: 131, steppe: 277, farm: 32, desert: 1, tundra: 0, ice: 0, water: 14}
+  - {id: ghana.northern, class: steppe, elev_m: 173, rugged_m: 5, mountains: 0, hills: 3, forest: 0, swamp: 40, steppe: 660, farm: 298, desert: 0, tundra: 0, ice: 0, water: 2}
   - {id: ghana.upper_east, class: steppe, elev_m: 200, rugged_m: 5, mountains: 0, hills: 3, forest: 0, swamp: 23, steppe: 545, farm: 429, desert: 0, tundra: 0, ice: 0, water: 3}
   - {id: ghana.upper_west, class: steppe, elev_m: 275, rugged_m: 5, mountains: 0, hills: 0, forest: 0, swamp: 10, steppe: 795, farm: 195, desert: 0, tundra: 0, ice: 0, water: 0}
-  - {id: ghana.volta, class: steppe, elev_m: 138, rugged_m: 11, mountains: 4, hills: 87, forest: 160, swamp: 159, steppe: 472, farm: 78, desert: 1, tundra: 0, ice: 0, water: 130}
+  - {id: ghana.volta, class: steppe, elev_m: 138, rugged_m: 11, mountains: 4, hills: 87, forest: 160, swamp: 159, steppe: 586, farm: 78, desert: 1, tundra: 0, ice: 0, water: 16}
   - {id: ghana.western, class: forest, elev_m: 127, rugged_m: 13, mountains: 0, hills: 41, forest: 921, swamp: 38, steppe: 19, farm: 12, desert: 2, tundra: 0, ice: 0, water: 8}
   - {id: gibraltar.gibraltar, class: hills, elev_m: 148, rugged_m: 76, mountains: 250, hills: 500, forest: 0, swamp: 584, steppe: 0, farm: 246, desert: 0, tundra: 0, ice: 0, water: 170}
   - {id: greece_kentriki_makedonia.anatoliki_makedonia_kai_thraki, class: forest, elev_m: 375, rugged_m: 33, mountains: 25, hills: 400, forest: 515, swamp: 36, steppe: 179, farm: 257, desert: 1, tundra: 0, ice: 0, water: 12}
@@ -1337,7 +1337,7 @@ terrain:
   - {id: iran_kerman.sistan_and_baluchestan_2, class: desert, elev_m: 796, rugged_m: 18, mountains: 8, hills: 151, forest: 0, swamp: 18, steppe: 0, farm: 0, desert: 979, tundra: 0, ice: 0, water: 3}
   - {id: iran_kerman.south_khorasan, class: desert, elev_m: 1279, rugged_m: 14, mountains: 6, hills: 88, forest: 0, swamp: 7, steppe: 0, farm: 11, desert: 982, tundra: 0, ice: 0, water: 0}
   - {id: iran_kerman.yazd, class: desert, elev_m: 1230, rugged_m: 13, mountains: 11, hills: 82, forest: 0, swamp: 133, steppe: 0, farm: 0, desert: 867, tundra: 0, ice: 0, water: 0}
-  - {id: iraq.al_anbar, class: desert, elev_m: 401, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 15, steppe: 0, farm: 10, desert: 963, tundra: 0, ice: 0, water: 12}
+  - {id: iraq.al_anbar, class: desert, elev_m: 401, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 15, steppe: 0, farm: 10, desert: 948, tundra: 0, ice: 0, water: 27}
   - {id: iraq.al_basrah, class: swamp, elev_m: 45, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 384, steppe: 0, farm: 0, desert: 551, tundra: 0, ice: 0, water: 65}
   - {id: iraq.al_muthannia, class: desert, elev_m: 210, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 31, steppe: 0, farm: 4, desert: 964, tundra: 0, ice: 0, water: 1}
   - {id: iraq.al_q_disiyyah, class: swamp, elev_m: 19, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 434, steppe: 0, farm: 167, desert: 393, tundra: 0, ice: 0, water: 6}
@@ -1494,7 +1494,7 @@ terrain:
   - {id: kazakhstan_qaraghandy.qaraghandy_3, class: steppe, elev_m: 279, rugged_m: 3, mountains: 0, hills: 1, forest: 0, swamp: 8, steppe: 950, farm: 0, desert: 41, tundra: 0, ice: 0, water: 1}
   - {id: kazakhstan_qaraghandy.qaraghandy_4, class: steppe, elev_m: 590, rugged_m: 4, mountains: 0, hills: 4, forest: 0, swamp: 10, steppe: 903, farm: 0, desert: 25, tundra: 0, ice: 0, water: 62}
   - {id: kazakhstan_qaraghandy.qaraghandy_5, class: steppe, elev_m: 408, rugged_m: 3, mountains: 0, hills: 1, forest: 0, swamp: 16, steppe: 944, farm: 0, desert: 40, tundra: 0, ice: 0, water: 0}
-  - {id: kazakhstan_qaraghandy.qyzylorda_1, class: plain, elev_m: 62, rugged_m: 2, mountains: 0, hills: 1, forest: 0, swamp: 198, steppe: 321, farm: 3, desert: 422, tundra: 0, ice: 0, water: 56}
+  - {id: kazakhstan_qaraghandy.qyzylorda_1, class: plain, elev_m: 62, rugged_m: 2, mountains: 0, hills: 1, forest: 0, swamp: 198, steppe: 321, farm: 3, desert: 157, tundra: 0, ice: 0, water: 321}
   - {id: kazakhstan_qaraghandy.qyzylorda_2, class: desert, elev_m: 104, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 180, steppe: 287, farm: 15, desert: 516, tundra: 0, ice: 0, water: 2}
   - {id: kazakhstan_qaraghandy.qyzylorda_3, class: steppe, elev_m: 174, rugged_m: 3, mountains: 0, hills: 4, forest: 0, swamp: 149, steppe: 589, farm: 23, desert: 236, tundra: 0, ice: 0, water: 3}
   - {id: kazakhstan_qaraghandy.south_kazakhstan, class: steppe, elev_m: 391, rugged_m: 8, mountains: 13, hills: 42, forest: 0, swamp: 59, steppe: 759, farm: 121, desert: 50, tundra: 0, ice: 1, water: 10}
@@ -1876,7 +1876,7 @@ terrain:
   - {id: niger_agadez.agadez_5, class: desert, elev_m: 457, rugged_m: 6, mountains: 0, hills: 6, forest: 0, swamp: 1, steppe: 0, farm: 0, desert: 999, tundra: 0, ice: 0, water: 0}
   - {id: niger_agadez.agadez_6, class: desert, elev_m: 388, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 85, steppe: 0, farm: 0, desert: 915, tundra: 0, ice: 0, water: 0}
   - {id: niger_agadez.agadez_7, class: desert, elev_m: 574, rugged_m: 6, mountains: 2, hills: 18, forest: 0, swamp: 11, steppe: 165, farm: 5, desert: 819, tundra: 0, ice: 0, water: 0}
-  - {id: niger_agadez.diffa, class: desert, elev_m: 375, rugged_m: 6, mountains: 0, hills: 0, forest: 1, swamp: 9, steppe: 220, farm: 3, desert: 765, tundra: 0, ice: 0, water: 2}
+  - {id: niger_agadez.diffa, class: desert, elev_m: 375, rugged_m: 6, mountains: 0, hills: 0, forest: 1, swamp: 9, steppe: 220, farm: 3, desert: 744, tundra: 0, ice: 0, water: 23}
   - {id: niger_agadez.zinder, class: steppe, elev_m: 433, rugged_m: 5, mountains: 0, hills: 1, forest: 0, swamp: 4, steppe: 478, farm: 112, desert: 406, tundra: 0, ice: 0, water: 0}
   - {id: niger_tahoua.dosso, class: steppe, elev_m: 240, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 44, steppe: 662, farm: 240, desert: 52, tundra: 0, ice: 0, water: 2}
   - {id: niger_tahoua.maradi, class: plain, elev_m: 411, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 7, steppe: 327, farm: 661, desert: 5, tundra: 0, ice: 0, water: 0}
@@ -1884,7 +1884,7 @@ terrain:
   - {id: niger_tahoua.tillab_ri, class: steppe, elev_m: 258, rugged_m: 4, mountains: 0, hills: 0, forest: 0, swamp: 60, steppe: 675, farm: 31, desert: 231, tundra: 0, ice: 0, water: 3}
   - {id: nigeria_borno.adamawa, class: plain, elev_m: 438, rugged_m: 16, mountains: 15, hills: 128, forest: 102, swamp: 33, steppe: 334, farm: 525, desert: 1, tundra: 0, ice: 0, water: 5}
   - {id: nigeria_borno.bauchi, class: plain, elev_m: 518, rugged_m: 7, mountains: 1, hills: 26, forest: 0, swamp: 42, steppe: 385, farm: 571, desert: 1, tundra: 0, ice: 0, water: 1}
-  - {id: nigeria_borno.borno, class: steppe, elev_m: 349, rugged_m: 3, mountains: 0, hills: 8, forest: 0, swamp: 102, steppe: 743, farm: 153, desert: 0, tundra: 0, ice: 0, water: 2}
+  - {id: nigeria_borno.borno, class: steppe, elev_m: 349, rugged_m: 3, mountains: 0, hills: 8, forest: 0, swamp: 102, steppe: 659, farm: 153, desert: 0, tundra: 0, ice: 0, water: 86}
   - {id: nigeria_borno.gombe, class: plain, elev_m: 402, rugged_m: 9, mountains: 3, hills: 40, forest: 0, swamp: 60, steppe: 265, farm: 659, desert: 2, tundra: 0, ice: 0, water: 14}
   - {id: nigeria_borno.jigawa, class: plain, elev_m: 393, rugged_m: 2, mountains: 0, hills: 1, forest: 0, swamp: 127, steppe: 8, farm: 864, desert: 0, tundra: 0, ice: 0, water: 1}
   - {id: nigeria_borno.kano, class: plain, elev_m: 516, rugged_m: 4, mountains: 0, hills: 4, forest: 0, swamp: 168, steppe: 9, farm: 808, desert: 2, tundra: 0, ice: 0, water: 13}
@@ -2187,7 +2187,7 @@ terrain:
   - {id: russia_irkutsk.irkutsk_2, class: forest, elev_m: 844, rugged_m: 37, mountains: 29, hills: 428, forest: 766, swamp: 45, steppe: 57, farm: 0, desert: 4, tundra: 121, ice: 0, water: 7}
   - {id: russia_irkutsk.irkutsk_3, class: forest, elev_m: 465, rugged_m: 10, mountains: 0, hills: 12, forest: 919, swamp: 51, steppe: 24, farm: 0, desert: 0, tundra: 2, ice: 0, water: 4}
   - {id: russia_irkutsk.irkutsk_4, class: forest, elev_m: 703, rugged_m: 28, mountains: 12, hills: 299, forest: 829, swamp: 41, steppe: 32, farm: 0, desert: 1, tundra: 90, ice: 0, water: 7}
-  - {id: russia_irkutsk.irkutsk_5, class: forest, elev_m: 414, rugged_m: 11, mountains: 0, hills: 15, forest: 844, swamp: 71, steppe: 28, farm: 3, desert: 0, tundra: 0, ice: 0, water: 54}
+  - {id: russia_irkutsk.irkutsk_5, class: forest, elev_m: 414, rugged_m: 11, mountains: 0, hills: 15, forest: 898, swamp: 71, steppe: 28, farm: 3, desert: 0, tundra: 0, ice: 0, water: 0}
   - {id: russia_irkutsk.irkutsk_6, class: forest, elev_m: 724, rugged_m: 22, mountains: 10, hills: 142, forest: 865, swamp: 42, steppe: 33, farm: 1, desert: 1, tundra: 19, ice: 0, water: 39}
   - {id: russia_irkutsk.irkutsk_7, class: forest, elev_m: 831, rugged_m: 27, mountains: 28, hills: 260, forest: 815, swamp: 20, steppe: 92, farm: 23, desert: 2, tundra: 41, ice: 0, water: 7}
   - {id: russia_irkutsk.irkutsk_8, class: forest, elev_m: 701, rugged_m: 19, mountains: 7, hills: 144, forest: 661, swamp: 33, steppe: 141, farm: 65, desert: 0, tundra: 7, ice: 0, water: 93}
@@ -2298,7 +2298,7 @@ terrain:
   - {id: russia_perm.saratov, class: plain, elev_m: 115, rugged_m: 4, mountains: 0, hills: 1, forest: 50, swamp: 30, steppe: 288, farm: 609, desert: 0, tundra: 0, ice: 0, water: 23}
   - {id: russia_perm.tatarstan, class: plain, elev_m: 138, rugged_m: 6, mountains: 0, hills: 2, forest: 135, swamp: 94, steppe: 221, farm: 496, desert: 0, tundra: 0, ice: 0, water: 54}
   - {id: russia_perm.udmurt, class: forest, elev_m: 171, rugged_m: 6, mountains: 0, hills: 0, forest: 534, swamp: 72, steppe: 175, farm: 213, desert: 0, tundra: 0, ice: 0, water: 6}
-  - {id: russia_perm.ulyanovsk, class: plain, elev_m: 173, rugged_m: 6, mountains: 0, hills: 1, forest: 293, swamp: 83, steppe: 191, farm: 375, desert: 0, tundra: 0, ice: 0, water: 58}
+  - {id: russia_perm.ulyanovsk, class: plain, elev_m: 173, rugged_m: 6, mountains: 0, hills: 1, forest: 293, swamp: 83, steppe: 191, farm: 415, desert: 0, tundra: 0, ice: 0, water: 18}
   - {id: russia_primorye.primorye_1, class: hills, elev_m: 533, rugged_m: 39, mountains: 16, hills: 531, forest: 902, swamp: 42, steppe: 45, farm: 5, desert: 0, tundra: 1, ice: 0, water: 5}
   - {id: russia_primorye.primorye_2, class: forest, elev_m: 324, rugged_m: 28, mountains: 4, hills: 357, forest: 752, swamp: 39, steppe: 67, farm: 98, desert: 1, tundra: 0, ice: 0, water: 43}
   - {id: russia_primorye.sakhalin, class: forest, elev_m: 201, rugged_m: 25, mountains: 10, hills: 278, forest: 728, swamp: 127, steppe: 93, farm: 5, desert: 4, tundra: 1, ice: 0, water: 42}
@@ -2354,7 +2354,7 @@ terrain:
   - {id: russia_volgograd.north_ossetia, class: plain, elev_m: 1171, rugged_m: 50, mountains: 228, hills: 224, forest: 321, swamp: 11, steppe: 281, farm: 307, desert: 52, tundra: 12, ice: 13, water: 3}
   - {id: russia_volgograd.rostov, class: plain, elev_m: 92, rugged_m: 4, mountains: 0, hills: 0, forest: 57, swamp: 17, steppe: 236, farm: 669, desert: 1, tundra: 0, ice: 0, water: 20}
   - {id: russia_volgograd.stavropol, class: plain, elev_m: 215, rugged_m: 5, mountains: 0, hills: 7, forest: 28, swamp: 11, steppe: 243, farm: 708, desert: 1, tundra: 0, ice: 0, water: 9}
-  - {id: russia_volgograd.volgograd, class: steppe, elev_m: 95, rugged_m: 4, mountains: 0, hills: 0, forest: 27, swamp: 34, steppe: 435, farm: 469, desert: 1, tundra: 0, ice: 0, water: 34}
+  - {id: russia_volgograd.volgograd, class: steppe, elev_m: 95, rugged_m: 4, mountains: 0, hills: 0, forest: 27, swamp: 34, steppe: 435, farm: 483, desert: 1, tundra: 0, ice: 0, water: 20}
   - {id: russia_vologda.leningrad, class: forest, elev_m: 77, rugged_m: 4, mountains: 0, hills: 0, forest: 671, swamp: 106, steppe: 60, farm: 44, desert: 0, tundra: 0, ice: 0, water: 119}
   - {id: russia_vologda.leningrad_ceded_from_finland, class: forest, elev_m: 33, rugged_m: 4, mountains: 0, hills: 0, forest: 595, swamp: 107, steppe: 39, farm: 18, desert: 2, tundra: 0, ice: 0, water: 239}
   - {id: russia_vologda.novgorod, class: forest, elev_m: 108, rugged_m: 4, mountains: 0, hills: 0, forest: 722, swamp: 145, steppe: 79, farm: 23, desert: 0, tundra: 0, ice: 0, water: 31}
@@ -2549,7 +2549,7 @@ terrain:
   - {id: sudan_northern.north_darfur_2, class: desert, elev_m: 781, rugged_m: 5, mountains: 0, hills: 10, forest: 0, swamp: 4, steppe: 33, farm: 0, desert: 963, tundra: 0, ice: 0, water: 0}
   - {id: sudan_northern.north_darfur_3, class: steppe, elev_m: 799, rugged_m: 6, mountains: 1, hills: 24, forest: 0, swamp: 15, steppe: 783, farm: 23, desert: 179, tundra: 0, ice: 0, water: 0}
   - {id: sudan_northern.northern_1, class: desert, elev_m: 529, rugged_m: 4, mountains: 0, hills: 4, forest: 0, swamp: 0, steppe: 0, farm: 0, desert: 1000, tundra: 0, ice: 0, water: 0}
-  - {id: sudan_northern.northern_2, class: desert, elev_m: 333, rugged_m: 5, mountains: 0, hills: 6, forest: 0, swamp: 6, steppe: 0, farm: 0, desert: 984, tundra: 0, ice: 0, water: 10}
+  - {id: sudan_northern.northern_2, class: desert, elev_m: 333, rugged_m: 5, mountains: 0, hills: 6, forest: 9, swamp: 6, steppe: 0, farm: 0, desert: 984, tundra: 0, ice: 0, water: 1}
   - {id: sudan_northern.northern_3, class: desert, elev_m: 396, rugged_m: 4, mountains: 0, hills: 1, forest: 0, swamp: 2, steppe: 0, farm: 0, desert: 998, tundra: 0, ice: 0, water: 0}
   - {id: sudan_northern.northern_4, class: desert, elev_m: 342, rugged_m: 4, mountains: 0, hills: 2, forest: 0, swamp: 18, steppe: 0, farm: 0, desert: 974, tundra: 0, ice: 0, water: 8}
   - {id: sudan_northern.red_sea_1, class: desert, elev_m: 513, rugged_m: 16, mountains: 9, hills: 120, forest: 0, swamp: 0, steppe: 0, farm: 1, desert: 998, tundra: 0, ice: 0, water: 1}
@@ -2797,12 +2797,12 @@ terrain:
   - {id: uganda.rubirizi, class: forest, elev_m: 1355, rugged_m: 22, mountains: 6, hills: 198, forest: 439, swamp: 33, steppe: 413, farm: 8, desert: 0, tundra: 0, ice: 0, water: 107}
   - {id: uganda.rukungiri, class: forest, elev_m: 1632, rugged_m: 38, mountains: 24, hills: 458, forest: 538, swamp: 51, steppe: 270, farm: 99, desert: 0, tundra: 0, ice: 0, water: 42}
   - {id: uganda.tororo, class: plain, elev_m: 1111, rugged_m: 6, mountains: 0, hills: 2, forest: 200, swamp: 101, steppe: 378, farm: 300, desert: 0, tundra: 0, ice: 0, water: 21}
-  - {id: ukraine_dnipropetrovsk.dnipropetrovsk, class: plain, elev_m: 106, rugged_m: 5, mountains: 0, hills: 1, forest: 51, swamp: 52, steppe: 122, farm: 734, desert: 3, tundra: 0, ice: 0, water: 38}
+  - {id: ukraine_dnipropetrovsk.dnipropetrovsk, class: plain, elev_m: 106, rugged_m: 5, mountains: 0, hills: 1, forest: 51, swamp: 52, steppe: 122, farm: 756, desert: 3, tundra: 0, ice: 0, water: 16}
   - {id: ukraine_dnipropetrovsk.donetsk, class: plain, elev_m: 150, rugged_m: 6, mountains: 0, hills: 1, forest: 129, swamp: 14, steppe: 166, farm: 677, desert: 1, tundra: 0, ice: 0, water: 13}
   - {id: ukraine_dnipropetrovsk.kharkiv, class: plain, elev_m: 147, rugged_m: 7, mountains: 0, hills: 0, forest: 179, swamp: 15, steppe: 126, farm: 669, desert: 0, tundra: 0, ice: 0, water: 11}
-  - {id: ukraine_dnipropetrovsk.kherson, class: plain, elev_m: 34, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 74, steppe: 98, farm: 739, desert: 3, tundra: 0, ice: 0, water: 86}
+  - {id: ukraine_dnipropetrovsk.kherson, class: plain, elev_m: 34, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 74, steppe: 98, farm: 766, desert: 3, tundra: 0, ice: 0, water: 59}
   - {id: ukraine_dnipropetrovsk.luhansk, class: plain, elev_m: 148, rugged_m: 8, mountains: 0, hills: 0, forest: 168, swamp: 15, steppe: 263, farm: 550, desert: 1, tundra: 0, ice: 0, water: 3}
-  - {id: ukraine_dnipropetrovsk.zaporizhzhya, class: plain, elev_m: 87, rugged_m: 4, mountains: 0, hills: 0, forest: 0, swamp: 58, steppe: 72, farm: 814, desert: 0, tundra: 0, ice: 0, water: 56}
+  - {id: ukraine_dnipropetrovsk.zaporizhzhya, class: plain, elev_m: 87, rugged_m: 4, mountains: 0, hills: 0, forest: 0, swamp: 58, steppe: 72, farm: 840, desert: 0, tundra: 0, ice: 0, water: 30}
   - {id: ukraine_odessa.cherkasy, class: plain, elev_m: 159, rugged_m: 6, mountains: 0, hills: 0, forest: 144, swamp: 109, steppe: 46, farm: 639, desert: 0, tundra: 0, ice: 0, water: 62}
   - {id: ukraine_odessa.chernihiv, class: plain, elev_m: 135, rugged_m: 3, mountains: 0, hills: 0, forest: 265, swamp: 87, steppe: 144, farm: 498, desert: 0, tundra: 0, ice: 0, water: 6}
   - {id: ukraine_odessa.kiev, class: plain, elev_m: 151, rugged_m: 4, mountains: 0, hills: 0, forest: 260, swamp: 86, steppe: 122, farm: 489, desert: 0, tundra: 0, ice: 0, water: 43}
@@ -3005,8 +3005,8 @@ terrain:
   - {id: uzbekistan.bukhoro, class: desert, elev_m: 210, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 100, steppe: 0, farm: 113, desert: 774, tundra: 0, ice: 0, water: 13}
   - {id: uzbekistan.ferghana, class: plain, elev_m: 569, rugged_m: 7, mountains: 8, hills: 32, forest: 0, swamp: 171, steppe: 4, farm: 711, desert: 101, tundra: 0, ice: 0, water: 13}
   - {id: uzbekistan.jizzakh, class: steppe, elev_m: 643, rugged_m: 15, mountains: 20, hills: 120, forest: 0, swamp: 32, steppe: 534, farm: 309, desert: 10, tundra: 0, ice: 0, water: 115}
-  - {id: uzbekistan.karakalpakstan_1, class: desert, elev_m: 118, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 116, steppe: 82, farm: 10, desert: 761, tundra: 0, ice: 0, water: 31}
-  - {id: uzbekistan.karakalpakstan_2, class: desert, elev_m: 75, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 229, steppe: 0, farm: 5, desert: 761, tundra: 0, ice: 0, water: 5}
+  - {id: uzbekistan.karakalpakstan_1, class: desert, elev_m: 118, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 116, steppe: 82, farm: 10, desert: 635, tundra: 0, ice: 0, water: 157}
+  - {id: uzbekistan.karakalpakstan_2, class: desert, elev_m: 75, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 229, steppe: 0, farm: 5, desert: 531, tundra: 0, ice: 0, water: 235}
   - {id: uzbekistan.kashkadarya, class: steppe, elev_m: 801, rugged_m: 18, mountains: 42, hills: 150, forest: 0, swamp: 26, steppe: 548, farm: 326, desert: 93, tundra: 0, ice: 1, water: 6}
   - {id: uzbekistan.khorezm, class: swamp, elev_m: 114, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 405, steppe: 0, farm: 193, desert: 371, tundra: 0, ice: 0, water: 31}
   - {id: uzbekistan.namangan, class: plain, elev_m: 1061, rugged_m: 22, mountains: 68, hills: 153, forest: 0, swamp: 96, steppe: 285, farm: 449, desert: 152, tundra: 3, ice: 1, water: 14}
@@ -3039,7 +3039,7 @@ terrain:
   - {id: venezuela_bol_var.amazonas_1, class: forest, elev_m: 416, rugged_m: 27, mountains: 28, hills: 272, forest: 816, swamp: 98, steppe: 77, farm: 0, desert: 0, tundra: 0, ice: 0, water: 9}
   - {id: venezuela_bol_var.amazonas_2, class: forest, elev_m: 368, rugged_m: 20, mountains: 17, hills: 173, forest: 857, swamp: 132, steppe: 7, farm: 0, desert: 0, tundra: 0, ice: 0, water: 4}
   - {id: venezuela_bol_var.anzo_tegui, class: steppe, elev_m: 169, rugged_m: 8, mountains: 3, hills: 39, forest: 367, swamp: 38, steppe: 566, farm: 12, desert: 1, tundra: 0, ice: 0, water: 16}
-  - {id: venezuela_bol_var.bol_var_1, class: forest, elev_m: 271, rugged_m: 13, mountains: 4, hills: 69, forest: 596, swamp: 72, steppe: 269, farm: 3, desert: 0, tundra: 0, ice: 0, water: 60}
+  - {id: venezuela_bol_var.bol_var_1, class: forest, elev_m: 271, rugged_m: 13, mountains: 4, hills: 69, forest: 650, swamp: 72, steppe: 269, farm: 3, desert: 0, tundra: 0, ice: 0, water: 6}
   - {id: venezuela_bol_var.bol_var_2, class: forest, elev_m: 317, rugged_m: 23, mountains: 20, hills: 221, forest: 714, swamp: 87, steppe: 182, farm: 0, desert: 0, tundra: 0, ice: 0, water: 17}
   - {id: venezuela_bol_var.bol_var_3, class: forest, elev_m: 735, rugged_m: 28, mountains: 29, hills: 223, forest: 840, swamp: 25, steppe: 132, farm: 0, desert: 0, tundra: 0, ice: 0, water: 3}
   - {id: venezuela_bol_var.delta_amacuro, class: swamp, elev_m: 39, rugged_m: 6, mountains: 0, hills: 22, forest: 363, swamp: 557, steppe: 48, farm: 0, desert: 1, tundra: 0, ice: 0, water: 31}
@@ -3116,12 +3116,12 @@ terrain:
   - {id: zambia.muchinga, class: forest, elev_m: 1136, rugged_m: 9, mountains: 2, hills: 43, forest: 434, swamp: 53, steppe: 477, farm: 34, desert: 0, tundra: 0, ice: 0, water: 2}
   - {id: zambia.north_western, class: forest, elev_m: 1224, rugged_m: 5, mountains: 0, hills: 1, forest: 706, swamp: 56, steppe: 226, farm: 9, desert: 1, tundra: 0, ice: 0, water: 2}
   - {id: zambia.northern, class: forest, elev_m: 1280, rugged_m: 7, mountains: 1, hills: 19, forest: 426, swamp: 80, steppe: 393, farm: 44, desert: 0, tundra: 0, ice: 0, water: 57}
-  - {id: zambia.southern, class: steppe, elev_m: 1022, rugged_m: 7, mountains: 1, hills: 37, forest: 255, swamp: 91, steppe: 508, farm: 114, desert: 0, tundra: 0, ice: 0, water: 32}
+  - {id: zambia.southern, class: steppe, elev_m: 1022, rugged_m: 7, mountains: 1, hills: 37, forest: 255, swamp: 91, steppe: 536, farm: 114, desert: 0, tundra: 0, ice: 0, water: 4}
   - {id: zambia.western, class: forest, elev_m: 1071, rugged_m: 3, mountains: 0, hills: 0, forest: 420, swamp: 128, steppe: 447, farm: 2, desert: 0, tundra: 0, ice: 0, water: 3}
   - {id: zimbabwe.manicaland, class: steppe, elev_m: 1079, rugged_m: 23, mountains: 10, hills: 226, forest: 235, swamp: 7, steppe: 540, farm: 213, desert: 1, tundra: 0, ice: 0, water: 4}
   - {id: zimbabwe.mashonaland_central, class: steppe, elev_m: 935, rugged_m: 15, mountains: 2, hills: 98, forest: 152, swamp: 12, steppe: 621, farm: 210, desert: 1, tundra: 0, ice: 0, water: 4}
   - {id: zimbabwe.mashonaland_east, class: steppe, elev_m: 1205, rugged_m: 12, mountains: 1, hills: 67, forest: 148, swamp: 5, steppe: 700, farm: 145, desert: 0, tundra: 0, ice: 0, water: 2}
-  - {id: zimbabwe.mashonaland_west, class: steppe, elev_m: 975, rugged_m: 12, mountains: 1, hills: 74, forest: 176, swamp: 21, steppe: 630, farm: 137, desert: 1, tundra: 0, ice: 0, water: 35}
+  - {id: zimbabwe.mashonaland_west, class: steppe, elev_m: 975, rugged_m: 12, mountains: 1, hills: 74, forest: 176, swamp: 21, steppe: 661, farm: 137, desert: 1, tundra: 0, ice: 0, water: 4}
   - {id: zimbabwe.masvingo, class: steppe, elev_m: 691, rugged_m: 9, mountains: 0, hills: 50, forest: 244, swamp: 7, steppe: 577, farm: 164, desert: 1, tundra: 0, ice: 0, water: 7}
   - {id: zimbabwe.matabeleland_north, class: steppe, elev_m: 1007, rugged_m: 6, mountains: 0, hills: 17, forest: 205, swamp: 26, steppe: 702, farm: 50, desert: 1, tundra: 0, ice: 0, water: 16}
   - {id: zimbabwe.matabeleland_south, class: steppe, elev_m: 956, rugged_m: 7, mountains: 0, hills: 15, forest: 201, swamp: 4, steppe: 727, farm: 63, desert: 2, tundra: 0, ice: 0, water: 3}
