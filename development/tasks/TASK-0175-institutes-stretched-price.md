@@ -1,7 +1,7 @@
 ---
 id: TASK-0175
 title: "Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-25
 approval_ref: TASK-0173 (docs/simulation/institutes-p7-measurement.md)
+review_ref: "reviewer: APPROVE (2e32d8d, 5f98ae6); codex 3 returns (#432), rest DEBT-0107"
 created: 2026-11-25
 ---
 

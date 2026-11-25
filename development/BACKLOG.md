@@ -190,7 +190,7 @@
 | [TASK-0172](../development/tasks/TASK-0172-zaf-core-regions.md) | DONE | Data: South Africa regions status core of ZAF (O-076), checked per region | MS-M0 |
 | [TASK-0173](../development/tasks/TASK-0173-lab-p7-institutes-early-build.md) | DONE | Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on | MS-M0 |
 | [TASK-0174](../development/tasks/TASK-0174-institutes-followup-debt0107.md) | DONE | Institutes follow-up: iterative group walk (deep graph), built institute capacity by level, cooldown on same goal, no build charge after completion | MS-M0 |
-| [TASK-0175](../development/tasks/TASK-0175-institutes-stretched-price.md) | IN_PROGRESS | Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares) | MS-M0 |
+| [TASK-0175](../development/tasks/TASK-0175-institutes-stretched-price.md) | DONE | Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares) | MS-M0 |
 
 ## Гипотезы
 
