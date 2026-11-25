@@ -35,6 +35,14 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         GameData data = SliceData.Load(setup.ManifestDirectory, setup.RecordedDataFiles ?? []);
         CheckControlHorizon(p.Config.Layer, setup.Ticks, data.Scenario(p.Config.ScenarioId));
         CheckControlGenerations(p.Config.Layer, data);
+        if (p.Institutes?.Player is { } player)
+        {
+            // TASK-0173: the AI neither sets the goals nor starts the projects of the player's actor (O-067); the script plays them.
+            int row = data.Scenario(p.Config.ScenarioId).ActorId.IndexOf(player);
+            if (row < 0)
+                throw new ParamException($"INST_PLAYER '{player}' is not an actor of the scenario.");
+            p = p with { Config = p.Config with { PlayerActor = row } };
+        }
         ControlTables? tables = null;
         if (p.ControlTablesPath is string rel)
         {
@@ -232,6 +240,8 @@ public sealed class JetSliceModel : ISessionModel
         _calibration = calibration;
         MetricTables = calibration ? SliceTables.CalibrationFor(SliceTables.Generations(data))
             : p.Levers is { Eta: true } ? [.. SliceTables.Full, LeverSpec.EtaTable] : SliceTables.Full;
+        if (p.Institutes is { Probe: true })
+            MetricTables = [.. MetricTables, InstituteSpec.GoalTable, InstituteSpec.BuildTable];
     }
 
     public IReadOnlyList<MetricTableSpec> MetricTables { get; }
@@ -247,8 +257,15 @@ public sealed class JetSliceModel : ISessionModel
             months++;
         ForceProxy? force = _p.ForceDivisor > 0 ? new ForceProxy(s, _p.ForceDivisor) : null;
         // TASK-0148: the scripted player levers; absent (null) for every manifest without LEVER_*/RESERVE* keys, so those runs are unchanged.
-        LeverScript? levers = _p.Levers is { Active: true } spec ? new LeverScript(s, spec, sink, MetricTables.Count - 1) : null;
+        int eta = _p.Levers is { Eta: true } ? SliceTables.Full.Length : -1;
+        LeverScript? levers = _p.Levers is { Active: true } spec ? new LeverScript(s, spec, sink, eta) : null;
         levers?.Issue(0);
+        // TASK-0173: the scripted institute player and the P-7/P-8 probes; null without INST_* keys, so those runs are unchanged.
+        bool probe = _p.Institutes is { Probe: true };
+        InstituteScript? inst = _p.Institutes is { } ispec
+            ? new InstituteScript(s, ispec, sink, probe ? MetricTables.Count - 2 : -1, probe ? MetricTables.Count - 1 : -1)
+            : null;
+        inst?.Issue(0);
         observer.Start(s.View);
         int logSeen = 0;
         for (long t = 0; t < months; t++)
@@ -257,12 +274,18 @@ public sealed class JetSliceModel : ISessionModel
             s.StepTo(calendar.TickOfMonth(t));
             SliceView snapshot = s.View;
             observer.BeforeStep(t);
+            inst?.BeforeStep(t);
             s.Step(1);
             observer.Month(snapshot, s.View, t);
             if (levers is not null)
             {
                 levers.Observe(t);
                 levers.Issue(t + 1);
+            }
+            if (inst is not null)
+            {
+                inst.Observe(t);
+                inst.Issue(t + 1);
             }
             if (force is not null)
             {
@@ -273,6 +296,7 @@ public sealed class JetSliceModel : ISessionModel
             }
         }
         s.StepTo(_ticks);
+        inst?.End(months - 1);
         observer.End(s.LastHash);
         var info = new List<KeyValuePair<string, string>>
         {
@@ -288,6 +312,8 @@ public sealed class JetSliceModel : ISessionModel
         info.AddRange(observer.Counters());
         if (levers is not null)
             info.AddRange(levers.Counters());
+        if (inst is not null)
+            info.AddRange(inst.Counters());
         return new SessionRunResult(s.LastHash, s.Tick, info);
     }
 
