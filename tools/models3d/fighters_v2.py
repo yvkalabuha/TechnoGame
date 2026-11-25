@@ -5,8 +5,10 @@ exports and renders. Two modes, both headless (Blender 5.3):
 
   # 1. one GLB per part from the saved scene file (each part root moved to the origin)
   nice -n 10 blender -b assets/models3d/fighters_v2/fighters_v2.blend -P tools/models3d/fighters_v2.py -- export
-  # slot test: part roots, ATTACH empties, assembled kit == saved scene (exit 1 on failure)
-  nice -n 10 blender -b assets/models3d/fighters_v2/fighters_v2.blend -P tools/models3d/fighters_v2.py -- test
+  # slot test: exact root and ATTACH node names in each GLB, assembled parts == saved scene (exit 1 on failure)
+  nice -n 10 blender -b assets/models3d/fighters_v2/fighters_v2.blend --python-exit-code 1 \
+      -P tools/models3d/fighters_v2.py -- test
+Every mode exits 1 on any exception (main() calls sys.exit(1)); pass --python-exit-code 1 as well.
   # 2. assemble every kit from its GLBs on the ATTACH empties; render the sheet, its greyscale copy and pair_g2_g5.png
   nice -n 10 blender -b --factory-startup -P tools/models3d/fighters_v2.py -- render [--out DIR]
 
@@ -86,6 +88,10 @@ def export(out):
             keep = {root} | set(root.children_recursive)
             for o in [o for o in bpy.data.objects if o not in keep]:
                 bpy.data.objects.remove(o, do_unlink=True)
+            for o in keep:   # brief names: Blender suffixed the shared ATTACH_* names per scene (.001 ...)
+                base = re.sub(r"\.\d{3}$", "", o.name)
+                if base != o.name and bpy.data.objects.get(base) is None:
+                    o.name = base
             root.parent = None
             root.matrix_world = Matrix.Identity(4)   # each part GLB has its root at the origin
             bpy.context.view_layer.update()
@@ -425,7 +431,7 @@ def draw_cell(sheet, g, x, y, w, top_h, side_h, ctx, scale=None):
     tw = w - 2 * MARGIN
     s = scale or min((tw - 20) / ext.x, (top_h - 16) / ext.y, (side_h - 16) / ext.z)
     id_mats = [id_material(i) for i in range(2 * len(meshes))]
-    tmp = os.path.join(out, ".pass.png")
+    tmp = os.path.join(TMPDIR[0], "pass.png")
     top = render_tile("top", ctr, s, tw, top_h, meshes, mats, id_mats, nrm, tmp)
     side = render_tile("side", ctr, s, tw, side_h, meshes, mats, id_mats, nrm, tmp)
     sheet[y + 48:y + 48 + top_h, x + MARGIN:x + MARGIN + tw] = top
@@ -442,7 +448,20 @@ def grey_of(sheet):
     return np.round(sheet.astype(np.float64) @ np.array([0.2126, 0.7152, 0.0722])).astype(np.uint8)
 
 
+TMPDIR = [None]   # per-process scratch directory for render passes (set in render_all)
+
+
 def render_all(kits, out):
+    import shutil
+    import tempfile
+    TMPDIR[0] = tempfile.mkdtemp(prefix="fighters_v2_")
+    try:
+        _render_all(kits, out)
+    finally:
+        shutil.rmtree(TMPDIR[0], ignore_errors=True)
+
+
+def _render_all(kits, out):
     import numpy as np
     check_slot_ids()
     setup_scene()
@@ -499,9 +518,12 @@ def test_kits(kits):
         for part in PARTS:
             for o in list(bpy.data.objects):
                 bpy.data.objects.remove(o, do_unlink=True)
-            objs = import_part(os.path.join(kits, g.lower(), "%s_%s.glb" % (g.lower(), part)))
+            path = os.path.join(kits, g.lower(), "%s_%s.glb" % (g.lower(), part))
+            names = set(glb_node_names(path))          # exact names, as a game-side loader sees them
+            objs = import_part(path)
             roots = [o for o in objs if o.parent is None]
-            names = {o.name.split(".")[0] for o in objs}
+            if "KIT_%s_%s_root" % (g, part) not in names:
+                fails.append("%s %s: GLB has no node KIT_%s_%s_root" % (g, part, g, part))
             if [r.name.split(".")[0] for r in roots] != ["KIT_%s_%s_root" % (g, part)]:
                 fails.append("%s %s: roots %s" % (g, part, [r.name for r in roots]))
             elif roots[0].matrix_world.translation.length > 1e-6:
@@ -520,6 +542,15 @@ def test_kits(kits):
     print("[test] %s" % ("PASS" if not fails else "FAIL " + "; ".join(fails)))
     if fails:
         sys.exit(1)
+
+
+def glb_node_names(path):
+    """Node names straight from the GLB JSON chunk (independent of Blender's import renaming)."""
+    import json
+    with open(path, "rb") as f:
+        data = f.read()
+    n = struct.unpack("<I", data[12:16])[0]
+    return [nd.get("name", "") for nd in json.loads(data[20:20 + n].decode("utf-8")).get("nodes", [])]
 
 
 def _bbox(vs):
@@ -599,4 +630,12 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
+    try:
+        main(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
+    except SystemExit:
+        raise
+    except BaseException:
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.exit(1)   # blender -b would otherwise return 0 after a Python exception
