@@ -176,6 +176,53 @@ public static class LabelPlacement
         return false;
     }
 
+    /// <summary>Screen rectangle of a placed label (Godot-free twin of Rect2).</summary>
+    public readonly record struct Box(float X, float Y, float W, float H)
+    {
+        public bool Intersects(Box o) => X < o.X + o.W && o.X < X + W && Y < o.Y + o.H && o.Y < Y + H;
+        public Box Grow(float g) => new(X - g, Y - g, W + 2 * g, H + 2 * g);
+    }
+
+    public const float LeaderGap = 22f, LimbKeep = 0.95f;
+    // Preferred directions of a leader (unit vectors, 8 of them): up-right first, as before.
+    static readonly (float X, float Y)[] Dirs = { (0.7071f, -0.7071f), (1f, 0f), (0f, -1f), (0.7071f, 0.7071f), (-0.7071f, -0.7071f), (-1f, 0f), (0f, 1f), (-0.7071f, 0.7071f) };
+    static readonly float[] LengthSteps = { 1f, 1.5f, 2f };
+
+    /// <summary>
+    /// Leader label (small countries): the text box centre is searched on 8 directions and 3 lengths (from <see cref="LeaderGap"/> or the region radius up to twice that);
+    /// the first box that keeps Margin from the frame, stays inside the globe disc, touches no placed label and covers no land of another country wins.
+    /// <paramref name="blocked"/> says whether the globe under a screen point is land that is not the label's own. False (the label is hidden) when no place is free.
+    /// </summary>
+    public static bool PlaceLeader(float ax, float ay, float w, float h, float vpW, float vpH, float gcx, float gcy, float limbR, float regionR,
+        System.Collections.Generic.IReadOnlyList<Box> placed, System.Func<float, float, bool> blocked, out float cx, out float cy)
+    {
+        cx = cy = 0;
+        float hw = w * 0.5f, hh = h * 0.5f, baseL = System.MathF.Max(LeaderGap, regionR + 4f);
+        foreach (float k in LengthSteps)
+            foreach (var (ux, uy) in Dirs)
+            {
+                float l = baseL * k;
+                float px = ax + ux * l + (ux > 0.3f ? hw : ux < -0.3f ? -hw : 0f), py = ay + uy * l + (uy > 0.3f ? hh : uy < -0.3f ? -hh : 0f);
+                if (px - hw < Margin || px + hw > vpW - Margin || py - hh < Margin || py + hh > vpH - Margin) continue;
+                if (!InsideDisc(px, py, hw, hh, gcx, gcy, limbR)) continue;
+                var box = new Box(px - hw, py - hh, w, h).Grow(2f);
+                bool hit = false;
+                for (int i = 0; i < placed.Count && !hit; i++) hit = placed[i].Intersects(box);
+                if (hit || AnyBlocked(px, py, hw, hh, blocked)) continue;
+                cx = px; cy = py; return true;
+            }
+        return false;
+    }
+
+    // Nine probes (centre, corners, edge midpoints) plus the middles of the quarters: a coarse cover test without allocation.
+    static bool AnyBlocked(float cx, float cy, float hw, float hh, System.Func<float, float, bool> blocked)
+    {
+        for (int j = -2; j <= 2; j++)
+            for (int i = -2; i <= 2; i++)
+                if (blocked(cx + i * 0.5f * hw, cy + j * 0.5f * hh)) return true;
+        return false;
+    }
+
     /// <summary>Centre of a callout plate: up and to the right of the anchor, to the left when the right side would leave the frame.</summary>
     public static void CalloutCentre(float ax, float ay, float w, float h, float vpW, out float cx, out float cy)
     {

@@ -141,6 +141,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
         _overlay.InRegion = (c, lon, lat) => _data.InLabelRegion(c, lon, lat);
+        _overlay.IsLand = (lon, lat) => _data.IsLandAt(lon, lat);
         _overlay.LegendOpen = Settings.Current.MapLegendOpen;
         _overlay.LegendToggled += open => { Settings.Current.MapLegendOpen = open; if (!_shots && !_mapFrames && !_bench) Settings.Save(); };
         foreach (var c in top) _overlay.AddLabel(c, false);

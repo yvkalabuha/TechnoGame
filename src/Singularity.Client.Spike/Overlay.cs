@@ -74,6 +74,11 @@ public sealed partial class Overlay : Control
     bool OnRegion(float sx, float sy)
     {
         if (InRegion == null || _regionOf == null) return false;
+        return ScreenToLonLat(sx, sy, out float lon, out float lat) && InRegion(_regionOf, lon, lat);
+    }
+    bool ScreenToLonLat(float sx, float sy, out float lon, out float lat)
+    {
+        lon = lat = 0;
         // The camera ray in managed math (no engine call per probe): the fit search tests hundreds of points per pass.
         float nx = (sx / VpSize.X * 2f - 1f) * _aspect * _tanHalf, ny = (1f - sy / VpSize.Y * 2f) * _tanHalf;
         var d = (_cb.X * nx + _cb.Y * ny - _cb.Z).Normalized();
@@ -82,7 +87,8 @@ public sealed partial class Overlay : Control
         if (disc < 0f) return false;
         var hit = o + d * (-b - Mathf.Sqrt(disc));
         var ll = GlobeData.ToLonLat(hit);
-        return InRegion(_regionOf, ll.X, ll.Y);
+        lon = ll.X; lat = ll.Y;
+        return true;
     }
     public bool LegendVisible;   // the key is allowed on this screen (the map, not the tree)
     public bool LegendOpen = true;   // expanded; collapsed it is the "?" button (key L); the state is remembered in Settings
@@ -270,10 +276,29 @@ public sealed partial class Overlay : Control
         return p.Normalized().Dot(v);
     }
 
+    bool BlockedByForeignLand(float sx, float sy)
+    {
+        if (InRegion == null || IsLand == null || !ScreenToLonLat(sx, sy, out float lon, out float lat)) return false;
+        return IsLand(lon, lat) && !InRegion(_regionOf, lon, lat);
+    }
+    public System.Func<float, float, bool> IsLand;   // GlobeData.IsLandAt
+    System.Func<float, float, bool> _blocked;
+
+    // Leader label: free water or own land only, clear of the other labels; hidden when no direction is free (#523: it appears when the player zooms in).
+    bool PlaceLeaderLabel(LabelState s, Vector2 anchor, float w, float h, float area, List<LabelPlacement.Box> placed, out float px, out float py)
+    {
+        _blocked ??= BlockedByForeignLand;
+        px = py = 0;
+        if (!LabelPlacement.PlaceLeader(anchor.X, anchor.Y, w, h, VpSize.X, VpSize.Y, VpSize.X * 0.5f, VpSize.Y * 0.5f, GlobeRadiusPx(_dist) * LabelPlacement.LimbKeep,
+                LabelPlacement.RegionRadius(area), placed, _blocked, out float cx, out float cy)) return false;
+        px = cx - w * 0.5f; py = cy - h * 0.5f;
+        return true;
+    }
+
     void UpdateLabels()
     {
-        var placed = new List<Rect2>();
-        if (_legPlaced) placed.Add(LegendRect(LegendTextWidth()).Grow(4f));   // labels keep clear of the key
+        var placed = new List<LabelPlacement.Box>();
+        if (_legPlaced) { var lr = LegendRect(LegendTextWidth()).Grow(4f); placed.Add(new(lr.Position.X, lr.Position.Y, lr.Size.X, lr.Size.Y)); }   // labels keep clear of the key
         VisibleLabels = 0;
         long t0 = (long)Time.GetTicksUsec();
         CacheCamera();
@@ -290,7 +315,7 @@ public sealed partial class Overlay : Control
                 // Real projected area of the region from the local projection at its point: decides size, leader line or hiding (#523).
                 var ex = _cam.UnprojectPosition(GlobeData.ToSphere(s.C.LabelPoint.X + 1f, s.C.LabelPoint.Y)) - sp;
                 var ey = _cam.UnprojectPosition(GlobeData.ToSphere(s.C.LabelPoint.X, s.C.LabelPoint.Y + 1f)) - sp;
-                float area = LabelPlacement.ScreenArea(s.C.BoxArea, ex.X, ex.Y, ey.X, ey.Y);
+                float area = LabelPlacement.ScreenArea(s.C.OwnArea, ex.X, ex.Y, ey.X, ey.Y);
                 if (area < LabelPlacement.HiddenBelow) { s.Node.Visible = false; continue; }   // too small to name at this zoom: shown when the player zooms in
                 var mode = LabelPlacement.ModeFor(area);
                 s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Anchor = sp; s.Area = area;
@@ -303,8 +328,7 @@ public sealed partial class Overlay : Control
                 {
                     s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
                     w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
-                    LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);
-                    if (!LabelPlacement.Place(ccx, ccy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
+                    if (!PlaceLeaderLabel(s, sp, w, h, area, placed, out px, out py)) { s.Node.Visible = false; continue; }
                 }
                 else
                 {
@@ -321,7 +345,7 @@ public sealed partial class Overlay : Control
                         {
                             float tw = font.GetStringSize(variant, HorizontalAlignment.Left, -1, sz).X, bw = tw + 4f, bh = font.GetHeight(sz) + 2f;
                             if (!LabelPlacement.MayFit(area, bw * fit, bh * fit)) continue;
-                            if (LabelPlacement.FindSpot(sp.X, sp.Y, bw, bh, fit, 4f, VpSize.X * 0.5f, VpSize.Y * 0.5f, GlobeRadiusPx(_dist) * 0.97f, VpSize.X, VpSize.Y, step, _onRegion, out float cx, out float cy))
+                            if (LabelPlacement.FindSpot(sp.X, sp.Y, bw, bh, fit, 4f, VpSize.X * 0.5f, VpSize.Y * 0.5f, GlobeRadiusPx(_dist) * LabelPlacement.LimbKeep, VpSize.X, VpSize.Y, step, _onRegion, out float cx, out float cy))
                             { chosen = variant; size = sz; s.TextW = tw; w = bw; h = bh; px = cx - w * 0.5f; py = cy - h * 0.5f; break; }
                         }
                     }
@@ -332,8 +356,7 @@ public sealed partial class Overlay : Control
                         s.Callout = true; size = (int)LabelPlacement.NominalFont; chosen = Names.Country(s.C.Name) ?? s.C.Name;
                         s.TextW = font.GetStringSize(chosen, HorizontalAlignment.Left, -1, size).X;
                         w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
-                        LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float fcx, out float fcy);
-                        if (!LabelPlacement.Place(fcx, fcy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
+                        if (!PlaceLeaderLabel(s, sp, w, h, area, placed, out px, out py)) { s.Node.Visible = false; continue; }
                     }
                     if (s.Node.Text != chosen) s.Node.Text = chosen;
                 }
@@ -341,9 +364,10 @@ public sealed partial class Overlay : Control
                 var rect = new Rect2(px, py, w, h);
                 s.Rect = rect;
                 bool hit = false;
-                foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
+                var pbox = new LabelPlacement.Box(rect.Position.X, rect.Position.Y, rect.Size.X, rect.Size.Y);
+                if (!s.Callout) foreach (var o in placed) if (o.Intersects(pbox)) { hit = true; break; }   // leaders were checked against placed labels when searching
                 if (hit) { s.Node.Visible = false; continue; }
-                placed.Add(rect);
+                placed.Add(pbox);
                 s.Node.Position = rect.Position + new Vector2(2, 1);
                 s.Node.Visible = true;
                 VisibleLabels++;

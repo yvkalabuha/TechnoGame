@@ -12,6 +12,7 @@ public sealed class Country
     public string Name;      // polity code, for example "SUN"; the display name is Names.Country(code)
     public int Group;        // colony label: colony group number (1..), else 0
     public double BoxArea;   // pixels of the owner on the raster: the label order
+    public double OwnArea;   // pixels of the land the label names (own land without colonies, or the colony group): the one size scale of every label
     public Vector2 LabelPoint;
     public int Tint;         // tone index 0..11 of CountryPalette
 }
@@ -58,6 +59,10 @@ public sealed class GlobeData
         foreach (var rg in RegionIds) if (rg != 0) carea[cg[rg - 1]]++;
         for (int k = 1; k <= WorldMap.ColonyGroups.Length; k++)
             if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat), Group = k, Tint = Style.CodeTone[Math.Max(0, Array.IndexOf(Style.Codes, WorldMap.ColonyGroups[k - 1].Owner))] });
+        foreach (var cl in ColonyLabels) cl.OwnArea = cl.BoxArea;
+        var own = new long[Map.Owners.Length + 1];
+        for (int i = 0; i < RegionIds.Length; i++) { int r = RegionIds[i], o = Ids[i]; if (r != 0 && o != 0 && OwnLand(Countries[o - 1], r, o)) own[o]++; }
+        foreach (var c in Countries) c.OwnArea = own[c.Id];
         ColonyLabels.Sort((a, b) => b.BoxArea.CompareTo(a.BoxArea));
 
         if (Style.Controllers.Length > 255) throw new InvalidOperationException("controller number is 8-bit in the region table");
@@ -104,7 +109,19 @@ public sealed class GlobeData
         int r = RegionIds[y * W + x];
         if (r == 0) return false;
         if (c.Id == 0) return c.Group > 0 && _colonyGroup[r - 1] == c.Group;
-        return (!CountryPalette.IsDependent(Map.Rows[r - 1].Status) || (!_hasHome[c.Id] && (_colonyGroup[r - 1] == 0 || !_hasOwnLand[c.Id]))) && Ids[y * W + x] == c.Id;   // an occupied colony (Libya under Britain) is not Italy's own land
+        return OwnLand(c, r, Ids[y * W + x]);
+    }
+
+    // An occupied colony (Libya under Britain) is not Italy's own land.
+    bool OwnLand(Country c, int region, int owner) =>
+        (!CountryPalette.IsDependent(Map.Rows[region - 1].Status) || (!_hasHome[c.Id] && (_colonyGroup[region - 1] == 0 || !_hasOwnLand[c.Id]))) && owner == c.Id;
+
+    /// <summary>True when the point at lon/lat is land of any region (sea is false).</summary>
+    public bool IsLandAt(float lon, float lat)
+    {
+        int x = Math.Clamp((int)((lon + 180) / 360f * W), 0, W - 1);
+        int y = Math.Clamp((int)((90 - lat) / 180f * H), 0, H - 1);
+        return RegionIds[y * W + x] != 0;
     }
 
     /// <summary>Owner number at lon/lat in degrees (0 = sea or no owner).</summary>
