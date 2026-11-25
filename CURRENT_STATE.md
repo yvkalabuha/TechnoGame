@@ -1,6 +1,7 @@
 # CURRENT STATE
 
 ## Сводка
+- **2026-11-25 (5):** ядро волны рычагов 1 влито целиком: разведка (0160), советник (0153), институты (0151, 0174, 0175; P-7 PASS — 0173), K0 и таблицы Kernel (0162, 0165); Session API v26. Окна рычагов в клиенте (0156 части 1–2) ждут кадров. Включение механик по умолчанию (0171) остановлено: институты сдвигают калибровку 1945–1977 (A16). 3D делает Gemini (#544), набор частей G4 готов.
 - **Фаза: M-play: вердикт партии 2026-11-24 — решений у игрока нет (#470). Идёт волна рычагов 1 (одна сборка для партии, #474, #497) и М1 параллельно (#504, ADR-0027…0029). Режим работы /autopilot (#529).**
   - Срез считает до декабря 2030 (TASK-0121). Поезд 2 влит 2026-11-24 (88fa41b): 99 узлов знаний, G5/G6 с промежуточными ступенями (#457), цена опережения k 0,02 / 2 / 10 (#458, #465), освоение производства (#452), старение парка (#431). Колбы науки и сплава в живой партии (TASK-0119). Правила бюджета измерены (TASK-0122, TASK-0123; `docs/simulation/budget-rule-measurement.md`): вариант А не проходит допуски 1945–1977, Б1 и Б2 проходят и не различаются сверх шума. Записки: бюджеты ред. 3, парк без замены ред. 3 (#430, #431); **владелец правила ещё не утверждал**.
   - EXP-0007 — INCONCLUSIVE, цифры приняты как справка; решающий замер — K4 на мире M1 (#419). EXP-0008 и ADR-0024 отложены, харнесс заморожен. Отложены до вердикта M-play: #328, #364, #394, провинции #195 (#420). CI на `main` зелёный с 2026-11-19 (TASK-0116).
@@ -20,24 +21,20 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
-- TASK-0156 [IN_PROGRESS] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
 - TASK-0161 [IN_PROGRESS] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0163 [IN_PROGRESS] Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) (developer)
 - TASK-0164 [IN_PROGRESS] M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) (simulation-engineer)
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
 - TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
-- TASK-0171 [IN_PROGRESS] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
+- TASK-0156 [REVIEW] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
+- TASK-0171 [BLOCKED] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
 - TASK-0167 [APPROVED] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
-- #228 требует ADR к ADR-0006 до кода E1; системам провинций нужен ADR бюджета.
-- CI job `llm-worker` на GitHub не проверен.
+- A16: включать ли институты у ИИ по умолчанию (калибровка) — блокирует TASK-0171 и сборку для партии.
+- Кадры игры (A8, A15) отложены владельцем (#545) — блокируют приёмку TASK-0156, 0161, 0163, 0167.
 
 ## Точка продолжения
-1. Слить ветки ядра по порядку (0160, 0162, 0165, 0153, 0151; версии API Session при слиянии) — `development/handoff/2026-11-25-2.md`.
-2. Пачка кадров с разрешения владельца: дерево (0161), глобус (0163/0167); затем ui-art-director + Gemini.
-3. Рельеф 0168 (ветка агента), 3D-пилот и сравнение Claude vs Gemini (#539).
-4. Личности в институтах (#540–#543).
-5. После всех веток ядра — пакет изменений, меняющих эталоны (флаги по умолчанию), затем окна рычагов TASK-0156.
+Последний handoff: `development/handoff/2026-11-25-5.md`. Спросить A16 (и A9, A13, A14); по ответу — доделать TASK-0171 (worktree agent-a5360ae99120f7be5, не закоммичено) → кадры → партия владельца.

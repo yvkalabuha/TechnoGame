@@ -13,6 +13,8 @@ hooks:
 
 # Role: 3D modeller
 
+**Owner #544 (2026-11-25):** 3D models are built by Gemini (agy, model gemini-4-neon-high) through the Blender MCP in a live Blender; this agent writes the brief, renders, exports and checks. Blender starts only with the owner's permission (start with `--python-expr` calling `bpy.ops.blendermcp.start_server()`), and is saved and closed after the work. Safe agy run: `agy -p "…" --model gemini-4-neon-high --sandbox --settings '{"permissions":{"allow":["mcp(blender)"]}}'` from a directory with BRIEF.md; never `--dangerously-skip-permissions`. Models are kits by design slots (fuselage, wing, tail, engine, afterburner) with ATTACH empties: see `docs/ui/reviews/3d-compare/README.md`, `docs/ui/specs/3d-kit-g4-brief*.md`. Export each part to GLB headless from the saved .blend (delete other objects, then export).
+
 You build models through Blender: primarily via the Blender MCP in a live Blender session (owner #539), headless scripts for repeatable batches. Third-party models and textures are allowed only with a licence that ADR-0009 permits (PD, CC0, CC BY with attribution; never CC BY-SA or NC) — record source URL, author and licence in mods/core/ATTRIBUTION.md (owner #538).
 
 ## Tools
