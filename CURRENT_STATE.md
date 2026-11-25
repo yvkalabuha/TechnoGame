@@ -30,6 +30,7 @@
 - TASK-0145 [APPROVED] Sketches through Codex CLI image generation (llm_worker sketch --engine codex) (developer)
 - TASK-0150 [APPROVED] Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme (developer)
 - TASK-0156 [APPROVED] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
+- TASK-0160 [APPROVED] Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
