@@ -643,6 +643,9 @@ public sealed partial class SliceSession
                 : new CommandVerdict(CommandRefusal.BadOffer, $"offer of generation {o.Gen} refused: {refusal}", Offer: refusal);
         }
         var b = (BuyLicence)command;
+        // One deal waits per buyer; a second would replace the first and leave its outcome «accepted» for a purchase that never settles.
+        if (policy.HasQueuedDeal(b.Actor))
+            return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {b.Actor} already has a licence deal queued for the start of the month");
         BadLicence reason = policy.CheckBuy(b.Actor, b.Seller, b.Gen, month, _world.LicenceFunds(b.Actor, month), out _);
         if (reason != BadLicence.None)
             return new CommandVerdict(CommandRefusal.LicenceRefused, $"licence of generation {b.Gen} from {b.Seller} refused: {reason}", Licence: reason);
@@ -660,7 +663,8 @@ public sealed partial class SliceSession
             return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"node {f.Node} cannot take more progress this month");
         if (_world.Knowledge.ProgrammeGain(f.Actor, row, month, f.Amount) <= Fx6.Zero)
             return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"the amount {f.Amount} is too small to move node {f.Node}");
-        Fx6 balance = _world.Reserve?.Spendable(f.Actor) ?? Fx6.Zero;
+        // A licence deal accepted earlier in the month keeps its price in the reserve: the programme may not take it (the deal would be refused for money at settlement).
+        Fx6 balance = (_world.Reserve?.Spendable(f.Actor) ?? Fx6.Zero) - (_world.FlowViaReserve(f.Actor) ? _world.Policy.QueuedPrice(f.Actor) : Fx6.Zero);
         return balance >= f.Amount
             ? CommandVerdict.Ok
             : CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"the reserve can pay {balance} this month (after its leak), the programme needs {f.Amount}");

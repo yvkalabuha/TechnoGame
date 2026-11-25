@@ -89,7 +89,7 @@ internal sealed class SliceWorld
             LicOff = config.LicOff, T6dOff = config.T6dOff,
             LicenceMarket = config.LicenceMarket, LicenceExternalRows = config.LicenceExternalActors.IsDefault ? [] : config.LicenceExternalActors,
             MarketActorIds = config.LicenceMarket ? scenario.ActorId : [], MarketStartYear = scenario.StartYear, MarketStartMonth = scenario.StartMonth,
-            Alliances = config.Alliances ?? AllianceTable.Empty,
+            Alliances = config.LicenceMarket ? config.Alliances ?? throw new ArgumentException("The licence market needs the alliances table (AllianceTable.Load of scenarios/<id>/alliances.yaml): without it the Bloc and Friends circles are silently empty.", nameof(config)) : AllianceTable.Empty,
             Mastery = pp.Mastery,
         };
         config.ToolingTarget.Validate();
@@ -162,7 +162,7 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
@@ -296,10 +296,10 @@ internal sealed class SliceWorld
     /// The largest node number a licence can carry: the PRC of the engine and hot-section alternatives (the mask of <see cref="PolicyEventsAdapter.Subject"/>).
     /// Other nodes of the graph (any number, e.g. 180 in synthetic worlds) are not licensable, so they never decide the mask width. Above 127 the build fails.
     /// </summary>
-    private static int MaxLicensableNumber(ProductsLayout l)
+    private static int MaxLicensableNumber(ProductsLayout l, bool wholeProject)
     {
         int max = 0;
-        foreach (int slot in (int[])[l.BaseSlot, l.AlloySlot])
+        foreach (int slot in wholeProject ? Enumerable.Range(0, l.SlotCount) : (int[])[l.BaseSlot, l.AlloySlot])
         {
             for (int a = l.AltStart[slot]; a < l.AltStart[slot + 1]; a++)
             {
@@ -412,6 +412,9 @@ internal sealed class SliceWorld
         for (int d = 0; d < ProductsLayout.Designs; d++)
         {
             if (Products.Stage(actor, d) is not (DesignStage.Series or DesignStage.InService))
+                continue;
+            // With the market a licensed project (or a derivative of one) is not the buyer's own engine: it must neither lapse its own licences nor raise g_a.
+            if (Products.LicensedFrom(actor, d) >= 0)
                 continue;
             g = Math.Max(g, ProductsLayout.AltEngGen[Products.AltAt(actor, d, ProductsLayout.BaseSlot)]);
         }

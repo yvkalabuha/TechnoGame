@@ -159,10 +159,13 @@ public class LicenceMarketTests
         var rig = new Rig(PolicyProfile.Adaptive);
         rig.Events.Gen = [3, 2, 0];
         rig.Month(0);
-        rig.Buy(2, 0, 3, 0);
-        rig.Buy(2, 1, 2, 1);
+        rig.Buy(2, 1, 2, 0);
+        rig.Buy(2, 0, 3, 1);
         Assert.Equal(2, rig.Policy.Licences(2).Count);
         Assert.Equal(3, rig.Policy.LicenceGen(2));   // the aggregate is the highest generation
+        // A licence of a generation already covered (G2 again, from the other seller) adds nothing and is refused as held.
+        rig.Events.Gen = [3, 3, 0];
+        Assert.Equal(BadLicence.Gen, rig.Policy.CheckBuy(2, 1, 3, 2, rig.Funds(2), out _));
     }
 
     [Fact]
@@ -266,8 +269,8 @@ public class LicenceMarketTests
         var rig = new Rig(PolicyProfile.Adaptive, external: [2]);
         rig.Events.Gen = [4, 2, 0];
         rig.Month(0);
-        rig.Buy(2, 0, 4, 0);
-        rig.Buy(2, 1, 2, 1);
+        rig.Buy(2, 1, 2, 0);
+        rig.Buy(2, 0, 4, 1);
         Assert.Equal(2, rig.Policy.Licences(2).Count);
         rig.Events.Gen[2] = 3;   // the buyer's own engine passes G2 but not G4
         rig.Month(3);
@@ -280,6 +283,20 @@ public class LicenceMarketTests
         Assert.Equal(0, rig.Policy.LicenceGen(2));
         Assert.Equal(-1, rig.Policy.LicenceSeller(2));
         Assert.True(rig.Policy.LicenceMask(2).IsEmpty);
+    }
+
+    [Fact]
+    public void AiDeal_IsRefusedAtSettlement_WhenTheSellerRaisedThePriceWithinTheCeiling_ThePriceTheUpkeepRoomWasCheckedFor()
+    {
+        // Decided at m = 1.0 (room for 15 000), settled after a raise to m = 1.5 (22 500): inside the ceiling k and inside the funds, but not what the AI checked.
+        var rig = new Rig(PolicyProfile.Mass, external: [0], buyerBudget: Fx6.FromInt(200_000));
+        rig.Events.OwnProject[1] = false;
+        Assert.Equal(OfferRefusal.None, rig.Policy.SetOffer(0, 2, Fx6.One, SaleCircle.All, 0));
+        rig.Month(0);
+        Assert.Equal(OfferRefusal.None, rig.Policy.SetOffer(0, 2, Fx6.FromRaw(1_500_000), SaleCircle.All, 1));
+        rig.Month(1);
+        Assert.Empty(rig.Policy.Licences(2));
+        Assert.Equal(1L, rig.Policy.BadLicenceCount(2, BadLicence.Price));
     }
 
     // ---- the catalogue

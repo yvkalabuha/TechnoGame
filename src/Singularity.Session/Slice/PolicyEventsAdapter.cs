@@ -19,8 +19,9 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
             if (l.AltEngGen[world.Products.AltAt(sellerRow, d, l.BaseSlot)] != gen)
                 continue;
             // The mask is the PRC of the engine and of the hot section as of the decision (spec A43.1); no reference to the project is kept.
+            // The market sells the whole project (LP-1, #158), so its mask covers every slot: the buyer must be able to produce all of it.
             LicenceMask mask = default;
-            foreach (int slot in (int[])[l.BaseSlot, l.AlloySlot])
+            foreach (int slot in world.Config.LicenceMarket ? Enumerable.Range(0, l.SlotCount) : (int[])[l.BaseSlot, l.AlloySlot])
             {
                 int alt = world.Products.AltAt(sellerRow, d, slot);
                 if (alt < 0)
@@ -50,10 +51,18 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
     // The longest estimate over the links of the requirement of the generation; any link without an estimate means "never by itself".
     public int? OwnEtaMonths(int actorRow, int gen, long month)
     {
+        // The ETA is to the APP node of the generation (O-062): once it is known the buyer reaches the generation by itself, whatever else its requirement lists.
+        ProductsLayout layout = world.ProductsLayout;
+        int appRow = gen >= 1 && gen <= layout.Generations ? world.Graph.RowOf(layout.GenApp[gen - 1]) : -1;
+        if (appRow >= 0 && world.Knowledge.IsKnown(actorRow, appRow))
+            return 0;
         IReadOnlyList<Link> links = world.WhyNot.WhyNot(actorRow, WhyNotTarget.Requirement(gen), month);
         int worst = 0;
         foreach (Link l in links)
         {
+            // Only the research of the generation counts: a design link («no project yet») has no ETA of its own and says nothing about how soon the APP is known.
+            if (l.Layer != WhyNotLayer.Knowledge)
+                continue;
             if (l.EtaMonths is not { } eta)
                 return null;
             worst = Math.Max(worst, eta);

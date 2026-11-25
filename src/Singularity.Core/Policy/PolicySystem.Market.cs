@@ -224,28 +224,47 @@ public sealed partial class PolicySystem
         return false;
     }
 
+    // The buyer holds a licence of this generation or a newer one from anybody: another one adds nothing (the legacy rule «gen > lic_gen»).
+    private bool Covered(int buyer, int gen)
+    {
+        for (int k = 0; k < _mkSeller.Length; k++)
+        {
+            if (_mkSeller[k].Current[buyer] >= 0 && _mkGen[k].Current[buyer] >= gen)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>The price of the deal waiting in the queue of the actor for the start of the month, 0 without one: money a programme of the same month must leave alone.</summary>
+    public Fx6 QueuedPrice(int actorRow) => _qSeller is not null && _p.LicenceMarket && _qSeller.Current[actorRow] >= 0 ? Fx6.FromRaw(_qPrice.Current[actorRow]) : Fx6.Zero;
+
+    /// <summary>A deal of the actor is already queued for the next settlement.</summary>
+    public bool HasQueuedDeal(int actorRow) => _p.LicenceMarket && _qSeller.Current[actorRow] >= 0;
+
     /// <summary>
     /// The refusal a purchase would meet now (what the screen shows before the button is pressed, and what <see cref="ApplyDeals"/> decides): the same
     /// function. <paramref name="funds"/> is what the buyer may spend (the reserve of the player, else the procurement base). <paramref name="incomeSoFar"/> is the
     /// income the seller has already booked this year including the deals applied earlier in the same month; null reads the stored one.
     /// </summary>
-    public BadLicence CheckBuy(int buyer, int seller, int gen, long month, Fx6 funds, out Fx6 price, Fx6? incomeSoFar = null)
+    public BadLicence CheckBuy(int buyer, int seller, int gen, long month, Fx6 funds, out Fx6 price, Fx6? incomeSoFar = null, Fx6? decidedPrice = null)
     {
         LicenceOffer? offer = seller == buyer ? null : Offer(seller, gen, month);
         price = offer?.Price ?? Fx6.Zero;
         int year = YearOf(month);
         bool inCircle = offer is { } o && o.Circle != SaleCircle.Nobody && _p.Alliances.InCircle(_p.MarketActorIds[seller], _p.MarketActorIds[buyer], year, o.Circle);
-        bool held = KeyHeld(buyer, seller, gen) || gen >= 1 && gen <= (_ev?.EngineGen(buyer, month) ?? 0);
+        bool held = KeyHeld(buyer, seller, gen) || Covered(buyer, gen) || gen >= 1 && gen <= (_ev?.EngineGen(buyer, month) ?? 0);
         Fx6 limit = IsExternal(buyer) ? funds : AiLimit(funds);
         bool hasSlot = (_ev?.HasFreeDesignSlot(buyer) ?? true) && FreeLicenceSlot(buyer) >= 0;
         bool overCap = IsExternal(seller) && offer is not null
             && (incomeSoFar ?? LicenceIncome(seller, month)) + price > _p.IncomeCapShare * Fx6.FromInt(12) * Budget(seller);
         BadLicence verdict = LicenceRules.ValidateMarket(buyer, seller, gen, offer is not null, held, price, funds, limit, inCircle, hasSlot, overCap);
         // The AI decided on the price of last month: a seller that raised it since cannot pass the ceiling k × ref at settlement.
-        return verdict == BadLicence.None && !IsExternal(buyer) && price > offer!.Value.Reference * _p.AiPriceK ? BadLicence.Price : verdict;
+        // An AI buyer also pays no more than it decided on: the room it checked against its upkeep was for that price.
+        return verdict == BadLicence.None && !IsExternal(buyer) && (price > offer!.Value.Reference * _p.AiPriceK || decidedPrice is { } decided && price > decided) ? BadLicence.Price : verdict;
     }
 
-    // L (months of the stock) and the share the AI keeps in the month of the payment: the lower bound wins.
+    // L (months of the stock) and the share the AI keeps in the month of the payment: the lower bound wins. While the AI pays from the procurement of one month
+    // (it has no reserve) the keep share is always the lower one, so L does not bind; it starts to bind when the AI pays from an account of several months.
     private Fx6 AiLimit(Fx6 funds)
     {
         Fx6 stock = funds * Fx6.FromInt(_p.AiStockMonths), keep = funds * (Fx6.One - _p.AiKeepShare);
@@ -318,7 +337,7 @@ public sealed partial class PolicySystem
                 continue;
             for (int gen = Math.Min(_marketGens, _ev.EngineGen(s, t)); gen > gBuyer; gen--)
             {
-                if (Offer(s, gen, t) is not { } o || KeyHeld(row, s, gen))
+                if (Offer(s, gen, t) is not { } o || KeyHeld(row, s, gen) || Covered(row, gen))
                     continue;
                 if (o.Circle == SaleCircle.Nobody || !_p.Alliances.InCircle(_p.MarketActorIds[s], _p.MarketActorIds[row], year, o.Circle))
                     continue;
@@ -413,7 +432,7 @@ public sealed partial class PolicySystem
             qSeller[b] = -1;
             int gen = _qGen.Current[b];
             Fx6 soFar = incomeYear[s] == year ? Fx6.FromRaw(income[s]) : Fx6.Zero;   // the deals of this month applied before this one count against the cap
-            BadLicence reason = CheckBuy(b, s, gen, month, funds(b), out Fx6 price, soFar);
+            BadLicence reason = CheckBuy(b, s, gen, month, funds(b), out Fx6 price, soFar, Fx6.FromRaw(_qPrice.Current[b]));
             if (reason != BadLicence.None)
             {
                 bad[(int)reason - 1][b]++;

@@ -94,9 +94,62 @@ public class LicenceMarketSessionTests
         Assert.NotEmpty(unknown);
         Assert.All(unknown, n => Assert.True(s.World.IndustryInputs.KnowsProcess(buyer, s.World.IndustryLayout.RowOf(n), 26), $"process {n} stays unusable after the licence"));
         Assert.All(unknown, n => Assert.False(s.World.Knowledge.IsKnown(buyer, s.World.Graph.RowOf(n)), "the licence must not teach the node"));
+        // The whole project is licensed, not only the engine and the hot section: every process of the licensed design can be produced.
+        Assert.All(licensed.PrcSet, n => Assert.True(s.World.IndustryInputs.KnowsProcess(buyer, s.World.IndustryLayout.RowOf(n), 26), $"process {n} of the licensed design is unusable"));
+        // A licensed project in series is not the buyer's own engine: it neither raises g_a nor lapses the licence it came with (A43.4).
+        int genBefore = s.World.EngineGen(buyer);
+        s.Submit(SourceClass.Player, buyer, 3, new StartSeries(buyer, licensed.Handle, Fx6.FromInt(1), true));
+        s.StepThroughMonth(30);
+        Assert.Equal(DesignStage.Series, s.View.Actors[buyer].Designs.First(d => d.LicensedFrom == seller).Stage);
+        Assert.Equal(genBefore, s.World.EngineGen(buyer));
+        Assert.Contains(pol.Licences(buyer), r => r.Seller == seller && r.Gen == gen);
 
         SliceSession replay = SliceSession.Replay(SliceTestData.Data, Config(buyer), s.CommandLog, s.Tick);
         HashAssert.Equal(s.LastHash, replay.LastHash);
+    }
+
+    [Fact]
+    public void SecondBuyOfTheSameMonth_IsRefused_AndAProgrammeCannotTakeTheMoneyOfAnAcceptedDeal()
+    {
+        (int buyer, int seller, int gen) = FindDeal(out SliceSession s);
+        Assert.True(s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, seller, gen)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, buyer, 3, new BuyLicence(buyer, seller, gen)).Accepted);
+        int row = Enumerable.Range(0, s.World.Graph.Count).First(r => s.World.Knowledge.InFrontier(buyer, r) && !s.World.Graph.IsHazard[r]);
+        Fx6 all = s.World.Reserve!.Spendable(buyer);
+        Assert.True(s.Submit(SourceClass.Player, buyer, 4, new FundProgramme(buyer, s.World.Graph.Number[row], all)).Accepted);
+        s.StepThroughMonth(25);
+        string[] out3 = [.. s.Outcomes.TakeLast(3)];
+        Assert.Contains("accepted", out3[0], StringComparison.Ordinal);
+        Assert.Contains("SlotOverflow", out3[1], StringComparison.Ordinal);
+        Assert.Contains("ProgrammeNotFundable", out3[2], StringComparison.Ordinal);
+        Assert.Single(s.World.Policy.Licences(buyer));
+    }
+
+    [Fact]
+    public void LicenceMarket_WithoutTheAlliancesTable_IsRefused_NotSilentlyEmpty()
+    {
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 7, LicenceMarket = true }));
+    }
+
+    [Fact]
+    public void OwnEta_IsZeroForAGenerationWhoseApplicationIsKnown_WhateverTheDesignLinksSay()
+    {
+        SliceSession s = SliceTestData.Create(Config(0));
+        s.StepThroughMonth(0);
+        var events = new PolicyEventsAdapter(s.World);
+        int checkedPairs = 0;
+        for (int a = 0; a < s.World.Scenario.ActorCount; a++)
+        {
+            for (int g = 1; g <= s.World.ProductsLayout.Generations; g++)
+            {
+                int row = s.World.Graph.RowOf(s.World.ProductsLayout.GenApp[g - 1]);
+                if (row < 0 || !s.World.Knowledge.IsKnown(a, row))
+                    continue;
+                checkedPairs++;
+                Assert.Equal(0, events.OwnEtaMonths(a, g, 1));
+            }
+        }
+        Assert.True(checkedPairs > 0, "no actor knows an application at the start");
     }
 
     [Fact]
