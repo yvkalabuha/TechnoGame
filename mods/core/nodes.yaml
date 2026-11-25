@@ -28,6 +28,7 @@ define:
       before: true
       source: "RULE-G0"
       estimated: true
+    directions: [prop, chem]
   - id: s8.fnd.boundary_layer
     number: 2
     type: FND
@@ -50,6 +51,7 @@ define:
       year: 1904
       source: "S32"
       estimated: false
+    directions: [aero, prop]
   - id: s8.fnd.compressible_flow
     number: 3
     type: FND
@@ -73,6 +75,7 @@ define:
       before: true
       source: "RULE-G0"
       estimated: true
+    directions: [aero, prop]
   - id: s5.fnd.precipitation_hardening
     number: 4
     type: FND
@@ -92,6 +95,7 @@ define:
       year: 1906
       source: "S31"
       estimated: false
+    directions: [met, struct]
   - id: s8.fnd.transonic_aerodynamics
     number: 5
     type: FND
@@ -112,6 +116,7 @@ define:
       year: 1947
       source: "S28"
       estimated: false
+    directions: [aero, prop]
   - id: s5.fnd.high_temperature_creep
     number: 6
     type: FND
@@ -129,6 +134,7 @@ define:
       year: 1948
       source: "S34"
       estimated: false
+    directions: [met, prop]
   - id: s7.fnd.turbine_heat_transfer
     number: 7
     type: FND
@@ -144,6 +150,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [prop, met]
   - id: s5.fnd.solidification_science
     number: 8
     type: FND
@@ -159,6 +166,7 @@ define:
       year: 1953
       source: "S35"
       estimated: false
+    directions: [met, mfg]
   - id: s8.prn.gas_turbine
     number: 9
     type: PRN
@@ -171,6 +179,7 @@ define:
       year: 1937
       source: "RR-0008§12"
       estimated: false
+    directions: [prop, met, mfg]
   - id: s8.prn.swept_wing
     number: 10
     type: PRN
@@ -183,6 +192,7 @@ define:
       year: 1935
       source: "S13"
       estimated: false
+    directions: [aero, struct]
   - id: s8.prn.afterburning
     number: 11
     type: PRN
@@ -195,6 +205,7 @@ define:
       year: 1944
       source: "S19"
       estimated: false
+    directions: [prop, chem]
   - id: s5.prn.gamma_prime_alloy_design
     number: 12
     type: PRN
@@ -207,6 +218,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [met, chem]
   - id: s8.prn.area_rule
     number: 13
     type: PRN
@@ -219,6 +231,7 @@ define:
       year: 1952
       source: "S14"
       estimated: false
+    directions: [aero, struct]
   - id: s8.prn.multi_spool_compression
     number: 14
     type: PRN
@@ -231,6 +244,7 @@ define:
       year: 1950
       source: "S16"
       estimated: false
+    directions: [prop, aero, mfg]
   - id: s8.prn.bypass_engine
     number: 15
     type: PRN
@@ -243,6 +257,7 @@ define:
       year: 1952
       source: "S18"
       estimated: false
+    directions: [prop, aero]
   - id: s8.prn.film_cooling
     number: 16
     type: PRN
@@ -255,6 +270,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [prop, mfg, met]
   - id: s8.eng.turbojet_g1
     number: 17
     type: ENG
@@ -267,6 +283,7 @@ define:
       year: 1944
       source: "S7"
       estimated: false
+    directions: [prop, mfg]
   - id: s8.eng.straight_wing_jet_airframe
     number: 18
     type: ENG
@@ -279,6 +296,7 @@ define:
       year: 1944
       source: "S7"
       estimated: false
+    directions: [aero, struct]
   - id: s8.eng.turbojet_g2
     number: 19
     type: ENG
@@ -291,6 +309,7 @@ define:
       year: 1944
       source: "S4"
       estimated: false
+    directions: [prop, met]
   - id: s8.eng.swept_wing_airframe
     number: 20
     type: ENG
@@ -303,6 +322,7 @@ define:
       year: 1947
       source: "S27"
       estimated: false
+    directions: [aero, struct]
   - id: s8.eng.afterburner
     number: 21
     type: ENG
@@ -315,6 +335,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [prop, chem]
   - id: s8.eng.all_moving_tail
     number: 22
     type: ENG
@@ -327,6 +348,7 @@ define:
       year: 1947
       source: "S28"
       estimated: false
+    directions: [aero, ctrl]
   - id: s8.eng.turbojet_g3
     number: 23
     type: ENG
@@ -339,6 +361,7 @@ define:
       year: 1950
       source: "S16"
       estimated: false
+    directions: [prop, met, mfg]
   - id: s8.eng.area_ruled_airframe
     number: 24
     type: ENG
@@ -351,6 +374,7 @@ define:
       year: 1954
       source: "S15"
       estimated: false
+    directions: [aero, struct]
   - id: s8.eng.delta_wing_airframe
     number: 25
     type: ENG
@@ -363,6 +387,7 @@ define:
       year: 1954
       source: "S15"
       estimated: false
+    directions: [aero, struct]
   - id: s8.eng.variable_geometry_inlet
     number: 26
     type: ENG
@@ -375,6 +400,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [aero, prop, ctrl]
   - id: s8.eng.air_cooled_turbine_blade
     number: 27
     type: ENG
@@ -387,6 +413,7 @@ define:
       year: 1970
       source: "RULE-MID"
       estimated: true
+    directions: [prop, met, mfg]
   - id: s8.eng.turbofan_g4
     number: 28
     type: ENG
@@ -399,6 +426,7 @@ define:
       year: 1964
       source: "S25"
       estimated: false
+    directions: [prop, aero]
   - id: s8.eng.mach2_airframe_g4
     number: 29
     type: ENG
@@ -411,6 +439,7 @@ define:
       year: 1972
       source: "S26"
       estimated: false
+    directions: [aero, struct, met]
   - id: s5.cmp.heat_resistant_alloy
     number: 30
     type: CMP
@@ -423,6 +452,7 @@ define:
       year: 1941
       source: "S3"
       estimated: false
+    directions: [met, prop]
   - id: s5.cmp.aluminium_alloy_sheet
     number: 31
     type: CMP
@@ -435,6 +465,7 @@ define:
       year: 1909
       source: "S31"
       estimated: false
+    directions: [met, struct]
   - id: s5.cmp.titanium_alloy
     number: 32
     type: CMP
@@ -447,6 +478,7 @@ define:
       year: 1954
       source: "S20"
       estimated: false
+    directions: [met, struct, prop]
   - id: s8.cmp.turbine_blade_forged
     number: 33
     type: CMP
@@ -459,6 +491,7 @@ define:
       year: 1941
       source: "S3"
       estimated: false
+    directions: [prop, mfg, met]
   - id: s8.cmp.turbine_blade_cast
     number: 34
     type: CMP
@@ -471,6 +504,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [prop, mfg, met]
   - id: s8.cmp.turbine_blade_cooled
     number: 35
     type: CMP
@@ -483,6 +517,7 @@ define:
       year: 1970
       source: "RULE-MID"
       estimated: true
+    directions: [prop, mfg, met]
   - id: s8.cmp.axial_compressor_assembly
     number: 36
     type: CMP
@@ -495,6 +530,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [prop, mfg, aero]
   - id: s8.cmp.afterburner_unit
     number: 37
     type: CMP
@@ -507,6 +543,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [prop, chem]
   - id: s5.prc.light_alloy_rolling
     number: 38
     type: PRC
@@ -525,6 +562,7 @@ define:
       year: 1909
       source: "S31"
       estimated: false
+    directions: [met, mfg]
   - id: s5.prc.nicr_alloy_melt
     number: 39
     type: PRC
@@ -542,6 +580,7 @@ define:
       year: 1941
       source: "S3"
       estimated: false
+    directions: [met, chem]
   - id: s5.prc.superalloy_melt_g2
     number: 40
     type: PRC
@@ -559,6 +598,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [met, chem]
   - id: s5.prc.vacuum_induction_melt
     number: 41
     type: PRC
@@ -576,6 +616,7 @@ define:
       year: 1952
       source: "S23"
       estimated: false
+    directions: [met, chem]
   - id: s5.prc.titanium_reduction_forging
     number: 42
     type: PRC
@@ -594,6 +635,7 @@ define:
       year: 1948
       source: "S37"
       estimated: false
+    directions: [met, mfg, chem]
   - id: s5.prc.ds_casting
     number: 43
     type: PRC
@@ -612,6 +654,7 @@ define:
       year: 1969
       source: "S22"
       estimated: false
+    directions: [met, mfg, prop]
   - id: s5.prc.alloying_element_refining
     number: 44
     type: PRC
@@ -630,6 +673,7 @@ define:
       before: true
       source: "RULE-G0"
       estimated: true
+    directions: [chem, met]
   - id: s5.prc.high_purity_nickel_refining
     number: 45
     type: PRC
@@ -647,6 +691,7 @@ define:
       year: 1945
       source: "RULE-MID"
       estimated: true
+    directions: [chem, met]
   - id: s5.prc.ceramic_shell_moulding
     number: 46
     type: PRC
@@ -665,6 +710,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [chem, mfg, mat]
   - id: s6.prc.precision_gear_bearing
     number: 47
     type: PRC
@@ -683,6 +729,7 @@ define:
       before: true
       source: "RULE-G0"
       estimated: true
+    directions: [mfg, prop]
   - id: s6.prc.centrifugal_impeller_machining
     number: 48
     type: PRC
@@ -700,6 +747,7 @@ define:
       year: 1945
       source: "RULE-MID"
       estimated: true
+    directions: [mfg, prop]
   - id: s6.prc.precision_blade_forging
     number: 49
     type: PRC
@@ -718,6 +766,7 @@ define:
       year: 1941
       source: "S3"
       estimated: false
+    directions: [mfg, met]
   - id: s6.prc.axial_compressor_machining
     number: 50
     type: PRC
@@ -735,6 +784,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [mfg, prop]
   - id: s6.prc.investment_cast_blades
     number: 51
     type: PRC
@@ -753,6 +803,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [mfg, met]
   - id: s6.prc.cooled_blade_drilling
     number: 52
     type: PRC
@@ -770,6 +821,7 @@ define:
       year: 1970
       source: "RULE-MID"
       estimated: true
+    directions: [mfg, prop]
   - id: s8.prc.stressed_skin_assembly
     number: 53
     type: PRC
@@ -788,6 +840,7 @@ define:
       before: true
       source: "RULE-G0"
       estimated: true
+    directions: [struct, mfg, aero]
   - id: s8.prc.jet_engine_assembly_test
     number: 54
     type: PRC
@@ -805,6 +858,7 @@ define:
       year: 1944
       source: "S7"
       estimated: false
+    directions: [prop, mfg]
   - id: s8.prc.swept_wing_fabrication
     number: 55
     type: PRC
@@ -822,6 +876,7 @@ define:
       year: 1947
       source: "S27"
       estimated: false
+    directions: [struct, mfg, aero]
   - id: s8.prc.machined_integral_skins
     number: 56
     type: PRC
@@ -839,6 +894,7 @@ define:
       year: 1960
       source: "RULE-MID"
       estimated: true
+    directions: [struct, mfg, met]
   - id: s8.prc.afterburner_fabrication
     number: 57
     type: PRC
@@ -857,6 +913,7 @@ define:
       year: 1951
       source: "RULE-MID"
       estimated: true
+    directions: [prop, mfg]
   - id: s8.app.jet_fighter_g1
     number: 58
     type: APP
@@ -869,6 +926,7 @@ define:
       year: 1944
       source: "S7"
       estimated: false
+    directions: [aero, prop, ord]
   - id: s8.app.jet_fighter_g2
     number: 59
     type: APP
@@ -881,6 +939,7 @@ define:
       year: 1947
       source: "S27"
       estimated: false
+    directions: [aero, prop, ord]
   - id: s8.app.jet_fighter_g3
     number: 60
     type: APP
@@ -893,6 +952,7 @@ define:
       year: 1953
       source: "S27"
       estimated: false
+    directions: [aero, prop, sens]
   - id: s8.app.jet_fighter_g4
     number: 61
     type: APP
@@ -905,6 +965,7 @@ define:
       year: 1972
       source: "S26"
       estimated: false
+    directions: [aero, prop, sens, ctrl]
   - id: s8.fnd.electronic_flight_control_theory
     number: 62
     type: FND
@@ -921,6 +982,7 @@ define:
       year: 1972
       source: "G56-S-A"
       estimated: false
+    directions: [ctrl, aero]
   - id: s8.fnd.edge_wave_diffraction
     number: 63
     type: FND
@@ -935,6 +997,7 @@ define:
       year: 1962
       source: "G56-S-B"
       estimated: true
+    directions: [sens, aero]
   - id: s5.prn.single_crystal_growth
     number: 64
     type: PRN
@@ -947,6 +1010,7 @@ define:
       year: 1974
       source: "G56-S-C"
       estimated: true
+    directions: [met, prop]
   - id: s5.prn.fibre_composite_laminate_design
     number: 65
     type: PRN
@@ -959,6 +1023,7 @@ define:
       year: 1970
       source: "G56-S-D"
       estimated: false
+    directions: [mat, struct]
   - id: s8.prn.low_observable_shaping
     number: 66
     type: PRN
@@ -971,6 +1036,7 @@ define:
       year: 1975
       source: "G56-S-B"
       estimated: true
+    directions: [sens, aero, struct]
   - id: s8.eng.fly_by_wire_relaxed_stability
     number: 67
     type: ENG
@@ -983,6 +1049,7 @@ define:
       year: 1974
       source: "G56-S-E"
       estimated: false
+    directions: [ctrl, aero]
   - id: s8.eng.turbofan_g5
     number: 68
     type: ENG
@@ -995,6 +1062,7 @@ define:
       year: 1981
       source: "G56-S-F"
       estimated: false
+    directions: [prop, ctrl, met]
   - id: s8.eng.composite_airframe
     number: 69
     type: ENG
@@ -1007,6 +1075,7 @@ define:
       year: 1978
       source: "G56-S-G"
       estimated: false
+    directions: [struct, mat, aero]
   - id: s8.eng.low_observable_airframe
     number: 70
     type: ENG
@@ -1019,6 +1088,7 @@ define:
       year: 1977
       source: "G56-S-H"
       estimated: false
+    directions: [sens, struct, mat]
   - id: s8.eng.thrust_vectoring_supercruise_engine
     number: 71
     type: ENG
@@ -1031,6 +1101,7 @@ define:
       year: 1990
       source: "G56-S-I"
       estimated: false
+    directions: [prop, ctrl, aero]
   - id: s8.cmp.turbine_blade_single_crystal
     number: 72
     type: CMP
@@ -1043,6 +1114,7 @@ define:
       year: 1982
       source: "G56-S-C"
       estimated: true
+    directions: [prop, met, mfg]
   - id: s5.prc.single_crystal_casting
     number: 73
     type: PRC
@@ -1061,6 +1133,7 @@ define:
       year: 1982
       source: "G56-S-C"
       estimated: true
+    directions: [met, mfg, prop]
   - id: s8.prc.composite_layup_cure
     number: 74
     type: PRC
@@ -1078,6 +1151,7 @@ define:
       year: 1978
       source: "G56-S-G"
       estimated: true
+    directions: [mfg, mat, struct]
   - id: s5.prc.low_observable_finishing
     number: 75
     type: PRC
@@ -1096,6 +1170,7 @@ define:
       year: 1981
       source: "G56-S-H"
       estimated: true
+    directions: [mat, sens, chem]
   - id: s8.app.jet_fighter_g5
     number: 76
     type: APP
@@ -1108,6 +1183,7 @@ define:
       year: 1984
       source: "G56-S-J"
       estimated: false
+    directions: [aero, sens, ctrl, prop]
   - id: s8.app.jet_fighter_g6
     number: 77
     type: APP
@@ -1120,6 +1196,7 @@ define:
       year: 2005
       source: "G56-S-I"
       estimated: false
+    directions: [aero, sens, ctrl, prop]
   - id: s8.eng.aesa_sensor_fusion
     number: 78
     type: ENG
@@ -1132,6 +1209,7 @@ define:
       year: 1997
       source: "G56-S-L"
       estimated: true
+    directions: [sens, ctrl, elec]
   - id: s5.cmp.ceramic_matrix_composite
     number: 79
     type: CMP
@@ -1144,6 +1222,7 @@ define:
       year: 2016
       source: "G56-S-M"
       estimated: true
+    directions: [mat, prop, chem]
   - id: s5.prc.cmc_fabrication
     number: 80
     type: PRC
@@ -1162,6 +1241,7 @@ define:
       year: 2016
       source: "G56-S-M"
       estimated: true
+    directions: [mfg, mat, chem]
   - id: s8.eng.adaptive_cycle_engine
     number: 81
     type: ENG
@@ -1174,6 +1254,7 @@ define:
       year: 2021
       source: "G56-S-N"
       estimated: true
+    directions: [prop, ctrl, mat]
   - id: s8.prn.phased_array_radar_pesa
     number: 82
     type: PRN
@@ -1186,6 +1267,7 @@ define:
       year: 1975
       source: "G56-R-1"
       estimated: false
+    directions: [sens, elec]
   - id: s5.prn.gaas_wafer_growth
     number: 83
     type: PRN
@@ -1198,6 +1280,7 @@ define:
       year: 1965
       source: "G56-R-2"
       estimated: false
+    directions: [elec, chem]
   - id: s5.cmp.gaas_mmic
     number: 84
     type: CMP
@@ -1210,6 +1293,7 @@ define:
       year: 1976
       source: "G56-R-3"
       estimated: false
+    directions: [elec, sens]
   - id: s8.cmp.solid_state_tr_module
     number: 85
     type: CMP
@@ -1222,6 +1306,7 @@ define:
       year: 1988
       source: "G56-R-4"
       estimated: true
+    directions: [elec, sens]
   - id: s8.prn.programmable_signal_processing
     number: 86
     type: PRN
@@ -1234,6 +1319,7 @@ define:
       year: 1979
       source: "G56-R-5"
       estimated: true
+    directions: [ctrl, sens, elec]
   - id: s8.eng.digital_beamforming
     number: 87
     type: ENG
@@ -1246,6 +1332,7 @@ define:
       year: 1990
       source: "G56-R-6"
       estimated: true
+    directions: [sens, ctrl, elec]
   - id: s8.prn.relaxed_static_stability
     number: 88
     type: PRN
@@ -1258,6 +1345,7 @@ define:
       year: 1972
       source: "G56-R-7"
       estimated: true
+    directions: [aero, ctrl]
   - id: s8.cmp.digital_flight_control_computer
     number: 89
     type: CMP
@@ -1270,6 +1358,7 @@ define:
       year: 1976
       source: "G56-R-8"
       estimated: true
+    directions: [ctrl, elec, aero]
   - id: s8.prn.electronic_engine_control
     number: 90
     type: PRN
@@ -1282,6 +1371,7 @@ define:
       year: 1969
       source: "G56-R-9"
       estimated: false
+    directions: [ctrl, prop, elec]
   - id: s5.cmp.high_modulus_fibre
     number: 91
     type: CMP
@@ -1294,6 +1384,7 @@ define:
       year: 1963
       source: "G56-R-10"
       estimated: false
+    directions: [mat, chem, struct]
   - id: s8.prn.thrust_vectoring_nozzle
     number: 92
     type: PRN
@@ -1306,6 +1397,7 @@ define:
       year: 1989
       source: "G56-R-11"
       estimated: false
+    directions: [prop, ctrl, struct]
   - id: s8.prn.rcs_computational_prediction
     number: 93
     type: PRN
@@ -1318,6 +1410,7 @@ define:
       year: 1975
       source: "G56-R-12"
       estimated: false
+    directions: [sens, ctrl, aero]
   - id: s8.eng.integrated_avionics_architecture
     number: 94
     type: ENG
@@ -1330,6 +1423,7 @@ define:
       year: 1986
       source: "G56-R-13"
       estimated: true
+    directions: [ctrl, elec, sens]
   - id: s5.cmp.silicon_carbide_fibre
     number: 95
     type: CMP
@@ -1342,6 +1436,7 @@ define:
       year: 1975
       source: "G56-R-14"
       estimated: false
+    directions: [mat, chem, prop]
   - id: s5.prn.matrix_infiltration_cvi
     number: 96
     type: PRN
@@ -1354,6 +1449,7 @@ define:
       year: 1977
       source: "G56-R-15"
       estimated: false
+    directions: [mat, chem, mfg]
   - id: s5.prn.environmental_barrier_coating
     number: 97
     type: PRN
@@ -1366,6 +1462,7 @@ define:
       year: 2000
       source: "G56-R-16"
       estimated: true
+    directions: [mat, chem, prop]
   - id: s8.prn.variable_cycle_engine
     number: 98
     type: PRN
@@ -1378,6 +1475,7 @@ define:
       year: 1990
       source: "G56-R-17"
       estimated: false
+    directions: [prop, ctrl, aero]
   - id: s8.prn.adaptive_third_stream_fan
     number: 99
     type: PRN
@@ -1390,3 +1488,4 @@ define:
       year: 2013
       source: "G56-R-18"
       estimated: false
+    directions: [prop, aero, ctrl]

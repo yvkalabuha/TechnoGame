@@ -27,6 +27,10 @@ public sealed partial class NodeTable
     /// <summary><c>labour_p</c>: hours per process execution (contract §4.1); zero for non-PRC nodes.</summary>
     public required ImmutableArray<Fx6> LabourP { get; init; }
     public required ImmutableArray<Hazard> Hazard { get; init; }
+
+    /// <summary>Directions of row r (numbers of <see cref="Directions.Ids"/>, the main one first): <c>DirectionStart[r]..DirectionStart[r+1]</c>. Not part of the data hash yet.</summary>
+    public required ImmutableArray<int> DirectionStart { get; init; }
+    public required ImmutableArray<int> Direction { get; init; }
     public required RequirementLists Requires { get; init; }
 
     /// <summary>informs edges of row r: <c>InformsStart[r]..InformsStart[r+1]</c>, targets ascending.</summary>
@@ -49,6 +53,11 @@ public sealed partial class NodeTable
         int i = _sortedIds.AsSpan().BinarySearch(id, StringComparer.Ordinal);
         return i >= 0 ? _sortedRows[i] : -1;
     }
+
+    public int DirectionCount(int row) => DirectionStart[row + 1] - DirectionStart[row];
+
+    /// <summary>The k-th direction number of the node; k = 0 is the main one.</summary>
+    public int DirectionAt(int row, int k) => Direction[DirectionStart[row] + k];
 
     public Fx6 Requirement(int row, Dimension dim) => dim switch
     {
@@ -102,6 +111,14 @@ public sealed partial class NodeTable
             informsStart.Add(informsTo.Count);
         }
 
+        var directionStart = new List<int> { 0 };
+        var directions = new List<int>();
+        foreach (RawNode node in raw)
+        {
+            directions.AddRange(node.Directions);
+            directionStart.Add(directions.Count);
+        }
+
         var table = new NodeTable
         {
             Id = [.. raw.Select(r => r.Id)],
@@ -116,6 +133,8 @@ public sealed partial class NodeTable
             ReqQualityControl = [.. raw.Select(r => r.Req[2])],
             LabourP = [.. raw.Select(r => r.LabourP)],
             Hazard = [.. raw.Select(r => r.Hazard)],
+            DirectionStart = directionStart.ToImmutableArray(),
+            Direction = directions.ToImmutableArray(),
             Requires = RequirementLists.Build(requires),
             InformsStart = [.. informsStart],
             InformsTo = [.. informsTo],

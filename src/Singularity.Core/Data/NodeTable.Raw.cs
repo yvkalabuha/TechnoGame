@@ -12,6 +12,7 @@ public sealed partial class NodeTable
         public required string Id;
         public required YSeq Requires;
         public YSeq? Informs;
+        public int[] Directions = [];
         public int Number, Gen, Tier, AnchorYear;
         public NodeType Type;
         public Discipline Discipline;
@@ -40,6 +41,7 @@ public sealed partial class NodeTable
             n.Discipline = m.Enum("discipline", DataNames.Disciplines);
             n.Cluster = m.Enum("cluster", DataNames.Clusters);
             n.Hazard = m.Enum("hazard", DataNames.Hazards);
+            n.Directions = Core.Data.Directions.ReadForNode(m.Optional("directions"), n.Id);
             n.Informs = m.Optional("informs") is {} inf ? Scalars.Seq(inf) : null;
             ReadCapability(m, n);
             ReadAnchor(m.Required("anchor"), n);
