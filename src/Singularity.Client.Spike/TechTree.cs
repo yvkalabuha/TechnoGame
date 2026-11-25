@@ -476,31 +476,39 @@ public sealed partial class TechTree : Control
         float avail = cs > 0.35f ? da.End.X - q.X - 4 : cs < -0.35f ? q.X - da.Position.X - 4 : 220;
         string s = Loc.T("disc." + w);
         if (Fonts.DraftBold.GetStringSize(s, HorizontalAlignment.Left, -1, 14).X > avail) s = Loc.T("disc." + w + ".s");   // short name before any ellipsis
-        s = Fit(s, Math.Max(60, avail), 14, Fonts.DraftBold);
+        s = Fit(s, Math.Max(Area.Size.X * 0.4f, avail), 14, Fonts.DraftBold);   // the label is shifted inside the window below, so only a very long name is cut
         var sz = Fonts.DraftBold.GetStringSize(s, HorizontalAlignment.Left, -1, 14);
         float x = cs > 0.35f ? q.X : cs < -0.35f ? q.X - sz.X : q.X - sz.X * 0.5f;
         float y = sn > 0.35f ? q.Y + 6 : sn < -0.35f ? q.Y - sz.Y - 2 : q.Y - sz.Y * 0.5f;
-        return (new Rect2(x, y, sz), s);
+        // Shown whole or not at all: moved into the window (the total under the name is part of the box), hidden when it would stand far from its sector.
+        if (!TreeLabelRules.ClampInto(new LabelBox(da.Position.X, da.Position.Y, da.Size.X, da.Size.Y), 4f, new LabelBox(x, y, sz.X, sz.Y + 20f), 90f, out var cb))
+            return (new Rect2(-1e5f, -1e5f, 0, 0), s);
+        return (new Rect2(cb.X, cb.Y, sz), s);
     }
 
     void DrawPlanisphere()
     {
-        _countRects.Clear(); _labelRects.Clear(); _plates.Clear();
+        _countRects.Clear(); _labelRects.Clear(); _plates.Clear(); _plateText.Clear();
         CountCells();
         var c = Centre; float u = Unit;
         DrawSectors(c, u);
         DrawDecades(c, u);
-        DrawNowRing(c, u);
         for (int w = 0; w < _nSec; w++)
         {
             var (rc, s) = WedgeLabel(w);
+            if (rc.Size.X <= 0f) { _sumRects[w] = new Rect2(-1e5f, -1e5f, 0, 0); continue; }
             Text(new Vector2(rc.Position.X, rc.End.Y - 4), s, 14, Ui.Ink2, FontKind.Draft);
             // The wedge summary known/total: under the wedge name, never skipped, on the paper (no plate).
             var ssz = Fonts.Mono.GetStringSize(_sumText[w], HorizontalAlignment.Left, -1, 14);
             _sumRects[w] = new Rect2(rc.GetCenter().X - ssz.X * 0.5f, rc.End.Y + 2, ssz);
             Text(new Vector2(_sumRects[w].Position.X, _sumRects[w].Position.Y + ssz.Y * 0.8f), _sumText[w], 14, Ui.DiscText[w % Ui.DiscText.Length], FontKind.Mono);
         }
+        // The node counter stands on its own paper plate: the hatch never runs through the digits (C5).
+        var hsz = Fonts.Mono.GetStringSize(_hdrText, HorizontalAlignment.Left, -1, 14);
+        _hdrRect = new Rect2(Area.Position.X + 14 - TreeLabelRules.PlateField, Area.Position.Y + 20 - hsz.Y * 0.8f - TreeLabelRules.PlateField, hsz.X + 2 * TreeLabelRules.PlateField, hsz.Y + 2 * TreeLabelRules.PlateField);
+        _cv.DrawRect(_hdrRect, Ui.Paper);
         Text(new Vector2(Area.Position.X + 14, Area.Position.Y + 20), _hdrText, 14, Ui.Ink, FontKind.Mono);
+        DrawNowRing(c, u);   // after the counter plate: the label keeps off it
 
         var nodes = _host.Data.Nodes; var rq = nodes.Requires;
         // requires edges (every any_of alternative): quiet first, then selected, then the route on top
@@ -512,7 +520,7 @@ public sealed partial class TechTree : Control
                         bool onRoute = _route[i] && _route[m];
                         bool toSel = _selected >= 0 && (i == _selected || m == _selected);
                         // every link rides on a 2 du paper halo, so the hatch under it never buries it
-                        if (pass == 0 && !onRoute && !toSel) { var ch = Channel(m, i); _cv.DrawPolyline(ch, new Color(Ui.Paper, 0.85f), 5f, true); _cv.DrawPolyline(ch, new Color(Ui.Rule, 0.9f), 1f, true); }
+                        if (pass == 0 && !onRoute && !toSel) { var ch = Channel(m, i); _cv.DrawPolyline(ch, new Color(Ui.Paper, 0.85f), 5f, true); _cv.DrawPolyline(ch, new Color(Ui.Ink2, 0.7f), 1f, true); }   // darker than the year rings (Rule): links are data, rings are the grid
                         else if (pass == 1 && toSel && !onRoute) { var ch = Channel(m, i); _cv.DrawPolyline(ch, Ui.Paper, 5.6f, true); _cv.DrawPolyline(ch, Ui.Ink, 1.6f, true); }
                         else if (pass == 2 && onRoute) { var ch = Channel(m, i); _cv.DrawPolyline(ch, Ui.Paper, 6.2f, true); _cv.DrawPolyline(ch, Ui.Command, 2.2f, true); }
                     }
@@ -525,6 +533,9 @@ public sealed partial class TechTree : Control
         if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) DrawYearAndChips(i);
         DrawLabels(c);
         if (Step >= ZoomSteps.EdgeLabels) DrawEdgeLabels();
+        // Last layer: the "now" plate and the decade years, over links and hatch, whole or not at all.
+        DrawNowLabel();
+        DrawYearPlates();
         DrawKeyFocus();
     }
 
@@ -612,25 +623,40 @@ public sealed partial class TechTree : Control
     }
 
     // A year on a paper plate centred at a point of a ring (drawn before the nodes, so a node always stays above it).
-    readonly List<Rect2> _plates = new();
+    readonly List<Rect2> _plates = new(); readonly List<string> _plateText = new(); Rect2 _hdrRect;
+    // The plate is only planned here (names and the "now" label keep off it) and drawn last by DrawYearPlates; one that does not fit whole is dropped.
+    Rect2 ZoomKeepOut => new(_zoomBar.Position - new Vector2(0, 40), _zoomBar.Size + new Vector2(40, 40));
+    static LabelBox B(Rect2 r) => new(r.Position.X, r.Position.Y, r.Size.X, r.Size.Y);
     void YearPlate(float x, float y, string text)
     {
-        if (!Area.Grow(20).HasPoint(new Vector2(x, y))) return;
         var sz = Fonts.Mono.GetStringSize(text, HorizontalAlignment.Left, -1, 14);
         var pl = new Rect2(x - sz.X * 0.5f - 3, y - sz.Y * 0.5f - 1, sz.X + 6, sz.Y + 2);
-        _plates.Add(pl);
-        _cv.DrawRect(pl, new Color(Ui.Sheet, 0.92f));
-        Text(new Vector2(pl.Position.X + 3, pl.Position.Y + 1 + sz.Y * 0.8f), text, 14, Ui.Ink2, FontKind.Mono);
+        if (!TreeLabelRules.PlateFits(B(pl), B(Area), B(ZoomKeepOut))) return;
+        for (int i = 0; i < _rad.Length; i++) if (!TreeLabelRules.Clear(B(pl), B(NodeBox(i).Grow(2)))) return;
+        _plates.Add(pl); _plateText.Add(text);
+    }
+    void DrawYearPlates()
+    {
+        for (int k = 0; k < _plates.Count; k++)
+        {
+            var pl = _plates[k];
+            _cv.DrawRect(pl, Ui.Sheet);
+            Text(new Vector2(pl.Position.X + 3, pl.Position.Y + 1 + (pl.Size.Y - 2) * 0.8f), _plateText[k], 14, Ui.Ink2, FontKind.Mono);
+        }
     }
 
-    // «Now»: a dashed ring at the radius of the session date and its label on the first free place of the ring (bottom first); what lies outside is not yet open.
+    // «Now»: a double thin ring at the radius of the session date (a dash means "can be opened" elsewhere, so it is not used here) and its label on the first free place of the ring (bottom first);
+    // what lies outside is not yet open. The label is only planned here and drawn last by DrawNowLabel, on a solid plate that no link or hatch crosses.
+    bool _nowLeader; Vector2 _nowFrom, _nowTo;
     void DrawNowRing(Vector2 c, float u)
     {
         float yf = _date.Year + (_date.Month - 1) / 12f + (_date.Day - 1) / 365f, r = TreeYearLayout.RadiusOf(yf) * u;
-        for (int k = 0; k < 120; k++) _cv.DrawArc(c, r, k * Mathf.Tau / 120f, (k + 0.55f) * Mathf.Tau / 120f, 3, Ui.Ink, 1.6f, true);
-        _nowRect = default;
+        foreach (float d in NowRingGap) _cv.DrawArc(c, r + d, 0, Mathf.Tau, TreeYearLayout.ArcPoints(r, 360f), Ui.Ink, 1.2f, true);
+        _nowRect = default; _nowLeader = false;
         if (_nowYear != _date.Year || _nowText == null) { _nowYear = _date.Year; _nowText = Loc.T("tree.now", _date.Year); }
-        var sz = Fonts.Text.GetStringSize(_nowText, HorizontalAlignment.Left, -1, 14) + new Vector2(10, 4);
+        var ts = Fonts.Text.GetStringSize(_nowText, HorizontalAlignment.Left, -1, 14);
+        var (pw, ph) = TreeLabelRules.NowPlateSize(ts.X, ts.Y); var sz = new Vector2(pw, ph);
+        var keep = ZoomKeepOut;
         // first free place: on the ring, else pulled out of it on a leader (the ring is crowded with nodes at the start); bottom first
         for (int off = 0; off <= 2; off++)
             for (int k = 0; k < 60; k++)
@@ -638,25 +664,32 @@ public sealed partial class TechTree : Control
                 float deg = 90f + (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 6f, a = Mathf.DegToRad(deg), dist = r + off * 46f;
                 var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
                 var rc = new Rect2(c + dir * dist - sz * 0.5f, sz);
-                bool free = Area.Encloses(rc);
+                bool free = Area.Encloses(rc) && !keep.Intersects(rc) && !_hdrRect.Grow(2).Intersects(rc);
                 for (int i = 0; free && i < _rad.Length; i++) if (NodeBox(i).Grow(2).Intersects(rc)) free = false;
                 foreach (var pl in _plates) if (free && pl.Grow(2).Intersects(rc)) free = false;
                 if (!free) continue;
-                if (off > 0) _cv.DrawLine(c + dir * r, c + dir * (dist - (sz.Y * 0.5f)), Ui.Ink, 1.2f, true);
-                _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
-                Text(new Vector2(rc.Position.X + 5, rc.Position.Y + 2 + sz.Y * 0.7f), _nowText, 14, Ui.Ink);
+                _nowLeader = off > 0; _nowFrom = c + dir * r; _nowTo = c + dir * (dist - sz.Y * 0.5f);
                 _nowRect = rc;   // node names keep off it
                 return;
             }
     }
+    static readonly float[] NowRingGap = { -1.75f, 1.75f };
+
+    void DrawNowLabel()
+    {
+        if (_nowRect.Size.X <= 0f) return;
+        if (_nowLeader) _cv.DrawLine(_nowFrom, _nowTo, Ui.Ink, 1.2f, true);
+        _cv.DrawRect(_nowRect, Ui.Sheet); _cv.DrawRect(_nowRect, Ui.Ink, false, 1f);
+        Text(new Vector2(_nowRect.Position.X + TreeLabelRules.PlateField + 1, _nowRect.Position.Y + TreeLabelRules.PlateField + (_nowRect.Size.Y - 2 * TreeLabelRules.PlateField) * 0.8f), _nowText, 14, Ui.Ink);
+    }
 
     // At step 5 a node shows its year to the right of the mark («≈» when the year is estimated) and, under it, its effect chips when the core has them (TASK-0157).
     // «No data» is said in the node panel and the hover tip, not on every node of the map. Node names go above the mark and keep off the year (DrawLabels reads the rectangle).
-    Rect2 YearRect(int i) { var p = PosOf(i); return new Rect2(p.X + NR + 4, p.Y - 9, _yearW[i] + 2, 18); }
+    Rect2 YearRect(int i) { var p = PosOf(i); return new Rect2(p.X + Reach(i) + TreeLabelRules.YearGap, p.Y - 9, _yearW[i] + 2, 18); }
     void DrawYearAndChips(int i)
     {
         var p = PosOf(i);
-        if (!Area.Grow(40).HasPoint(p)) return;
+        if (!TreeLabelRules.IconVisible(p.X, p.Y, NR, B(Area))) return;   // the year goes with its icon
         var yr = YearRect(i);
         _cv.DrawStringOutline(Fonts.Mono, new Vector2(yr.Position.X, p.Y + 5), _yearText[i], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
         Text(new Vector2(yr.Position.X, p.Y + 5), _yearText[i], 14, Ui.Ink2, FontKind.Mono);
@@ -706,6 +739,8 @@ public sealed partial class TechTree : Control
     {
         foreach (var l in _labelRects) if (l.Intersects(rc)) return true;
         foreach (var l in _edgePlates) if (l.Intersects(rc)) return true;
+        if (_nowRect.Size.X > 0f && _nowRect.Intersects(rc)) return true;
+        foreach (var l in _plates) if (l.Intersects(rc)) return true;
         for (int i = 0; i < _rad.Length; i++)
         {
             if (NodeBox(i).Intersects(rc)) return true;
@@ -865,6 +900,7 @@ public sealed partial class TechTree : Control
         {
             occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(6));
         }
+        occupied.Add(_hdrRect.Grow(2));
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         if (_nowRect.Size.X > 0f) occupied.Add(_nowRect.Grow(2));
         foreach (var pl in _plates) occupied.Add(pl.Grow(2));   // decade years: names keep off them
@@ -887,12 +923,14 @@ public sealed partial class TechTree : Control
         var hard = _lbHard; hard.Clear();
         for (int w = 0; w < _nSec; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(6)); }
         hard.AddRange(_countRects);
+        hard.Add(_hdrRect.Grow(2));
         hard.Add(barKeepOut);
         if (_nowRect.Size.X > 0f) hard.Add(_nowRect.Grow(2));
         var placed = _lbPlaced; placed.Clear();
         bool Place(int i, string text, FontKind kind, bool far = false, bool force = false)
         {
             var p = PosOf(i); float o = i == _selected ? SelKeepOut(i) + 3 : NR + 6;
+            if (!TreeLabelRules.IconVisible(p.X, p.Y, NR, B(Area))) return false;   // no icon in the window: no name hanging alone at the edge
             var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
             // near places first, then farther ones (so that the goal and the selected node always find a free spot)
             var cands = _lbCands;
@@ -999,10 +1037,19 @@ public sealed partial class TechTree : Control
     /// <summary>How far the drawing of a node reaches from its centre: the real corners of its outline, its goal frame and its selection ring (not just the mark radius).</summary>
     float Reach(int i)
     {
-        var t = _host.Data.Nodes.Type[i]; float r = MarkRadius(t), e = GlyphGeometry.Extent(t.ToString(), r);
-        if (i == _goal) e = Math.Max(e, GlyphGeometry.Extent(t.ToString(), r + 5f));
+        var t = _host.Data.Nodes.Type[i]; float r = MarkRadius(t); EnsureExtents(); float e = _ext0[(int)t];
+        if (i == _goal) e = Math.Max(e, _ext5[(int)t]);
         if (i == _selected) e = Math.Max(e, r + 4.5f + (i == _goal ? 8f : 0f) + 1f);
         return e;
+    }
+    // Outline extents per node type, rebuilt only when the mark size changes (so that Reach allocates nothing on a normal redraw).
+    readonly float[] _ext0 = new float[6], _ext5 = new float[6]; float _extKey = -1;
+    void EnsureExtents()
+    {
+        float key = NR * 100f + (int)CurLod;
+        if (key == _extKey) return;
+        _extKey = key;
+        for (int k = 0; k < 6; k++) { var nt = (NodeType)k; float r = MarkRadius(nt); _ext0[k] = GlyphGeometry.Extent(nt.ToString(), r); _ext5[k] = GlyphGeometry.Extent(nt.ToString(), r + 5f); }
     }
     bool NamedNode(int i) => i == _selected || i == _goal || i == _root;
 

@@ -7,6 +7,7 @@
     <Compile Include="../../src/Singularity.Client.Spike/CreditsData.cs" Link="CreditsData.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/PlanisphereMath.cs" Link="PlanisphereMath.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TreeYearLayout.cs" Link="TreeYearLayout.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/TreeLabelRules.cs" Link="TreeLabelRules.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/NodeMenuLogic.cs" Link="NodeMenuLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/NodeSchematics.cs" Link="NodeSchematics.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />

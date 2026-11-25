@@ -417,7 +417,7 @@ legend.colony,Colony or mandate,Колония или мандат
 legend.occupied,Occupation hatch,Оккупация (штриховка)
 legend.control,Line of control,Линия контроля
 tip.legend,Map key: hatching and lines (L),Легенда карты: штриховки и линии (L)
-legend.now,Dashed ring = now,Пунктир = сегодня
+legend.now,Double ring = now,Двойное кольцо = сегодня
 tree.step,Step {0} of 6,Шаг {0} из 6
 tree.zoom.in,Zoom in (+),Приблизить (+)
 tree.zoom.out,Zoom out (−),Отдалить (−)
