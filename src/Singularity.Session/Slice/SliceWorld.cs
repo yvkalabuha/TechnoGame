@@ -358,6 +358,13 @@ internal sealed class SliceWorld
     public BudgetShares SharesOf(int actor) => Commands.SharesOverride(actor) ?? Policy.Shares(actor);
 
     /// <summary>Procurement budget of the month in force: <c>share_P·budget_a</c> (spec §3.3, §3.4); one definition for the product layer and <c>why_not</c>.</summary>
+    /// <summary>
+    /// The share of the budget that flows into the reserve account: the remainder the player left out, plus the share set on the quality item when the
+    /// player set the split (that item has no reader in the core, so its money is not lost but kept in the reserve). The AI's own split sums to 1 and
+    /// feeds nothing.
+    /// </summary>
+    public Fx6 ReserveShare(int actor) => Commands.SharesOverride(actor) is { } s ? s.Reserve + s.Quality : Fx6.Zero;
+
     public Fx6 ProcurementBudget(int actor) => ProcurementBase(actor) + LicenceFlow(actor);
 
     /// <summary><c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5).</summary>

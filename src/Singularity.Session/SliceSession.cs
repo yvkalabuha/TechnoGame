@@ -593,15 +593,27 @@ public sealed partial class SliceSession
             return false;
         // Consumed by the first monthly step at or after this tick.
         long month = _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, tick));
-        foreach (LoggedCommand c in _pending)
+        // A programme is judged on the shares of the month that consumes it, so the other commands of the batch (a new budget split) go first.
+        var verdicts = new CommandVerdict[_pending.Count];
+        for (int pass = 0; pass < 2; pass++)
         {
-            CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
-            if (v.Accepted && c.Command is StartMasteryProgramme start)
-                v = MasteryVerdict(start, month);
-            if (v.Accepted && c.Command is FundProgramme fund)
-                v = FundVerdict(fund, month);
-            if (v.Accepted)
-                v = _world.Commands.Apply(c.Command, month);
+            for (int i = 0; i < _pending.Count; i++)
+            {
+                SliceCommand command = _pending[i].Command;
+                if ((command is FundProgramme) != (pass == 1))
+                    continue;
+                CommandVerdict v0 = CommandValidator.CheckState(command, _knowsProcess);
+                if (v0.Accepted && command is StartMasteryProgramme start)
+                    v0 = MasteryVerdict(start, month);
+                if (v0.Accepted && command is FundProgramme fund)
+                    v0 = FundVerdict(fund, month);
+                verdicts[i] = v0.Accepted ? _world.Commands.Apply(command, month) : v0;
+            }
+        }
+        for (int i = 0; i < _pending.Count; i++)
+        {
+            LoggedCommand c = _pending[i];
+            CommandVerdict v = verdicts[i];
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
             if (v.Accepted && HandleOf(c.Command) is { } h && !_world.Products.Resolves(c.Command.Actor, h))
                 v = CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {h.Slot} generation {h.Generation} no longer stands in its slot");

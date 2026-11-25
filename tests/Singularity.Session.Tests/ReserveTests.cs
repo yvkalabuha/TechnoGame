@@ -162,10 +162,15 @@ public class ReserveTests
     }
 
     [Fact]
-    public void Validator_WithTheReserve_RefusesAShareOnTheQualityItem()
+    public void QualityShare_WithTheReserve_IsValidAndGoesToTheReserve()
     {
         SliceSession s = Make(true);
-        Assert.Equal(CommandRefusal.BadShares, s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, Shares(150_000, 100_000, 50_000, 200_000, 10_000))).Reason);
+        // A full-budget split that keeps a share on the unread quality item stays valid; that share is kept in the reserve, not lost.
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, Shares(300_000, 150_000, 100_000, 400_000, 50_000))).Accepted);
+        s.StepThroughMonth(0);
+        Assert.Equal(Fx6.FromRaw(50_000), s.World.ReserveShare(0));
+        Assert.Equal(Fx6.FromRaw(50_000) * s.World.BudgetAtStart[0], Balance(s));
+        Assert.Equal(Fx6.Zero, s.World.ReserveShare(1));   // an AI actor feeds nothing
     }
 
     [Fact]

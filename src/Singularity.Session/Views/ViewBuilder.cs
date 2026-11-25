@@ -264,7 +264,7 @@ internal static class ViewBuilder
             designs.Add(DesignInputs(w, a, d, month));
         return new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
             new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month),
-            w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.SharesOf(a).Reserve * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))));
+            w.Reserve is null ? null : new ReserveView(w.Reserve.Balance(a), w.ReserveShare(a) * w.Policy.Budget(a), w.Reserve.LeakOf(w.Reserve.Balance(a))));
     }
 
     // The variants of the yearly Requirement; FV is not read in the calibration mode (spec §8.2 п. 2). Initialize writes only pol.* columns,

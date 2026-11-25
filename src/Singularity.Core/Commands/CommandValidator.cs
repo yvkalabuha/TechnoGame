@@ -106,9 +106,7 @@ public static class CommandValidator
             case SetBudgetShares s:
                 if (limits.ReserveEnabled)
                 {
-                    // The quality item has no reader in the core: a share there would be money that does nothing.
-                    if (s.Shares.InRange && s.Shares.Quality > Singularity.Kernel.Fx6.Zero)
-                        return CommandVerdict.Refuse(CommandRefusal.BadShares, "the quality item has no effect: its share must be 0 (leave it in the reserve)");
+                    // The quality item has no reader in the core: with the reserve its share is kept in the reserve (SliceWorld.ReserveShare), so it stays valid.
                     return s.Shares.IsValidWithReserve
                         ? CommandVerdict.Ok
                         : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must each lie in [0, 1] and sum to at most 1, got [{s.Shares.Research.Raw}, {s.Shares.Capability.Raw}, {s.Shares.Effort.Raw}, {s.Shares.Procurement.Raw}, {s.Shares.Quality.Raw}] (raw)");

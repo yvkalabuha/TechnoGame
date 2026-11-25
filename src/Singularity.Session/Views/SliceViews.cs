@@ -117,7 +117,7 @@ public sealed record ActorInputsView(
 
 /// <summary>
 /// The reserve account of an actor (null when the run has none): the balance, what the five items leave into it this month, and what the next step takes
-/// as the leak. Money in the units of the core (million 2011 dollars); the display in 1990 prices is the client's.
+/// as the leak. Amounts are in budget-index units, as <c>Budget</c> is (not money in dollars); the display in 1990 dollars is the client's.
 /// </summary>
 public readonly record struct ReserveView(Fx6 Balance, Fx6 Inflow, Fx6 LeakNextMonth);
 
