@@ -7,11 +7,11 @@ public class PlanisphereMathTests
 {
     [Theory]
     [InlineData(1f, Lod.Overview)]
-    [InlineData(1.59f, Lod.Overview)]
-    [InlineData(1.6f, Lod.Nodes)]
-    [InlineData(3.39f, Lod.Nodes)]
-    [InlineData(3.4f, Lod.Icons)]
-    [InlineData(9f, Lod.Icons)]
+    [InlineData(1.79f, Lod.Overview)]
+    [InlineData(1.8f, Lod.Nodes)]
+    [InlineData(4.99f, Lod.Nodes)]
+    [InlineData(5f, Lod.Icons)]
+    [InlineData(12f, Lod.Icons)]
     public void Lod_follows_zoom(float zoom, Lod expected) => Assert.Equal(expected, PlanisphereMath.LodOf(zoom));
 
     [Fact]

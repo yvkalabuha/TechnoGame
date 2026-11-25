@@ -5,11 +5,36 @@ namespace Singularity.Client.Spike;
 /// <summary>Level of detail of the planisphere (tech-tree-scale.html): cells with counts, individual nodes, node icons.</summary>
 public enum Lod { Overview, Nodes, Icons }
 
+/// <summary>Zoom step of the tree (owner #473): 1 overview ... 6 maximum.</summary>
+public static class ZoomSteps
+{
+    public const int Count = 6;
+    public static readonly float[] Scales = { 1f, 1.8f, 3f, 5f, 8f, 12f };
+    /// <summary>From this step: node names (3), icons (4), effect chips and year (5), edge labels (6).</summary>
+    public const int Names = 3, Icons = 4, Effects = 5, EdgeLabels = 6;
+
+    /// <summary>The step 1..6 a zoom factor belongs to: the highest step whose scale it has reached.</summary>
+    public static int StepOf(float zoom)
+    {
+        int s = 1;
+        for (int k = 1; k < Count; k++) if (zoom >= Scales[k] - 0.001f) s = k + 1;
+        return s;
+    }
+
+    /// <summary>The scale of the next step up (+1) or down (-1) from a zoom factor; stays at the ends. A zoom between steps moves to the nearest step in that direction.</summary>
+    public static float Next(float zoom, int dir)
+    {
+        if (dir > 0) { for (int k = 0; k < Count; k++) if (Scales[k] > zoom + 0.001f) return Scales[k]; return Scales[Count - 1]; }
+        for (int k = Count - 1; k >= 0; k--) if (Scales[k] < zoom - 0.001f) return Scales[k];
+        return Scales[0];
+    }
+}
+
 /// <summary>Godot-free view math of the client (zoom about the cursor, pan limits, level of detail, shortest camera turn). Presentation only, not simulation.</summary>
 public static class PlanisphereMath
 {
-    public const float MinZoom = 1f, MaxZoom = 9f;
-    public const float NodesFrom = 1.6f, IconsFrom = 3.4f;
+    public const float MinZoom = 1f, MaxZoom = 12f;
+    public const float NodesFrom = 1.8f, IconsFrom = 5f;
 
     public static float ClampZoom(float z) => Math.Clamp(z, MinZoom, MaxZoom);
 

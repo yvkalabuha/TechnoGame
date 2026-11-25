@@ -23,8 +23,9 @@ public sealed partial class TechTree : Control
 
     static readonly Color EmbossLight = new("FFFFFA");
     const float SubpanelButtonDu = 32;   // A10: a button is at least 32 du high
+    const float CloseW = 190, CloseH = 40;   // #473: the close button is 40 du high
     const float ZoomRate = 14f;
-    const float WedgeMargin = 0.14f;
+    const float WedgeMargin = 0.12f;
 
     readonly SimHost _host;
     readonly VBoxContainer _inset = new();
@@ -42,15 +43,21 @@ public sealed partial class TechTree : Control
     NodeView[] _nv; int[] _depth;
     readonly Dictionary<int, int> _rowOfNumber = new();
     readonly List<int> _focus = new();               // SetEffortFocus draft, process numbers
-    float[] _rad, _ang;                              // ring (1..6 plus jitter) and angle in degrees
+    float[] _rad, _ang;                              // radius in base units (from the anchor year) and angle in degrees
+    int[] _sec; int _nSec = 5;                       // sector (discipline) of each node and the number of sectors
+    string[] _yearText; float[] _yearW;              // «1953», «≈1953» per node (step 5), built once per model
+    Rect2 _nowRect; string _hdrText, _nowText; int _hdrKn = -1, _hdrTot = -1, _nowYear = -1;
+    readonly Button _closeBtn, _zoomIn, _zoomOut, _fit; readonly Label _stepLbl; readonly HBoxContainer _zoomBar = new();
+    int _stepShown = -1, _hover = -1;
     readonly List<(Rect2 rect, int row)> _rowRects = new();
     List<int>[] _dep;                                // dependants: row -> rows that list it in requires
     // Zoom and pan of the planisphere (PlanisphereMath). The drawing is clipped to the view control; _cv is the item being painted.
     readonly Control _view = new() { ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
     CanvasItem _cv;
     float _zoom = 1f, _zoomTarget = 1f; Vector2 _pan, _anchor;
-    bool _press, _dragged; Vector2 _pressPos;
+    bool _press, _dragged, _longDone; Vector2 _pressPos, _mouse; ulong _pressMs; int _pressRow = -1;
     Lod CurLod => PlanisphereMath.LodOf(_zoom);
+    int Step => ZoomSteps.StepOf(_zoom);
     /// <summary>The player's own power: orders (effort focus) are enabled only for it.</summary>
     public int Player { get; set; }
     public event Action Closed;
@@ -58,22 +65,32 @@ public sealed partial class TechTree : Control
     public TechTree(SimHost host)
     {
         _host = host; _cv = this;
-        MouseFilter = MouseFilterEnum.Stop;
+        MouseFilter = MouseFilterEnum.Stop; FocusMode = FocusModeEnum.All;   // keyboard walk over the nodes (TASK-0132)
+        FocusEntered += Redraw; FocusExited += Redraw;
 
         var top = new HBoxContainer { Position = new Vector2(14, 8) };
         top.AddThemeConstantOverride("separation", 4);
         top.AddChild(Ui.Lbl("tree.path", 18, null, FontKind.Draft));
         top.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
-        _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu);
+        _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu, focusable: true);
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
+        foreach (var cell in _viewSwitch.GetChildren())   // A7: the focus of a tab is a 3 px ultramarine ring 3 du off the frame, not the ink frame of the selected tab
+            if (cell is Button tb) tb.AddThemeStyleboxOverride("focus", Ui.FocusBox());
         top.AddChild(_viewSwitch);
-        var reset = Ui.Btn("tree.reset", ResetView); reset.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
-        var close = Ui.Btn("tree.close", () => Closed?.Invoke(), focusable: true); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
-        // A heavy 3 du frame in every state, so that the button stays the most visible one; focus keeps the two-tone ring of CaptionButton (A6, A7).
-        close.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 3, 10));
-        close.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 3, 10));
-        close.AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Ink, Ui.Ink, 3, 10));
-        top.AddChild(reset); top.AddChild(close);
+        // «Close» (#473): 40 du high in the top-right corner of the sheet, always in view; a heavy 3 du frame in every state keeps it the most visible button,
+        // focus keeps the two-tone ring of CaptionButton (A6, A7). Esc does the same.
+        _closeBtn = Ui.Btn("tree.close", () => Closed?.Invoke(), focusable: true); _closeBtn.CustomMinimumSize = new Vector2(CloseW, CloseH);
+        _closeBtn.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 3, 10));
+        _closeBtn.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 3, 10));
+        _closeBtn.AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Ink, Ui.Ink, 3, 10));
+        // Zoom bar at the lower left of the map: − + whole disc, and «Step N of 6» (C3).
+        _zoomOut = Ui.Btn("−", () => ZoomBy(-1), focusable: true); _zoomIn = Ui.Btn("+", () => ZoomBy(1), focusable: true); _fit = Ui.Btn("tree.reset", ResetView, focusable: true);
+        _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in");
+        _zoomOut.CustomMinimumSize = new Vector2(40, SubpanelButtonDu); _zoomIn.CustomMinimumSize = new Vector2(40, SubpanelButtonDu); _fit.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        _stepLbl = Ui.Lbl("", 14, Ui.Ink); _stepLbl.CustomMinimumSize = new Vector2(120, SubpanelButtonDu); _stepLbl.VerticalAlignment = VerticalAlignment.Center;
+        _zoomBar.AddThemeConstantOverride("separation", 4);
+        foreach (Control zc in new Control[] { _zoomOut, _zoomIn, _fit, _stepLbl }) _zoomBar.AddChild(zc);
+        foreach (var zb in new[] { _zoomOut, _zoomIn, _fit }) zb.AddThemeStyleboxOverride("focus", Ui.FocusBox());
         AddChild(_view);
         _view.Draw += PaintView;
         // The closed legend is a real button above the canvas (opaque sheet, 1 du ink border, 2 px focus ring): chart ink never shows through it.
@@ -87,14 +104,15 @@ public sealed partial class TechTree : Control
         _legendBtn.Pressed += () => ToggleLegend(true);
         _legendBtn.GuiInput += e => { if (e is InputEventMouseButton { Pressed: false, ButtonIndex: MouseButton.Left }) _legendBtn.CallDeferred(Control.MethodName.ReleaseFocus); };   // a click must not leave the focus (Space pauses)
         AddChild(_legendBtn);
+        AddChild(_zoomBar);
         AddChild(top);
 
         _insetBox.AddThemeStyleboxOverride("panel", DepthBox.Make(Ui.Box(Ui.Sheet, Ui.Ink, 1, 12)));
         // Sized by its content (like the power panel): anchored top-right, no bottom anchor; the scroll appears only above the stamp.
-        _insetBox.AnchorLeft = 0.6f; _insetBox.AnchorRight = 1; _insetBox.OffsetLeft = 0; _insetBox.OffsetTop = 6; _insetBox.OffsetRight = -6;
+        _insetBox.AnchorLeft = 0.6f; _insetBox.AnchorRight = 1; _insetBox.OffsetLeft = 0; _insetBox.OffsetTop = CloseH + 10; _insetBox.OffsetRight = -6;   // below the close button
         var sc = _insetScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         // A12: the scroll bar is 8 du wide, ink-2 grabber on a rule track.
-        var vbar = sc.GetVScrollBar(); vbar.CustomMinimumSize = new Vector2(8, 0);
+        var vbar = sc.GetVScrollBar(); vbar.CustomMinimumSize = new Vector2(10, 0);
         vbar.AddThemeStyleboxOverride("scroll", Ui.Box(Ui.Rule, null, 0, 0, 0));
         foreach (var gb in new[] { "grabber", "grabber_highlight", "grabber_pressed" }) vbar.AddThemeStyleboxOverride(gb, Ui.Box(Ui.Ink2, null, 0, 0, 0));
         _inset.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -103,14 +121,21 @@ public sealed partial class TechTree : Control
         _insetPad.AddThemeConstantOverride("margin_right", 12); _insetPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _insetPad.AddChild(_inset); sc.AddChild(_insetPad); _insetBox.AddChild(sc);
         AddChild(_insetBox);
+        AddChild(_closeBtn);
+        _menu = new MenuLayer(this); AddChild(_menu);
+        VisibilityChanged += () => { if (!Visible) CloseMenu(); };
+        _legendOpen = true;   // the legend is visible by default (Gemini finding, TASK-0149)
         Loc.Changed += Invalidate;
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
 
-    void Invalidate() { _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
+    void Invalidate() { _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
+    /// <summary>One zoom step up (+1) or down (-1) about the middle of the map (buttons and the keys + − 0).</summary>
+    public void ZoomBy(int dir) { _zoomTarget = PlanisphereMath.ClampZoom(ZoomSteps.Next(_zoomTarget, dir)); _anchor = Area.GetCenter(); Redraw(); }
+    public int ShotStep => Step;
     /// <summary>Screenshot run: jumps the zoom to a value and centres the given row (none: the drawing centre).</summary>
     public void ShotZoom(float zoom, int rowToCentre)
     {
@@ -143,11 +168,19 @@ public sealed partial class TechTree : Control
         return "no view of the Icons level shows all six node types";
     }
     public int GoalRow => _goal;
+    /// <summary>Shot run: a node worth centring on: the route frontier, else any frontier node, else the goal, else the first node.</summary>
+    public int ShotPickRow()
+    {
+        if (FrontierRow >= 0) return FrontierRow;
+        for (int i = 0; _state != null && i < _state.Length; i++) if (_state[i] == St.Frontier) return i;
+        return _goal >= 0 ? _goal : 0;
+    }
+    public int SelectedRow => _selected;
     public int FrontierRow { get { for (int i = 0; _state != null && i < _state.Length; i++) if (_state[i] == St.Frontier && _route[i]) return i; return -1; } }
 
     public void ShowFor(int actor, int mode)
     {
-        _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; Visible = true;
+        _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; _kb = -1; _kbActive = false; CloseMenu(); Visible = true; CallDeferred(Control.MethodName.GrabFocus);   // Tab and the arrows work at once
     }
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
     /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
@@ -159,9 +192,14 @@ public sealed partial class TechTree : Control
     {
         // The goal panel yields to the open legend: its bottom stays 8 du above the sheet (the sheet top is Size.Y - 332) and the rest scrolls inside.
         float limit = InsetLimit;
-        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_insetPad.GetCombinedMinimumSize().Y, LegendOpen ? limit - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit));
-        _legendBtn.Position = new Vector2(Area.Position.X + 10, Area.End.Y - 42); _legendBtn.Size = new Vector2(144, 32);
+        float topShift = _insetBox.OffsetTop - 6f;   // the box starts below the close button, so its room is that much shorter
+        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_insetPad.GetCombinedMinimumSize().Y, LegendOpen ? limit - topShift - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit - topShift));
+        _closeBtn.Size = new Vector2(CloseW, CloseH); _closeBtn.Position = new Vector2(Size.X - 6 - CloseW, 4);
+        _zoomBar.Position = new Vector2(Area.Position.X + 10, Area.End.Y - 42); _zoomBar.Visible = _mode == 0;
+        _legendBtn.Position = new Vector2(Area.Position.X + 10, Area.End.Y - 82); _legendBtn.Size = new Vector2(144, 32);
         _legendBtn.Visible = _mode == 0 && !LegendOpen;
+        if (_stepShown != Step) { _stepShown = Step; _stepLbl.Text = Loc.T("tree.step", Step); }
+        PollLongPress();
         _view.Position = Area.Position; _view.Size = Area.Size;
         if (Math.Abs(_zoom - _zoomTarget) > 0.001f)
         {
@@ -287,27 +325,24 @@ public sealed partial class TechTree : Control
         return best;
     }
 
-    // Wedge = discipline (clockwise = newer generation), ring = node type (layer). Nodes of one wedge-ring cell are spread by generation.
+    // Radius = anchor year, sector = discipline appended clockwise; the type of a node is its shape (owner #473). Nodes of one sector are spread by TreeYearLayout.Place.
+    const float MinGapUnits = 0.3f;
     void Layout()
     {
-        var nodes = _host.Data.Nodes;
-        _rad = new float[nodes.Count]; _ang = new float[nodes.Count];
-        var cell = new Dictionary<(int, int), List<int>>();
-        for (int i = 0; i < nodes.Count; i++)
+        var nodes = _host.Data.Nodes; int n = nodes.Count;
+        _rad = new float[n]; _ang = new float[n]; _sec = new int[n];
+        int maxD = 0;
+        for (int i = 0; i < n; i++) maxD = Math.Max(maxD, (int)nodes.Discipline[i]);
+        _nSec = Math.Clamp(maxD + 1, 1, TreeYearLayout.MaxSectors);
+        var year = new int[n]; var num = new int[n];
+        _yearText = new string[n]; _yearW = new float[n];
+        for (int i = 0; i < n; i++)
         {
-            var k = ((int)nodes.Type[i], (int)nodes.Discipline[i]);
-            if (!cell.TryGetValue(k, out var l)) cell[k] = l = new List<int>();
-            l.Add(i);
+            _sec[i] = Math.Min((int)nodes.Discipline[i], _nSec - 1); year[i] = nodes.AnchorYear[i]; num[i] = nodes.Number[i];
+            _yearText[i] = (nodes.AnchorEstimated[i] ? "≈" : nodes.AnchorBefore[i] ? "<" : "") + nodes.AnchorYear[i];   // an estimated year is said to be one (#473)
+            _yearW[i] = Fonts.Mono.GetStringSize(_yearText[i], HorizontalAlignment.Left, -1, 14).X;
         }
-        foreach (var kv in cell)
-        {
-            var l = kv.Value.OrderBy(i => nodes.Gen[i]).ThenBy(i => nodes.Number[i]).ToList();
-            for (int j = 0; j < l.Count; j++)
-            {
-                _ang[l[j]] = -90f + kv.Key.Item2 * 72f + 72f * (WedgeMargin + (1 - 2 * WedgeMargin) * (j + 0.5f) / l.Count);
-                _rad[l[j]] = kv.Key.Item1 + 1f + (j % 2 == 0 ? -0.1f : 0.1f);
-            }
-        }
+        TreeYearLayout.Place(year, _sec, num, _nSec, WedgeMargin, MinGapUnits, _rad, _ang);
     }
 
     // ---------------- drawing ----------------
@@ -417,24 +452,25 @@ public sealed partial class TechTree : Control
         Text(r.Position + new Vector2(r.Size.X - 10 - 130, 50), _date.ToString(), 14, Ui.Ink, FontKind.Mono, HorizontalAlignment.Right, 130);
     }
 
-    // Channel route of an edge between rings: radial out of the source, an arc along the channel (half-integer radius), radial into the target.
-    List<Vector2> Channel(int m, int i)
+    // Route of an edge: radial out of the source, an arc along a channel radius between the two years (just outside the later one when they are close), radial into the target.
+    // The returned array comes from a pool by length and is valid until the next call of the same length (every caller uses it at once), so a redraw allocates no route buffers.
+    readonly Vector2[][] _chPool = new Vector2[128][];
+    Vector2[] Channel(int m, int i)
     {
-        int ringI = (int)Mathf.Round(_rad[i]);
-        float rc = ringI < 6 ? ringI + 0.5f : 5.78f;               // 5.5 is the double circle itself
-        if (_rad[i] > _rad[m] + 0.3f) rc = ringI == 6 ? 5.78f : ringI - 0.5f;
-        var pts = new List<Vector2> { PosOf(m), Polar(rc, _ang[m]) };
+        float rc = Math.Abs(_rad[i] - _rad[m]) > 0.4f ? (_rad[m] + _rad[i]) * 0.5f : Math.Max(_rad[m], _rad[i]) + 0.12f;
         float a0 = _ang[m], a1 = a0 + Mathf.PosMod(_ang[i] - a0 + 180f, 360f) - 180f;   // the short way round
-        int steps = Math.Max(1, (int)(Math.Abs(a1 - a0) / 4f));
-        for (int k = 1; k <= steps; k++) pts.Add(Polar(rc, a0 + (a1 - a0) * k / steps));
-        pts.Add(PosOf(i));
+        int steps = Math.Max(1, (int)(Math.Abs(a1 - a0) / 4f)), n = steps + 3;
+        var pts = _chPool[n] ??= new Vector2[n];
+        pts[0] = PosOf(m); pts[1] = Polar(rc, _ang[m]);
+        for (int k = 1; k <= steps; k++) pts[k + 1] = Polar(rc, a0 + (a1 - a0) * k / steps);
+        pts[n - 1] = PosOf(i);
         return pts;
     }
 
     // Wedge name outside the outer ring: left-aligned on the right side, right-aligned on the left, centred below; trimmed to the free width.
     (Rect2 rect, string text) WedgeLabel(int w)
     {
-        float mid = -90f + w * 72f + 36f, cs = Mathf.Cos(Mathf.DegToRad(mid)), sn = Mathf.Sin(Mathf.DegToRad(mid));
+        float mid = TreeYearLayout.SectorMid(w, _nSec), cs = Mathf.Cos(Mathf.DegToRad(mid)), sn = Mathf.Sin(Mathf.DegToRad(mid));
         var q = Polar(6.65f, mid);
         var da = Area;
         float avail = cs > 0.35f ? da.End.X - q.X - 4 : cs < -0.35f ? q.X - da.Position.X - 4 : 220;
@@ -449,32 +485,24 @@ public sealed partial class TechTree : Control
 
     void DrawPlanisphere()
     {
-        _countRects.Clear(); _labelRects.Clear();
+        _countRects.Clear(); _labelRects.Clear(); _plates.Clear();
         CountCells();
         var c = Centre; float u = Unit;
-        // layers: six rings; the double circle between processes and products is the «knowledge ≠ production» line
-        for (int r = 1; r <= 6; r++) if (r != 6) _cv.DrawArc(c, r * u, 0, Mathf.Tau, 96, Ui.Rule, 1f, true);
-        _cv.DrawArc(c, 5.5f * u - 3f, 0, Mathf.Tau, 96, Ui.Ink, 1.6f, true);
-        _cv.DrawArc(c, 5.5f * u + 3f, 0, Mathf.Tau, 96, Ui.Ink, 1.6f, true);
-        _cv.DrawArc(c, 6 * u, 0, Mathf.Tau, 96, Ui.Rule, 1f, true);
-        for (int w = 0; w < 5; w++)
+        DrawSectors(c, u);
+        DrawDecades(c, u);
+        DrawNowRing(c, u);
+        for (int w = 0; w < _nSec; w++)
         {
-            float a = Mathf.DegToRad(-90f + w * 72f);
-            var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-            _cv.DrawLine(c + d * u * 0.6f, c + d * (6.5f * u), Ui.Rule, 1f);
             var (rc, s) = WedgeLabel(w);
             Text(new Vector2(rc.Position.X, rc.End.Y - 4), s, 14, Ui.Ink2, FontKind.Draft);
             // The wedge summary known/total: under the wedge name, never skipped, on the paper (no plate).
             var ssz = Fonts.Mono.GetStringSize(_sumText[w], HorizontalAlignment.Left, -1, 14);
             _sumRects[w] = new Rect2(rc.GetCenter().X - ssz.X * 0.5f, rc.End.Y + 2, ssz);
-            Text(new Vector2(_sumRects[w].Position.X, _sumRects[w].Position.Y + ssz.Y * 0.8f), _sumText[w], 14, Ui.DiscText[w], FontKind.Mono);
+            Text(new Vector2(_sumRects[w].Position.X, _sumRects[w].Position.Y + ssz.Y * 0.8f), _sumText[w], 14, Ui.DiscText[w % Ui.DiscText.Length], FontKind.Mono);
         }
-        DrawClock(c, u);
-        DrawCells(c, u);
+        Text(new Vector2(Area.Position.X + 14, Area.Position.Y + 20), _hdrText, 14, Ui.Ink, FontKind.Mono);
 
         var nodes = _host.Data.Nodes; var rq = nodes.Requires;
-        var routeEdges = new HashSet<(int, int)>();
-        for (int k = 0; k + 1 < _path.Count; k++) routeEdges.Add((_path[k], _path[k + 1]));
         // requires edges (every any_of alternative): quiet first, then selected, then the route on top
         for (int pass = 0; pass < 3; pass++)
             for (int i = 0; i < nodes.Count; i++)
@@ -483,81 +511,232 @@ public sealed partial class TechTree : Control
                     {
                         bool onRoute = _route[i] && _route[m];
                         bool toSel = _selected >= 0 && (i == _selected || m == _selected);
-                        if (pass == 0 && !onRoute && !toSel) _cv.DrawPolyline(Channel(m, i).ToArray(), new Color(Ui.Rule, 0.7f), 1f, true);
-                        else if (pass == 1 && toSel && !onRoute) _cv.DrawPolyline(Channel(m, i).ToArray(), Ui.Ink, 1.6f, true);
-                        else if (pass == 2 && onRoute) _cv.DrawPolyline(Channel(m, i).ToArray(), Ui.Command, 2.2f, true);
+                        // every link rides on a 2 du paper halo, so the hatch under it never buries it
+                        if (pass == 0 && !onRoute && !toSel) { var ch = Channel(m, i); _cv.DrawPolyline(ch, new Color(Ui.Paper, 0.85f), 5f, true); _cv.DrawPolyline(ch, new Color(Ui.Rule, 0.9f), 1f, true); }
+                        else if (pass == 1 && toSel && !onRoute) { var ch = Channel(m, i); _cv.DrawPolyline(ch, Ui.Paper, 5.6f, true); _cv.DrawPolyline(ch, Ui.Ink, 1.6f, true); }
+                        else if (pass == 2 && onRoute) { var ch = Channel(m, i); _cv.DrawPolyline(ch, Ui.Paper, 6.2f, true); _cv.DrawPolyline(ch, Ui.Command, 2.2f, true); }
                     }
         // the continuous route from the root of «why not» to the goal
-        for (int k = 0; k + 1 < _path.Count; k++) _cv.DrawPolyline(Channel(_path[k], _path[k + 1]).ToArray(), Ui.Command, 3.4f, true);
+        // A5: the route is a wide band with a dashed light centre (a double dashed line); the links of the selected node are a thin solid line, so the two differ in grey too.
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); _cv.DrawPolyline(ch, Ui.Paper, 9f, true); _cv.DrawPolyline(ch, Ui.Command, 5f, true); }
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) _cv.DrawDashedLine(ch[j], ch[j + 1], Ui.Sheet, 1.8f, 5f, true); }
 
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
+        if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) DrawYearAndChips(i);
         DrawLabels(c);
+        if (Step >= ZoomSteps.EdgeLabels) DrawEdgeLabels();
+        DrawKeyFocus();
     }
 
-    // Clock: 1910 → 2100 around the circle, the hand shows the session date; G1–G4 arcs and the P10–P90 interval have no data (not drawn).
-    void DrawClock(Vector2 c, float u)
+    // Sector = discipline: a quiet wash (decor, C5) and a hatch of its own direction that carries the meaning in grey (A5); the lines between sectors start at the roots band.
+    static readonly (float X, float Y)[][] HatchNormals = BuildHatchNormals();
+    static (float X, float Y)[][] BuildHatchNormals() { var a = new (float X, float Y)[5][]; for (int k = 0; k < 5; k++) a[k] = TreeYearLayout.HatchNormals((SectorHatch)k); return a; }
+    void DrawSectors(Vector2 c, float u)
     {
-        float r = u * 0.5f;
-        _cv.DrawArc(c, r, 0, Mathf.Tau, 48, Ui.Ink, 1.6f, true);
-        for (int y = 1910; y < 2100; y += 10)
+        float alpha = Step == 1 ? 0.5f : Step <= 3 ? 0.3f : 0.18f;
+        float w = TreeYearLayout.SectorWidth(_nSec), rIn = (TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, rOut = TreeYearLayout.Edge * u;
+        for (int d = 0; d < _nSec; d++)
         {
-            float a = Mathf.Tau * (y - 1910) / 190f - Mathf.Pi / 2;
-            var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-            _cv.DrawLine(c + d * r, c + d * (r + (y % 50 == 0 ? 6f : 3f)), Ui.Ink, y % 50 == 0 ? SettingsLogic.MinTickDu + 1f : SettingsLogic.MinTickDu, true);   // A2: ticks >= 2 physical px
+            float s0 = TreeYearLayout.SectorStart(d, _nSec), s1 = s0 + w;
+            float a0 = Mathf.DegToRad(s0 + w * WedgeMargin * 0.5f), a1 = Mathf.DegToRad(s1 - w * WedgeMargin * 0.5f);
+            _cv.DrawArc(c, (rIn + rOut) * 0.5f, a0, a1, TreeYearLayout.ArcPoints(rOut, w), new Color(Ui.DiscWash[d % Ui.DiscWash.Length], alpha), rOut - rIn);
+            DrawHatch(c, rIn, rOut, a0, a1, TreeYearLayout.HatchOf(d), new Color(Ui.DiscText[d % Ui.DiscText.Length], TreeYearLayout.HatchAlphaAt(Step)));
+            float b = Mathf.DegToRad(s0);
+            _cv.DrawLine(c + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * rIn, c + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * (6.5f * u), GridColor, 1f, true);
         }
-        float frac = (_date.Year + (_date.Month - 1) / 12f + (_date.Day - 1) / 365f - 1910f) / 190f;
-        float h = Mathf.Tau * frac - Mathf.Pi / 2;
-        _cv.DrawLine(c, c + new Vector2(Mathf.Cos(h), Mathf.Sin(h)) * (r + 4), Ui.Ink, 2f, true);
-        _cv.DrawCircle(c, 2.5f, Ui.Ink);
+    }
+
+    // Hatch lines of one direction inside an annular sector, only over the visible map: every line is walked in short steps and the runs inside the sector are drawn.
+    void DrawHatch(Vector2 c, float rIn, float rOut, float a0, float a1, SectorHatch kind, Color col)
+    {
+        var area = Area; float r2in = rIn * rIn, r2out = rOut * rOut, sp = TreeYearLayout.HatchSpacing;
+        float d0x = Mathf.Cos(a0), d0y = Mathf.Sin(a0), d1x = Mathf.Cos(a1), d1y = Mathf.Sin(a1);
+        foreach (var (nx, ny) in HatchNormals[(int)kind])
+        {
+            float tx = -ny, ty = nx;
+            float dmin = float.MaxValue, dmax = float.MinValue;
+            for (int k = 0; k < 4; k++) { float cx = (k & 1) == 0 ? area.Position.X : area.End.X, cy = (k & 2) == 0 ? area.Position.Y : area.End.Y, v = (cx - c.X) * nx + (cy - c.Y) * ny; dmin = Math.Min(dmin, v); dmax = Math.Max(dmax, v); }
+            dmin = Math.Max(dmin, -rOut); dmax = Math.Min(dmax, rOut);
+            for (float d = Mathf.Ceil(dmin / sp) * sp; d <= dmax; d += sp)
+            {
+                float lim = Mathf.Sqrt(Math.Max(0f, r2out - d * d));
+                bool run = false; Vector2 from = default, last = default;
+                for (float s = -lim; s <= lim; s += 5f)
+                {
+                    float px = nx * d + tx * s, py = ny * d + ty * s;
+                    bool inside = false;
+                    if (px + c.X >= area.Position.X && px + c.X <= area.End.X && py + c.Y >= area.Position.Y && py + c.Y <= area.End.Y)
+                    {
+                        float q = px * px + py * py;
+                        inside = q >= r2in && q <= r2out && d0x * py - d0y * px >= 0f && px * d1y - py * d1x >= 0f;
+                    }
+                    var pt = new Vector2(c.X + px, c.Y + py);
+                    if (inside) { if (!run) { run = true; from = pt; } last = pt; }
+                    else if (run) { _cv.DrawLine(from, last, col, 1f); run = false; }
+                }
+                if (run) _cv.DrawLine(from, last, col, 1f);
+            }
+        }
+    }
+
+    /// <summary>Colour of the grid (rings, sector lines): decor, at most 1.6:1 on the paper (Gemini, TASK-0149); a unit test holds the number.</summary>
+    static Color GridColor => new(Ui.Rule, TreeYearLayout.GridAlpha);
+
+    // Year rings: a circle per decade 1950..2030 (1980 and 2000 heavier), its year on a plate at the top; the 1945 circle bounds the centre, labelled inside.
+    static readonly string[] RingText = BuildRingText();
+    static string[] BuildRingText() { var a = new string[TreeYearLayout.RingYears.Length]; for (int k = 0; k < a.Length; k++) a[k] = TreeYearLayout.RingYears[k].ToString(); return a; }
+    void DrawDecades(Vector2 c, float u)
+    {
+        _cv.DrawArc(c, TreeYearLayout.Inner * u, 0, Mathf.Tau, TreeYearLayout.ArcPoints(TreeYearLayout.Inner * u, 360f), GridColor, 1f, true);
+        _cv.DrawArc(c, (TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, 0, Mathf.Tau, TreeYearLayout.ArcPoints((TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, 360f), GridColor, 1f, true);
+        for (int k = 0; k < TreeYearLayout.RingYears.Length; k++)
+        {
+            int ry = TreeYearLayout.RingYears[k]; float r = TreeYearLayout.RadiusOf(ry) * u;
+            _cv.DrawArc(c, r, 0, Mathf.Tau, TreeYearLayout.ArcPoints(r, 360f), GridColor, TreeYearLayout.IsLandmark(ry) ? 2f : 1f, true);
+            if (ry >= 1960) YearPlate(c.X, c.Y - r, RingText[k]);   // the inner decades would lie on the crowded centre; 1950 stands on a gap bisector below
+            if (ry is 1950 or 1980 or 2010)   // also on two other bisectors of the gaps between sectors, where no node ever stands (art director)
+                for (int g = 1; g <= 2; g++)
+                {
+                    float ga = Mathf.DegToRad(TreeYearLayout.SectorStart(g * _nSec / 3 == 0 ? 1 : g * _nSec / 3, _nSec));
+                    YearPlate(c.X + Mathf.Cos(ga) * r, c.Y + Mathf.Sin(ga) * r, RingText[k]);
+                }
+        }
+        // the centre: the roots band lies around it, 1900-1945
+        if (u * (TreeYearLayout.Inner - TreeYearLayout.RootsBand) > 40f)
+        {
+            string s1 = Loc.T("tree.centre.head"), s2 = Loc.T("tree.centre");
+            var l1 = Fonts.Mono.GetStringSize(s1, HorizontalAlignment.Left, -1, 14); var l2 = Fonts.Text.GetStringSize(s2, HorizontalAlignment.Left, -1, 14);
+            Text(new Vector2(c.X - l1.X * 0.5f, c.Y - 2), s1, 14, Ui.Ink2, FontKind.Mono);
+            Text(new Vector2(c.X - l2.X * 0.5f, c.Y + 15), s2, 14, Ui.Ink2);
+        }
+    }
+
+    // A year on a paper plate centred at a point of a ring (drawn before the nodes, so a node always stays above it).
+    readonly List<Rect2> _plates = new();
+    void YearPlate(float x, float y, string text)
+    {
+        if (!Area.Grow(20).HasPoint(new Vector2(x, y))) return;
+        var sz = Fonts.Mono.GetStringSize(text, HorizontalAlignment.Left, -1, 14);
+        var pl = new Rect2(x - sz.X * 0.5f - 3, y - sz.Y * 0.5f - 1, sz.X + 6, sz.Y + 2);
+        _plates.Add(pl);
+        _cv.DrawRect(pl, new Color(Ui.Sheet, 0.92f));
+        Text(new Vector2(pl.Position.X + 3, pl.Position.Y + 1 + sz.Y * 0.8f), text, 14, Ui.Ink2, FontKind.Mono);
+    }
+
+    // «Now»: a dashed ring at the radius of the session date and its label on the first free place of the ring (bottom first); what lies outside is not yet open.
+    void DrawNowRing(Vector2 c, float u)
+    {
+        float yf = _date.Year + (_date.Month - 1) / 12f + (_date.Day - 1) / 365f, r = TreeYearLayout.RadiusOf(yf) * u;
+        for (int k = 0; k < 120; k++) _cv.DrawArc(c, r, k * Mathf.Tau / 120f, (k + 0.55f) * Mathf.Tau / 120f, 3, Ui.Ink, 1.6f, true);
+        _nowRect = default;
+        if (_nowYear != _date.Year || _nowText == null) { _nowYear = _date.Year; _nowText = Loc.T("tree.now", _date.Year); }
+        var sz = Fonts.Text.GetStringSize(_nowText, HorizontalAlignment.Left, -1, 14) + new Vector2(10, 4);
+        // first free place: on the ring, else pulled out of it on a leader (the ring is crowded with nodes at the start); bottom first
+        for (int off = 0; off <= 2; off++)
+            for (int k = 0; k < 60; k++)
+            {
+                float deg = 90f + (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 6f, a = Mathf.DegToRad(deg), dist = r + off * 46f;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                var rc = new Rect2(c + dir * dist - sz * 0.5f, sz);
+                bool free = Area.Encloses(rc);
+                for (int i = 0; free && i < _rad.Length; i++) if (NodeBox(i).Grow(2).Intersects(rc)) free = false;
+                foreach (var pl in _plates) if (free && pl.Grow(2).Intersects(rc)) free = false;
+                if (!free) continue;
+                if (off > 0) _cv.DrawLine(c + dir * r, c + dir * (dist - (sz.Y * 0.5f)), Ui.Ink, 1.2f, true);
+                _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
+                Text(new Vector2(rc.Position.X + 5, rc.Position.Y + 2 + sz.Y * 0.7f), _nowText, 14, Ui.Ink);
+                _nowRect = rc;   // node names keep off it
+                return;
+            }
+    }
+
+    // At step 5 a node shows its year to the right of the mark («≈» when the year is estimated) and, under it, its effect chips when the core has them (TASK-0157).
+    // «No data» is said in the node panel and the hover tip, not on every node of the map. Node names go above the mark and keep off the year (DrawLabels reads the rectangle).
+    Rect2 YearRect(int i) { var p = PosOf(i); return new Rect2(p.X + NR + 4, p.Y - 9, _yearW[i] + 2, 18); }
+    void DrawYearAndChips(int i)
+    {
+        var p = PosOf(i);
+        if (!Area.Grow(40).HasPoint(p)) return;
+        var yr = YearRect(i);
+        _cv.DrawStringOutline(Fonts.Mono, new Vector2(yr.Position.X, p.Y + 5), _yearText[i], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
+        Text(new Vector2(yr.Position.X, p.Y + 5), _yearText[i], 14, Ui.Ink2, FontKind.Mono);
+        var chips = EffectChips(i);
+        float y = p.Y + NR + 16;
+        for (int k = 0; k < chips.Count && k < 3; k++) Text(new Vector2(p.X - 40, y + 18 * k), chips[k], 14, Ui.Ink, FontKind.Mono);
+    }
+
+    // Hook for the numeric effects of a node («speed +30»): TASK-0157 (NodeEffects in the core data) is not on main yet, so there is nothing to show. The client never invents the numbers (ui.md).
+    IReadOnlyList<string> EffectChips(int row) => Array.Empty<string>();
+
+    // Step 6: the edges of the selected node carry the name of the other end («needs: X», «opens: Y»), cached when the selection changes.
+    readonly List<(int a, int b, string text)> _edgeLbl = new(); int _edgeKey = -2;
+    void BuildEdgeLabels()
+    {
+        _edgeKey = _selected; _edgeLbl.Clear();
+        if (_selected < 0) return;
+        var nodes = _host.Data.Nodes; var rq = nodes.Requires;
+        foreach (int m in _dep[_selected]) _edgeLbl.Add((_selected, m, Loc.T("edge.opens", Names.Node(nodes.Id[m]))));
+        for (int g = rq.GroupStart[_selected]; g < rq.GroupStart[_selected + 1]; g++)
+            foreach (int m in rq.GroupMembers(g)) _edgeLbl.Add((m, _selected, Loc.T("edge.needs", Names.Node(nodes.Id[m]))));
+    }
+    readonly List<Rect2> _edgePlates = new();
+    // An edge plate sits on the middle of its edge, or a third of the way along when the middle is taken (three tries at most); when none is free it stays hidden (C1: it never covers a node, a name or a year).
+    void DrawEdgeLabels()
+    {
+        if (_edgeKey != _selected) BuildEdgeLabels();
+        _edgePlates.Clear();
+        foreach (var (a, b, text) in _edgeLbl)
+        {
+            var ch = Channel(a, b);
+            var sz = Fonts.Text.GetStringSize(text, HorizontalAlignment.Left, -1, 14);
+            for (int t = 0; t < 3; t++)
+            {
+                var at = ch[t == 0 ? ch.Length / 2 : t == 1 ? ch.Length / 3 : ch.Length * 2 / 3];
+                var rc = new Rect2(at - new Vector2(sz.X * 0.5f + 3, sz.Y * 0.5f), sz + new Vector2(6, 2));
+                if (!Area.Encloses(rc) || PlateTaken(rc)) continue;
+                _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink2, false, 1f);
+                Text(new Vector2(rc.Position.X + 3, rc.Position.Y + sz.Y * 0.8f), text, 14, Ui.Ink2);
+                _edgePlates.Add(rc);
+                break;
+            }
+        }
+    }
+
+    bool PlateTaken(Rect2 rc)
+    {
+        foreach (var l in _labelRects) if (l.Intersects(rc)) return true;
+        foreach (var l in _edgePlates) if (l.Intersects(rc)) return true;
+        for (int i = 0; i < _rad.Length; i++)
+        {
+            if (NodeBox(i).Intersects(rc)) return true;
+            if (Step >= ZoomSteps.Effects && YearRect(i).Intersects(rc)) return true;
+        }
+        return false;
     }
 
     // Node mark size: every state is 16 du (TreeClarity.MarkDu), never scaled down with the canvas (A2); a little larger when zoomed in; icon plates are larger still.
     // NR is the box half-size used for hits, label places and overlap checks; the mark itself is drawn at MarkRadius(type).
-    float NR => CurLod switch { Lod.Overview => 10f, Lod.Nodes => 12.5f, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
+    float NR => CurLod switch { Lod.Overview => 8f, Lod.Nodes => 12.5f, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
     static readonly float[] MarkR = BuildMarkR();
     static float[] BuildMarkR() { var r = new float[6]; for (int k = 0; k < 6; k++) r[k] = GlyphGeometry.LegendRadius(LegendData.Types[k].Code); return r; }
-    float MarkRadius(NodeType t) => CurLod == Lod.Icons ? NR : MarkR[(int)t] * (CurLod == Lod.Nodes ? 1.25f : 1f);
+    float MarkRadius(NodeType t) => CurLod == Lod.Icons ? NR : MarkR[(int)t] * (CurLod == Lod.Nodes ? 1.25f : CurLod == Lod.Overview ? 0.65f : 1f);   // overview: 10 du marks, so that the crowded centre keeps a gap
 
-    // Counts per (ring, wedge) cell and per wedge, filled once per draw into fields (no allocation); the wedge summaries are the always-visible counts.
-    readonly int[,] _cellTot = new int[6, 5], _cellKn = new int[6, 5];
-    readonly int[] _wTot = new int[5], _wKn = new int[5], _sumShown = { -1, -1, -1, -1, -1 };
-    readonly string[] _sumText = new string[5];
-    readonly Rect2[] _sumRects = new Rect2[5];
+    // Counts per sector, filled once per draw into fields (no allocation); the sector summaries are the always-visible counts.
+    readonly int[] _wTot = new int[TreeYearLayout.MaxSectors], _wKn = new int[TreeYearLayout.MaxSectors], _sumShown = { -1, -1, -1, -1, -1, -1, -1, -1 };
+    readonly string[] _sumText = new string[TreeYearLayout.MaxSectors];
+    readonly Rect2[] _sumRects = new Rect2[TreeYearLayout.MaxSectors];
     void CountCells()
     {
-        var nodes = _host.Data.Nodes;
-        Array.Clear(_cellTot); Array.Clear(_cellKn); Array.Clear(_wTot); Array.Clear(_wKn);
+        var nodes = _host.Data.Nodes; int known = 0;
+        Array.Clear(_wTot); Array.Clear(_wKn);
         for (int i = 0; i < nodes.Count; i++)
         {
-            int t = (int)nodes.Type[i], d = (int)nodes.Discipline[i]; bool kn = _state[i] == St.Known;
-            _cellTot[t, d]++; _wTot[d]++;
-            if (kn) { _cellKn[t, d]++; _wKn[d]++; }
+            int d = _sec[i]; bool kn = _state[i] == St.Known;
+            _wTot[d]++;
+            if (kn) { _wKn[d]++; known++; }
         }
-        for (int w = 0; w < 5; w++) if (_sumShown[w] != _wKn[w] * 10000 + _wTot[w]) { _sumShown[w] = _wKn[w] * 10000 + _wTot[w]; _sumText[w] = _wKn[w] + "/" + _wTot[w]; }
-    }
-
-    // Overview: every (layer, discipline) cell is a wash with «known/total»; zoomed in the wash fades into a quiet band.
-    void DrawCells(Vector2 c, float u)
-    {
-        var nodes = _host.Data.Nodes;
-        var tot = _cellTot; var kn = _cellKn;
-        float alpha = CurLod == Lod.Overview ? 0.75f : CurLod == Lod.Nodes ? 0.4f : 0.22f;
-        for (int t = 0; t < 6; t++)
-            for (int d = 0; d < 5; d++)
-            {
-                if (tot[t, d] == 0) continue;
-                float a0 = -90f + d * 72f + 72f * WedgeMargin * 0.5f, a1 = -90f + (d + 1) * 72f - 72f * WedgeMargin * 0.5f;
-                _cv.DrawArc(c, (t + 1) * u, Mathf.DegToRad(a0), Mathf.DegToRad(a1), 24, new Color(Ui.DiscWash[d], alpha), Math.Max(10f, u * 0.46f), true);
-                if (CurLod != Lod.Overview) continue;
-                var q = Polar(t + 1.5f - (t == 4 ? 16f / u : 0f), (a0 + a1) * 0.5f);   // the process cell sits on the double circle: move the tag 16 du inward
-                string txt = kn[t, d] + "/" + tot[t, d];
-                var sz = Fonts.Mono.GetStringSize(txt, HorizontalAlignment.Left, -1, 14);
-                var rc = new Rect2(q - sz * 0.5f, sz);
-                if (!CountFits(rc.Grow(2))) continue;   // a tag that would sit on a node or another label is left out (A9)
-                _countRects.Add(rc.Grow(2));
-                _cv.DrawRect(rc.Grow(2), new Color(Ui.Sheet, 0.92f));
-                Text(new Vector2(rc.Position.X, rc.Position.Y + sz.Y * 0.8f), txt, 14, Ui.DiscText[d], FontKind.Mono);
-            }
+        for (int w = 0; w < _nSec; w++) if (_sumShown[w] != _wKn[w] * 10000 + _wTot[w]) { _sumShown[w] = _wKn[w] * 10000 + _wTot[w]; _sumText[w] = _wKn[w] + "/" + _wTot[w]; }
+        if (_hdrKn != known || _hdrTot != nodes.Count || _hdrText == null) { _hdrKn = known; _hdrTot = nodes.Count; _hdrText = Loc.T("tree.count", nodes.Count, known); }
     }
 
     readonly List<Rect2> _countRects = new(), _labelRects = new();
@@ -567,8 +746,8 @@ public sealed partial class TechTree : Control
     bool CountFits(Rect2 r)
     {
         for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(r)) return false;
-        for (int w = 0; w < 5; w++) if (WedgeLabel(w).rect.Intersects(r)) return false;
-        for (int w = 0; w < 5; w++) if (_sumRects[w].Intersects(r)) return false;
+        for (int w = 0; w < _nSec; w++) if (WedgeLabel(w).rect.Intersects(r)) return false;
+        for (int w = 0; w < _nSec; w++) if (_sumRects[w].Intersects(r)) return false;
         foreach (var o in _countRects) if (o.Intersects(r)) return false;
         return true;
     }
@@ -579,8 +758,8 @@ public sealed partial class TechTree : Control
         var boxes = new List<(string what, Rect2 r)>();
         foreach (var r in _countRects) boxes.Add(("count tag", r));
         foreach (var r in _labelRects) boxes.Add(("label", r));
-        for (int w = 0; w < 5; w++) boxes.Add(("wedge summary", _sumRects[w]));
-        for (int w = 0; w < 5; w++) boxes.Add(("wedge name", WedgeLabel(w).rect));
+        for (int w = 0; w < _nSec; w++) boxes.Add(("wedge summary", _sumRects[w]));
+        for (int w = 0; w < _nSec; w++) boxes.Add(("wedge name", WedgeLabel(w).rect));
         for (int a = 0; a < boxes.Count; a++)
         {
             for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(boxes[a].r)) return $"{boxes[a].what} {boxes[a].r} touches node {i}";
@@ -679,43 +858,57 @@ public sealed partial class TechTree : Control
     void DrawLabels(Vector2 c)
     {
         var nodes = _host.Data.Nodes;
-        var occupied = new List<Rect2>();
-        float hr = NR + 3; for (int i = 0; i < nodes.Count; i++) occupied.Add(new Rect2(PosOf(i) - new Vector2(hr, hr), new Vector2(hr * 2, hr * 2)));
+        var occupied = _lbOccupied; occupied.Clear();
+        for (int i = 0; i < nodes.Count; i++) { float hr = i == _selected ? SelKeepOut(i) : NR + 3; occupied.Add(new Rect2(PosOf(i) - new Vector2(hr, hr), new Vector2(hr * 2, hr * 2))); }   // the selected node keeps its ring (and the goal frame) clear
         occupied.Add(new Rect2(c - new Vector2(Unit * 0.7f, Unit * 0.7f), new Vector2(Unit * 1.4f, Unit * 1.4f)));
-        for (int w = 0; w < 5; w++)   // wedge names
+        for (int w = 0; w < _nSec; w++)   // wedge names
         {
-            occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(2));
+            occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(6));
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
+        if (_nowRect.Size.X > 0f) occupied.Add(_nowRect.Grow(2));
+        foreach (var pl in _plates) occupied.Add(pl.Grow(2));   // decade years: names keep off them
+        var barKeepOut = new Rect2(_zoomBar.Position - new Vector2(0, 40), _zoomBar.Size + new Vector2(40, 40));   // 40 du above the zoom buttons and the step label
+        occupied.Add(barKeepOut); occupied.Add(new Rect2(_legendBtn.Position - new Vector2(0, 6), _legendBtn.Size + new Vector2(6, 12)));
+        if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) if (Area.Grow(40).HasPoint(PosOf(i))) { occupied.Add(YearRect(i).Grow(1)); }
         // The route is an obstacle too, so that no label sits on it.
-        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Count; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
-        var order = new List<int>();
+        var order = _lbOrder; order.Clear();
         void Add(int i) { if (i >= 0 && !order.Contains(i)) order.Add(i); }
+        var byNum = RowsByNumber(nodes.Number);
         Add(_selected); Add(_goal); Add(_root);
-        foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _route[i] && _state[i] != St.Unavailable).OrderBy(i => nodes.Number[i])) Add(i);
-        foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _state[i] == St.Frontier).OrderBy(i => nodes.Number[i])) Add(i);
-        if (CurLod == Lod.Icons) foreach (int i in Enumerable.Range(0, nodes.Count).OrderBy(i => nodes.Number[i])) Add(i);
-        var area = Area;
-        var hard = new List<Rect2>();
-        for (int w = 0; w < 5; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(2)); }
+        foreach (int i in byNum) if (_route[i] && _state[i] != St.Unavailable) Add(i);
+        foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);
+        Add(_hover);
+        foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);   // priority: selected > goal > openable > known
+        foreach (int i in byNum) if (_state[i] == St.Known || Step >= ZoomSteps.Icons) Add(i);
+        var area = new Rect2(Area.Position, new Vector2(Area.Size.X, Math.Max(40f, _zoomBar.Position.Y - 40f - Area.Position.Y)));   // names stay 40 du above the zoom panel, across the whole width
+        var hard = _lbHard; hard.Clear();
+        for (int w = 0; w < _nSec; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(6)); }
         hard.AddRange(_countRects);
-        var placed = new Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)>();
+        hard.Add(barKeepOut);
+        if (_nowRect.Size.X > 0f) hard.Add(_nowRect.Grow(2));
+        var placed = _lbPlaced; placed.Clear();
         bool Place(int i, string text, FontKind kind, bool far = false, bool force = false)
         {
-            var p = PosOf(i); float o = NR + 6;
+            var p = PosOf(i); float o = i == _selected ? SelKeepOut(i) + 3 : NR + 6;
             var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
             // near places first, then farther ones (so that the goal and the selected node always find a free spot)
-            var cands = new[]
-            {
-                new Rect2(p + new Vector2(o, -sz.Y * 0.5f), sz), new Rect2(p + new Vector2(-o - sz.X, -sz.Y * 0.5f), sz),
-                new Rect2(p + new Vector2(-sz.X * 0.5f, o), sz), new Rect2(p + new Vector2(-sz.X * 0.5f, -o - sz.Y), sz),
-                new Rect2(p + new Vector2(o + 2, o + 2), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz),
-                new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz),
-            };
+            var cands = _lbCands;
+            cands[0] = new Rect2(p + new Vector2(o, -sz.Y * 0.5f), sz); cands[1] = new Rect2(p + new Vector2(-o - sz.X, -sz.Y * 0.5f), sz);
+            cands[2] = new Rect2(p + new Vector2(-sz.X * 0.5f, o), sz); cands[3] = new Rect2(p + new Vector2(-sz.X * 0.5f, -o - sz.Y), sz);
+            cands[4] = new Rect2(p + new Vector2(o + 2, o + 2), sz); cands[5] = new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz);
+            cands[6] = new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz); cands[7] = new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz);
+            if (Step >= ZoomSteps.Effects) (cands[0], cands[3]) = (cands[3], cands[0]);   // name above the mark, the year stands on its right
             bool Try(Rect2 rc, bool ignoreOthers = false, bool leaderCheck = true)
             {
-                var pad = rc.Grow(2);
+                var pad = rc.Grow(3);   // 3 du each side: at least 6 du between two names
+                if (!area.Encloses(pad))   // pushed inside the window edge rather than dropped
+                {
+                    float nx = Math.Clamp(rc.Position.X, area.Position.X + 4, Math.Max(area.Position.X + 4, area.End.X - rc.Size.X - 4)), ny = Math.Clamp(rc.Position.Y, area.Position.Y + 4, Math.Max(area.Position.Y + 4, area.End.Y - rc.Size.Y - 4));
+                    rc = new Rect2(nx, ny, rc.Size); pad = rc.Grow(3);
+                }
                 if (!area.Encloses(pad) || (!ignoreOthers && occupied.Any(o => o.Intersects(pad)))) return false;
                 if (ignoreOthers && hard.Any(h => h.Intersects(pad))) return false;   // a forced plate may sit over nodes, never over a wedge name, a total or a count
                 // The leader of a named node must not run across a wedge name, a wedge total or a count tag (C5).
@@ -756,12 +949,14 @@ public sealed partial class TechTree : Control
         foreach (int i in order)
         {
             if (NamedNode(i) && placed.ContainsKey(i)) continue;
-            if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
+            if (!(_route[i] || i == _selected || i == _goal || i == _root || i == _hover || (Step >= ZoomSteps.Names && (_state[i] != St.Unavailable || Step >= ZoomSteps.Icons)) || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
             Place(i, Names.Node(nodes.Id[i]), FontKind.Text, NamedNode(i));
         }
         // Drawn from the lowest priority to the highest, so that a named node's plate is always on top.
-        foreach (int i in order.OrderByDescending(i => LabelGeometry.Rank(NamedNode(i), _route[i], _state[i] == St.Frontier)))
+        for (int rank = 3; rank >= 0; rank--)
+        foreach (int i in order)
         {
+            if (LabelGeometry.Rank(NamedNode(i), _route[i], _state[i] == St.Frontier) != rank) continue;
             if (!placed.TryGetValue(i, out var pl)) continue;
             _labelRects.Add(pl.pad);
             _labelText[i] = pl.text;
@@ -769,7 +964,7 @@ public sealed partial class TechTree : Control
             if (callout || LabelNeedsLeader(i, pl.rc))
             {
                 var own = PosOf(i); var near = own.Clamp(pl.pad.Position, pl.pad.End); var dir = (near - own).Normalized();
-                _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // ends at the plate: the goal or selected node, or a node with a neighbour as near as it
+                if (own.DistanceTo(near) > NR + 8f) _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // no stub when the plate stands next to the mark; ends at the plate: the goal or selected node, or a node with a neighbour as near as it
             }
             _cv.DrawRect(pl.pad, Ui.Sheet);   // opaque plate (spec 2.3)
             if (callout) _cv.DrawRect(pl.pad, Ui.Command, false, 1f);
@@ -788,6 +983,27 @@ public sealed partial class TechTree : Control
     }
 
     static readonly float[] FarRings = { 28, 60, 100 };
+    // Per-frame scratch of DrawLabels (reused, so a redraw allocates no lists).
+    readonly List<Rect2> _lbOccupied = new(), _lbHard = new(); readonly List<int> _lbOrder = new();
+    readonly Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)> _lbPlaced = new();
+    readonly Rect2[] _lbCands = new Rect2[8];
+    int[] _byNumber;
+    int[] RowsByNumber(System.Collections.Immutable.ImmutableArray<int> num)
+    {
+        int n = num.Length;
+        if (_byNumber == null || _byNumber.Length != n) { _byNumber = new int[n]; for (int i = 0; i < n; i++) _byNumber[i] = i; Array.Sort(_byNumber, (a, b) => num[a].CompareTo(num[b])); }
+        return _byNumber;
+    }
+    /// <summary>Half-size of the box around the selected node that labels keep clear: outside its ring, and outside the goal frame when it is the goal as well (ring r + 12.5).</summary>
+    float SelKeepOut(int i) => Math.Max(NR + 3, Reach(i) + 6);
+    /// <summary>How far the drawing of a node reaches from its centre: the real corners of its outline, its goal frame and its selection ring (not just the mark radius).</summary>
+    float Reach(int i)
+    {
+        var t = _host.Data.Nodes.Type[i]; float r = MarkRadius(t), e = GlyphGeometry.Extent(t.ToString(), r);
+        if (i == _goal) e = Math.Max(e, GlyphGeometry.Extent(t.ToString(), r + 5f));
+        if (i == _selected) e = Math.Max(e, r + 4.5f + (i == _goal ? 8f : 0f) + 1f);
+        return e;
+    }
     bool NamedNode(int i) => i == _selected || i == _goal || i == _root;
 
     bool LabelNeedsLeader(int i, Rect2 rc)
@@ -820,15 +1036,15 @@ public sealed partial class TechTree : Control
     public bool LegendOpen => _legendOpen && _mode == 0;
     public bool CanLegend => _mode == 0;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
-    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 560, LegendH = 352, StampH = 62, StampGap = 8;
+    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 560, LegendH = 368, StampH = 62, StampGap = 8;
     /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
     public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(LegendW, Size.X - x - 6), LegendH); } }
     Rect2 StampRect => new(Size.X - 6 - 360, Size.Y - 6 - StampH, 360, StampH);
 
     // Cached legend content: localized texts (rebuilt when the language changes), colours and closed node outlines (built once).
     bool _lgDirty = true;
-    // Texts: 0 rings head, 1 states head, 2 disciplines head, 3 lines head, 4 route, 5 root, 6 why the root, 7 close; 8-12 disciplines; 13-18 ring names; 19-23 states, 24 goal, 25 links of the selected node.
-    readonly string[] _lgText = new string[26];
+    // Texts: 0 rings head, 1 states head, 2 disciplines head, 3 lines head, 4 route, 5 root, 6 why the root, 7 close; 8-12 disciplines; 13-18 ring names; 19-23 states, 24 goal, 25 links of the selected node, 26 the centre dial.
+    readonly string[] _lgText = new string[28];
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
     bool _lgBuilt;
@@ -839,13 +1055,20 @@ public sealed partial class TechTree : Control
         string[] keys = { "legend.rings", "legend.states", "legend.disc", "legend.lines", "legend.route", "legend.root", "legend.root.why", "legend.close" };
         for (int k = 0; k < keys.Length; k++) _lgText[k] = Loc.T(keys[k]);
         for (int k = 0; k < 5; k++) _lgText[8 + k] = Loc.T(_lgDiscs[k].NameKey);
-        for (int k = 0; k < 6; k++) _lgText[13 + k] = (k + 1) + "  " + Loc.T(LegendData.Types[k].NameKey);
+        for (int k = 0; k < 6; k++) _lgText[13 + k] = Loc.T(LegendData.Types[k].NameKey);
         for (int k = 0; k < 5; k++) _lgText[19 + k] = Loc.T(TreeClarity.LegendKey(TreeClarity.LegendStates[k]));
-        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links");
+        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links"); _lgText[26] = Loc.T("legend.dial"); _lgText[27] = Loc.T("legend.now");
         if (_lgBuilt) return;
         _lgBuilt = true;
         _lgWash = new Color[5]; _lgLine = new Color[5];
         for (int k = 0; k < 5; k++) { _lgWash[k] = new Color(_lgDiscs[k].WashHex); _lgLine[k] = new Color(_lgDiscs[k].LineHex); }
+    }
+
+    // The same hatch as the sector on the map (same directions, 4 du apart), clipped to the round swatch of radius 8.
+    void HatchSwatch(Vector2 mk, int sector, Color line)
+    {
+        foreach (var (nx, ny) in HatchNormals[(int)TreeYearLayout.HatchOf(sector)])
+            for (float d = -6f; d <= 6f; d += 4f) { float h = Mathf.Sqrt(64f - d * d); var m = mk + new Vector2(nx, ny) * d; var t = new Vector2(-ny, nx) * h; _cv.DrawLine(m - t, m + t, line, 1.4f); }
     }
 
     // Legend (spec 2.2): rings, states, disciplines, lines. The marks go through the same drawing as the nodes of the map.
@@ -866,15 +1089,18 @@ public sealed partial class TechTree : Control
             float y = Y(1 + k); var mk = new Vector2(xl + 14, y - 5);
             var tp = LegendData.Types[k].Code; float rr = GlyphGeometry.LegendRadius(tp);
             Shape((NodeType)k, mk, rr, Colors.Transparent, Ui.Ink2, false, 2f);
+            Glyph(-1, (NodeType)k, mk, rr, Ui.Ink2);   // the icon the map shows inside this shape from step 4 (the hourglass of a process included)
             Text(new Vector2(xl + 36, y), _lgText[13 + k], 14, Ui.Ink2);
         }
         Head(xl, Y(7, 8), 2);
         for (int k = 0; k < 5; k++)
         {
             float y = Y(8 + k, 8); var mk = new Vector2(xl + 14, y - 5);
-            _cv.DrawCircle(mk, 8, _lgWash[k]); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, _lgLine[k], 1.8f, true);
+            _cv.DrawCircle(mk, 8, _lgWash[k]); HatchSwatch(mk, k, _lgLine[k]); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, _lgLine[k], 1.8f, true);
             Text(new Vector2(xl + 36, y), _lgText[8 + k], 14, Ui.Ink2);
         }
+        Text(new Vector2(xl, Y(13, 8)), _lgText[26], 14, Ui.Ink2);   // distance from the centre = year, ring = decade
+        Text(new Vector2(xl, Y(14, 8)), _lgText[27], 14, Ui.Ink2);
         // right: states, lines
         Head(xr, Y(0), 1);
         for (int k = 0; k < 5; k++)
@@ -892,7 +1118,7 @@ public sealed partial class TechTree : Control
         Text(new Vector2(xr + 36, gy), _lgText[24], 14, Ui.Ink2);
         Head(xr, Y(7, 16), 3);
         float ry = Y(8, 16);
-        _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Command, 3f);
+        _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Command, 5f); _cv.DrawDashedLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Sheet, 1.8f, 5f);
         Text(new Vector2(xr + 36, ry), _lgText[4], 14, Ui.Ink2);
         ry = Y(9, 16);
         _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Ink, 1.6f);   // the links of the selected node, as the map draws them
@@ -1001,8 +1227,10 @@ public sealed partial class TechTree : Control
         void Walk(Node n) { if (n is RootMarkIcon) rootIcon = true; foreach (var c in n.GetChildren()) Walk(c); }
         Walk(_insetBox);
         if (_root >= 0 && !rootIcon) bad.Add("the root has no mark in the panel");
-        if (Array.IndexOf(_state, St.Unavailable) < 0) bad.Add("no unknown node");
-        if (Array.IndexOf(_state, St.Frontier) < 0) bad.Add("no frontier node");
+        bool unk = false, fr = false;   // counted in the visible area, not in the model
+        for (int i = 0; i < _state.Length; i++) { if (!Area.HasPoint(PosOf(i))) continue; unk |= _state[i] == St.Unavailable; fr |= _state[i] == St.Frontier; }
+        if (!unk) bad.Add("no unknown node in view");
+        if (!fr) bad.Add("no frontier node in view");
         return bad.Count == 0 ? null : string.Join("; ", bad);
     }
     public string ShotPanelInfo => $"panel {PanelRect}, scroll max {_insetScroll.GetVScrollBar().MaxValue:F0} page {_insetScroll.GetVScrollBar().Page:F0}";
@@ -1020,7 +1248,7 @@ public sealed partial class TechTree : Control
         var others = new List<(string, Rect2)> { ("stamp", StampRect) };
         if (LegendOpen) others.Add(("legend sheet", LegendSheet));
         if (_insetBox.Visible) others.Add(("goal panel", PanelRect));
-        for (int w = 0; w < 5; w++)
+        for (int w = 0; w < _nSec; w++)
         {
             var r = _sumRects[w];
             if (_sumText[w] == null || r.Size.X <= 0) return $"summary {w} not drawn";
@@ -1029,7 +1257,7 @@ public sealed partial class TechTree : Control
             else if (baseView) return $"summary {w} {r} is not fully inside the chart area {Area}";
             else continue;
             if (baseView) foreach (var (n, o) in others) if (o.Intersects(r) || o.Intersects(WedgeLabel(w).rect)) return $"summary {w} {r} touches {n} {o}";
-            for (int v = 0; v < 5; v++) { if (v != w && _sumRects[v].Intersects(r)) return $"summary {w} touches summary {v}"; if (WedgeLabel(v).rect.Intersects(r)) return $"summary {w} touches wedge name {v}"; }
+            for (int v = 0; v < _nSec; v++) { if (v != w && _sumRects[v].Intersects(r)) return $"summary {w} touches summary {v}"; if (WedgeLabel(v).rect.Intersects(r)) return $"summary {w} touches wedge name {v}"; }
             for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(r)) return $"summary {w} touches node {i}";
             foreach (var l in _labelRects) if (l.Intersects(r)) return $"summary {w} touches a node label";
         }
@@ -1037,7 +1265,7 @@ public sealed partial class TechTree : Control
         {
             var b = new Rect2(_legendBtn.Position, _legendBtn.Size);
             if (b.Intersects(StampRect)) return "legend button touches the stamp";
-            for (int w = 0; w < 5; w++) if (b.Intersects(_sumRects[w]) || b.Intersects(WedgeLabel(w).rect)) return $"legend button touches wedge {w}";
+            for (int w = 0; w < _nSec; w++) if (b.Intersects(_sumRects[w]) || b.Intersects(WedgeLabel(w).rect)) return $"legend button touches wedge {w}";
             if (_legendBtn.Modulate.A < 1f || _legendBtn.GetIndex() != _view.GetIndex() + 1) return "legend button is not the node right after the canvas, or not opaque";
         }
         return null;
@@ -1168,6 +1396,14 @@ public sealed partial class TechTree : Control
     // Wheel zooms about the cursor, a drag pans, a click without a drag selects a node.
     public override void _GuiInput(InputEvent e)
     {
+        if (e is InputEventMouseMotion m0)
+        {
+            _mouse = m0.Position;
+            int hv = _mode == 0 && Area.HasPoint(m0.Position) ? HitAt(m0.Position, 12f) : -1;
+            if (hv != _hover) { _hover = hv; Redraw(); }
+        }
+        if (e is InputEventMouseButton { Pressed: true } && _kbActive) { _kbActive = false; Redraw(); }   // a click ends the keyboard walk: no ring, no key tip
+        if (e is InputEventKey { Pressed: true } ke && _mode == 0 && KeyNav(ke.Keycode, ke.ShiftPressed, ke.CtrlPressed || ke.AltPressed || ke.MetaPressed)) { AcceptEvent(); return; }
         if (_mode == 0 && e is InputEventMouseButton { Pressed: true } w && Area.HasPoint(w.Position) && w.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
         {
             _zoomTarget = PlanisphereMath.ClampZoom(_zoomTarget * (w.ButtonIndex == MouseButton.WheelUp ? 1.25f : 0.8f));
@@ -1176,12 +1412,23 @@ public sealed partial class TechTree : Control
         }
         else if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } mb)
         {
-            if (mb.Pressed) { _press = _mode == 0 && Area.HasPoint(mb.Position); _dragged = false; _pressPos = mb.Position; if (_mode == 1) { int h = HitAt(mb.Position, 14f); if (h >= 0) Select(h); } }
+            if (mb.Pressed)
+            {
+                _press = _mode == 0 && Area.HasPoint(mb.Position); _dragged = false; _longDone = false; _pressPos = mb.Position; _mouse = mb.Position; _pressMs = Time.GetTicksMsec();
+                _pressRow = _press ? HitAt(mb.Position, 14f) : -1;
+                if (_mode == 1) { int h = HitAt(mb.Position, 14f); if (h >= 0) Select(h); }
+            }
             else
             {
-                if (_press && !_dragged) { int hit = HitAt(mb.Position, 14f); if (hit >= 0) Select(hit); }
+                if (_press && !_dragged && !_longDone) { int hit = HitAt(mb.Position, 14f); if (hit >= 0) Select(hit); }
                 _press = false;
             }
+        }
+        else if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } rb && _mode == 0 && Area.HasPoint(rb.Position))
+        {
+            int hit = HitAt(rb.Position, 14f);
+            if (hit >= 0) { Select(hit); OpenMenu(hit, rb.Position); }
+            AcceptEvent();
         }
         else if (e is InputEventMouseMotion mm && _press)
         {
@@ -1191,14 +1438,228 @@ public sealed partial class TechTree : Control
         }
     }
 
+    // ---- keyboard walk over the nodes (TASK-0132; A6-A8): Tab / Shift+Tab in number order, arrows to the nearest node, Enter opens the node panel; the key tip names the node ----
+    int _kb = -1; bool _kbActive;
+    string _kbTip; Vector2 _kbTipSize; int _kbTipFor = -1;
+    float[] _kbX, _kbY;
+    /// <summary>The node under the keyboard ring, or -1.</summary>
+    public int KeyFocusRow => _kbActive && HasFocus() ? _kb : -1;
+    public string KeyTipText => KeyFocusRow >= 0 ? _kbTip : null;
+
+    bool KbVisible(int i) => Area.Grow(-NR).HasPoint(PosOf(i));
+
+    /// <summary>Handles one key of the walk; true when the key was used (Tab past the last node is not used, so the focus moves on).</summary>
+    public bool KeyNav(Key key, bool shift, bool modified)
+    {
+        if (modified || _state == null) return false;
+        int n = _host.Data.Nodes.Count, next = -1;
+        switch (key)
+        {
+            case Key.Tab:
+                next = TreeKeyNav.Step(RowsByNumber(_host.Data.Nodes.Number), _kb, shift ? -1 : 1, KbVisible);
+                if (next < 0) { _kbActive = false; _kb = -1; Redraw(); return false; }
+                break;
+            case Key.Left or Key.Right or Key.Up or Key.Down:
+                if (_kb < 0 || !_kbActive) { next = _selected >= 0 && KbVisible(_selected) ? _selected : TreeKeyNav.Step(RowsByNumber(_host.Data.Nodes.Number), -1, 1, KbVisible); break; }
+                if (_kbX == null || _kbX.Length != n) { _kbX = new float[n]; _kbY = new float[n]; }
+                for (int i = 0; i < n; i++) { var p = PosOf(i); _kbX[i] = p.X; _kbY[i] = p.Y; }
+                next = TreeKeyNav.Direction(_kbX, _kbY, _kb, key == Key.Left ? -1 : key == Key.Right ? 1 : 0, key == Key.Up ? -1 : key == Key.Down ? 1 : 0, KbVisible);
+                if (next < 0) return true;   // the edge: the ring stays
+                break;
+            case Key.Enter or Key.KpEnter:
+                if (_kb < 0 || !_kbActive) return false;
+                Select(_kb); return true;
+            case Key.Equal or Key.Plus or Key.KpAdd: ZoomBy(1); return true;
+            case Key.Minus or Key.KpSubtract: ZoomBy(-1); return true;
+            case Key.Key0 or Key.Kp0: ResetView(); return true;
+            case Key.Menu or Key.F10 when key == Key.Menu || shift:   // the menu of the node under the keyboard ring, else of the selected one
+                int mrow = _kbActive && _kb >= 0 ? _kb : _selected;
+                if (mrow < 0) return false;
+                Select(mrow); OpenMenu(mrow, PosOf(mrow)); return true;
+            default: return false;
+        }
+        _kb = next; _kbActive = true; _kbTipFor = -1; Redraw();
+        return true;
+    }
+
+    // The ring (2.5 du ink on a 5.5 du sheet halo: 3:1 on paper, wash and plate alike) and the key tip are drawn after the labels, on top of everything.
+    void DrawKeyFocus()
+    {
+        int i = KeyFocusRow;
+        if (i < 0) return;
+        var nodes = _host.Data.Nodes; var p = PosOf(i); float r = Reach(i) + 5f;   // outside the corners, the goal frame and the selection ring
+        _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Sheet, 5.5f, true);
+        _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Ink, 2.5f, true);
+        if (_kbTipFor != i) { _kbTip = Names.Node(nodes.Id[i]); _kbTipSize = Fonts.Text.GetStringSize(_kbTip, HorizontalAlignment.Left, -1, 14); _kbTipFor = i; }
+        var sz = _kbTipSize + new Vector2(12, 8); var a = Area;
+        float x = p.X + r + 4; if (x + sz.X > a.End.X - 2) x = p.X - r - 4 - sz.X;
+        float y = Math.Clamp(p.Y - sz.Y * 0.5f, a.Position.Y + 2, a.End.Y - sz.Y - 2);
+        var rc = new Rect2(x, y, sz);
+        _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
+        Text(new Vector2(x + 6, y + 4 + _kbTipSize.Y * 0.8f), _kbTip, 14, Ui.Ink);
+    }
+
     // Hover shows the node name and number (ids never appear in the visible text).
     public override string _GetTooltip(Vector2 atPosition)
     {
         int hit = HitAt(atPosition, 12f);
         if (hit < 0) return "";
         var nodes = _host.Data.Nodes;
-        return Names.Node(nodes.Id[hit]);   // the localized name, never the raw id or a number
+        return Names.Node(nodes.Id[hit]) + "\n" + Loc.T("tree.effects.none");   // the localized name, never the raw id or a number
     }
+
+    // ---------------- node menu (#473) ----------------
+    // One function for the right click, the long press and the keyboard: four items; an unavailable one is hatched and says why in words (A1, A5).
+    MenuLayer _menu; bool _menuOpen; int _menuRow, _menuHot = -1;
+    NodeMenuItem[] _menuItems; Rect2 _menuBox; readonly Rect2[] _menuRect = new Rect2[4]; readonly List<string>[] _menuWhy = new List<string>[4]; string[] _menuLabel;
+    const float MenuW = 330, MenuRowH = 34, MenuLine = 19;
+
+    /// <summary>Opens the menu of a node at a point of the tree.</summary>
+    void OpenMenu(int row, Vector2 at)
+    {
+        var nodes = _host.Data.Nodes;
+        var ctx = new NodeMenuLogic.Ctx(_state[row] == St.Known, nodes.Type[row] == NodeType.PRC, _actor == Player, CanSetGoal: false, _focus.Contains(nodes.Number[row]), _focus.Count);
+        _menuItems = NodeMenuLogic.Items(ctx); _menuRow = row; _menuLabel = new string[_menuItems.Length];
+        float h = 8;
+        for (int k = 0; k < _menuItems.Length; k++)
+        {
+            _menuLabel[k] = Loc.T(_menuItems[k].LabelKey);
+            float rh = MenuRowH;
+            _menuWhy[k] = null;
+            if (!_menuItems[k].Enabled)
+            {
+                _menuWhy[k] = TextWrap.Lines(Loc.T(_menuItems[k].WhyKey!), MenuW - 28, t => Fonts.Text.GetStringSize(t, HorizontalAlignment.Left, -1, 14).X);
+                rh += _menuWhy[k].Count * MenuLine + 4;
+            }
+            _menuRect[k] = new Rect2(4, h - 4 + 4, MenuW - 8, rh);   // y fixed up below
+            h += rh + 2;
+        }
+        var pos = at + new Vector2(10, 10);
+        pos.X = Math.Clamp(pos.X, 4, Size.X - MenuW - 4); pos.Y = Math.Clamp(pos.Y, 4, Size.Y - h - 4);
+        _menuBox = new Rect2(pos, new Vector2(MenuW, h));
+        float y = pos.Y + 4;
+        for (int k = 0; k < _menuItems.Length; k++) { _menuRect[k] = new Rect2(pos.X + 4, y, MenuW - 8, _menuRect[k].Size.Y); y += _menuRect[k].Size.Y + 2; }
+        _menuOpen = true; _menuHot = NodeMenuLogic.NextEnabled(_menuItems, -1, 1);
+        _menu.Visible = true; _menu.MouseFilter = MouseFilterEnum.Stop; _menu.GrabFocus(); _menu.QueueRedraw();
+    }
+
+    void CloseMenu()
+    {
+        if (!_menuOpen) return;
+        _menuOpen = false; _menu.Visible = false; _menu.MouseFilter = MouseFilterEnum.Ignore;
+        if (IsVisibleInTree()) GrabFocus();
+    }
+
+    void PollLongPress()
+    {
+        if (!_press || _dragged || _pressRow < 0 || _menuOpen) return;
+        float held = (Time.GetTicksMsec() - _pressMs) / 1000f;
+        if (!NodeMenuLogic.IsLongPress(held, _mouse.DistanceTo(_pressPos))) return;
+        _press = false; _longDone = true; Select(_pressRow); OpenMenu(_pressRow, _pressPos);
+    }
+
+    int MenuRowAt(Vector2 p) { for (int k = 0; k < _menuItems.Length; k++) if (_menuRect[k].HasPoint(p)) return k; return -1; }
+
+    internal void MenuInput(InputEvent e)
+    {
+        if (!_menuOpen) return;
+        switch (e)
+        {
+            case InputEventMouseMotion mm:
+                int hv = MenuRowAt(mm.Position);
+                if (hv >= 0 && _menuItems[hv].Enabled && hv != _menuHot) { _menuHot = hv; _menu.QueueRedraw(); }
+                break;
+            case InputEventMouseButton { Pressed: true } mb:
+                int row = MenuRowAt(mb.Position);
+                if (row >= 0 && mb.ButtonIndex == MouseButton.Left) { if (_menuItems[row].Enabled) ActivateMenu(row); }
+                else if (row < 0 || mb.ButtonIndex != MouseButton.Left) CloseMenu();
+                _menu.AcceptEvent();
+                break;
+            case InputEventKey { Pressed: true } k:
+                if (k.Keycode == Key.Escape) CloseMenu();
+                else if (k.Keycode is Key.Down or Key.Up) { _menuHot = NodeMenuLogic.NextEnabled(_menuItems, _menuHot, k.Keycode == Key.Down ? 1 : -1); _menu.QueueRedraw(); }
+                else if (k.Keycode is Key.Enter or Key.KpEnter) { if (_menuHot >= 0) ActivateMenu(_menuHot); }
+                else break;
+                _menu.AcceptEvent();
+                break;
+        }
+    }
+
+    void ActivateMenu(int k)
+    {
+        var action = _menuItems[k].Action; int row = _menuRow; var nodes = _host.Data.Nodes;
+        CloseMenu();
+        switch (action)
+        {
+            case NodeAction.MasteryFocus:
+                int num = nodes.Number[row];
+                if (!_focus.Remove(num) && _focus.Count < NodeMenuLogic.FocusLimit) _focus.Add(num);
+                _insetDirty = true; Select(row); break;
+            case NodeAction.WhyBlocked: _whyOpen = true; Select(row); break;
+            case NodeAction.ShowLinks:   // the links of a selected node are drawn; the view comes in to the step where the names are readable
+                Select(row); _zoomTarget = PlanisphereMath.ClampZoom(Math.Max(_zoomTarget, ZoomSteps.Scales[ZoomSteps.Names - 1])); _anchor = PosOf(row); break;
+        }
+    }
+
+    internal void PaintMenu(Control ci)
+    {
+        if (!_menuOpen) return;
+        _cv = ci;
+        ci.DrawRect(_menuBox.Grow(2), Ui.Sheet); ci.DrawRect(_menuBox, Ui.Sheet); ci.DrawRect(_menuBox, Ui.Ink, false, 1.5f);
+        for (int k = 0; k < _menuItems.Length; k++)
+        {
+            var r = _menuRect[k]; bool on = _menuItems[k].Enabled, hot = k == _menuHot;
+            if (on && hot) ci.DrawRect(r, Ui.Hover);
+            var head = new Rect2(r.Position, new Vector2(r.Size.X, MenuRowH));
+            if (!on) HatchRect(ci, head, 8f, new Color(Ui.Ink3, 0.45f));   // disabled: hatched, the reason follows in words
+            ci.DrawRect(r, on ? Ui.Ink : Ui.Ink3, false, on && hot ? 2f : 1f);
+            if (on && hot) ci.DrawRect(r.Grow(-1), Ui.Focus, false, 3f);   // the one focus style (Ui.FocusBox)
+            float ty = r.Position.Y + MenuRowH * 0.5f + 5;
+            if (!on) ci.DrawStringOutline(Fonts.Text, new Vector2(r.Position.X + 10, ty), _menuLabel[k], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
+            Text(new Vector2(r.Position.X + 10, ty), _menuLabel[k], 14, on ? Ui.Ink : Ui.Ink2);
+            if (!on) for (int j = 0; j < _menuWhy[k].Count; j++) Text(new Vector2(r.Position.X + 14, r.Position.Y + MenuRowH + 15 + j * MenuLine), _menuWhy[k][j], 14, Ui.Ink);
+        }
+        _cv = this;
+    }
+
+    // Diagonal hatch inside a rectangle, clipped without allocating.
+    static void HatchRect(CanvasItem ci, Rect2 r, float step, Color c)
+    {
+        float h = r.Size.Y;
+        for (float x = r.Position.X - h; x < r.End.X; x += step)
+        {
+            float t0 = Math.Max(0f, (r.Position.X - x) / h), t1 = Math.Min(1f, (r.End.X - x) / h);
+            if (t1 <= t0) continue;
+            ci.DrawLine(new Vector2(x + t0 * h, r.End.Y - t0 * h), new Vector2(x + t1 * h, r.End.Y - t1 * h), c, 1f);
+        }
+    }
+
+    /// <summary>Shot run: opens the menu of a node (a real session state) and returns the rows as words, or null when the menu did not open.</summary>
+    public string ShotOpenMenu(int row)
+    {
+        if (row < 0 || _state == null) return null;
+        Select(row); OpenMenu(row, PosOf(row));
+        var sb = new System.Text.StringBuilder();
+        for (int k = 0; k < _menuItems.Length; k++) sb.Append(_menuItems[k].Enabled ? "[x] " : "[hatched: " + Loc.T(_menuItems[k].WhyKey!) + "] ").Append(_menuLabel[k]).Append("; ");
+        return sb.ToString();
+    }
+    public void ShotCloseMenu() => CloseMenu();
+    /// <summary>Shot run: the keyboard focus on the zoom-in button, and on the first view tab (frames that prove a visible focus on controls other than nodes, A7).</summary>
+    public void ShotFocusZoomIn() => _zoomIn.GrabFocus();
+    public bool ShotFocusTab(int k = 0) { if (_viewSwitch.GetChildCount() <= k || _viewSwitch.GetChild(k) is not Control c || c.FocusMode == FocusModeEnum.None) return false; c.GrabFocus(); return true; }
+    /// <summary>Shot run (#473): the close button is 40 du high and fully inside the sheet, clear of the goal panel; the zoom bar sits inside the map; null when fine.</summary>
+    public string ShotChromeCheck()
+    {
+        var cb = new Rect2(_closeBtn.Position, _closeBtn.Size);
+        if (cb.Size.Y < CloseH - 0.5f) return $"close button is {cb.Size.Y:F0} du high";
+        if (!new Rect2(Vector2.Zero, Size).Encloses(cb)) return "close button leaves the sheet";
+        if (_insetBox.Visible && cb.Intersects(PanelRect)) return "close button touches the goal panel";
+        var zb = new Rect2(_zoomBar.Position, _zoomBar.Size);
+        if (!Area.Encloses(zb)) return $"zoom bar {zb} leaves the map {Area}";
+        if (_zoomIn.Size.Y < SubpanelButtonDu - 0.5f || _zoomIn.Size.X < 24f) return "a zoom button is below 32 du";
+        return null;
+    }
+    public bool ShotMenuOpen => _menuOpen;
 
     // ---------------- inset ----------------
     void BuildInset(HostSnapshot s)
@@ -1395,6 +1856,7 @@ public sealed partial class TechTree : Control
                 case TreeClarity.ParamLine.KnowledgeStep: pbody.Add(Ui.Wrap(Loc.T("ui.tree.effects.knowledge"), 14, Ui.Ink2)); break;
                 default: pbody.Add(Ui.Wrap(Loc.T("card.param.cap", Loc.N(nodes.ReqPrecision[i].ToDouble()), Loc.N(nodes.ReqPurity[i].ToDouble()), Loc.N(nodes.ReqQualityControl[i].ToDouble()), nodes.Tier[i]), 14, Ui.Ink2)); break;
             }
+        pbody.Add(Ui.Wrap(Loc.T("tree.effects.none"), 14, Ui.Ink2));   // numeric effects: TASK-0157; said here once, not on every node of the map
         _inset.AddChild(Block(CardIcon.Kind.Raises, "card.raises", pbody.ToArray()));
 
         // 4. unlocks: the rows that list this node in requires

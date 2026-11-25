@@ -69,17 +69,20 @@ public static class LabelGeometry
     /// <summary>Placement priority of a tree label, lower is placed first and drawn last (on top): the goal, selected or root name 0, the route 1, the frontier 2, the rest 3.</summary>
     public static int Rank(bool named, bool onRoute, bool frontier) => named ? 0 : onRoute ? 1 : frontier ? 2 : 3;
 
-    /// <summary>Does the segment a-b pass through the box (sampled every 6 du, ends excluded)?</summary>
+    /// <summary>Does the segment a-b run through the box? Exact (Liang-Barsky): any overlap of positive length counts, so a short clip of a corner is a hit; a point touch is not.</summary>
     public static bool SegmentHitsRect(float ax, float ay, float bx, float by, float x, float y, float w, float h)
     {
-        float len = MathF.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
-        int n = Math.Max(2, (int)(len / 6f));
-        for (int k = 1; k < n; k++)
+        float dx = bx - ax, dy = by - ay, t0 = 0f, t1 = 1f;
+        bool Clip(float p, float q)   // p: direction against this edge, q: distance of a from it (inside when q >= 0)
         {
-            float f = (float)k / n, px = ax + (bx - ax) * f, py = ay + (by - ay) * f;
-            if (px >= x && px <= x + w && py >= y && py <= y + h) return true;
+            if (p == 0f) return q >= 0f;
+            float t = q / p;
+            if (p < 0f) { if (t > t1) return false; if (t > t0) t0 = t; }
+            else { if (t < t0) return false; if (t < t1) t1 = t; }
+            return true;
         }
-        return false;
+        if (!Clip(-dx, ax - x) || !Clip(dx, x + w - ax) || !Clip(-dy, ay - y) || !Clip(dy, y + h - ay)) return false;
+        return (t1 - t0) * MathF.Sqrt(dx * dx + dy * dy) > 0.01f;
     }
 
     /// <summary>True when some other node centre is within `slack` du of being as near to the label box as the own node.</summary>
