@@ -1062,7 +1062,7 @@ public sealed partial class Main : Node3D
                 Q(0.5, () =>
                 {
                     kbRow = _tree.KeyFocusRow; string tip = _tree.KeyTipText;
-                    bool ok = kbRow >= 0 && tip != null && tip.Contains("№");
+                    bool ok = kbRow >= 0 && !string.IsNullOrEmpty(tip) && !tip.Contains("№");
                     _shotLog += $"tree keyboard{sfx}: Tab -> row {kbRow}, tip '{tip}': {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Tab did not put the ring and the key tip on a node");
                     SaveShot($"tree_key_tip{sfx}.png", null, scale == 100);
                     PressKey(Key.Enter); PressKey(Key.Enter, false);
@@ -1102,8 +1102,10 @@ public sealed partial class Main : Node3D
                     bool ok = _tree.KeyFocusRow >= 0 && !_tree.ShotMenuOpen;
                     _shotLog += $"tree year rings keyboard {sfx}: Tab -> row {_tree.KeyFocusRow}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree year rings: Tab did not put the ring on a node");
                     SaveShot($"tree_year_focus{sfx}.png", null, scale == 100);
-                    _tree.Select(-1); _tree.ResetView(); _tree.Visible = false;
+                    _tree.ShotFocusZoomIn();
                 });
+                Q(0.4, () => { SaveShot($"tree_year_focus_plus{sfx}.png", null, scale == 100); bool ok = _tree.ShotFocusTab(); _shotLog += $"tree focus on a tab {sfx}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree view tab is not focusable"); });
+                Q(0.4, () => { SaveShot($"tree_year_focus_tab{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });

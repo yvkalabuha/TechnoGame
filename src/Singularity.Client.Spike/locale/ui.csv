@@ -436,3 +436,5 @@ menu.why.focus.process,Needs a known process,Нужен известный пр�
 menu.why.focus.power,Only for your own power,Только для своей державы
 menu.why.focus.full,The focus already holds 3 processes,В фокусе уже 3 процесса
 menu.why.blocked.known,Already known: nothing blocks it,Узел уже известен: ничего не мешает
+tree.centre.head,before 1945,до 1945
+tree.effects.none,effects: no data,эффекты: нет данных

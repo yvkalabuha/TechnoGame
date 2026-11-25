@@ -29,11 +29,10 @@ public static class GlyphPrims
             case "PRN": return new[] { new Prim(PrimKind.Ring, new[] { (0f, 0f) }, ArrowStroke, rg), new Prim(PrimKind.Dot, new[] { (0f, 0f) }, 0, 1.8f) };
             case "ENG":
             case "CMP": return new[] { new Prim(PrimKind.Closed, GlyphGeometry.Outline(code, rg * 0.85f)!, ArrowStroke) };
-            case "PRC":   // process: an arrow
+            case "PRC":   // process: an hourglass (an arrow here read as «opens next» of the node card)
                 return new[]
                 {
-                    new Prim(PrimKind.Polyline, new[] { (-rg, 0f), (rg, 0f) }, ArrowStroke),
-                    new Prim(PrimKind.Polyline, new[] { (0.3f * rg, -0.95f * rg), (rg, 0f), (0.3f * rg, 0.95f * rg) }, ArrowStroke),
+                    new Prim(PrimKind.Polyline, new[] { (-rg, -0.95f * rg), (rg, -0.95f * rg), (-rg, 0.95f * rg), (rg, 0.95f * rg), (-rg, -0.95f * rg) }, ArrowStroke),
                 };
             default: return new[] { new Prim(PrimKind.Fill, new[] { (0f, -rg), (rg, 0f), (0f, rg), (-rg, 0f) }, 0) };   // product: a solid diamond
         }

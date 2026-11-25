@@ -72,7 +72,7 @@ public sealed partial class TechTree : Control
         top.AddThemeConstantOverride("separation", 4);
         top.AddChild(Ui.Lbl("tree.path", 18, null, FontKind.Draft));
         top.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
-        _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu);
+        _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu, focusable: true);
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
         top.AddChild(_viewSwitch);
         // «Close» (#473): 40 du high in the top-right corner of the sheet, always in view; a heavy 3 du frame in every state keeps it the most visible button,
@@ -109,7 +109,7 @@ public sealed partial class TechTree : Control
         _insetBox.AnchorLeft = 0.6f; _insetBox.AnchorRight = 1; _insetBox.OffsetLeft = 0; _insetBox.OffsetTop = CloseH + 10; _insetBox.OffsetRight = -6;   // below the close button
         var sc = _insetScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         // A12: the scroll bar is 8 du wide, ink-2 grabber on a rule track.
-        var vbar = sc.GetVScrollBar(); vbar.CustomMinimumSize = new Vector2(8, 0);
+        var vbar = sc.GetVScrollBar(); vbar.CustomMinimumSize = new Vector2(10, 0);
         vbar.AddThemeStyleboxOverride("scroll", Ui.Box(Ui.Rule, null, 0, 0, 0));
         foreach (var gb in new[] { "grabber", "grabber_highlight", "grabber_pressed" }) vbar.AddThemeStyleboxOverride(gb, Ui.Box(Ui.Ink2, null, 0, 0, 0));
         _inset.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -126,7 +126,7 @@ public sealed partial class TechTree : Control
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
 
-    void Invalidate() { _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
+    void Invalidate() { _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _noData = null; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
@@ -484,6 +484,7 @@ public sealed partial class TechTree : Control
     {
         _countRects.Clear(); _labelRects.Clear();
         CountCells();
+        if (_noData == null) { _noData = Loc.T("tree.effects.none"); _noDataW = Fonts.Text.GetStringSize(_noData, HorizontalAlignment.Left, -1, 14).X + 2; }
         var c = Centre; float u = Unit;
         DrawSectors(c, u);
         DrawDecades(c, u);
@@ -513,7 +514,9 @@ public sealed partial class TechTree : Control
                         else if (pass == 2 && onRoute) _cv.DrawPolyline(Channel(m, i), Ui.Command, 2.2f, true);
                     }
         // the continuous route from the root of «why not» to the goal
-        for (int k = 0; k + 1 < _path.Count; k++) _cv.DrawPolyline(Channel(_path[k], _path[k + 1]), Ui.Command, 3.4f, true);
+        // A5: the route is a wide band with a dashed light centre (a double dashed line); the links of the selected node are a thin solid line, so the two differ in grey too.
+        for (int k = 0; k + 1 < _path.Count; k++) _cv.DrawPolyline(Channel(_path[k], _path[k + 1]), Ui.Command, 5f, true);
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) _cv.DrawDashedLine(ch[j], ch[j + 1], Ui.Sheet, 1.8f, 5f, true); }
 
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
         if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) DrawYearAndChips(i);
@@ -522,23 +525,54 @@ public sealed partial class TechTree : Control
         DrawKeyFocus();
     }
 
-    // Sector = discipline: a quiet wash (decor, C5) and a hatch pattern that carries the meaning in grey (A5); the lines between sectors start at the rim of the centre.
+    // Sector = discipline: a quiet wash (decor, C5) and a hatch of its own direction that carries the meaning in grey (A5); the lines between sectors start at the roots band.
+    static readonly (float X, float Y)[][] HatchNormals = BuildHatchNormals();
+    static (float X, float Y)[][] BuildHatchNormals() { var a = new (float X, float Y)[5][]; for (int k = 0; k < 5; k++) a[k] = TreeYearLayout.HatchNormals((SectorHatch)k); return a; }
     void DrawSectors(Vector2 c, float u)
     {
         float alpha = Step == 1 ? 0.5f : Step <= 3 ? 0.3f : 0.18f;
-        float w = TreeYearLayout.SectorWidth(_nSec), rIn = TreeYearLayout.Inner * u, rOut = TreeYearLayout.Edge * u;
+        float w = TreeYearLayout.SectorWidth(_nSec), rIn = (TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, rOut = TreeYearLayout.Edge * u;
         for (int d = 0; d < _nSec; d++)
         {
             float s0 = TreeYearLayout.SectorStart(d, _nSec), s1 = s0 + w;
             float a0 = Mathf.DegToRad(s0 + w * WedgeMargin * 0.5f), a1 = Mathf.DegToRad(s1 - w * WedgeMargin * 0.5f);
             _cv.DrawArc(c, (rIn + rOut) * 0.5f, a0, a1, TreeYearLayout.ArcPoints(rOut, w), new Color(Ui.DiscWash[d % Ui.DiscWash.Length], alpha), rOut - rIn);
-            var hs = TreeYearLayout.HatchOf(d); var hc = new Color(Ui.DiscText[d % Ui.DiscText.Length], 0.35f);
-            if (hs.SpokeDeg > 0f)
-                for (float a = s0 + hs.SpokeDeg * 0.5f; a < s1 - 0.1f; a += hs.SpokeDeg) { float ar = Mathf.DegToRad(a); _cv.DrawLine(c + new Vector2(Mathf.Cos(ar), Mathf.Sin(ar)) * rIn, c + new Vector2(Mathf.Cos(ar), Mathf.Sin(ar)) * rOut, hc, 1f, true); }
-            if (hs.ArcUnits > 0f)
-                for (float r = TreeYearLayout.Inner + hs.ArcUnits * 0.5f; r < TreeYearLayout.Edge; r += hs.ArcUnits) _cv.DrawArc(c, r * u, a0, a1, TreeYearLayout.ArcPoints(r * u, w), hc, 1f, true);
+            DrawHatch(c, rIn, rOut, a0, a1, TreeYearLayout.HatchOf(d), new Color(Ui.DiscText[d % Ui.DiscText.Length], TreeYearLayout.HatchAlpha));
             float b = Mathf.DegToRad(s0);
             _cv.DrawLine(c + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * rIn, c + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * (6.5f * u), GridColor, 1f, true);
+        }
+    }
+
+    // Hatch lines of one direction inside an annular sector, only over the visible map: every line is walked in short steps and the runs inside the sector are drawn.
+    void DrawHatch(Vector2 c, float rIn, float rOut, float a0, float a1, SectorHatch kind, Color col)
+    {
+        var area = Area; float r2in = rIn * rIn, r2out = rOut * rOut, sp = TreeYearLayout.HatchSpacing;
+        float d0x = Mathf.Cos(a0), d0y = Mathf.Sin(a0), d1x = Mathf.Cos(a1), d1y = Mathf.Sin(a1);
+        foreach (var (nx, ny) in HatchNormals[(int)kind])
+        {
+            float tx = -ny, ty = nx;
+            float dmin = float.MaxValue, dmax = float.MinValue;
+            for (int k = 0; k < 4; k++) { float cx = (k & 1) == 0 ? area.Position.X : area.End.X, cy = (k & 2) == 0 ? area.Position.Y : area.End.Y, v = (cx - c.X) * nx + (cy - c.Y) * ny; dmin = Math.Min(dmin, v); dmax = Math.Max(dmax, v); }
+            dmin = Math.Max(dmin, -rOut); dmax = Math.Min(dmax, rOut);
+            for (float d = Mathf.Ceil(dmin / sp) * sp; d <= dmax; d += sp)
+            {
+                float lim = Mathf.Sqrt(Math.Max(0f, r2out - d * d));
+                bool run = false; Vector2 from = default, last = default;
+                for (float s = -lim; s <= lim; s += 5f)
+                {
+                    float px = nx * d + tx * s, py = ny * d + ty * s;
+                    bool inside = false;
+                    if (px + c.X >= area.Position.X && px + c.X <= area.End.X && py + c.Y >= area.Position.Y && py + c.Y <= area.End.Y)
+                    {
+                        float q = px * px + py * py;
+                        inside = q >= r2in && q <= r2out && d0x * py - d0y * px >= 0f && px * d1y - py * d1x >= 0f;
+                    }
+                    var pt = new Vector2(c.X + px, c.Y + py);
+                    if (inside) { if (!run) { run = true; from = pt; } last = pt; }
+                    else if (run) { _cv.DrawLine(from, last, col, 1f); run = false; }
+                }
+                if (run) _cv.DrawLine(from, last, col, 1f);
+            }
         }
     }
 
@@ -551,23 +585,33 @@ public sealed partial class TechTree : Control
     void DrawDecades(Vector2 c, float u)
     {
         _cv.DrawArc(c, TreeYearLayout.Inner * u, 0, Mathf.Tau, TreeYearLayout.ArcPoints(TreeYearLayout.Inner * u, 360f), GridColor, 1f, true);
+        _cv.DrawArc(c, (TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, 0, Mathf.Tau, TreeYearLayout.ArcPoints((TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, 360f), GridColor, 1f, true);
+        YearPlate(c.X, c.Y - TreeYearLayout.Inner * u, "1945");
         for (int k = 0; k < TreeYearLayout.RingYears.Length; k++)
         {
             int ry = TreeYearLayout.RingYears[k]; float r = TreeYearLayout.RadiusOf(ry) * u;
             _cv.DrawArc(c, r, 0, Mathf.Tau, TreeYearLayout.ArcPoints(r, 360f), GridColor, TreeYearLayout.IsLandmark(ry) ? 2f : 1f, true);
-            var sz = Fonts.Mono.GetStringSize(RingText[k], HorizontalAlignment.Left, -1, 14);
-            var pl = new Rect2(c.X - sz.X * 0.5f - 3, c.Y - r - sz.Y * 0.5f - 1, sz.X + 6, sz.Y + 2);
-            _cv.DrawRect(pl, new Color(Ui.Sheet, 0.92f));
-            Text(new Vector2(pl.Position.X + 3, pl.Position.Y + 1 + sz.Y * 0.8f), RingText[k], 14, Ui.Ink2, FontKind.Mono);
+            YearPlate(c.X, c.Y - r, RingText[k]);
+            if (ry is 1950 or 1980 or 2010) { YearPlate(c.X + r, c.Y, RingText[k]); YearPlate(c.X - r, c.Y, RingText[k]); }   // also at 3 and 9 o'clock (art director)
         }
-        // the centre: «1945 · roots»
-        float cy = c.Y - 2;
-        var l1 = Fonts.Mono.GetStringSize("1945", HorizontalAlignment.Left, -1, 14); var s2 = Loc.T("tree.centre"); var l2 = Fonts.Text.GetStringSize(s2, HorizontalAlignment.Left, -1, 14);
-        if (u * TreeYearLayout.Inner > 40f)
+        // the centre: the roots band lies around it, 1900-1945
+        if (u * (TreeYearLayout.Inner - TreeYearLayout.RootsBand) > 40f)
         {
-            Text(new Vector2(c.X - l1.X * 0.5f, cy), "1945", 14, Ui.Ink2, FontKind.Mono);
-            Text(new Vector2(c.X - l2.X * 0.5f, cy + 17), s2, 14, Ui.Ink2);
+            string s1 = Loc.T("tree.centre.head"), s2 = Loc.T("tree.centre");
+            var l1 = Fonts.Mono.GetStringSize(s1, HorizontalAlignment.Left, -1, 14); var l2 = Fonts.Text.GetStringSize(s2, HorizontalAlignment.Left, -1, 14);
+            Text(new Vector2(c.X - l1.X * 0.5f, c.Y - 2), s1, 14, Ui.Ink2, FontKind.Mono);
+            Text(new Vector2(c.X - l2.X * 0.5f, c.Y + 15), s2, 14, Ui.Ink2);
         }
+    }
+
+    // A year on a paper plate centred at a point of a ring (drawn before the nodes, so a node always stays above it).
+    void YearPlate(float x, float y, string text)
+    {
+        if (!Area.Grow(20).HasPoint(new Vector2(x, y))) return;
+        var sz = Fonts.Mono.GetStringSize(text, HorizontalAlignment.Left, -1, 14);
+        var pl = new Rect2(x - sz.X * 0.5f - 3, y - sz.Y * 0.5f - 1, sz.X + 6, sz.Y + 2);
+        _cv.DrawRect(pl, new Color(Ui.Sheet, 0.92f));
+        Text(new Vector2(pl.Position.X + 3, pl.Position.Y + 1 + sz.Y * 0.8f), text, 14, Ui.Ink2, FontKind.Mono);
     }
 
     // «Now»: a dashed ring at the radius of the session date and its label on the first free place of the ring (bottom first); what lies outside is not yet open.
@@ -578,31 +622,45 @@ public sealed partial class TechTree : Control
         _nowRect = default;
         if (_nowYear != _date.Year || _nowText == null) { _nowYear = _date.Year; _nowText = Loc.T("tree.now", _date.Year); }
         var sz = Fonts.Text.GetStringSize(_nowText, HorizontalAlignment.Left, -1, 14) + new Vector2(10, 4);
-        for (int k = 0; k < 60; k++)
-        {
-            float deg = 90f + (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 6f, a = Mathf.DegToRad(deg);
-            var q = c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
-            var rc = new Rect2(q - sz * 0.5f, sz);
-            bool free = Area.Encloses(rc);
-            for (int i = 0; free && i < _rad.Length; i++) if (NodeBox(i).Intersects(rc)) free = false;
-            if (!free) continue;
-            _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
-            Text(new Vector2(rc.Position.X + 5, rc.Position.Y + 2 + sz.Y * 0.7f), _nowText, 14, Ui.Ink);
-            _nowRect = rc;   // node names keep off it
-            return;
-        }
+        // first free place: on the ring, else pulled out of it on a leader (the ring is crowded with nodes at the start); bottom first
+        for (int off = 0; off <= 2; off++)
+            for (int k = 0; k < 60; k++)
+            {
+                float deg = 90f + (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 6f, a = Mathf.DegToRad(deg), dist = r + off * 46f;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                var rc = new Rect2(c + dir * dist - sz * 0.5f, sz);
+                bool free = Area.Encloses(rc);
+                for (int i = 0; free && i < _rad.Length; i++) if (NodeBox(i).Grow(2).Intersects(rc)) free = false;
+                if (!free) continue;
+                if (off > 0) _cv.DrawLine(c + dir * r, c + dir * (dist - (sz.Y * 0.5f)), Ui.Ink, 1.2f, true);
+                _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
+                Text(new Vector2(rc.Position.X + 5, rc.Position.Y + 2 + sz.Y * 0.7f), _nowText, 14, Ui.Ink);
+                _nowRect = rc;   // node names keep off it
+                return;
+            }
     }
 
-    // At step 5 a node shows its year under the mark («≈» when the year is estimated); effect chips go below it when the core provides them (TASK-0157, see EffectChips).
+    // At step 5 a node shows its year to the right of the mark («≈» when the year is estimated) and, under it, its effect chips: until TASK-0157 gives the core data the line says there is none (C3).
+    // Node names go above the mark and keep off both (DrawLabels reads these rectangles).
+    string _noData; float _noDataW;
+    Rect2 YearRect(int i) { var p = PosOf(i); return new Rect2(p.X + NR + 4, p.Y - 9, _yearW[i] + 2, 18); }
+    Rect2 NoDataRect(int i) { var p = PosOf(i); return new Rect2(p.X - _noDataW * 0.5f, p.Y + NR + 3, _noDataW, 18); }
     void DrawYearAndChips(int i)
     {
         var p = PosOf(i);
         if (!Area.Grow(40).HasPoint(p)) return;
-        float y = p.Y + NR + 16;
-        _cv.DrawStringOutline(Fonts.Mono, new Vector2(p.X - _yearW[i] * 0.5f, y), _yearText[i], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
-        Text(new Vector2(p.X - _yearW[i] * 0.5f, y), _yearText[i], 14, Ui.Ink2, FontKind.Mono);
+        var yr = YearRect(i);
+        _cv.DrawStringOutline(Fonts.Mono, new Vector2(yr.Position.X, p.Y + 5), _yearText[i], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
+        Text(new Vector2(yr.Position.X, p.Y + 5), _yearText[i], 14, Ui.Ink2, FontKind.Mono);
         var chips = EffectChips(i);
-        for (int k = 0; k < chips.Count && k < 3; k++) Text(new Vector2(p.X - 40, y + 18 * (k + 1)), chips[k], 14, Ui.Ink, FontKind.Mono);
+        float y = p.Y + NR + 16;
+        if (chips.Count == 0)
+        {
+            var nd = NoDataRect(i);
+            _cv.DrawStringOutline(Fonts.Text, new Vector2(nd.Position.X, y), _noData, HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
+            Text(new Vector2(nd.Position.X, y), _noData, 14, Ui.Ink2);
+        }
+        for (int k = 0; k < chips.Count && k < 3; k++) Text(new Vector2(p.X - 40, y + 18 * k), chips[k], 14, Ui.Ink, FontKind.Mono);
     }
 
     // Hook for the numeric effects of a node («speed +30»): TASK-0157 (NodeEffects in the core data) is not on main yet, so there is nothing to show. The client never invents the numbers (ui.md).
@@ -619,18 +677,39 @@ public sealed partial class TechTree : Control
         for (int g = rq.GroupStart[_selected]; g < rq.GroupStart[_selected + 1]; g++)
             foreach (int m in rq.GroupMembers(g)) _edgeLbl.Add((m, _selected, Loc.T("edge.needs", Names.Node(nodes.Id[m]))));
     }
+    readonly List<Rect2> _edgePlates = new();
+    // An edge plate sits on the middle of its edge, or a third of the way along when the middle is taken (three tries at most); when none is free it stays hidden (C1: it never covers a node, a name or a year).
     void DrawEdgeLabels()
     {
         if (_edgeKey != _selected) BuildEdgeLabels();
+        _edgePlates.Clear();
         foreach (var (a, b, text) in _edgeLbl)
         {
-            var ch = Channel(a, b); var mid = ch[ch.Length / 2];
-            if (!Area.HasPoint(mid)) continue;
+            var ch = Channel(a, b);
             var sz = Fonts.Text.GetStringSize(text, HorizontalAlignment.Left, -1, 14);
-            var rc = new Rect2(mid - new Vector2(sz.X * 0.5f + 3, sz.Y * 0.5f), sz + new Vector2(6, 2));
-            _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink2, false, 1f);
-            Text(new Vector2(rc.Position.X + 3, rc.Position.Y + sz.Y * 0.8f), text, 14, Ui.Ink2);
+            for (int t = 0; t < 3; t++)
+            {
+                var at = ch[t == 0 ? ch.Length / 2 : t == 1 ? ch.Length / 3 : ch.Length * 2 / 3];
+                var rc = new Rect2(at - new Vector2(sz.X * 0.5f + 3, sz.Y * 0.5f), sz + new Vector2(6, 2));
+                if (!Area.Encloses(rc) || PlateTaken(rc)) continue;
+                _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink2, false, 1f);
+                Text(new Vector2(rc.Position.X + 3, rc.Position.Y + sz.Y * 0.8f), text, 14, Ui.Ink2);
+                _edgePlates.Add(rc);
+                break;
+            }
         }
+    }
+
+    bool PlateTaken(Rect2 rc)
+    {
+        foreach (var l in _labelRects) if (l.Intersects(rc)) return true;
+        foreach (var l in _edgePlates) if (l.Intersects(rc)) return true;
+        for (int i = 0; i < _rad.Length; i++)
+        {
+            if (NodeBox(i).Intersects(rc)) return true;
+            if (Step >= ZoomSteps.Effects && (YearRect(i).Intersects(rc) || NoDataRect(i).Intersects(rc))) return true;
+        }
+        return false;
     }
 
     // Node mark size: every state is 16 du (TreeClarity.MarkDu), never scaled down with the canvas (A2); a little larger when zoomed in; icon plates are larger still.
@@ -786,6 +865,7 @@ public sealed partial class TechTree : Control
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         if (_nowRect.Size.X > 0f) occupied.Add(_nowRect.Grow(2));
+        if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) if (Area.Grow(40).HasPoint(PosOf(i))) { occupied.Add(YearRect(i).Grow(1)); occupied.Add(NoDataRect(i).Grow(1)); }
         // The route is an obstacle too, so that no label sits on it.
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
@@ -812,6 +892,7 @@ public sealed partial class TechTree : Control
             cands[2] = new Rect2(p + new Vector2(-sz.X * 0.5f, o), sz); cands[3] = new Rect2(p + new Vector2(-sz.X * 0.5f, -o - sz.Y), sz);
             cands[4] = new Rect2(p + new Vector2(o + 2, o + 2), sz); cands[5] = new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz);
             cands[6] = new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz); cands[7] = new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz);
+            if (Step >= ZoomSteps.Effects) (cands[0], cands[3]) = (cands[3], cands[0]);   // name above the mark, the year stands on its right
             bool Try(Rect2 rc, bool ignoreOthers = false, bool leaderCheck = true)
             {
                 var pad = rc.Grow(2);
@@ -970,13 +1051,11 @@ public sealed partial class TechTree : Control
         for (int k = 0; k < 5; k++) { _lgWash[k] = new Color(_lgDiscs[k].WashHex); _lgLine[k] = new Color(_lgDiscs[k].LineHex); }
     }
 
-    // The same hatch as the sector on the map, as a few lines inside the round swatch (spokes -> vertical lines, arcs -> horizontal lines).
+    // The same hatch as the sector on the map (same directions, 4 du apart), clipped to the round swatch of radius 8.
     void HatchSwatch(Vector2 mk, int sector, Color line)
     {
-        var hs = TreeYearLayout.HatchOf(sector);
-        int nv = hs.SpokeDeg <= 0f ? 0 : hs.SpokeDeg <= 4f ? 5 : hs.SpokeDeg <= 6f ? 3 : 2, nh = hs.ArcUnits <= 0f ? 0 : hs.ArcUnits <= 0.2f ? 5 : hs.ArcUnits <= 0.3f ? 3 : 2;
-        for (int k = 0; k < nv; k++) { float t = (k + 1) * 16f / (nv + 1) - 8f, h = Mathf.Sqrt(64f - t * t); _cv.DrawLine(mk + new Vector2(t, -h), mk + new Vector2(t, h), line, 1f); }
-        for (int k = 0; k < nh; k++) { float t = (k + 1) * 16f / (nh + 1) - 8f, h = Mathf.Sqrt(64f - t * t); _cv.DrawLine(mk + new Vector2(-h, t), mk + new Vector2(h, t), line, 1f); }
+        foreach (var (nx, ny) in HatchNormals[(int)TreeYearLayout.HatchOf(sector)])
+            for (float d = -6f; d <= 6f; d += 4f) { float h = Mathf.Sqrt(64f - d * d); var m = mk + new Vector2(nx, ny) * d; var t = new Vector2(-ny, nx) * h; _cv.DrawLine(m - t, m + t, line, 1.4f); }
     }
 
     // Legend (spec 2.2): rings, states, disciplines, lines. The marks go through the same drawing as the nodes of the map.
@@ -1025,7 +1104,7 @@ public sealed partial class TechTree : Control
         Text(new Vector2(xr + 36, gy), _lgText[24], 14, Ui.Ink2);
         Head(xr, Y(7, 16), 3);
         float ry = Y(8, 16);
-        _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Command, 3f);
+        _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Command, 5f); _cv.DrawDashedLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Sheet, 1.8f, 5f);
         Text(new Vector2(xr + 36, ry), _lgText[4], 14, Ui.Ink2);
         ry = Y(9, 16);
         _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Ink, 1.6f);   // the links of the selected node, as the map draws them
@@ -1392,7 +1471,7 @@ public sealed partial class TechTree : Control
         var nodes = _host.Data.Nodes; var p = PosOf(i); float r = Reach(i) + 5f;   // outside the corners, the goal frame and the selection ring
         _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Sheet, 5.5f, true);
         _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Ink, 2.5f, true);
-        if (_kbTipFor != i) { _kbTip = $"{Names.Node(nodes.Id[i])} · №{nodes.Number[i]}"; _kbTipSize = Fonts.Text.GetStringSize(_kbTip, HorizontalAlignment.Left, -1, 14); _kbTipFor = i; }
+        if (_kbTipFor != i) { _kbTip = Names.Node(nodes.Id[i]); _kbTipSize = Fonts.Text.GetStringSize(_kbTip, HorizontalAlignment.Left, -1, 14); _kbTipFor = i; }
         var sz = _kbTipSize + new Vector2(12, 8); var a = Area;
         float x = p.X + r + 4; if (x + sz.X > a.End.X - 2) x = p.X - r - 4 - sz.X;
         float y = Math.Clamp(p.Y - sz.Y * 0.5f, a.Position.Y + 2, a.End.Y - sz.Y - 2);
@@ -1546,6 +1625,9 @@ public sealed partial class TechTree : Control
         return sb.ToString();
     }
     public void ShotCloseMenu() => CloseMenu();
+    /// <summary>Shot run: the keyboard focus on the zoom-in button, and on the first view tab (frames that prove a visible focus on controls other than nodes, A7).</summary>
+    public void ShotFocusZoomIn() => _zoomIn.GrabFocus();
+    public bool ShotFocusTab() { if (_viewSwitch.GetChildCount() == 0 || _viewSwitch.GetChild(0) is not Control c || c.FocusMode == FocusModeEnum.None) return false; c.GrabFocus(); return true; }
     /// <summary>Shot run (#473): the close button is 40 du high and fully inside the sheet, clear of the goal panel; the zoom bar sits inside the map; null when fine.</summary>
     public string ShotChromeCheck()
     {

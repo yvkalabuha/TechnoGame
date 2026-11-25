@@ -3,16 +3,18 @@ using System;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Second channel of a sector (A5): spokes every <see cref="SpokeDeg"/> degrees and/or arcs every <see cref="ArcUnits"/> base units; 0 = none.</summary>
-public readonly record struct HatchSpec(float SpokeDeg, float ArcUnits);
+/// <summary>Second channel of a sector (A5): the direction of its hatch lines; five patterns that stay apart in greyscale.</summary>
+public enum SectorHatch { Vertical, Horizontal, Diagonal, AntiDiagonal, Grid }
 
 /// <summary>Godot-free layout of the knowledge tree (owner #473): radius = year, sector = discipline, 6 zoom steps. Presentation only.</summary>
 public static class TreeYearLayout
 {
-    /// <summary>The centre is "1945, roots": earlier anchors sit on the innermost circle.</summary>
-    public const int FirstYear = 1945, EdgeYear = 2040;
-    /// <summary>Radius of year 1945 and of the edge of the disc, in base units.</summary>
-    public const float Inner = 1.0f, Edge = 6.3f;
+    /// <summary>Anchors up to 1945 are the roots: they have their own inner band, spread by a square-root scale so that the many years just before 1945 do not pile on one circle.</summary>
+    public const int FirstYear = 1945, EdgeYear = 2040, RootsFrom = 1900;
+    /// <summary>Radius of year 1945, the width of the roots band below it, and the edge of the disc (2040), in base units.</summary>
+    public const float Inner = 2.0f, RootsBand = 1.2f, Edge = 6.3f;
+    /// <summary>Hatch line spacing in du and its opacity (stronger than a wash, A5).</summary>
+    public const float HatchSpacing = 6f, HatchAlpha = 0.5f;
     public const int MaxSectors = 8;
     /// <summary>Opacity of the grid ink (rings, sector lines) over the paper: keeps the grid at 1.6:1 or less (a unit test holds it).</summary>
     public const float GridAlpha = 0.75f;
@@ -23,15 +25,21 @@ public static class TreeYearLayout
     /// <summary>The thicker landmark rings.</summary>
     public static bool IsLandmark(int ringYear) => ringYear is 1980 or 2000;
 
-    /// <summary>Radius in base units of a (fractional) year; years outside 1945..2040 are clamped.</summary>
+    /// <summary>Radius in base units of a (fractional) year. Before 1945: Inner - RootsBand * sqrt((1945 - year) / 45), so the years nearest 1945 get the most room; from 1945: linear to the edge.
+    /// Years outside 1900..2040 are clamped. The two parts meet at 1945.</summary>
     public static float RadiusOf(float year)
     {
-        float y = Math.Clamp(year, FirstYear, EdgeYear);
+        float y = Math.Clamp(year, RootsFrom, EdgeYear);
+        if (y < FirstYear) return Inner - RootsBand * MathF.Sqrt((FirstYear - y) / (FirstYear - RootsFrom));
         return Inner + (y - FirstYear) * ((Edge - Inner) / (EdgeYear - FirstYear));
     }
 
     /// <summary>Year at a radius (inverse of <see cref="RadiusOf"/>), for tests and tips.</summary>
-    public static float YearAt(float radius) => FirstYear + (radius - Inner) * ((EdgeYear - FirstYear) / (Edge - Inner));
+    public static float YearAt(float radius)
+    {
+        if (radius < Inner) { float q = (Inner - radius) / RootsBand; return FirstYear - (FirstYear - RootsFrom) * q * q; }
+        return FirstYear + (radius - Inner) * ((EdgeYear - FirstYear) / (Edge - Inner));
+    }
 
     /// <summary>Sector width in degrees: the disc is shared equally, and a sector appended later only shrinks the others.</summary>
     public static float SectorWidth(int sectors) => 360f / Math.Max(1, sectors);
@@ -41,15 +49,22 @@ public static class TreeYearLayout
 
     public static float SectorMid(int sector, int sectors) => SectorStart(sector, sectors) + SectorWidth(sectors) * 0.5f;
 
-    /// <summary>Hatch of a sector: five different patterns, then they repeat.</summary>
-    public static HatchSpec HatchOf(int sector) => (sector % 5) switch
+    /// <summary>Hatch of a sector: vertical, horizontal, 45 degrees, -45 degrees, grid; then they repeat.</summary>
+    public static SectorHatch HatchOf(int sector) => (SectorHatch)(sector % 5);
+
+    /// <summary>Unit normal of the hatch lines of a kind (the lines run along its perpendicular); a grid has two.</summary>
+    public static (float X, float Y)[] HatchNormals(SectorHatch k)
     {
-        0 => new(6f, 0f),
-        1 => new(0f, 0.3f),
-        2 => new(12f, 0.6f),
-        3 => new(4f, 0f),
-        _ => new(0f, 0.2f),
-    };
+        const float h = 0.70710678f;
+        return k switch
+        {
+            SectorHatch.Vertical => new[] { (1f, 0f) },
+            SectorHatch.Horizontal => new[] { (0f, 1f) },
+            SectorHatch.Diagonal => new[] { (h, h) },
+            SectorHatch.AntiDiagonal => new[] { (h, -h) },
+            _ => new[] { (1f, 0f), (0f, 1f) },
+        };
+    }
 
     /// <summary>Points for an arc of a given span at a given screen radius: chords stay short enough that the polygon sag is invisible at the maximum zoom (a fixed count showed corners).</summary>
     public static int ArcPoints(float radiusDu, float spanDeg)
@@ -59,7 +74,7 @@ public static class TreeYearLayout
     }
 
     /// <summary>Slots across the usable arc of a sector that the greedy placement tries.</summary>
-    const int Slots = 24;
+    const int Slots = 48;
 
     /// <summary>
     /// Places the nodes: radius from the year, angle inside the sector. Nodes of a sector go in the order (year, number); each takes the first free slot of the sector arc

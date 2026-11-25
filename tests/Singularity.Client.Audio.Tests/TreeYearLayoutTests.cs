@@ -10,15 +10,25 @@ public class TreeYearLayoutTests
     [Fact]
     public void RadiusGrowsWithTheYearAndIsClampedAtTheEnds()
     {
+        Assert.Equal(TreeYearLayout.Inner - TreeYearLayout.RootsBand, TreeYearLayout.RadiusOf(1900), 4);
+        Assert.Equal(TreeYearLayout.RadiusOf(1900), TreeYearLayout.RadiusOf(1850), 4);
         Assert.Equal(TreeYearLayout.Inner, TreeYearLayout.RadiusOf(1945), 4);
-        Assert.Equal(TreeYearLayout.Inner, TreeYearLayout.RadiusOf(1910), 4);   // earlier anchors sit in the centre
         Assert.Equal(TreeYearLayout.Edge, TreeYearLayout.RadiusOf(2040), 4);
         Assert.Equal(TreeYearLayout.Edge, TreeYearLayout.RadiusOf(2100), 4);
-        for (int y = 1945; y < 2040; y++) Assert.True(TreeYearLayout.RadiusOf(y + 1) > TreeYearLayout.RadiusOf(y));
+        for (int y = 1900; y < 2040; y++) Assert.True(TreeYearLayout.RadiusOf(y + 1) > TreeYearLayout.RadiusOf(y), $"year {y}");
     }
 
     [Fact]
-    public void DecadeRingsAreEquallySpaced()
+    public void TheRootsBandGivesTheYearsJustBefore1945MoreRoomThanTheOldOnes()
+    {
+        float Step(int y) => TreeYearLayout.RadiusOf(y + 1) - TreeYearLayout.RadiusOf(y);
+        Assert.True(Step(1944) > Step(1930) && Step(1930) > Step(1905));   // square-root scale: the finest spread nearest 1945
+        // the 1940-44 nodes (the crowded ones) get a band of at least a quarter of a unit, where a linear scale gave them 0.05
+        Assert.True(TreeYearLayout.RadiusOf(1945) - TreeYearLayout.RadiusOf(1940) > 0.25f);
+    }
+
+    [Fact]
+    public void DecadeRingsFromTheNineteenFiftiesAreEquallySpaced()
     {
         var r = TreeYearLayout.RingYears.Select(y => TreeYearLayout.RadiusOf(y)).ToArray();
         for (int k = 2; k < r.Length; k++) Assert.Equal(r[1] - r[0], r[k] - r[k - 1], 4);
@@ -26,7 +36,7 @@ public class TreeYearLayoutTests
     }
 
     [Fact]
-    public void YearAtInvertsRadiusOf() { foreach (int y in new[] { 1950, 1987, 2021 }) Assert.Equal(y, TreeYearLayout.YearAt(TreeYearLayout.RadiusOf(y)), 2); }
+    public void YearAtInvertsRadiusOf() { foreach (int y in new[] { 1904, 1930, 1943, 1950, 1987, 2021 }) Assert.Equal(y, TreeYearLayout.YearAt(TreeYearLayout.RadiusOf(y)), 2); }
 
     [Fact]
     public void SectorsShareTheCircleClockwiseFromTheTop()
@@ -50,7 +60,9 @@ public class TreeYearLayoutTests
     {
         var all = Enumerable.Range(0, 5).Select(TreeYearLayout.HatchOf).ToArray();
         Assert.Equal(5, all.Distinct().Count());
-        Assert.All(all, h => Assert.True(h.SpokeDeg > 0f || h.ArcUnits > 0f));
+        // distinct directions: no two kinds share the same set of line normals
+        Assert.Equal(5, all.Select(k => string.Join(";", TreeYearLayout.HatchNormals(k))).Distinct().Count());
+        Assert.True(TreeYearLayout.HatchAlpha >= 0.5f && TreeYearLayout.HatchSpacing <= 6f);
     }
 
     static (float[] r, float[] a) Place(int[] year, int[] sector, int[] number, int sectors, float margin = 0.08f, float gap = 0.3f)
@@ -113,6 +125,15 @@ public class TreeYearLayoutTests
         double chord = radius * span * Math.PI / 180 / pts, sag = chord * chord / (8 * radius);
         Assert.InRange(pts, 8, 1024);
         if (pts < 1024) Assert.True(sag < 0.6, $"sag {sag:F2} px");
+    }
+
+    [Theory]
+    [InlineData("Ink2")] [InlineData("Ink3")]
+    public void SecondaryTextHolds4Point5OnPaperAndSheet(string which)
+    {
+        string ink = which == "Ink2" ? Palette.Ink2 : Palette.Ink3;
+        foreach (var bg in new[] { Palette.C.Paper, Palette.C.Sheet })
+            Assert.True(ColorMath.Contrast(ColorMath.FromHex(ink), ColorMath.FromHex(bg)) >= 4.5, $"{which} on {bg}");
     }
 
     [Fact]
