@@ -41,7 +41,7 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
         if (world.Reserve is null || world.Commands.Fund(actorRow, month) is not { } f)
             return false;
         nodeRow = world.Graph.RowOf(f.Node);
-        Fx6 balance = world.Reserve.Balance(actorRow);
+        Fx6 balance = world.Reserve.Spendable(actorRow);
         amount = f.Amount < balance ? f.Amount : balance;
         return nodeRow >= 0;
     }

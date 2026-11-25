@@ -84,6 +84,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
     /// <summary>The run has the reserve account: budget shares may sum to less than 1 and <c>fund_programme</c> is accepted.</summary>
     public bool ReserveEnabled { get; init; }
 
+    /// <summary>Programmes can run: the reserve is on and the knowledge layer is the full model (a schedule has no progress to fund).</summary>
+    public bool FundEnabled { get; init; }
+
     /// <summary>Node numbers of the knowledge graph (for <c>fund_programme</c>).</summary>
     public ImmutableArray<int> NodeNumbers { get; init; } = [];
 
@@ -121,16 +124,14 @@ public static class CommandValidator
             case SetBudgetShares s:
                 if (limits.ReserveEnabled)
                 {
-                    // The quality item has no reader in the core: a share there would be money that does nothing.
-                    if (s.Shares.Quality > Singularity.Kernel.Fx6.Zero)
-                        return CommandVerdict.Refuse(CommandRefusal.BadShares, "the quality item has no effect: its share must be 0 (leave it in the reserve)");
+                    // The quality item has no reader in the core: with the reserve its share is kept in the reserve (SliceWorld.ReserveShare), so it stays valid.
                     return s.Shares.IsValidWithReserve
                         ? CommandVerdict.Ok
-                        : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must be non-negative and sum to at most 1, got {s.Shares.Sum}");
+                        : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must each lie in [0, 1] and sum to at most 1, got [{s.Shares.Research.Raw}, {s.Shares.Capability.Raw}, {s.Shares.Effort.Raw}, {s.Shares.Procurement.Raw}, {s.Shares.Quality.Raw}] (raw)");
                 }
                 return s.Shares.IsValid
                     ? CommandVerdict.Ok
-                    : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must be non-negative and sum to exactly 1, got {s.Shares.Sum}");
+                    : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must each lie in [0, 1] and sum to exactly 1, got [{s.Shares.Research.Raw}, {s.Shares.Capability.Raw}, {s.Shares.Effort.Raw}, {s.Shares.Procurement.Raw}, {s.Shares.Quality.Raw}] (raw)");
             case SetPriorityNode pn:
                 if (limits.InstituteSlots.IsDefaultOrEmpty)
                     return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
@@ -146,8 +147,8 @@ public static class CommandValidator
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {bi.Actor} has no institute slot {bi.Slot}");
             case FundProgramme fp:
-                if (!limits.ReserveEnabled)
-                    return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run has no reserve account");
+                if (!limits.ReserveEnabled || !limits.FundEnabled)
+                    return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run cannot fund programmes (no reserve account, or the knowledge layer is a schedule)");
                 if (!limits.NodeNumbers.Contains(fp.Node))
                     return CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {fp.Node} is not in the graph");
                 return fp.Amount > Singularity.Kernel.Fx6.Zero

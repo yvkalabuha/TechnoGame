@@ -52,8 +52,7 @@ public interface IReserveInputs
 
 /// <summary>
 /// The budget reserve: one <c>res.balance</c> column (Fx6 raw) per actor. Monthly, after the layers that read the same snapshot:
-/// <c>R' = (R + inflow − spend)·(1 − leak)</c> (A2 of PLAYER_LEVERS_WAVE1: add, then leak). Part B I3 writes <c>R·(1 − λ/12) + inflow − spend</c>,
-/// the leak on the old balance only; the two differ by the leak of one month's flows (under 1 % of them) and A2 is the owner-facing text. The balance never goes below zero (I4). Own column; nothing else writes it.
+/// <c>R' = R·(1 − leak) + inflow − spend</c> (part B I3): the opening balance leaks, this month's flows do not, so a first deposit keeps its whole value. The balance never goes below zero (I4). Own column; nothing else writes it.
 /// </summary>
 public sealed class ReserveSystem : ITickSystem
 {
@@ -84,6 +83,12 @@ public sealed class ReserveSystem : ITickSystem
     /// <summary>The balance in the snapshot.</summary>
     public Fx6 Balance(int actorRow) => Fx6.FromRaw(_balance.Current[actorRow]);
 
+    /// <summary>
+    /// What the month's step lets a programme take from the snapshot balance: the balance after this month's leak. The leak is paid first (I3), so money
+    /// already consumed by it cannot be spent; verdict and spend use this one function.
+    /// </summary>
+    public Fx6 Spendable(int actorRow) => Balance(actorRow) - LeakOf(Balance(actorRow));
+
     /// <summary>What the next monthly step takes from the current balance as the leak (before the new inflow): a pure read for the views.</summary>
     public Fx6 LeakOf(Fx6 balance) => balance * _leak;
 
@@ -94,10 +99,9 @@ public sealed class ReserveSystem : ITickSystem
         {
             Fx6 balance = Balance(a);
             Fx6 spend = _inputs.Spend(a, t);
-            if (spend > balance)
-                throw new ReserveInvariantException(t, a, $"spend {spend} exceeds the balance {balance} (I3)");
-            Fx6 after = balance + _inputs.Inflow(a, t) - spend;
-            _balance.Next[a] = (after - after * _leak).Raw;
+            if (spend > Spendable(a))
+                throw new ReserveInvariantException(t, a, $"spend {spend} exceeds the balance {balance} after its leak (I3)");
+            _balance.Next[a] = (balance - balance * _leak + _inputs.Inflow(a, t) - spend).Raw;
         }
     }
 
