@@ -3,4 +3,4 @@ id: core
 version: "0.1.0"
 name: "Singularity core data"
 dependencies: []
-files: [nodes.yaml, product_classes.yaml, scenario_1945.yaml, intelligence.yaml]
+files: [nodes.yaml, product_classes.yaml, node_history.yaml, scenario_1945.yaml, intelligence.yaml]
