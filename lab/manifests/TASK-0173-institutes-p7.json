@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0173-institutes-p7",
+  "description": "TASK-0173 (docs/simulation/institutes-p7-measurement.md): institutes on (TASK-0151 code, flag INSTITUTES). AI = no player; per player actor (USA, GBR, FRA: the actors with a candidate institute whose early and historical starts differ) the script plays its institutes: goals from the adviser (the AI rule), projects EARLY (window ref-10), HIST (AI rule), HIST_M5/HIST_P5 (5 years earlier/later), NOBUILD; NOGOAL = HIST without goals (P-8 trajectory); EARLY_F35 = EARLY with 35 % of the planned research while a project runs (stretched project, DEBT-0107 r3 #2). JetSlice FULL 1945-09..2000-12.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 20
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full",
+    "INSTITUTES": true,
+    "INST_PROBE": true
+  },
+  "series": [
+    {
+      "name": "AI",
+      "params": {}
+    },
+    {
+      "name": "USA_HIST",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "HIST"
+      }
+    },
+    {
+      "name": "USA_EARLY",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "EARLY"
+      }
+    },
+    {
+      "name": "USA_HIST_M5",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "HIST_M5"
+      }
+    },
+    {
+      "name": "USA_HIST_P5",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "HIST_P5"
+      }
+    },
+    {
+      "name": "USA_NOBUILD",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "NONE"
+      }
+    },
+    {
+      "name": "USA_NOGOAL",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "HIST",
+        "INST_GOALS": "NONE"
+      }
+    },
+    {
+      "name": "USA_EARLY_F35",
+      "params": {
+        "INST_PLAYER": "USA",
+        "INST_BUILD": "EARLY",
+        "INST_FUND": 0.35
+      }
+    },
+    {
+      "name": "GBR_HIST",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "HIST"
+      }
+    },
+    {
+      "name": "GBR_EARLY",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "EARLY"
+      }
+    },
+    {
+      "name": "GBR_HIST_M5",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "HIST_M5"
+      }
+    },
+    {
+      "name": "GBR_HIST_P5",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "HIST_P5"
+      }
+    },
+    {
+      "name": "GBR_NOBUILD",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "NONE"
+      }
+    },
+    {
+      "name": "GBR_NOGOAL",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "HIST",
+        "INST_GOALS": "NONE"
+      }
+    },
+    {
+      "name": "GBR_EARLY_F35",
+      "params": {
+        "INST_PLAYER": "GBR",
+        "INST_BUILD": "EARLY",
+        "INST_FUND": 0.35
+      }
+    },
+    {
+      "name": "FRA_HIST",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "HIST"
+      }
+    },
+    {
+      "name": "FRA_EARLY",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "EARLY"
+      }
+    },
+    {
+      "name": "FRA_HIST_M5",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "HIST_M5"
+      }
+    },
+    {
+      "name": "FRA_HIST_P5",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "HIST_P5"
+      }
+    },
+    {
+      "name": "FRA_NOBUILD",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "NONE"
+      }
+    },
+    {
+      "name": "FRA_NOGOAL",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "HIST",
+        "INST_GOALS": "NONE"
+      }
+    },
+    {
+      "name": "FRA_EARLY_F35",
+      "params": {
+        "INST_PLAYER": "FRA",
+        "INST_BUILD": "EARLY",
+        "INST_FUND": 0.35
+      }
+    }
+  ],
+  "meta": {
+    "preregistration": "docs/simulation/institutes-p7-measurement.md §1-4",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5"
+  }
+}
