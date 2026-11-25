@@ -15,6 +15,11 @@ from helpers import FakeProvider
 from tools.llm_worker import __main__ as cli, config, provider as prov, visual
 from tools.llm_worker.provider import OpenAICompatProvider, ProviderUnavailable
 
+def run_key(*a, **kw):
+    """The key provider: these tests cover the AI Studio path; the agy path is in test_visual_agy."""
+    return visual.run_visual(*a, **{"provider": "key", **kw})
+
+
 def png(w=1920, h=1080):
     """A PNG signature and IHDR with the given size, then filler: enough for the size check."""
     return visual.PNG + b"\x00\x00\x00\rIHDR" + w.to_bytes(4, "big") + h.to_bytes(4, "big") + b"fake-image-bytes"
@@ -120,7 +125,7 @@ class FramesAndRequest(Base):
 class RunVisual(Base):
     def run_with(self, content, **kw):
         fake = FakeProvider([content])
-        res = visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+        res = run_key("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
                                 make_provider=lambda: fake, **kw)
         return res, fake
 
@@ -156,7 +161,7 @@ class RunVisual(Base):
     @mock.patch("tools.llm_worker.gitleaks.scan_text")
     def test_dry_run_needs_no_key_and_sends_nothing(self, _scan):
         called = []
-        res = visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+        res = run_key("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
                                 make_provider=lambda: called.append(1), dry_run=True)
         self.assertEqual(res[2]["frames"][0]["name"], "a.png")
         self.assertFalse(called)
@@ -215,7 +220,7 @@ class RunVisual(Base):
 
     def test_bad_task_id(self):
         with self.assertRaises(visual.VisualError):
-            visual.run_visual("../x", self.frames, shots_dir=self.shots)
+            run_key("../x", self.frames, shots_dir=self.shots)
 
 
 class KeyRefusal(Base):
@@ -225,7 +230,7 @@ class KeyRefusal(Base):
                 mock.patch.object(config, "SHOTS_DIR", self.shots), \
                 mock.patch("tools.llm_worker.gitleaks.scan_text"), \
                 redirect_stdout(out):
-            rc = cli.main(["--runs", str(self.runs), "visual", "--task", "TASK-0126", "--frames",
+            rc = cli.main(["--runs", str(self.runs), "visual", "--provider", "key", "--task", "TASK-0126", "--frames",
                            *map(str, self.frames)])
         return rc, out.getvalue(), None
 
@@ -352,7 +357,7 @@ class Round3(Base):
     def test_unverified_findings_flagged_and_pair_written_with_hash(self, _scan):
         bad = {**GOOD, "findings": [GOOD["findings"][0], {**GOOD["findings"][0], "criterion": "Z99", "frame": "zzz.png"}]}
         fake = FakeProvider([bad])
-        path, md, rec = visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+        path, md, rec = run_key("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
                                           make_provider=lambda: fake)
         f = json.loads(path.read_text())["result"]["findings"]
         self.assertNotIn("unverified", f[0])
@@ -370,14 +375,14 @@ class Round4(Base):
         raw = sum(len(PNG) for _ in self.frames)
         with mock.patch.object(config, "MAX_REQUEST_BYTES", raw + 10), mock.patch("tools.llm_worker.gitleaks.scan_text"):
             with self.assertRaises(visual.VisualError) as cm:  # raw bytes fit, base64 does not
-                visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True)
+                run_key("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True)
         self.assertIn("encoded request", str(cm.exception))
 
     def test_frame_names_change_input_hash(self):
         with mock.patch("tools.llm_worker.gitleaks.scan_text"):
-            a = visual.run_visual("TASK-0126", [self.shots / "a.png"], shots_dir=self.shots, dry_run=True)[2]
+            a = run_key("TASK-0126", [self.shots / "a.png"], shots_dir=self.shots, dry_run=True)[2]
             (self.shots / "c.png").write_bytes(PNG)
-            b = visual.run_visual("TASK-0126", [self.shots / "c.png"], shots_dir=self.shots, dry_run=True)[2]
+            b = run_key("TASK-0126", [self.shots / "c.png"], shots_dir=self.shots, dry_run=True)[2]
         self.assertNotEqual(a["input_hash"], b["input_hash"])
 
     def test_concurrent_writes_leave_a_consistent_pair(self):
@@ -467,7 +472,7 @@ class Review2(Base):
 
         with mock.patch("tools.llm_worker.gitleaks.scan_text"):
             with self.assertRaises(visual.VisualError) as cm:
-                visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+                run_key("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
                                   make_provider=Leaky)
         self.assertEqual(cm.exception.code, "secret_detected")
 
@@ -486,7 +491,7 @@ DESIGN = {**GOOD, "proposals": [{"title": "Bigger top bar", "change": "font 16",
 class DesignMode(Base):
     def run_with(self, content, mode):
         fake = FakeProvider([content])
-        res = visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+        res = run_key("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
                                 make_provider=lambda: fake, mode=mode)
         return res, fake
 
@@ -513,8 +518,8 @@ class DesignMode(Base):
 
     @mock.patch("tools.llm_worker.gitleaks.scan_text")
     def test_modes_have_different_hashes(self, _scan):
-        a = visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True)[2]
-        b = visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True, mode="design")[2]
+        a = run_key("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True)[2]
+        b = run_key("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True, mode="design")[2]
         self.assertNotEqual(a["input_hash"], b["input_hash"])
 
 
