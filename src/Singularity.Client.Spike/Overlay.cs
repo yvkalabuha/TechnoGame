@@ -50,15 +50,34 @@ public sealed partial class Overlay : Control
     Vector2 VpSize => GetViewportRect().Size;
     double _acc;
     public int VisibleLabels;
+    public double MaxUpdateMs;   // slowest UpdateLabels pass, printed by the map-frames run (the fit search is the cost)
     public float AreaOf(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Area; return -1f; }
     public bool IsShown(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Node.Visible; return false; }
     public System.Func<Country, float, float, bool> InRegion;   // does the point at lon/lat belong to the land the label names (GlobeData.InLabelRegion)
     System.Func<float, float, bool> _onRegion;
     Country _regionOf;
+    Vector3 _camPos; Basis _cb; float _aspect, _tanHalf;
+    // The label pass costs milliseconds (fit search): it runs only when the view, the key or the label set changed.
+    Transform3D _lastXf; Vector2 _lastVp, _lastLeg; bool _lastLegOpen; int _lastLabelCount = -1, _lastSel = -2, _lastPlayer = -2;
+    bool LabelsDirty()
+    {
+        var xf = _cam.GlobalTransform;
+        if (xf == _lastXf && VpSize == _lastVp && _legPos == _lastLeg && LegendOpen == _lastLegOpen && _labels.Count == _lastLabelCount && _selId == _lastSel && _playerId == _lastPlayer) return false;
+        _lastXf = xf; _lastVp = VpSize; _lastLeg = _legPos; _lastLegOpen = LegendOpen; _lastLabelCount = _labels.Count; _lastSel = _selId; _lastPlayer = _playerId;
+        return true;
+    }
+    void CacheCamera()
+    {
+        _camPos = _cam.GlobalPosition; _cb = _cam.GlobalTransform.Basis.Orthonormalized();
+        _tanHalf = Mathf.Tan(Mathf.DegToRad(_cam.Fov) * 0.5f); _aspect = VpSize.X / VpSize.Y;
+    }
     bool OnRegion(float sx, float sy)
     {
         if (InRegion == null || _regionOf == null) return false;
-        var o = _cam.ProjectRayOrigin(new Vector2(sx, sy)); var d = _cam.ProjectRayNormal(new Vector2(sx, sy));
+        // The camera ray in managed math (no engine call per probe): the fit search tests hundreds of points per pass.
+        float nx = (sx / VpSize.X * 2f - 1f) * _aspect * _tanHalf, ny = (1f - sy / VpSize.Y * 2f) * _tanHalf;
+        var d = (_cb.X * nx + _cb.Y * ny - _cb.Z).Normalized();
+        var o = _camPos;
         float b = o.Dot(d), disc = b * b - (o.LengthSquared() - 1f);
         if (disc < 0f) return false;
         var hit = o + d * (-b - Mathf.Sqrt(disc));
@@ -114,12 +133,13 @@ public sealed partial class Overlay : Control
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
             l.AddThemeColorOverride("font_color", Ink);   // colony names: same size and ink as the powers (A1); the hatching marks the status
-            // No plate (#523): legibility comes from the paper-coloured halo set below.
+            // No plate (#523): legibility comes from a 2 px halo in the country's own tone, set below.
             AddChild(l);
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
-        s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
+        var halo = c.Id > 0 ? ToColor(HatchLogic.Line(c.Tint, 1f)) : LegendFillColony;   // tone of the land under the word, so that the hatching does not run through the letters
+        s.Node.AddThemeColorOverride("font_outline_color", new Color(halo, 0.85f)); s.Node.AddThemeConstantOverride("outline_size", 2);
         StyleLabel(s);
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
     }
@@ -167,7 +187,7 @@ public sealed partial class Overlay : Control
         LayoutLegend();
         QueueRedraw();
         _acc += delta;
-        if (_acc >= 1.0 / 15.0) { _acc = 0; UpdateLabels(); }
+        if (_acc >= 1.0 / 15.0) { _acc = 0; if (LabelsDirty()) UpdateLabels(); }
     }
 
     public override void _Draw()
@@ -255,8 +275,8 @@ public sealed partial class Overlay : Control
         var placed = new List<Rect2>();
         if (_legPlaced) placed.Add(LegendRect(LegendTextWidth()).Grow(4f));   // labels keep clear of the key
         VisibleLabels = 0;
-        float gr = GlobeRadiusPx(_dist);
-        var gc = VpSize * 0.5f;
+        long t0 = (long)Time.GetTicksUsec();
+        CacheCamera();
         // Slice countries first, so that they win overlaps.
         foreach (var pass in new[] { true, false })
             foreach (var s in _labels)
@@ -276,26 +296,31 @@ public sealed partial class Overlay : Control
                 s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Anchor = sp; s.Area = area;
                 var font = s.Emph ? Fonts.MapBold : Fonts.Map;
                 var text = s.Node.Text;
-                int size = s.Callout ? (int)LabelPlacement.NominalFont
-                    : (int)LabelPlacement.FontSizeFor(area, font.GetStringSize(text, HorizontalAlignment.Left, -1, (int)LabelPlacement.NominalFont).X);
-                if (size != s.Size) { s.Size = size; s.Node.AddThemeFontSizeOverride("font_size", size); }
-                s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
-                float w = s.TextW + 4f, h = font.GetHeight(size) + 2f;
-                float px, py;
+                float w = 0, h = 0, px = 0, py = 0;
+                int size = s.Callout ? (int)LabelPlacement.NominalFont : LabelPlacement.FontSizeFor(area);
                 _regionOf = s.C;
                 if (s.Callout)
                 {
+                    s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
+                    w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
                     LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);
                     if (!LabelPlacement.Place(ccx, ccy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
                 }
                 else
                 {
-                    // The word stays inside its own country: it must fit by area, and the box at the chosen spot must lie wholly on the land.
-                    float fs = LabelPlacement.FitScale(s.Node.Visible), fw = w * fs, fh = h * fs;
-                    if (!LabelPlacement.MayFit(area, fw, fh)) { s.Node.Visible = false; continue; }
-                    if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(area), gc.X, gc.Y, gr * 0.97f, _onRegion, out px, out py)
-                        || !LabelPlacement.FitsInside(px + w * 0.5f, py + h * 0.5f, fw, fh, _onRegion)) { s.Node.Visible = false; continue; }
+                    // The word is as large as the inscribed text rectangle allows (down to the minimum size) and stays inside its own country, else it is hidden until zoomed in.
+                    float fit = LabelPlacement.FitScale(s.Node.Visible), step = Mathf.Clamp(Mathf.Sqrt(area) / 10f, 4f, 24f);
+                    bool found = false;
+                    for (; size > 0 && !found; size = LabelPlacement.NextSize(size))
+                    {
+                        s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
+                        w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
+                        if (!LabelPlacement.MayFit(area, w * fit, h * fit)) continue;
+                        if (LabelPlacement.FindSpot(sp.X, sp.Y, w, h, fit, VpSize.X, VpSize.Y, step, _onRegion, out float cx, out float cy)) { found = true; px = cx - w * 0.5f; py = cy - h * 0.5f; break; }
+                    }
+                    if (!found) { s.Node.Visible = false; continue; }
                 }
+                if (size != s.Size) { s.Size = size; s.Node.AddThemeFontSizeOverride("font_size", size); }
                 var rect = new Rect2(px, py, w, h);
                 s.Rect = rect;
                 bool hit = false;
@@ -306,5 +331,6 @@ public sealed partial class Overlay : Control
                 s.Node.Visible = true;
                 VisibleLabels++;
             }
+        MaxUpdateMs = System.Math.Max(MaxUpdateMs, ((long)Time.GetTicksUsec() - t0) / 1000.0);
     }
 }

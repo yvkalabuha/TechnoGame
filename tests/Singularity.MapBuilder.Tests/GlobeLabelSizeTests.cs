@@ -5,17 +5,19 @@ namespace Singularity.MapBuilder.Tests;
 
 public class GlobeLabelSizeTests
 {
-    [Fact] public void Size_is_clamped_to_min_and_max()
+    [Fact] public void Size_runs_from_14_to_28_by_extent()
     {
-        Assert.Equal(LabelPlacement.MinFont, LabelPlacement.FontSizeFor(500f, 120f));
-        Assert.Equal(LabelPlacement.MaxFont, LabelPlacement.FontSizeFor(1_000_000f, 60f));
+        Assert.Equal(14, LabelPlacement.FontSizeFor(500f));
+        Assert.Equal(28, LabelPlacement.FontSizeFor(1_000_000f));
+        int a = LabelPlacement.FontSizeFor(30_000f), b = LabelPlacement.FontSizeFor(120_000f);
+        Assert.True(a < b); Assert.InRange(a, 14, 28);
     }
 
-    [Fact] public void Size_grows_with_the_country_and_shrinks_with_the_word()
+    [Fact] public void Fallback_ladder_ends_at_the_minimum()
     {
-        float a = LabelPlacement.FontSizeFor(30_000f, 100f), b = LabelPlacement.FontSizeFor(60_000f, 100f), c = LabelPlacement.FontSizeFor(30_000f, 150f);
-        Assert.True(b >= a); Assert.True(c <= a);
-        Assert.InRange(a, LabelPlacement.MinFont, LabelPlacement.MaxFont);
+        var seen = new System.Collections.Generic.List<int>();
+        for (int s = 28; s > 0; s = LabelPlacement.NextSize(s)) seen.Add(s);
+        Assert.Equal(new[] { 28, 21, 17, 14, 13, 12 }, seen.ToArray());
     }
 
     [Fact] public void Mode_and_pre_test()
@@ -26,19 +28,34 @@ public class GlobeLabelSizeTests
         Assert.False(LabelPlacement.MayFit(1_000f, 100f, 16f));
     }
 
-    [Fact] public void Hysteresis_scale_keeps_shown_names_and_delays_hidden_ones()
+    [Fact] public void Hysteresis_shows_at_full_size_and_hides_at_85_percent()
     {
-        Assert.True(LabelPlacement.FitScale(true) < 1f && LabelPlacement.FitScale(false) > 1f);
-        float area = 10_000f;   // box area 6000 fits at 0.9 (4860) and at 1.0, not at 1.1 (7260)
-        Assert.True(LabelPlacement.MayFit(area, 100f * LabelPlacement.FitScale(true), 60f * LabelPlacement.FitScale(true)));
-        Assert.False(LabelPlacement.MayFit(area, 100f * LabelPlacement.FitScale(false), 60f * LabelPlacement.FitScale(false)));
+        Assert.Equal(1.0f, LabelPlacement.FitScale(false));
+        Assert.Equal(0.85f, LabelPlacement.FitScale(true));
+        System.Func<float, float, bool> land = (x, y) => x >= 0 && x <= 100 && y >= 0 && y <= 40;
+        // a 110 wide box fits only at 85 % (93.5): a shown name stays, a hidden one does not appear
+        Assert.True(LabelPlacement.FitsInside(50, 20, 110 * LabelPlacement.FitScale(true), 16, land));
+        Assert.False(LabelPlacement.FitsInside(50, 20, 110 * LabelPlacement.FitScale(false), 16, land));
     }
 
     [Fact] public void Fit_needs_every_probe_on_the_land()
     {
         System.Func<float, float, bool> land = (x, y) => x >= 0 && x <= 100 && y >= 0 && y <= 40;
         Assert.True(LabelPlacement.FitsInside(50, 20, 80, 16, land));
-        Assert.False(LabelPlacement.FitsInside(50, 20, 120, 16, land));   // sticks out left and right
-        Assert.False(LabelPlacement.FitsInside(50, 36, 80, 16, land));    // sticks out at the bottom
+        Assert.False(LabelPlacement.FitsInside(50, 20, 120, 16, land));
+        Assert.False(LabelPlacement.FitsInside(50, 36, 80, 16, land));
+    }
+
+    [Fact] public void Spot_search_finds_a_thin_diagonal_strip_the_anchor_misses_and_keeps_the_margin()
+    {
+        // a horizontal band 20 tall at y 300..320; the anchor lies 60 above it
+        System.Func<float, float, bool> band = (x, y) => y >= 300 && y <= 320 && x >= 100 && x <= 700;
+        Assert.True(LabelPlacement.FindSpot(400, 240, 120, 16, 1f, 1920, 1080, 12, band, out float cx, out float cy));
+        Assert.InRange(cy, 308f, 312f);
+        Assert.False(LabelPlacement.FindSpot(400, 240, 120, 30, 1f, 1920, 1080, 12, band, out _, out _));   // the band is too thin for a taller word
+        // a region that touches the window edge: the box keeps 8 px from it
+        System.Func<float, float, bool> edge = (x, y) => x >= 0 && x <= 500 && y >= 0 && y <= 500;
+        Assert.True(LabelPlacement.FindSpot(2, 250, 100, 16, 1f, 1920, 1080, 12, edge, out float ex, out _));
+        Assert.True(ex - 50f >= LabelPlacement.Margin - 0.01f);
     }
 }
