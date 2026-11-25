@@ -198,7 +198,7 @@ defaults:
   - {region: equatorial_guinea, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: eritrea, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
   - {region: ethiopia_amhara, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
-  - {region: ethiopia_ogaden, owner: ETH, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; owners-1945-check.md S3: Anglo-Ethiopian Agreement of 1945, British military administration continues without prejudice to Ethiopian sovereignty (handed over 1948), so owner ETH, controller GBR (TASK-0184, O-086; replaces #401 owner GBR); status colony is the nearest of the allowed statuses (there is none for military administration)"}
+  - {region: ethiopia_ogaden, owner: ETH, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; owners-1945-check.md S3: Anglo-Ethiopian Agreement of 1945, British military administration continues without prejudice to Ethiopian sovereignty (handed over 1948), so owner ETH, controller GBR (TASK-0184, #524 (revises #401) owner GBR); status colony is the nearest of the allowed statuses (there is none for military administration)"}
   - {region: ethiopia_oromiya, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
   - {region: falkland_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: federated_states_of_micronesia, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
