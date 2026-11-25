@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "experiment": "PACE-check",
+  "description": "Knowledge-pace check of decision #555: the calibration world of EXP-0002-calib (model JetSliceCalib, horizon 1977-12, levers at their defaults = off, calibration seeds 10001-10100) run on the current tree and on a base commit by lab/analysis/pace_check.py. Prints APP G2-G4 known months and the first unit of G2-G4 against the C4 windows. Doc: docs/simulation/lab-cli.md, section pace-check.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 10001,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN"
+  },
+  "series": [
+    {
+      "name": "base"
+    }
+  ],
+  "meta": {
+    "source_manifest": "lab/manifests/EXP-0002-calib.json (same model, ticks, seeds and params)",
+    "decision": "#555",
+    "pace": {
+      "month0": "1945-09",
+      "gens": [
+        2,
+        3,
+        4
+      ],
+      "windows": {
+        "2": [
+          16,
+          87
+        ],
+        "3": [
+          100,
+          195
+        ],
+        "4": [
+          256,
+          363
+        ]
+      },
+      "usa_actor": "USA",
+      "warn_median_shift_months": 24,
+      "warn_window_share_drop_pp": 5
+    }
+  }
+}
