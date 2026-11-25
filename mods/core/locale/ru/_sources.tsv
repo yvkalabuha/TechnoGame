@@ -162,7 +162,7 @@ node-s6-prc-centrifugal_impeller_machining	22c4f7735409b385
 node-s6-prc-cooled_blade_drilling	3550a8bf4ed6e032
 node-s6-prc-investment_cast_blades	6bf5fe9ab40e46e5
 node-s6-prc-precision_blade_forging	f44ff16fd8505ddf
-node-s6-prc-precision_gear_bearing	0b07d9eec19e2910
+node-s6-prc-precision_gear_bearing	e010c32d9c68824b
 node-s7-fnd-brayton_cycle	5fea0ebe131b0e05
 node-s7-fnd-turbine_heat_transfer	0ed81c29b8b87111
 node-s8-app-jet_fighter_g1	9de0cf602bde6259

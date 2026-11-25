@@ -246,8 +246,8 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Vitallium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.precision_gear_bearing
     epic: false
-    unconfirmed: true
     sources:
+      - {url: "https://en.wikipedia.org/wiki/Hobbing", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Gear_grinding", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.centrifugal_impeller_machining
     epic: false

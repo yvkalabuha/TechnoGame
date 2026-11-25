@@ -29,7 +29,7 @@ public class NodeHistoryTests : IDisposable
         NodeHistoryTable h = Data.History;
         for (int i = 0; i < h.SourceUrl.Length; i++)
         {
-            Assert.Equal("2026-11-24", h.SourceAccessed[i]);
+            Assert.True(string.CompareOrdinal(h.SourceAccessed[i], "2026-11-24") >= 0, h.SourceUrl[i]);
             if (h.SourceUse[i] == SourceUse.Quote)
                 Assert.NotEqual(SourceLicense.Other, h.SourceLicense[i]);
         }
@@ -55,64 +55,91 @@ public class NodeHistoryTests : IDisposable
     }
 
     [Fact]
-    public void DeltaWing_HasDerivedEffects_SharedWithAreaRuled()
+    public void DeltaWing_HasDerivedEffects_TogetherWithAreaRuled()
     {
         var fx = new List<NodeEffect>();
-        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.eng.delta_wing_airframe"), fx);
+        int delta = Data.Nodes.IndexOf("s8.eng.delta_wing_airframe"), ruled = Data.Nodes.IndexOf("s8.eng.area_ruled_airframe");
+        NodeEffects.Derive(Data, delta, fx);
         ProductClassTable pc = Data.ProductClasses;
         NodeEffect milled = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_milled");
-        Assert.True(milled.Shared);
+        Assert.True(milled.Together);
         Assert.Equal(pc.AltPerfMult[milled.AltRow], milled.Value);
         Assert.Equal(pc.AltPerfMult[milled.AltRow - 1], milled.Previous);
         Assert.True(milled.Value > milled.Previous);
 
-        // The any_of partner of delta_wing for af_milled is area_ruled_airframe, and only it.
-        int delta = Data.Nodes.IndexOf("s8.eng.delta_wing_airframe"), ruled = Data.Nodes.IndexOf("s8.eng.area_ruled_airframe");
-        bool partnerFound = false;
-        for (int g = pc.AltRequires.GroupStart[milled.AltRow]; g < pc.AltRequires.GroupStart[milled.AltRow + 1]; g++)
-        {
-            var members = pc.AltRequires.GroupMembers(g).ToArray();
-            if (members.Contains(delta))
-            {
-                Assert.Equal(new[] { delta, ruled }.Order().ToArray(), members);
-                partnerFound = true;
-            }
-        }
-        Assert.True(partnerFound);
+        // The only other requirement of af_milled is the any_of partner area_ruled_airframe.
+        var others = new List<int>();
+        NodeEffects.CoRequirements(Data, milled, delta, others);
+        Assert.Equal([ruled], others);
+
+        // af_titanium needs the titanium alloy too: the node is one requirement of several, never a plain "opens".
+        NodeEffect titanium = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_titanium");
+        Assert.True(titanium.Together);
+        others.Clear();
+        NodeEffects.CoRequirements(Data, titanium, delta, others);
+        Assert.Contains(Data.Nodes.IndexOf("s5.cmp.titanium_alloy"), others);
     }
 
     [Fact]
-    public void SameAirframeClassPeers_AreNotReadAsADowngrade()
+    public void SoleRequirement_IsNotTogether()
+    {
+        var fx = new List<NodeEffect>();
+        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.eng.straight_wing_jet_airframe"), fx);
+        NodeEffect straight = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && Data.ProductClasses.AltId[e.AltRow] == "af_straight");
+        Assert.False(straight.Together);
+    }
+
+    [Fact]
+    public void FlyByWire_IsShownAsALossAgainstItsSameClassPeer()
     {
         ProductClassTable pc = Data.ProductClasses;
         var fx = new List<NodeEffect>();
         NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.eng.fly_by_wire_relaxed_stability"), fx);
         NodeEffect fbw = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_fbw");
-        Assert.True(fbw.Value > fbw.Previous);   // compared with the last lower class, not with af_mach2 (same class, higher perf)
+        int mach2 = pc.AlternativeIndex(fbw.ClassRow, "airframe", "af_mach2");
+        Assert.True(mach2 >= 0);
+        Assert.Equal(pc.AltAfClass[mach2], pc.AltAfClass[fbw.AltRow]);
+        Assert.Equal(pc.AltPerfMult[mach2], fbw.Previous);
+        Assert.True(fbw.Value < fbw.Previous);   // honest: 1.75 against 1.80 of the same airframe class
+        // The first alternative of a class has no same-class peer and is compared with the best lower class.
+        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.eng.mach2_airframe_g4"), fx);
+        NodeEffect m2 = fx.First(e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_mach2");
+        Assert.True(m2.Value > m2.Previous);
     }
 
     [Fact]
-    public void NodesWithoutDerivedEffect_AreExactlyTheKnownHistoryOnlyOnes()
+    public void ProcessNodes_AndKnowledgeNodes_GetTheirSimulationEffects()
+    {
+        var fx = new List<NodeEffect>();
+        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s5.prc.single_crystal_casting"), fx);
+        Assert.Contains(fx, e => e.Kind == NodeEffectKind.ProcessUnlock && e.Value > Fx6.Zero);
+        Assert.Contains(fx, e => e.Kind == NodeEffectKind.Mastery);   // tier 5 and more: mastery programme
+
+        int bl = Data.Nodes.IndexOf("s8.fnd.boundary_layer");
+        fx.Clear();
+        NodeEffects.Derive(Data, bl, fx);
+        NodeTable n = Data.Nodes;
+        var informs = fx.Where(e => e.Kind == NodeEffectKind.Informs).ToArray();
+        Assert.Equal(n.InformsStart[bl + 1] - n.InformsStart[bl], informs.Length);
+        Assert.All(informs, e => Assert.True(e.Value > Fx6.Zero && e.Node >= 0));
+        Assert.Contains(fx, e => e.Kind == NodeEffectKind.RequiredFor && e.Node == n.IndexOf("s8.fnd.compressible_flow"));
+    }
+
+    [Fact]
+    public void NodesWithoutAnyDerivedEffect_AreExactlyTheKnownHistoryOnlyOnes()
     {
         var fx = new List<NodeEffect>();
         var without = new List<string>();
         for (int r = 0; r < Data.Nodes.Count; r++)
         {
-            if (Data.Nodes.Type[r] is NodeType.FND or NodeType.PRN)
-                continue;
             fx.Clear();
             NodeEffects.Derive(Data, r, fx);
             if (fx.Count == 0)
                 without.Add(Data.Nodes.Id[r]);
         }
-        // These ENG/CMP nodes change no product parameter today; the card shows them as "history only" (no fake bonus).
-        string[] expected =
-        [
-            "s5.cmp.aluminium_alloy_sheet", "s5.cmp.gaas_mmic", "s5.cmp.high_modulus_fibre", "s5.cmp.silicon_carbide_fibre",
-            "s8.cmp.digital_flight_control_computer", "s8.cmp.solid_state_tr_module", "s8.eng.aesa_sensor_fusion",
-            "s8.eng.air_cooled_turbine_blade", "s8.eng.all_moving_tail", "s8.eng.digital_beamforming",
-            "s8.eng.integrated_avionics_architecture", "s8.eng.variable_geometry_inlet",
-        ];
+        // History only: no product alternative, process, generation, research edge or dependant uses the node today,
+        // so a bonus line would be a fake mechanic.
+        string[] expected = ["s8.eng.digital_beamforming"];   // no node requires or is informed by it, and no product uses it
         Assert.Equal(expected, without.Order(StringComparer.Ordinal).ToArray());
     }
 

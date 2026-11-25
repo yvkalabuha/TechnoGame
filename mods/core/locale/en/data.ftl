@@ -280,7 +280,7 @@ node-s6-prc-precision_gear_bearing =
     .name = Precision gears and bearings
     .short = Gears, bear.
     .anchor = G0: before start
-    .history = Gears are finished by grinding after cutting; precise gears and bearings are needed for reduction gearboxes and turbine shaft supports.
+    .history = Gear hobbing was patented in 1856 by Christian Schiele of Lancaster. In 1897 Herman Pfauter built a machine that cut both spur and helical gears, which noticeably sped up production. For critical drives the cut teeth are then finished by grinding; precise gears and bearings are needed for reduction gearboxes and turbine shaft supports.
 
 node-s6-prc-centrifugal_impeller_machining =
     .name = Centrifugal impeller machining
