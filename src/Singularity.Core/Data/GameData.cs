@@ -6,8 +6,9 @@ namespace Singularity.Core.Data;
 public sealed class GameData
 {
     internal GameData(ImmutableArray<ModManifest> mods, NodeTable nodes, ProductClassTable productClasses,
-        ImmutableArray<ScenarioData> scenarios)
+        ImmutableArray<ScenarioData> scenarios, IntelligenceData? intelligence = null)
     {
+        Intelligence = intelligence;
         Mods = mods;
         Nodes = nodes;
         ProductClasses = productClasses;
@@ -29,6 +30,9 @@ public sealed class GameData
 
     /// <summary>Scenarios ordered by ID.</summary>
     public ImmutableArray<ScenarioData> Scenarios { get; }
+
+    /// <summary>The intelligence parameters, or null when no mod defines them. Outside <see cref="DataHash"/> (see <see cref="IntelligenceData"/>).</summary>
+    public IntelligenceData? Intelligence { get; }
 
     /// <summary>SHA-256 (hex) of the canonical form of all loaded tables (L1 data identity).</summary>
     public string DataHash { get; }

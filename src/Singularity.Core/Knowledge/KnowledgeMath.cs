@@ -20,11 +20,14 @@ public static class KnowledgeMath
 
     /// <summary>
     /// <c>c_eff = (c_money·(1 − k_diff·known_elsewhere)) / ((1 + (k_K·Kmix)/K_ref)·(1 + Σ w_i))</c>,
-    /// <paramref name="informsSum"/> = Σ w_i over known informing nodes (ascending node order).
+    /// <paramref name="informsSum"/> = Σ w_i over known informing nodes (ascending node order). <paramref name="sSteal"/> = the theft discount of the intelligence layer
+    /// (INTELLIGENCE.md §2.2): <c>c_money·(1 − max(k_diff·known, s_steal))</c>.
     /// </summary>
-    public static Fx6 CEff(Fx6 cMoney, Fx6 kDiff, bool knownElsewhere, Fx6 kK, Fx6 kmix, Fx6 kRef, Fx6 informsSum)
+    public static Fx6 CEff(Fx6 cMoney, Fx6 kDiff, bool knownElsewhere, Fx6 kK, Fx6 kmix, Fx6 kRef, Fx6 informsSum, Fx6 sSteal = default)
     {
-        Fx6 num = cMoney * (Fx6.One - kDiff * (knownElsewhere ? Fx6.One : Fx6.Zero));
+        // Diffusion and theft are one discount, the larger of the two (O-051): with sSteal = 0 this is the old value to the last bit.
+        Fx6 diffusion = kDiff * (knownElsewhere ? Fx6.One : Fx6.Zero);
+        Fx6 num = cMoney * (Fx6.One - (sSteal > diffusion ? sSteal : diffusion));
         Fx6 den = (Fx6.One + kK * kmix / kRef) * (Fx6.One + informsSum);
         return num / den;
     }
