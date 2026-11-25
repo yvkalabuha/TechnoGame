@@ -1,7 +1,7 @@
 ---
 id: TASK-0151
 title: "Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0148, TASK-0156]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#482; scope changed by #484-#496"
+review_ref: "reviewer: APPROVE (rounds 1-2 fixes, scratch fix); codex 5 returns (#432) then accept at merge 5b1eb13; rest DEBT-0106/0107, Lab gate TASK-0173"
 created: 2026-11-24
 ---
 
