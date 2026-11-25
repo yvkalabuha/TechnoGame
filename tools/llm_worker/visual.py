@@ -14,11 +14,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import config, gitleaks, review
+from .sandbox import SandboxUnavailable
 from .provider import KeyFileError, OpenAICompatProvider
 
 SCHEMAS = {"criteria": config.PACKAGE_DIR / "schemas" / "visual.schema.json",
            "design": config.PACKAGE_DIR / "schemas" / "visual-design.schema.json"}
 MODES = tuple(SCHEMAS)
+PROVIDERS = ("agy", "key")
 DIRECTION = "docs/ui/VISUAL_DIRECTION_V06.md"
 SYSTEM_DESIGN = (
     "Also act as a design reviewer. The visual direction document below is the intended direction. Besides "
@@ -119,6 +121,19 @@ class RateGuard:
 
     def release(self, rid):
         pass  # a 4xx / 429 attempt stays counted
+
+    def refund(self, stamp):
+        """Takes back one attempt (a server-side 503 or overload used no quota). stamp: the clock value of the attempt."""
+        fd = os.open(self.path.with_suffix(".lock"), os.O_CREAT | os.O_WRONLY, 0o600)
+        with os.fdopen(fd, "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                st = json.loads(self.path.read_text(encoding="utf-8"))
+                st["count"] = max(0, int(st["count"]) - 1)
+                st["recent"] = [t for t in st["recent"] if t != stamp]
+            except (OSError, ValueError, KeyError, TypeError):
+                return
+            self._save(st)
 
 
 # Gemini thinking tokens count against max_tokens: 8000 cut the first live answer at 317 output tokens
@@ -222,12 +237,14 @@ def build_messages(task, criteria, frames, direction=None):
 
 def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUNS_DIR, shots_dir=None,
                model=None, make_provider=None, dry_run=False, root=config.REPO_ROOT, mode="criteria",
-               allow_small=False):
-    """One request. Returns (json path or None, markdown path or None, record)."""
+               allow_small=False, provider="agy", agy_runner=None, agy_guard=None, agy_brain_dir=None):
+    """One request. provider: "agy" (the Antigravity subscription, default) or "key" (AI Studio key, fallback). Returns (json path or None, markdown path or None, record)."""
     if not TASK_RE.match(task):
         raise VisualError("bad_task", task)
     if mode not in SCHEMAS:
         raise VisualError("bad_mode", mode)
+    if provider not in PROVIDERS:
+        raise VisualError("bad_provider", provider)
     schema_path = SCHEMAS[mode]
     loaded = load_frames(frames, shots_dir, allow_small)
     criteria = load_criteria(criteria_spec, root)
@@ -239,12 +256,19 @@ def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUN
     except gitleaks.GitleaksUnavailable as e:
         raise VisualError("sandbox_unavailable", str(e)) from None
     profile = config.PROFILES["gemini-flash"]
-    model = model or profile.model
+    if provider == "agy":
+        from . import agyvisual
+        model = model or agyvisual.MODEL
+    else:
+        model = model or profile.model
     digest = hashlib.sha256(b"\0".join([model.encode(), mode.encode(), criteria.encode(), (direction or "").encode()]
                                     + [n.encode() + b"\0" + d for n, _, d in loaded])).hexdigest()
-    record = {"kind": "visual", "task": task, "mode": mode, "provider": profile.name, "model": model, "criteria": criteria_spec,
+    record = {"kind": "visual", "task": task, "mode": mode, "provider": "agy" if provider == "agy" else profile.name, "model": model, "criteria": criteria_spec,
               "frames": [{"name": n, "bytes": len(d), "size": "%dx%d" % image_size(d)} for n, _, d in loaded],
               "input_hash": digest}
+    if provider == "agy":
+        return _run_agy(record, task, loaded, criteria, direction, model, schema_path, runs_dir, digest, dry_run,
+                        agy_runner, agy_guard, agy_brain_dir)
     messages = build_messages(task, criteria, loaded, direction)
     size = len(json.dumps(messages).encode())  # base64 data URIs and text, as sent
     record["request_bytes"] = size
@@ -272,6 +296,57 @@ def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUN
         data = review.parse_answer(comp.content, schema_path, "visual")
     except review.ReviewError as e:
         review.write_run(runs_dir, stem + "-invalid.json", {**record, "error": str(e), "raw": comp.content})
+        raise VisualError("schema_invalid", str(e)) from None
+    mark_unverified(data, criteria, [n for n, _, _ in loaded])
+    record["result"] = data
+    path, md = write_pair(runs_dir, stem, record)
+    return path, md, record
+
+
+def _run_agy(record, task, loaded, criteria, direction, model, schema_path, runs_dir, digest, dry_run,
+             runner, guard, brain_dir):
+    """The agy provider: frames are copied into a private read-only workspace, the answer is audited and parsed like the key's."""
+    from . import agyreview, agyvisual, sketch
+
+    if dry_run:
+        return None, None, record
+    guard = guard or RateGuard(config.LEDGER_DIR / sketch.AGY_USAGE_FILE, rpm=agyvisual.AGY_RPM, rpd=agyvisual.AGY_RPD)
+    system = SYSTEM + ("\n\n" + SYSTEM_DESIGN if direction is not None else "")
+    stamp = guard.clock()
+    guard.before_attempt(0, 0)
+    try:
+        answer, usage, reported = agyvisual.run(
+            lambda ws, files: agyvisual.build_prompt(system, task, criteria, files, ws, direction), loaded, schema_path,
+            model=model, runner=runner, brain_dir=brain_dir)
+    except agyvisual.AgyOverloaded as e:
+        guard.refund(stamp)  # a capacity error used no quota
+        raise VisualError("agy_capacity", str(e)) from None
+    except agyreview.AgyLimit as e:
+        raise VisualError("agy_quota", str(e)) from None
+    except agyreview.AgyViolation as e:
+        raise VisualError("agent_tool_violation", str(e)) from None
+    except agyreview.AgyTimeout as e:
+        raise VisualError("agy_timeout", str(e)) from None
+    except agyreview.AgyFailed as e:
+        raise VisualError("agy_failed", str(e)) from None
+    except SandboxUnavailable as e:
+        guard.refund(stamp)
+        raise VisualError("sandbox_unavailable", str(e)) from None
+    try:
+        gitleaks.scan_text(answer)
+    except gitleaks.SecretDetected as e:
+        raise VisualError("secret_detected", str(e)) from None
+    except gitleaks.GitleaksUnavailable as e:
+        raise VisualError("sandbox_unavailable", str(e)) from None
+    stem = f"visual-{task}-{digest[:8]}-agy"
+    record["usage"] = usage
+    record["tokens"] = {"prompt": usage.get("input_tokens", 0), "completion": usage.get("output_tokens", 0),
+                        "thinking": usage.get("thinking_tokens", 0)}
+    record["response_sha256"] = hashlib.sha256(answer.encode()).hexdigest()
+    try:
+        data = review.parse_answer(answer, schema_path, "visual")
+    except review.ReviewError as e:
+        review.write_run(runs_dir, stem + "-invalid.json", {**record, "error": str(e), "raw": answer})
         raise VisualError("schema_invalid", str(e)) from None
     mark_unverified(data, criteria, [n for n, _, _ in loaded])
     record["result"] = data

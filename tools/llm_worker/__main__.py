@@ -69,11 +69,13 @@ def main(argv=None):
     p.add_argument("--profile", choices=["deepseek-flash", "deepseek-v4-pro"], default=review_mod.DEFAULT_PROFILE)
     p.add_argument("--dry-run", action="store_true", help="build and scan the input, print its size, send nothing")
     _thinking_flags(p, default="on")
-    p = sub.add_parser("visual", help="Gemini (free tier) as a second opinion on frames from shots-out/")
+    p = sub.add_parser("visual", help="Gemini as a second opinion on frames from shots-out/ (agy subscription by default)")
+    p.add_argument("--provider", choices=visual_mod.PROVIDERS, default="agy",
+                   help="agy: Antigravity subscription (default); key: AI Studio free-tier key (fallback)")
     p.add_argument("--task", required=True)
     p.add_argument("--frames", type=Path, nargs="+", required=True)
     p.add_argument("--criteria", default=visual_mod.DEFAULT_CRITERIA)
-    p.add_argument("--model", default=None, help="Gemini model id (default checked on 2026-11-24)")
+    p.add_argument("--model", default=None, help="model id (default: agy gemini-4-neon-high; key gemini-flash-latest)")
     p.add_argument("--mode", choices=visual_mod.MODES, default="criteria",
                    help="criteria: findings against the criteria; design: also Gemini's own proposals")
     p.add_argument("--allow-small", action="store_true", help="send frames smaller than 1920x1080")
@@ -201,7 +203,8 @@ def main(argv=None):
 def _visual(a):
     try:
         path, md, rec = visual_mod.run_visual(a.task, a.frames, a.criteria, runs_dir=a.runs, model=a.model,
-                                              dry_run=a.dry_run, mode=a.mode, allow_small=a.allow_small)
+                                              dry_run=a.dry_run, mode=a.mode, allow_small=a.allow_small,
+                                              provider=getattr(a, "provider", "agy"))
     except KeyFileError:
         print(f"refused: {config.GEMINI_KEY_HINT}")
         return 4
@@ -209,8 +212,10 @@ def _visual(a):
         print(f"refused: {e}")
         return 4
     except visual_mod.VisualError as e:
-        print(f"refused: {e}" if e.code in ("rate_limit", "secret_detected", "sandbox_unavailable") else f"error: {e}")
-        return 4 if e.code in ("rate_limit", "secret_detected", "sandbox_unavailable") else 5
+        refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_quota", "agy_capacity",
+                             "agent_tool_violation")
+        print(f"refused: {e}" if refused else f"error: {e}")
+        return 4 if refused else 5
     except (ProviderUnavailable, ProviderError, AuthError) as e:
         print(f"error: {e}")
         return 5
