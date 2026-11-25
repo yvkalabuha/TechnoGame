@@ -22,7 +22,6 @@
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
 - TASK-0151 [IN_PROGRESS] Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) (developer)
 - TASK-0153 [IN_PROGRESS] Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) (developer)
-- TASK-0160 [IN_PROGRESS] Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) (developer)
 - TASK-0161 [IN_PROGRESS] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0162 [IN_PROGRESS] K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5 (developer)
 - TASK-0163 [IN_PROGRESS] Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) (developer)
