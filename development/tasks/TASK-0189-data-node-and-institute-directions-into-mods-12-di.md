@@ -1,7 +1,7 @@
 ---
 id: TASK-0189
 title: "Data: node and institute directions into mods (12 directions, O-091)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-25
 approval_ref: "O-091, #571"
+review_ref: "reviewer: APPROVE; codex findings rejected per O-093/O-094; merge a082491"
 created: 2026-11-25
 ---
 
