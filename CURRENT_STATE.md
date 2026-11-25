@@ -27,6 +27,7 @@
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
 - TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
 - TASK-0173 [IN_PROGRESS] Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on (simulation-engineer)
+- TASK-0175 [IN_PROGRESS] Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0167 [APPROVED] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
 - TASK-0171 [APPROVED] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)

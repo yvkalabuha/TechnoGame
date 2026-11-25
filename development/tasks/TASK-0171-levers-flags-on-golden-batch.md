@@ -8,7 +8,7 @@ agent: developer         # ответственный агент
 category: core           # core | lab | client | data | tooling | docs | design (lab -> agent simulation-engineer)
 priority: high           # high | medium | low
 needs_owner: false       # true = ждёт решения владельца
-depends_on: [TASK-0150, TASK-0151, TASK-0152, TASK-0153, TASK-0160, TASK-0173, TASK-0174]
+depends_on: [TASK-0150, TASK-0151, TASK-0152, TASK-0153, TASK-0160, TASK-0173, TASK-0174, TASK-0175]
 related: []
 approved_by: orchestrator # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-25
