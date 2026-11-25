@@ -272,8 +272,8 @@ defaults:
   - {region: mauritius, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: mexico_chihuahua, owner: MEX, controller: MEX, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: mexico_oaxaca, owner: MEX, controller: MEX, status: core, confidence: H, source: "owners-1945-world.md: K2"}
-  - {region: mongolia_govi_altay, owner: ROC, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34"}
-  - {region: mongolia_mn_govi, owner: ROC, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34"}
+  - {region: mongolia_govi_altay, owner: MNG, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34, #550"}
+  - {region: mongolia_mn_govi, owner: MNG, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34, #550"}
   - {region: montserrat, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: morocco, owner: FRA, controller: FRA, status: protectorate, confidence: M, source: "owners-1945-world.md: K1, K2"}
   - {region: mozambique, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
