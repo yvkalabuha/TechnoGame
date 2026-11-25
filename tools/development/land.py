@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -34,6 +35,7 @@ from pathlib import Path
 # Paths whose content verify.py builds or tests.
 # One review may walk the whole chain: Codex (up to 1800 s), agy (900 s + 60 s grace), then DeepSeek.
 REVIEW_TIMEOUT_S = 3600
+LAND_LOCK = Path.home() / ".cache" / "singularity" / "land.lock"  # pid while a landing runs; tools/llm_worker/codexsketch.py reads it
 CODE_PATHS = ("src/", "tests/", "mods/", "tools/", "lab/", ".github/")
 
 
@@ -125,6 +127,20 @@ def insert_trailer(message: str, line: str) -> str:
 
 
 def main() -> int:
+    """Hold LAND_LOCK (our pid) for the whole landing: Codex sketches do not start while it exists."""
+    LAND_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    LAND_LOCK.write_text(str(os.getpid()), encoding="utf-8")
+    try:
+        return run()
+    finally:
+        try:
+            if LAND_LOCK.read_text(encoding="utf-8").strip() == str(os.getpid()):
+                LAND_LOCK.unlink()
+        except OSError:
+            pass
+
+
+def run() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("branch")
     ap.add_argument("-m", "--message", required=True)

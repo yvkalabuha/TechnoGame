@@ -240,7 +240,7 @@ def _sketch(a):
     except visual_mod.VisualError as e:
         refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in",
                                     "agy_quota", "agy_capacity", "agent_tool_violation", "codex_quota",
-                                    "codex_daily_cap")
+                                    "codex_daily_cap", "land_in_progress")
         print(f"refused: {e}" if refused else f"error: {e}")
         return 4 if refused else 5
     if a.dry_run:

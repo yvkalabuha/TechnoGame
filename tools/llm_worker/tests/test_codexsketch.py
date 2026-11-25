@@ -6,6 +6,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
@@ -40,11 +41,14 @@ class CodexSketchTest(unittest.TestCase):
         self.prompt = self.root / "brief.md"
         self.prompt.write_text("Draw a desk.", encoding="utf-8")
         self.calls = []
+        type(self)._real_bwrap = staticmethod(codex.bwrap_argv)  # before the mock below hides it
         for p in (mock.patch("tools.llm_worker.gitleaks.scan_text"),
                   mock.patch.object(codex, "bwrap_argv", lambda *a, **k: ["bwrap"]),
                   mock.patch.object(codex, "codex_mounts", lambda exe, home=None: (Path(exe), [], Path("/usr/bin")))):
             p.start()
             self.addCleanup(p.stop)
+
+    _real_bwrap = staticmethod(codex.bwrap_argv)
 
     def runner(self, out, rc=0, err="", save=None):
         def run(argv, prompt, timeout, env):
@@ -150,8 +154,35 @@ class CodexSketchTest(unittest.TestCase):
 
     def test_one_image_per_call(self):
         with self.assertRaises(sketch.SketchError) as c:
-            self.go(self.runner(""), ) if False else codexsketch.run_codex_sketch("TASK-0145", self.prompt, count=2, root=self.root)
+            codexsketch.run_codex_sketch("TASK-0145", self.prompt, count=2, root=self.root)
         self.assertEqual(c.exception.code, "bad_count")
+
+    def test_land_lock_blocks_live_pid_only(self):
+        lock = self.home / "land.lock"
+        lock.write_text(str(os.getpid()))
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(self.runner(""), land_lock=lock)
+        self.assertEqual((c.exception.code, self.calls), ("land_in_progress", []))
+        lock.write_text("999999999")  # no such pid: a stale lock
+        out = stream(ev(type="thread.started", thread_id=THREAD))
+        self.go(self.runner(out, save=png()), land_lock=lock)
+        self.assertEqual(len(self.calls), 1)
+
+    def test_bad_thread_id_is_ignored(self):
+        out = stream(ev(type="thread.started", thread_id="../../.."))
+        self.assertIsNone(codexsketch.parse_run(out)[0])
+
+    def test_item_started_and_web_search_are_violations(self):
+        for kind in ("command_execution", "web_search"):
+            out = stream(ev(type="item.started", item={"type": kind}))
+            self.assertEqual(codexsketch.parse_run(out)[4], [kind])
+
+    def test_real_bwrap_argv_without_schema(self):
+        with mock.patch.object(codex, "bwrap_argv", self._real_bwrap), \
+             mock.patch.object(codex, "codex_mounts", lambda exe, home=None: (Path(exe), [], Path("/usr/bin"))):
+            a = codex.bwrap_argv("/ws", None, "/usr/bin/codex", home=self.home, bwrap="bwrap")
+        self.assertNotIn("/schema.json", a)
+        self.assertEqual(a[-2:], ["--chdir", "/work"])
 
     def test_dry_run_calls_nothing(self):
         _, _, rec = self.go(self.runner(""), dry_run=True)

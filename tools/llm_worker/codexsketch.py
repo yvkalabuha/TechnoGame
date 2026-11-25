@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -29,7 +30,9 @@ DEFAULT_DAILY_CAP = 4
 DEFAULT_TIMEOUT_S = 600
 ATTEMPT_PROVIDER = "codex-sketch"
 FALLBACK_CODES = ("agy_quota", "rate_limit")  # Gemini has no quota: the only reasons to spend the Codex limit
-SHELL_ITEMS = ("command_execution", "local_shell_call", "mcp_tool_call", "file_change")
+SHELL_ITEMS = ("command_execution", "local_shell_call", "mcp_tool_call", "file_change", "web_search")
+LAND_LOCK = Path.home() / ".cache" / "singularity" / "land.lock"  # written by tools/development/land.py
+THREAD_RE = re.compile(r"\A[0-9a-f-]{36}\Z")
 
 
 def codex_home(home=None):
@@ -47,17 +50,17 @@ def parse_run(stdout):
             continue
         if not isinstance(ev, dict):
             continue
-        if ev.get("type") == "thread.started" and isinstance(ev.get("thread_id"), str):
+        if ev.get("type") == "thread.started" and isinstance(ev.get("thread_id"), str) and THREAD_RE.match(ev["thread_id"]):
             thread = ev["thread_id"]
         if isinstance(ev.get("model"), str):
             model = model or ev["model"]
         item = ev.get("item")
-        if ev.get("type") != "item.completed" or not isinstance(item, dict):
+        if ev.get("type") not in ("item.started", "item.completed") or not isinstance(item, dict):
             continue
         kind = str(item.get("type") or "")
         if kind in SHELL_ITEMS:
             shell.append(kind)
-        elif "image" in kind:
+        elif "image" in kind and ev["type"] == "item.completed":
             for k in ("path", "saved_path", "file", "file_path"):
                 if isinstance(item.get(k), str):
                     paths.append(item[k])
@@ -110,6 +113,18 @@ def daily_attempts(directory, day):
     return n
 
 
+def land_running(lock=None):
+    """True when land.py holds its lock under a live pid (a stale lock of a dead pid does not count)."""
+    try:
+        pid = int((lock or LAND_LOCK).read_text(encoding="utf-8").strip())
+        os.kill(pid, 0)
+    except PermissionError:
+        return True
+    except (OSError, ValueError):
+        return False
+    return True
+
+
 def codex_version(exe):
     try:
         p = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=15)
@@ -128,7 +143,7 @@ def decode_blob(b64):
 def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, shots_dir=None, root=config.REPO_ROOT,
                      runner=None, timeout_s=DEFAULT_TIMEOUT_S, dry_run=False, daily_cap=DEFAULT_DAILY_CAP,
                      state_dir=limitstate.STATE_DIR, ledger_dir=config.LEDGER_DIR, home=None, environ=os.environ,
-                     clock=time.time, fallback=None, find=codex.find_codex, bwrap=None):
+                     clock=time.time, fallback=None, find=codex.find_codex, bwrap=None, land_lock=None):
     """One Codex image. Returns (json path or None, md path or None, record)."""
     if not TASK_RE.match(task):
         raise SketchError("bad_task", task)
@@ -155,6 +170,8 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
     until = limitstate.limited_until(now, state_dir)
     if until:
         raise SketchError("codex_quota", f"Codex limit is active, reset at {until.isoformat(timespec='minutes')}")
+    if land_running(land_lock):
+        raise SketchError("land_in_progress", "land.py is running: the second review needs the Codex limit")
     day = datetime.fromtimestamp(clock(), timezone.utc).strftime("%Y-%m-%d")
     if daily_attempts(ledger_dir, day) >= daily_cap:
         raise SketchError("codex_daily_cap", f"{daily_cap} Codex sketch attempts today (--codex-daily-cap)")
@@ -197,7 +214,7 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
         p = Path(os.path.realpath(s))
         if gen in p.parents and p.suffix.lower() in IMAGE_EXT and image_complete(p):
             images.append((p.name, p.read_bytes()))
-    if not images and thread and (gen / thread).is_dir() and not (gen / thread).is_symlink():
+    if not images and thread and Path(os.path.realpath(gen / thread)).parent == gen and (gen / thread).is_dir():
         for p in sorted((gen / thread).iterdir()):
             if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and image_complete(p):
                 images.append((p.name, p.read_bytes()))
