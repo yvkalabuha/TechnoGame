@@ -479,12 +479,54 @@ public class InstituteTests
         Assert.Contains(Enumerable.Range(0, inst.Layout.SlotCount(other)), k => inst.GoalNode(new InstituteHandle(other, k)) != 0);
         var view = s.View.Actors[player].Institutes;
         Assert.Contains(view, v => v.ProposedGoal != 0);
-        Assert.True(view.Any(v => v.ProposesBuild) == (candidates.Length > 0 && candidates.Any(k => view[k].ProposesBuild)));
+        // A proposal to build exists only on candidate slots, never on a standing institute.
+        Assert.All(view.Where(v => v.Standing), v => Assert.False(v.ProposesBuild));
+        Assert.All(view.Where(v => v.ProposesBuild), v => Assert.Contains(v.Slot, candidates));
         Assert.All(s.View.Actors[other].Institutes, v => Assert.False(v.ProposesBuild || v.ProposedGoal != 0));
         // A command of the player works as before.
         int node = s.World.Graph.Number[Frontier(s, player)[0]];
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(player, 0, node)).Accepted);
         s.StepThroughMonth(40);
         Assert.Equal(node, inst.GoalNode(new InstituteHandle(player, 0)));
+    }
+
+    private static Singularity.Core.Data.GameData DataWithOtherInstitutes()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "singularity-inst-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        string core = Path.Combine(SliceTestData.RepoRoot, "mods", "core");
+        foreach (string f in Directory.GetFiles(core, "*.yaml"))
+        {
+            string text = File.ReadAllText(f);
+            if (Path.GetFileName(f) == "institutes.yaml")
+            {
+                Assert.Contains("areas: {aero: 4, prop: 3, mech: 2}, source: \"en.wikipedia.org/wiki/National_Advisory", text);
+                text = text.Replace("areas: {aero: 4, prop: 3, mech: 2}, source: \"en.wikipedia.org/wiki/National_Advisory", "areas: {aero: 3, prop: 3, mech: 2}, source: \"en.wikipedia.org/wiki/National_Advisory");
+            }
+            File.WriteAllText(Path.Combine(dir, Path.GetFileName(f)), text);
+        }
+        File.Copy(Path.Combine(core, "mod.yaml"), Path.Combine(dir, "mod.yaml"), true);
+        try
+        {
+            return Singularity.Core.Data.ModLoader.Load(dir);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void Snapshot_OfAnotherInstituteDataSet_IsRefused()
+    {
+        var config = new SliceRunConfig { Seed = 7, Institutes = true };
+        SliceSession a = SliceSession.Create(SliceTestData.Data, config);
+        for (long m = 0; m < 3; m++)
+            a.StepThroughMonth(m);
+        var snap = new MemoryStream();
+        a.WriteSnapshot(snap);
+        SliceSession.Create(SliceTestData.Data, config).LoadSnapshot(new MemoryStream(snap.ToArray()));
+        SliceSession other = SliceSession.Create(DataWithOtherInstitutes(), config);
+        Assert.ThrowsAny<Exception>(() => other.LoadSnapshot(new MemoryStream(snap.ToArray())));
     }
 }

@@ -50,3 +50,5 @@ created: 2026-11-24
 - Проверка: Session.Tests InstituteTests (12), ReserveTests, GoldenProjectionAgainstMain, SchemaTests, Command*; Core.Tests Data/Knowledge/Command (529); Architecture.Tests (147). Мутация: убрал max(1, ·) в KappaEff, тест KappaEff упал.
 - Решение Orchestrator 2026-11-25: ИИ не ставит приоритеты и не начинает стройку за `SliceRunConfig.PlayerActor` (по умолчанию −1; клиент должен его задать), только предлагает (`InstituteView.ProposedGoal`, `ProposesBuild`); цена считается по годам от года открытия до `ref_year` (в срок = ×1); проект ИИ платит с месяца старта, как проект игрока (исправлен сдвиг на месяц).
 - ONERA имеет Σ=3 из-за потолка малой страны; рост несколькими проектами по очереди в v0 не поддержан.
+
+**Раунд ревью (CHANGES):** исправлены пп. 1, 3, 4, 5, 6 (идентичность снимка: inst:+hash и run.inst.data; scratch в KnowledgeSystem; тексты; тест ProposesBuild). Долг (п. 2): мемоизация GroupOf/OnPath в KnowledgeSystem не сделана.

@@ -1,5 +1,5 @@
 # Research institutes standing in 1945 (research-institutes-priorities.md rev 4 §1.2; sources: §1.1 and docs/research/notes/institutes-sources-1945.md).
-# Only entries with a confirmed founding year are listed (Rolls-Royce Derby, CNES and the other unconfirmed rows wait for a source).
+# Only entries with a confirmed founding year are listed (Rolls-Royce Derby and the other unconfirmed rows wait for a source; fra_cnes has a wikidata P571 date).
 # country = actor ID of the scenario; areas = discipline: level 1..4 [estimate, calibrated in Lab]. ref_year = the historical year (the price of a later project).
 # Rows with founded after the start of the scenario are build candidates (BuildInstitute); their levels are estimates, and for a small country (FRA, SWE) the sum of levels of a project is at most 3.
 # One institute = one priority slot (#485). Not part of the data hash of the nodes and scenarios (own hash, InstituteTable.Hash).

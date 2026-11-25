@@ -359,6 +359,9 @@ public sealed partial class SliceSession
         // The intelligence parameters are outside the data hash: a snapshot must not resume under other ones (only a run with intelligence adds them).
         if (_world.IntelDataHash.Length > 0)
             hash.AppendData(System.Text.Encoding.UTF8.GetBytes("intel:" + _world.IntelDataHash));
+        // Likewise the institute data (own hash, outside the data hash; only a run with institutes adds it).
+        if (_world.Config.Institutes)
+            hash.AppendData(System.Text.Encoding.UTF8.GetBytes("inst:" + _world.Data.Institutes.Hash));
         return hash.GetHashAndReset();
     }
 
