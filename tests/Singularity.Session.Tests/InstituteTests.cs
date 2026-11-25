@@ -636,8 +636,8 @@ public class InstituteTests
             string text = File.ReadAllText(f);
             if (Path.GetFileName(f) == "institutes.yaml")
             {
-                Assert.Contains("areas: {aero: 4, prop: 3, mech: 2}, source: \"en.wikipedia.org/wiki/National_Advisory", text);
-                text = text.Replace("areas: {aero: 4, prop: 3, mech: 2}, source: \"en.wikipedia.org/wiki/National_Advisory", "areas: {aero: 3, prop: 3, mech: 2}, source: \"en.wikipedia.org/wiki/National_Advisory");
+                Assert.Contains("areas: {aero: 4, prop: 3, mech: 2}, directions: {aero: 4, prop: 3, struct: 2}, source: \"en.wikipedia.org/wiki/National_Advisory", text);
+                text = text.Replace("areas: {aero: 4, prop: 3, mech: 2}, directions: {aero: 4, prop: 3, struct: 2}, source: \"en.wikipedia.org/wiki/National_Advisory", "areas: {aero: 3, prop: 3, mech: 2}, directions: {aero: 4, prop: 3, struct: 2}, source: \"en.wikipedia.org/wiki/National_Advisory");
             }
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(f)), text);
         }
