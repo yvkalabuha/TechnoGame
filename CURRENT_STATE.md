@@ -32,6 +32,9 @@
 - TASK-0178 [REVIEW] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [REVIEW] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
 - TASK-0185 [REVIEW] Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) (simulation-engineer)
+- TASK-0187 [APPROVED] Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576) (developer)
+- TASK-0188 [APPROVED] Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) (research-scientist)
+- TASK-0189 [APPROVED] Data: node and institute directions into mods (12 directions, O-091) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
