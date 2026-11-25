@@ -35,6 +35,9 @@ public static class NodeMenuLogic
         };
     }
 
+    /// <summary>A press that moved farther than the long-press tolerance is a drag (it pans the map); one within it can still become the held-open menu.</summary>
+    public static bool IsDrag(float movedDu) => movedDu > LongPressMaxMoveDu;
+
     /// <summary>A held left button opens the menu: held long enough and moved no more than a few du (a drag pans the map instead).</summary>
     public static bool IsLongPress(float heldSeconds, float movedDu) => heldSeconds >= LongPressSeconds && movedDu <= LongPressMaxMoveDu;
 

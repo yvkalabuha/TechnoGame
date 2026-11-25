@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Singularity.Client.Spike;
@@ -41,6 +42,19 @@ public static class TreeClarity
     {
         float h = side / 2, c = side * 0.3f;
         return new[] { (-h, -h), (h - c, -h), (h, -h + c), (h, h), (-h, h) };
+    }
+
+    /// <summary>The requirement groups of a node that are not met yet: a group is met when any of its members is known. Read from the tree data, nothing inferred.</summary>
+    public static List<int[]> UnmetGroups(IReadOnlyList<int[]> groups, System.Func<int, bool> known)
+    {
+        var res = new List<int[]>();
+        foreach (var g in groups)
+        {
+            bool met = false;
+            foreach (int m in g) if (known(m)) { met = true; break; }
+            if (!met) res.Add(g);
+        }
+        return res;
     }
 
     public enum ParamLine { Yield, ProductGeneration, KnowledgeStep, Capability }

@@ -24,7 +24,6 @@ public sealed partial class TechTree : Control
     static readonly Color EmbossLight = new("FFFFFA");
     const float SubpanelButtonDu = 32;   // A10: a button is at least 32 du high
     const float CloseW = 190, CloseH = 40;   // #473: the close button is 40 du high
-    const float ZoomRate = 14f;
     const float WedgeMargin = 0.12f;
 
     readonly SimHost _host;
@@ -129,7 +128,7 @@ public sealed partial class TechTree : Control
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
 
-    void Invalidate() { _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
+    void Invalidate() { _fxCache = null; _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
@@ -201,11 +200,10 @@ public sealed partial class TechTree : Control
         if (_stepShown != Step) { _stepShown = Step; _stepLbl.Text = Loc.T("tree.step", Step); }
         PollLongPress();
         _view.Position = Area.Position; _view.Size = Area.Size;
-        if (Math.Abs(_zoom - _zoomTarget) > 0.001f)
+        if (_zoom != _zoomTarget)
         {
             float old = _zoom;
-            _zoom += (_zoomTarget - _zoom) * PlanisphereMath.EaseStep(delta, ZoomRate);
-            if (Math.Abs(_zoom - _zoomTarget) <= 0.001f) _zoom = _zoomTarget;
+            _zoom = PlanisphereMath.ZoomEase(_zoom, _zoomTarget, delta, Settings.Current.Animations);   // reduced motion: straight to the target; otherwise within 0.2 s
             var c = BaseCentre + _pan;
             var (px, py) = PlanisphereMath.PanAfterZoom(_pan.X, _pan.Y, c.X, c.Y, _anchor.X, _anchor.Y, old, _zoom);
             _pan = new Vector2(px, py); ClampPan(); Redraw();
@@ -691,6 +689,7 @@ public sealed partial class TechTree : Control
         var p = PosOf(i);
         if (!TreeLabelRules.IconVisible(p.X, p.Y, NR, B(Area))) return;   // the year goes with its icon
         var yr = YearRect(i);
+        if (!TreeLabelRules.PlateFits(B(yr), B(Area), B(ZoomKeepOut))) return;   // whole or not at all: never cut by the right edge
         _cv.DrawStringOutline(Fonts.Mono, new Vector2(yr.Position.X, p.Y + 5), _yearText[i], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
         Text(new Vector2(yr.Position.X, p.Y + 5), _yearText[i], 14, Ui.Ink2, FontKind.Mono);
         var chips = EffectChips(i);
@@ -904,7 +903,7 @@ public sealed partial class TechTree : Control
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         if (_nowRect.Size.X > 0f) occupied.Add(_nowRect.Grow(2));
         foreach (var pl in _plates) occupied.Add(pl.Grow(2));   // decade years: names keep off them
-        var barKeepOut = new Rect2(_zoomBar.Position - new Vector2(0, 40), _zoomBar.Size + new Vector2(40, 40));   // 40 du above the zoom buttons and the step label
+        var barKeepOut = ZoomKeepOut;   // 40 du above the zoom buttons and the step label
         occupied.Add(barKeepOut); occupied.Add(new Rect2(_legendBtn.Position - new Vector2(0, 6), _legendBtn.Size + new Vector2(6, 12)));
         if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) if (Area.Grow(40).HasPoint(PosOf(i))) { occupied.Add(YearRect(i).Grow(1)); }
         // The route is an obstacle too, so that no label sits on it.
@@ -917,7 +916,6 @@ public sealed partial class TechTree : Control
         foreach (int i in byNum) if (_route[i] && _state[i] != St.Unavailable) Add(i);
         foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);
         Add(_hover);
-        foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);   // priority: selected > goal > openable > known
         foreach (int i in byNum) if (_state[i] == St.Known || Step >= ZoomSteps.Icons) Add(i);
         var area = new Rect2(Area.Position, new Vector2(Area.Size.X, Math.Max(40f, _zoomBar.Position.Y - 40f - Area.Position.Y)));   // names stay 40 du above the zoom panel, across the whole width
         var hard = _lbHard; hard.Clear();
@@ -1480,7 +1478,7 @@ public sealed partial class TechTree : Control
         }
         else if (e is InputEventMouseMotion mm && _press)
         {
-            if (!_dragged && (mm.Position - _pressPos).Length() < 5f) return;
+            if (!_dragged && !NodeMenuLogic.IsDrag((mm.Position - _pressPos).Length())) return;
             _dragged = true;
             _pan += mm.Relative; ClampPan(); Redraw();
         }
@@ -1553,7 +1551,8 @@ public sealed partial class TechTree : Control
         int hit = HitAt(atPosition, 12f);
         if (hit < 0) return "";
         var nodes = _host.Data.Nodes;
-        return Names.Node(nodes.Id[hit]) + "\n" + Loc.T("tree.effects.none");   // the localized name, never the raw id or a number
+        string fx = EffectLine(hit);
+        return Names.Node(nodes.Id[hit]) + "\n" + (fx == "" ? Loc.T("tree.effects.none") : Loc.T("tree.effects.line", fx));   // the localized name, never the raw id or a number
     }
 
     // ---------------- node menu (#473) ----------------
@@ -1643,7 +1642,7 @@ public sealed partial class TechTree : Control
                 int num = nodes.Number[row];
                 if (!_focus.Remove(num) && _focus.Count < NodeMenuLogic.FocusLimit) _focus.Add(num);
                 _insetDirty = true; Select(row); break;
-            case NodeAction.WhyBlocked: _whyOpen = true; Select(row); break;
+            case NodeAction.WhyBlocked: _whyOpen = true; _whyNode = row; Select(row); break;
             case NodeAction.ShowLinks:   // the links of a selected node are drawn; the view comes in to the step where the names are readable
                 Select(row); _zoomTarget = PlanisphereMath.ClampZoom(Math.Max(_zoomTarget, ZoomSteps.Scales[ZoomSteps.Names - 1])); _anchor = PosOf(row); break;
         }
@@ -1754,6 +1753,7 @@ public sealed partial class TechTree : Control
         }
 
         _inset.AddChild(new HSeparator());
+        if (_whyOpen && _whyNode >= 0 && _whyNode == _selected && _state[_selected] != St.Known) BuildNodeBlockers(_selected);   // «what blocks it» of the node the menu was opened on
         bool whyOpen = _whyOpen || _selected < 0;   // collapsed while a node card is shown, so the card stays above the fold
         string whyHead = _goal >= 0 ? Loc.T("inset.why", Names.Node(nodes.Id[_goal])) : Loc.T("inset.why.nogoal");   // the heading names its goal (spec 2б.5)
         _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + whyHead, () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
@@ -1779,7 +1779,52 @@ public sealed partial class TechTree : Control
 
     }
 
-    bool _whyOpen, _whyShown;
+    bool _whyOpen, _whyShown; int _whyNode = -1;
+    // What blocks this very node: the requirement groups of the tree data with no known member (the goal chain below is about the goal, not about this node).
+    void BuildNodeBlockers(int i)
+    {
+        var nodes = _host.Data.Nodes; var rq = nodes.Requires;
+        var groups = new List<int[]>();
+        for (int g = rq.GroupStart[i]; g < rq.GroupStart[i + 1]; g++) groups.Add(rq.GroupMembers(g).ToArray());
+        var unmet = TreeClarity.UnmetGroups(groups, m => _state[m] == St.Known);
+        _inset.AddChild(Ui.Wrap(Loc.T("inset.why.node", Names.Node(nodes.Id[i])), 14, Ui.Ink));
+        if (unmet.Count == 0) { _inset.AddChild(Ui.Wrap(Loc.T("inset.why.node.free"), 14, Ui.Ink2)); return; }
+        foreach (var g in unmet)
+        {
+            string one = string.Join(" | ", g.Select(m => "✗ " + Names.Node(nodes.Id[m])));
+            _inset.AddChild(Ui.Wrap(g.Length > 1 ? "(" + one + ")" : one, 14, Ui.Ink));
+        }
+    }
+
+    // One line of the effects of a node, from NodeEffects.Derive (the numbers live in the data files); empty when the data gives none. Cached per language.
+    string[] _fxCache;
+    string EffectLine(int row)
+    {
+        var nodes = _host.Data.Nodes;
+        if (_fxCache == null || _fxCache.Length != nodes.Count) _fxCache = new string[nodes.Count];
+        if (_fxCache[row] != null) return _fxCache[row];
+        var fx = new List<Singularity.Core.Data.NodeEffect>(); Singularity.Core.Data.NodeEffects.Derive(_host.Data, row, fx);
+        var parts = new List<string>();
+        foreach (var e in fx)
+        {
+            string s = e.Kind switch
+            {
+                Singularity.Core.Data.NodeEffectKind.AlternativeUnlock => Loc.T("fx.alt", Loc.N(e.Value.ToDouble())),
+                Singularity.Core.Data.NodeEffectKind.AlloyNeed => Loc.T("fx.alloy", Loc.N(e.Value.ToDouble())),
+                Singularity.Core.Data.NodeEffectKind.ProcessUnlock => Loc.T("fx.process", Loc.N(e.Value.ToDouble())),
+                Singularity.Core.Data.NodeEffectKind.Mastery => Loc.T("fx.mastery", Loc.N(e.Value.ToDouble())),
+                Singularity.Core.Data.NodeEffectKind.Generation => Loc.T("fx.gen", Loc.N(e.Value.ToDouble())),
+                Singularity.Core.Data.NodeEffectKind.Informs => Loc.T("fx.informs", Names.Node(nodes.Id[e.Node])),
+                Singularity.Core.Data.NodeEffectKind.RequiredFor => Loc.T("fx.required", Names.Node(nodes.Id[e.Node])),
+                _ => Loc.T("fx.path", Names.Node(nodes.Id[e.Node])),
+            };
+            if (!parts.Contains(s)) parts.Add(s);
+        }
+        const int Show = 4;
+        string line = string.Join(" · ", parts.Take(Show));
+        if (parts.Count > Show) line += " · " + Loc.T("fx.more", parts.Count - Show);
+        return _fxCache[row] = line;
+    }
 
     void BuildWhy(HostSnapshot s, GameData data)
     {
@@ -1904,7 +1949,8 @@ public sealed partial class TechTree : Control
                 case TreeClarity.ParamLine.KnowledgeStep: pbody.Add(Ui.Wrap(Loc.T("ui.tree.effects.knowledge"), 14, Ui.Ink2)); break;
                 default: pbody.Add(Ui.Wrap(Loc.T("card.param.cap", Loc.N(nodes.ReqPrecision[i].ToDouble()), Loc.N(nodes.ReqPurity[i].ToDouble()), Loc.N(nodes.ReqQualityControl[i].ToDouble()), nodes.Tier[i]), 14, Ui.Ink2)); break;
             }
-        pbody.Add(Ui.Wrap(Loc.T("tree.effects.none"), 14, Ui.Ink2));   // numeric effects: TASK-0157; said here once, not on every node of the map
+        string fxLine = EffectLine(i);   // TASK-0157: the effects the data gives for this node, one line
+        pbody.Add(Ui.Wrap(fxLine == "" ? Loc.T("tree.effects.none") : Loc.T("tree.effects.line", fxLine), 14, fxLine == "" ? Ui.Ink2 : Ui.Ink));
         _inset.AddChild(Block(CardIcon.Kind.Raises, "card.raises", pbody.ToArray()));
 
         // 4. unlocks: the rows that list this node in requires

@@ -65,6 +65,19 @@ public static class PlanisphereMath
         return d;
     }
 
+    /// <summary>Zoom easing rate: the largest step (about 6) settles within 0.2 s (A8, animations at most 200 ms).</summary>
+    public const float ZoomRate = 40f;
+    /// <summary>Zoom closer than this to its target snaps onto it.</summary>
+    public const float ZoomSnap = 0.004f;
+
+    /// <summary>One frame of the zoom animation: eased towards the target, or straight onto it when animations are reduced (settings «Меньше движения»).</summary>
+    public static float ZoomEase(float zoom, float target, double dt, bool animate)
+    {
+        if (!animate || Math.Abs(target - zoom) <= ZoomSnap) return target;
+        float z = zoom + (target - zoom) * EaseStep(dt, ZoomRate);
+        return Math.Abs(target - z) <= ZoomSnap ? target : z;
+    }
+
     /// <summary>Fraction of the remaining distance to cover this frame (frame-rate independent easing).</summary>
     public static float EaseStep(double dt, float rate) => 1f - (float)Math.Exp(-rate * Math.Max(0, dt));
 

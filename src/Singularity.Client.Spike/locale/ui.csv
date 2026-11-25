@@ -437,4 +437,16 @@ menu.why.focus.power,Only for your own power,Только для своей де
 menu.why.focus.full,The focus already holds 3 processes,В фокусе уже 3 процесса
 menu.why.blocked.known,Already known: nothing blocks it,Узел уже известен: ничего не мешает
 tree.centre.head,before 1945,до 1945
+tree.effects.line,"effects: {0}","эффекты: {0}"
+fx.alt,"alternative performance x{0}","производительность варианта ×{0}"
+fx.alloy,"alloy {0} kg","сплав {0} кг"
+fx.process,"process: {0} labour h per unit","процесс: {0} чел.-ч на изделие"
+fx.mastery,"mastery programme, tier {0}","программа освоения, ступень {0}"
+fx.gen,"opens product generation {0}","открывает поколение изделия {0}"
+fx.informs,"eases research of: {0}","облегчает изучение: {0}"
+fx.required,"required for: {0}","нужен для: {0}"
+fx.path,"one of the ways to: {0}","один из путей к: {0}"
+fx.more,"{0} more","ещё {0}"
+inset.why.node,"What blocks «{0}»:","Что мешает узлу «{0}»:"
+inset.why.node.free,"Nothing blocks it: all requirements are known, it can be opened.","Ничего не мешает: все требования известны, узел можно открыть."
 tree.effects.none,effects: no data,эффекты: нет данных
