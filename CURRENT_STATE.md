@@ -21,15 +21,14 @@
 <!-- registry:active:start -->
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
 - TASK-0151 [IN_PROGRESS] Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) (developer)
+- TASK-0152 [IN_PROGRESS] Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) (developer)
 - TASK-0153 [IN_PROGRESS] Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) (developer)
 - TASK-0157 [IN_PROGRESS] Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) (research-scientist)
-- TASK-0159 [IN_PROGRESS] llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0154 [REVIEW] Data: alliances and blocs by year 1945-2030 for the licence buyer circle (research-scientist)
 - TASK-0155 [REVIEW] Data: constant 1990 US dollar display series and conversion from Core money unit (economy-analyst)
 - TASK-0145 [APPROVED] Sketches through Codex CLI image generation (llm_worker sketch --engine codex) (developer)
 - TASK-0150 [APPROVED] Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme (developer)
-- TASK-0152 [APPROVED] Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) (developer)
 - TASK-0156 [APPROVED] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
 <!-- registry:active:end -->
 
