@@ -186,6 +186,8 @@
 | [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | IN_PROGRESS | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
 | [TASK-0169](../development/tasks/TASK-0169-red-ci-sketch-order.md) | DONE | Red CI: sketch validates task id and count before opening the sandbox Box | MS-M0 |
 | [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | DONE | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
+| [TASK-0171](../development/tasks/TASK-0171-levers-flags-on-golden-batch.md) | APPROVED | Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation | MS-M0 |
+| [TASK-0172](../development/tasks/TASK-0172-zaf-core-regions.md) | APPROVED | Data: South Africa regions status core of ZAF (O-076), checked per region | MS-M0 |
 
 ## Гипотезы
 
