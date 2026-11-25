@@ -51,6 +51,9 @@ public sealed class InstituteOrders
     {
         if ((uint)command.Slot >= (uint)_l.SlotCount(command.Actor))
             return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {command.Actor} has no institute slot {command.Slot}");
+        // The same goal again is no change: it must not restart the reassignment period.
+        if (_order[command.Slot].Current[command.Actor] == command.Node)
+            return CommandVerdict.Ok;
         Set(_order[command.Slot], command.Actor, command.Node);
         Set(_stamp[command.Slot], command.Actor, checked((int)month) + 1);
         return CommandVerdict.Ok;

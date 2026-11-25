@@ -107,14 +107,13 @@ public sealed class InstituteLayout
         {
             int a = scenario.ActorIndex(table.Country(i));
             if (a < 0)
-                throw new ArgumentException($"Institute '{table.Id(i)}': country {table.Country(i)} is not an actor of the scenario.", nameof(table));
+                continue;   // the table is shared by scenarios: a country outside this one has no slots here
             (table.Founded(i) <= scenario.StartYear ? standing : candidates)[a].Add(i);   // table rows are in ID order
         }
         int max = 0;
         for (int a = 0; a < actors; a++)
             max = Math.Max(max, standing[a].Count + candidates[a].Count);
-        if (standing.All(l => l.Count == 0))
-            throw new ArgumentException("No institute stands at the start of the scenario.", nameof(table));
+        // A shared table may have no institute standing at this scenario's start: the scenario still loads (only candidates, or no slots).
         var slotCount = new int[actors];
         var startingCount = new int[actors];
         var rows = new int[actors * max];

@@ -321,30 +321,42 @@ public sealed class KnowledgeSystem : ITickSystem
 
     // Fills group[r] with the first goal whose path (the unknown requirements of the goal in the frontier) holds r, or −1.
     // One walk per goal with a visited mark (a node already grouped is not walked again: its requirements belong to the same or an earlier goal).
+    // Iterative: a mod graph may be a chain of any depth. A node is marked when pushed, so every node enters the stack at most once and n entries suffice.
+    // Called with goals only; the stack lives on the stack frame up to 512 nodes, else on the heap (no shared scratch: view building calls this too).
     private void BuildGroups(int a, ReadOnlySpan<int> goalRows, Span<sbyte> group)
     {
         group.Fill(-1);
-        for (int j = 0; j < goalRows.Length; j++)
-            MarkPath(a, goalRows[j], (sbyte)j, group);
-    }
-
-    private void MarkPath(int a, int from, sbyte j, Span<sbyte> group)
-    {
-        if (group[from] >= 0)
-            return;
-        group[from] = j;
-        if (IsKnown(a, from))
-            return;
+        Span<int> stack = _n <= 512 ? stackalloc int[_n] : new int[_n];
         RequirementLists req = _g.Requires;
-        for (int g = req.GroupStart[from]; g < req.GroupStart[from + 1]; g++)
+        for (int j = 0; j < goalRows.Length; j++)
         {
-            bool satisfied = false;
-            foreach (int m in req.GroupMembers(g))
-                satisfied |= IsKnown(a, m);
-            if (satisfied)
+            int root = goalRows[j];
+            if (group[root] >= 0)
                 continue;
-            foreach (int m in req.GroupMembers(g))
-                MarkPath(a, m, j, group);
+            group[root] = (sbyte)j;
+            int top = 0;
+            stack[top++] = root;
+            while (top > 0)
+            {
+                int from = stack[--top];
+                if (IsKnown(a, from))
+                    continue;
+                for (int g = req.GroupStart[from]; g < req.GroupStart[from + 1]; g++)
+                {
+                    bool satisfied = false;
+                    foreach (int m in req.GroupMembers(g))
+                        satisfied |= IsKnown(a, m);
+                    if (satisfied)
+                        continue;
+                    foreach (int m in req.GroupMembers(g))
+                    {
+                        if (group[m] >= 0)
+                            continue;
+                        group[m] = (sbyte)j;
+                        stack[top++] = m;
+                    }
+                }
+            }
         }
     }
 
