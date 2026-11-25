@@ -60,6 +60,12 @@ public static class InstituteMath
     public static Fx6 BuildRate(int levels, int yearsAhead, InstituteParams p) =>
         p.BuildRatePerLevel * Fx6.FromInt(levels) * AheadMultiplier(yearsAhead, p);
 
+    /// <summary>
+    /// Safety rule: the speed of a project is multiplied by <c>min(1, 1/take)</c>, where take is the sum of the shares the projects and the upkeep take. The data never
+    /// reaches 100 % (TASK-0173: at most 13.4 %), but without the rule a larger list of candidates would run projects at full speed on money that is not there.
+    /// </summary>
+    public static Fx6 OverloadScale(Fx6 take) => take > Fx6.One ? Fx6.One / take : Fx6.One;
+
     /// <summary>The highest level (0..4) whose threshold the experience reaches.</summary>
     public static int LevelOf(int experience, int nodesInArea, InstituteParams p)
     {

@@ -326,7 +326,7 @@ public class InstituteTests
         long t = 0;
         while (!inst.BuiltByProject(h))
             s.StepThroughMonth(t++);
-        Fx6 atOpening = inst.BudgetFactor(sun);
+        Fx6 atOpening = inst.BudgetFactor(sun, 0);
         int Levels() => Enumerable.Range(0, inst.Layout.DisciplineNames.Length).Sum(d => inst.Level(h, d));
         Assert.Equal(3, Levels());
         // Run on until the institute gains a level by experience (in any area); the factor must then move with it.
@@ -334,8 +334,8 @@ public class InstituteTests
             s.StepThroughMonth(t);
         int levels = Levels();
         Assert.True(levels > 3, "the institute did not gain a level in the run");
-        Assert.Equal((Fx6.One - P.UpkeepPerLevel * Fx6.FromInt(levels)) * (Fx6.One + P.CapacityPerLevel * Fx6.FromInt(levels)), inst.BudgetFactor(sun));
-        Assert.NotEqual(atOpening, inst.BudgetFactor(sun));
+        Assert.Equal((Fx6.One - P.UpkeepPerLevel * Fx6.FromInt(levels)) * (Fx6.One + P.CapacityPerLevel * Fx6.FromInt(levels)), inst.BudgetFactor(sun, 0));
+        Assert.NotEqual(atOpening, inst.BudgetFactor(sun, 0));
     }
 
     // Codex merge #3: the same goal again is not a change and keeps the period of the slot.
@@ -450,12 +450,12 @@ public class InstituteTests
         var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
         InstituteSystem inst = s.World.Institutes!;
         int prop = inst.Layout.DisciplineNames.IndexOf("prop");
-        Assert.Equal(Fx6.One, inst.BudgetFactor(sun));
+        Assert.Equal(Fx6.One, inst.BudgetFactor(sun, 0));
         Assert.Equal(0, inst.Level(h, prop));
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(sun, h.Slot)).Accepted);
         s.StepThroughMonth(0);
         s.StepThroughMonth(1);
-        Fx6 running = inst.BudgetFactor(sun);   // 1 - 3 levels * 1.5 %: the project opens in 1949, after its historical year 1946, so the price is not raised
+        Fx6 running = inst.BudgetFactor(sun, 2);   // 1 - 3 levels * 1.5 %: the project opens in 1949, after its historical year 1946, so the price is not raised
         Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, 0, P), running);
         Assert.False(inst.Standing(h));
         int months = inst.BuildMonths(h);
@@ -466,7 +466,7 @@ public class InstituteTests
         Assert.True(inst.Standing(h) && inst.BuiltByProject(h));
         Assert.Equal(months - 1, inst.OpenedMonth(h));
         Assert.Equal(3, inst.Level(h, prop));
-        Fx6 after = inst.BudgetFactor(sun);   // (1 - 3 * 0.4 %) * (1 + 3 * 0.8 %): the net gain is positive
+        Fx6 after = inst.BudgetFactor(sun, 0);   // (1 - 3 * 0.4 %) * (1 + 3 * 0.8 %): the net gain is positive
         Assert.Equal((Fx6.One - Fx6.FromRaw(12_000)) * (Fx6.One + Fx6.FromRaw(24_000)), after);
         Assert.True(after > Fx6.One);
         InstituteView v = s.View.Actors[sun].Institutes.Single(x => x.Id == "sun_nii88");
@@ -536,8 +536,8 @@ public class InstituteTests
         long opening = 28 + inst.BuildMonths(h) - 1;
         int years = 1958 - inst.Layout.YearOf(opening);
         Assert.True(years > 3);
-        Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, years, P), inst.BudgetFactor(usa));
-        Assert.Equal(InstituteMath.BuildRate(3, years, P), inst.BuildRate(h, 28));
+        Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, years, P), inst.BudgetFactor(usa, 29));
+        Assert.Equal(InstituteMath.BuildRate(3, years, P), inst.BuildRate(h, 29));
     }
 
     // Codex round 2: a run whose knowledge is a schedule refuses priority orders; the player does not see the goals of the others.
@@ -645,6 +645,115 @@ public class InstituteTests
             s.StepThroughMonth(t);
         Assert.False(inst.Standing(h));
         Assert.True(inst.Building(h));
+    }
+
+    [Fact]
+    public void OverloadScale_SlowsEveryProjectWhenTheTakeExceedsTheMoney()
+    {
+        Assert.Equal(Fx6.One, InstituteMath.OverloadScale(Fx6.Zero));
+        Assert.Equal(Fx6.One, InstituteMath.OverloadScale(Fx6.One));
+        Assert.Equal(Fx6.FromRaw(500_000), InstituteMath.OverloadScale(Fx6.FromInt(2)));
+        Assert.Equal(Fx6.One / Fx6.FromRaw(1_070_000), InstituteMath.OverloadScale(Fx6.FromRaw(1_070_000)));   // the Codex scenario: 107 %
+    }
+
+    // TASK-0175 (TASK-0173 finding): a project stretched by a low funding opens about its historical year and must pay the price of that year, not of the year it started for.
+    [Fact]
+    public void StretchedProject_PaysThePriceOfItsExpectedOpeningYear_AndFollowsTheFunding()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Fx6 plan = s.World.Policy.Shares(usa).Research;
+        Fx6 low = plan * Fx6.FromRaw(200_000);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(usa, new Singularity.Core.Policy.BudgetShares(low, Fx6.One - low, Fx6.Zero, Fx6.Zero, Fx6.Zero))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(usa, h.Slot)).Accepted);
+        s.StepThroughMonth(28);
+        Assert.True(inst.Building(h));
+        long opening = inst.ExpectedOpening(h, 29);
+        Assert.True(inst.Layout.YearOf(opening) >= 1958, "the stretched project opens in or after its historical year");
+        Assert.True(inst.BuildMonths(h) > 12 * 3);
+        // The price of the first month is the one of the expected opening year (on time = x1), shown in the view before and after the click.
+        Assert.Equal(InstituteMath.BuildRate(3, 0, P), inst.BuildRate(h, 29));
+        Assert.Equal(InstituteMath.BuildRate(3, 0, P), s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate);
+        // Full funding again: the project would open early, the price rises.
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new SetBudgetShares(usa, s.World.Policy.Shares(usa))).Accepted);
+        s.StepThroughMonth(29);
+        Assert.True(inst.BuildRate(h, 30) > InstituteMath.BuildRate(3, 0, P));
+    }
+
+    // Run to the end: the stretched project opens about its historical year and pays the price of opening on time in every month, so the sum is months x base rate.
+    [Fact]
+    public void StretchedProject_RunsToItsHistoricalYear_AndPaysTheBaseRateEveryMonth()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Fx6 low = s.World.Policy.Shares(usa).Research * Fx6.FromRaw(350_000);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(usa, new Singularity.Core.Policy.BudgetShares(low, Fx6.One - low, Fx6.Zero, Fx6.Zero, Fx6.Zero))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(usa, h.Slot)).Accepted);
+        long sum = 0;
+        int months = 0;
+        long m = 28;
+        for (; m < 28 + 12 * 40 && (m == 28 || !inst.Standing(h)); m++)
+        {
+            s.StepThroughMonth(m);
+            if (inst.Building(h))
+            {
+                Fx6 charged = inst.BuildRate(h, m + 1);
+                Assert.True(charged <= InstituteMath.BuildRate(3, 1, P), $"month {m}: the price must stay about the base one");
+                sum += charged.Raw;
+                months++;
+            }
+        }
+        Assert.True(inst.Standing(h));
+        int openYear = inst.Layout.YearOf(inst.OpenedMonth(h));
+        Assert.InRange(openYear, 1957, 1959);
+        Assert.True(months > 12 * 5, "the project was stretched well beyond its nominal term");
+        // The project opens in December of the year before, so at most the one-year step (x1.02) applies: the sum stays within 2 % of months x base rate (the old rule charged x1.77).
+        long baseSum = months * (long)InstituteMath.BuildRate(3, 0, P).Raw;
+        Assert.InRange(sum, baseSum, baseSum * 102 / 100);
+    }
+
+    // A project without any research money never opens: it pays the price of the historical year (x1) and the year of an absurd month does not overflow.
+    [Fact]
+    public void ProjectWithoutFunding_PaysThePriceOfOpeningOnTime()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(usa, new Singularity.Core.Policy.BudgetShares(Fx6.Zero, Fx6.One, Fx6.Zero, Fx6.Zero, Fx6.Zero))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(usa, h.Slot)).Accepted);
+        s.StepThroughMonth(28);
+        Assert.True(inst.Building(h));
+        Assert.Equal(InstituteMath.BuildRate(3, 0, P), inst.BuildRate(h, 29));
+        Assert.Equal(InstituteMath.BuildRate(3, 0, P), s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate);
+    }
+
+    // The window shows the price of a candidate before the click: the same the core charges once the project starts in that month.
+    [Fact]
+    public void Candidate_ShowsThePriceTheCoreChargesOnceStarted()
+    {
+        SliceSession s = Make(true);
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Fx6 shown = s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate;
+        Assert.True(shown > InstituteMath.BuildRate(3, 0, P), "an early candidate costs more than one on time");
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(usa, h.Slot)).Accepted);
+        s.StepThroughMonth(28);
+        Assert.Equal(Fx6.One - shown, inst.BudgetFactor(usa, 28));
+        Assert.Equal(shown, s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate);
     }
 
     [Fact]
