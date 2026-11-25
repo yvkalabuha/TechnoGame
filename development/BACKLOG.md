@@ -206,6 +206,7 @@
 | [TASK-0188](../development/tasks/TASK-0188-research-data-expand-knowledge-tree-computing-mate.md) | IN_PROGRESS | Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) | MS-M0 |
 | [TASK-0189](../development/tasks/TASK-0189-data-node-and-institute-directions-into-mods-12-di.md) | IN_PROGRESS | Data: node and institute directions into mods (12 directions, O-091) | MS-M0 |
 | [TASK-0190](../development/tasks/TASK-0190-tooling-gemini-visual-review-through-agy-subscript.md) | IN_PROGRESS | Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key | MS-M0 |
+| [TASK-0191](../development/tasks/TASK-0191-tooling-llm-worker-research-deepseek-checks-claims.md) | APPROVED | Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) | MS-M0 |
 
 ## Гипотезы
 

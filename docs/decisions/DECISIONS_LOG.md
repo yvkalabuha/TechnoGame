@@ -717,3 +717,4 @@ Design by ui-art-director with game-designer (information architecture); the own
 | 574 | 2026-11-25 | Institute ceiling while the tree is narrow: bounded by upkeep (build while upkeep is affordable); the formula ceiling (#564) returns when the tree widens | владелец (ответ на вопрос 2026-11-25) |
 | 575 | 2026-11-25 | Expand the knowledge tree before the play session: computing (research-speed nodes), materials, rocketry, space research as a separate area (satellites, cosmonautics, science), electronics, nuclear research | владелец (ответ на вопрос 2026-11-25) |
 | 576 | 2026-11-25 | SCIENCE_SLOTS.md (rev 2, gate critic + advocate + DeepSeek, docs/reviews/science-slots-gate-summary.md) approved with #573–#575; core and AI work starts | владелец (ответ на вопрос 2026-11-25) |
+| 577 | 2026-11-25 | Information search, collection and fact checking go to DeepSeek where it can do them; Claude agents review the result | владелец (сообщение 2026-11-25) |

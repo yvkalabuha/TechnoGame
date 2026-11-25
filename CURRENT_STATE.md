@@ -36,6 +36,7 @@
 - TASK-0178 [REVIEW] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [REVIEW] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
 - TASK-0185 [REVIEW] Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) (simulation-engineer)
+- TASK-0191 [APPROVED] Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
