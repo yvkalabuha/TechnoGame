@@ -16,6 +16,16 @@ public static class Ui
     public static readonly Color Paper = H(Palette.C.Paper), Sheet = H(Palette.C.Sheet), Hover = H(Palette.C.Hover), Ink = H(Palette.Ink),
         Ink2 = H(Palette.Ink2), Ink3 = H(Palette.Ink3), Rule = H(Palette.Rule), Normal = new("86837C"), Border = H(Palette.Border),
         Alarm = H(Palette.C.Alarm), Warn = H(Palette.C.Warn), Command = H(Palette.C.Command), Seq2 = new("C2CDD3");
+    /// <summary>Keyboard focus colour (O-074): its own token so that the focus never reads as an order; the value is the ultramarine of Command for now.</summary>
+    public static readonly Color Focus = H(Palette.C.Command);
+
+    /// <summary>The one focus style of tabs, buttons and menus: a 3 du ring in <see cref="Focus"/> standing 1 du off the control (A7).</summary>
+    public static StyleBoxFlat FocusBox()
+    {
+        var s = new StyleBoxFlat { DrawCenter = false, BorderColor = Focus, AntiAliasing = true, ExpandMarginLeft = 4, ExpandMarginRight = 4, ExpandMarginTop = 4, ExpandMarginBottom = 4 };
+        s.SetBorderWidthAll(3); s.SetCornerRadiusAll(6);
+        return s;
+    }
 
     // Radius scale (§17.7): 0 data, 2 keys and plates, 4 buttons and fields, 6 panels and sheets.
     public const float R1 = 2, R2 = 4, R3 = 6;

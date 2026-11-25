@@ -43,6 +43,16 @@ public static class GlyphGeometry
         return (x0, y0, x1, y1);
     }
 
+    /// <summary>Largest distance from the node centre to the outline of a type at radius r (a corner for the polygons, r for the circle).</summary>
+    public static float Extent(string code, float r)
+    {
+        var o = Outline(code, r);
+        if (o == null) return r;
+        float m = 0f;
+        foreach (var (x, y) in o) m = Math.Max(m, MathF.Sqrt(x * x + y * y));
+        return m;
+    }
+
     /// <summary>Smallest radius at which both sides of the outline box reach the icon floor (legend swatches use it, so each stays at 16 du and the shapes keep their proportions).</summary>
     public static float LegendRadius(string code)
     {

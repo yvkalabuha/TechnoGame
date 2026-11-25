@@ -103,7 +103,7 @@ tree.b,B · Goal statement,B · Ведомость цели
 tree.close,Close × (Esc),Закрыть × (Esc)
 panel.foreign,◆ FOREIGN POWER · read only,◆ ЧУЖАЯ ДЕРЖАВА · только просмотр
 panel.shares.profile,Shares of the AI doctrine profile (not this country's data).,Доли доктрины ИИ-профиля (не данные этой державы).
-tree.reset,Reset view,Сбросить вид
+tree.reset,Whole disc,Весь диск
 card.noschem,no schematic yet,схемы пока нет
 card.affects,AFFECTS,ЧТО ЗАТРАГИВАЕТ
 card.layer,Layer: {0} (ring {1}),Слой: {0} (кольцо {1})
@@ -166,7 +166,7 @@ inset.title,{0} · knowledge,{0} · знание
 inset.why,WHAT BLOCKS GETTING: {0},ЧТО МЕШАЕТ ПОЛУЧИТЬ: {0}
 inset.why.nogoal,WHAT BLOCKS IT,ЧТО МЕШАЕТ ПОЛУЧИТЬ
 inset.goal,Goal: {0} · steps to the blocker: {1},Цель: {0} · шагов до препятствия: {1}
-inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
+inset.eta," · ETA: ≈ {0} mo."," · срок: ≈ {0} мес."
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
 inset.node,NODE,УЗЕЛ
 card.index,Node {0} of {1} in the reference,Узел {0} из {1} в справочнике
@@ -317,7 +317,7 @@ set.sec,s,с
 set.anim,Animations,Анимации
 set.lang.note,"The language applies at once, no restart needed.","Язык применяется сразу, без перезапуска."
 legend.btn,Legend,Легенда
-legend.disc,Disciplines (wedge),Дисциплины (клин)
+legend.disc,Direction (sector and hatch),Направление (сектор и штриховка)
 legend.lines,Lines,Линии
 legend.route,Route to goal,Маршрут к цели
 legend.root,Root of “what blocks it”,Корень «что мешает»
@@ -389,7 +389,7 @@ ui.tree.anchor,Historical date: {0}{1},Историческая дата: {0}{1}
 ui.tree.anchor.named,Historical date: {0}{1} · {2},Историческая дата: {0}{1} · {2}
 ui.tree.anchor.tip,The year when this step appeared in real history,"Год, когда этот шаг появился в реальной истории"
 ui.tree.gen,generation {0},поколение {0}
-legend.rings,Rings,Кольца
+legend.rings,Node type (shape),Тип узла (форма)
 legend.states,Node states,Состояния узла
 legend.root.why,the link the goal is blocked on first,"звено, на которое цель упирается в первую очередь"
 ui.tree.state.0,unknown,неизвестен
@@ -402,7 +402,8 @@ ui.menu.load.why,Loading is not ready yet,Загрузка пока не гот�
 ui.menu.save.why.notready,Saving is not ready yet,Сохранение пока не готово
 ui.menu.save.why.nogame,No game started,Нет начатой игры
 menu.reason.nogame,No game running,Нет игры
-legend.goal,Goal (double frame),Цель (двойная рамка)
+legend.goal,"Goal (double frame, node shape)",Цель (двойная рамка по форме)
+legend.dial,Radius = year; ring = decade,Радиус = год; кольцо = 10 лет
 legend.links,Links of the selected node,Связи выбранного узла
 ui.tree.anchor.tip.est,"The year is an estimate (an orientation point in history), not a documented date","Год оценочный (ориентир по истории), а не документированная дата"
 ui.tree.anchor.est,Historical date (estimate): {0}{1},Историческая дата (оценка): {0}{1}
@@ -416,3 +417,36 @@ legend.colony,Colony or mandate,Колония или мандат
 legend.occupied,Occupation hatch,Оккупация (штриховка)
 legend.control,Line of control,Линия контроля
 tip.legend,Map key: hatching and lines (L),Легенда карты: штриховки и линии (L)
+legend.now,Double ring = now,Двойное кольцо = сегодня
+tree.step,Step {0} of 6,Шаг {0} из 6
+tree.zoom.in,Zoom in (+),Приблизить (+)
+tree.zoom.out,Zoom out (−),Отдалить (−)
+tree.now,Now: {0},Сейчас: {0}
+tree.centre,roots,корни
+tree.count,Nodes: {0} · known {1},Узлов: {0} · открыто {1}
+edge.needs,needs: {0},нужен: {0}
+edge.opens,opens: {0},открывает: {0}
+menu.goal,Make it the goal,Сделать целью
+menu.focus,Add to mastery focus,В фокус освоения
+menu.focus.remove,Remove from mastery focus,Убрать из фокуса освоения
+menu.blocked,What blocks it,Что мешает
+menu.links,Show links,Показать связи
+menu.why.goal,"The goal follows from the product generation; choosing it from the tree is not available yet.","Цель задаётся поколением изделия; выбрать её из дерева пока нельзя."
+menu.why.focus.process,Needs a known process,Нужен известный процесс
+menu.why.focus.power,Only for your own power,Только для своей державы
+menu.why.focus.full,The focus already holds 3 processes,В фокусе уже 3 процесса
+menu.why.blocked.known,Already known: nothing blocks it,Узел уже известен: ничего не мешает
+tree.centre.head,before 1945,до 1945
+tree.effects.line,"effects: {0}","эффекты: {0}"
+fx.alt,"alternative performance x{0}","производительность варианта ×{0}"
+fx.alloy,"alloy {0} kg","сплав {0} кг"
+fx.process,"process: {0} labour h per unit","процесс: {0} чел.-ч на изделие"
+fx.mastery,"mastery programme, tier {0}","программа освоения, ступень {0}"
+fx.gen,"opens product generation {0}","открывает поколение изделия {0}"
+fx.informs,"eases research of: {0}","облегчает изучение: {0}"
+fx.required,"required for: {0}","нужен для: {0}"
+fx.path,"one of the ways to: {0}","один из путей к: {0}"
+fx.more,"{0} more","ещё {0}"
+inset.why.node,"What blocks «{0}»:","Что мешает узлу «{0}»:"
+inset.why.node.free,"Nothing blocks it: all requirements are known, it can be opened.","Ничего не мешает: все требования известны, узел можно открыть."
+tree.effects.none,effects: no data,эффекты: нет данных
