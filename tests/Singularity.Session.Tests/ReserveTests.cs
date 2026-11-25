@@ -65,9 +65,9 @@ public class ReserveTests
             SliceSession s = Make(reserve);
             for (long t = 0; t < 36; t++)
                 s.StepThroughMonth(t);
-            Assert.Equal(MainAllColumns, ColumnProjection.Hash(s, n => !ColumnProjection.IsReserveColumn(n)));
+            HashAssert.Equal(MainAllColumns, ColumnProjection.Hash(s, n => !ColumnProjection.IsReserveColumn(n)));
             if (!reserve)
-                Assert.Equal(MainStateHash, s.LastHash);
+                HashAssert.Equal(MainStateHash, s.LastHash);
         }
     }
 
