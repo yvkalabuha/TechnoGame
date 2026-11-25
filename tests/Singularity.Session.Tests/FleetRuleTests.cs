@@ -342,7 +342,7 @@ public class FleetRuleTests
         f.Int("prd.d0.quotaBase", 120);
         IReadOnlyList<FleetCommand> cmds = f.Run(101);
         Assert.Equal(2, cmds.Count);
-        Assert.Equal(new FleetCommand(FleetCommandKind.Sell, f.HandleOf(0), 12, 2), cmds[0]);   // priced at G_front 2
+        Assert.Equal(new FleetCommand(FleetCommandKind.Sell, f.HandleOf(0), 12) { PricedGFront = 2 }, cmds[0]);   // priced at G_front 2
         Assert.Equal(FleetCommandKind.Retire, cmds[1].Kind);
         Assert.Equal(f.HandleOf(0), cmds[1].Design);
         Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
@@ -379,6 +379,32 @@ public class FleetRuleTests
         f.Session.StepThroughMonth(102);
         Assert.Equal(promised, f.Products.SaleIncome(Usa));
         Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
+    }
+
+    [Fact]
+    public void PendingAiSaleReplayedAcrossAFrontChange_ProjectionAndBookingChargeTheSameCap()
+    {
+        // TASK-0182 review: the projection of month 102 replays the sale decided in 101 at its priced G_front (2), as the booking does,
+        // although the rival lifted the front to 3; otherwise the follow-up sale could exceed the real annual cap and be refused.
+        Fixture f = Start();
+        f.Design(0, DesignStage.InService, 1, 1, HeavyPark(f));
+        f.Int("prd.d0.quotaBase", 120);
+        f.Design(2, DesignStage.Series, 2, 2, 60);
+        f.Master(2);
+        Assert.Contains(f.Run(101), c => c.Kind == FleetCommandKind.Sell);
+        var rival = new Fixture { Session = f.Session, Actor = 1 };
+        rival.Design(2, DesignStage.Series, 3, 3, 60);
+        rival.Master(2);
+        f.Master(2);
+        f.Session.StepThroughMonth(102);   // books the sale of 101 at G_front 2; decides the follow-up on the projection
+        Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
+        Fx6 cap = f.Products.SaleCap(Usa);
+        f.Master(2);
+        rival.Master(2);
+        f.Session.StepThroughMonth(103);
+        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
+        Assert.Equal(promised, f.Products.SaleIncome(Usa));
+        Assert.True(f.Products.SaleInYear(Usa) <= cap);
     }
 
     [Fact]

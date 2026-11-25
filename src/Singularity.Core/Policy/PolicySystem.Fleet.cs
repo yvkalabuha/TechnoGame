@@ -56,10 +56,12 @@ public sealed partial class PolicySystem
         for (int k = 0; k < _fltStamp.Length; k++)
         {
             if (_fltStamp[k].Current[actor] == Stamp(month))
-                {
+            {
                 var kind = (FleetCommandKind)_fltKind[k].Current[actor];
-                list.Add(new FleetCommand(kind, new DesignHandle(_fltDesign[k].Current[actor], _fltGen[k].Current[actor]), _fltN[k].Current[actor],
-                    kind == FleetCommandKind.Sell ? _fltGFront.Current[actor] : -1));
+                list.Add(new FleetCommand(kind, new DesignHandle(_fltDesign[k].Current[actor], _fltGen[k].Current[actor]), _fltN[k].Current[actor])
+                {
+                    PricedGFront = kind == FleetCommandKind.Sell ? _fltGFront.Current[actor] : -1,
+                });
             }
         }
         return list;
@@ -133,7 +135,7 @@ public sealed partial class PolicySystem
             foreach (FleetCommand c in pending)
             {
                 if (c.Kind == kind)
-                    _ = kind == FleetCommandKind.Sell ? book.Sell(c.Design.Slot, c.N, t, gFront) : book.Retire(c.Design.Slot, c.N);
+                    _ = kind == FleetCommandKind.Sell ? book.Sell(c.Design.Slot, c.N, t, c.PricedGFront >= 0 ? c.PricedGFront : gFront) : book.Retire(c.Design.Slot, c.N);
             }
         }
         book.ExpendCredit(t + 1);
