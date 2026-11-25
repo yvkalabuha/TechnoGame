@@ -23,6 +23,9 @@ public sealed class CommandState
     private readonly IntColumn[][] _dAlt;
     private readonly IntColumn[] _sStamp, _sGen, _sForce, _cStamp, _cGen;
     private readonly LongColumn[] _sRate;
+    // refuse_proposal per design and kind (open, close); only in a run with an adviser. The generation is the project the refusal named.
+    private readonly IntColumn[] _rOpenStamp = [], _rOpenGen = [], _rCloseStamp = [], _rCloseGen = [];
+    private readonly ImmutableArray<int> _adviserActors;
     private readonly IntColumn[] _progCmd;
     private readonly ImmutableArray<int> _progNumbers;
     private readonly IntColumn[] _fKind, _fDesign, _fGen, _fN, _fStamp;
@@ -37,7 +40,7 @@ public sealed class CommandState
     /// <param name="fundProgramme">The run has the reserve: adds the one-off slot <c>cmd.fund.*</c> (absent otherwise, so the table of other runs is unchanged).</param>
     /// <param name="intelligence">The run has intelligence: adds the security share and the target plan to the standing settings <c>cmd.shares.*</c> (absent otherwise).</param>
     /// <param name="programmeProcesses">Process numbers a mastery programme may run on (tier ≥ 5): one `cmd.prog.p{n}` column each.</param>
-    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, bool fundProgramme = false, bool intelligence = false)
+    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, ImmutableArray<int> adviserActors = default, bool fundProgramme = false, bool intelligence = false)
     {
         _progNumbers = programmeProcesses.IsDefault ? [] : programmeProcesses;
         _slots = CommandLimits.DesignSlots;
@@ -106,6 +109,30 @@ public sealed class CommandState
             _cStamp[d] = table.AddInt($"cmd.close.{d}.stamp");
             _cGen[d] = table.AddInt($"cmd.close.{d}.gen");
         }
+        _adviserActors = adviserActors.IsDefault ? [] : adviserActors;
+        if (_adviserActors.IsEmpty)
+            return;
+        _rOpenStamp = new IntColumn[designs];
+        _rOpenGen = new IntColumn[designs];
+        _rCloseStamp = new IntColumn[designs];
+        _rCloseGen = new IntColumn[designs];
+        for (int d = 0; d < designs; d++)
+        {
+            _rOpenStamp[d] = table.AddInt($"cmd.refuse.{d}.open.stamp");
+            _rOpenGen[d] = table.AddInt($"cmd.refuse.{d}.open.gen");
+            _rCloseStamp[d] = table.AddInt($"cmd.refuse.{d}.close.stamp");
+            _rCloseGen[d] = table.AddInt($"cmd.refuse.{d}.close.gen");
+        }
+    }
+
+    /// <summary>
+    /// <c>refuse_proposal</c> consumed at <paramref name="month"/>: the slot generation of the project whose open (or close) proposal was refused, 0 = none.
+    /// Always 0 in a run without an adviser.
+    /// </summary>
+    public int RefusedGen(int actor, int design, bool close, long month)
+    {
+        IntColumn[] stamp = close ? _rCloseStamp : _rOpenStamp;
+        return stamp.Length == 0 || stamp[design].Current[actor] != Stamp(month) ? 0 : (close ? _rCloseGen : _rOpenGen)[design].Current[actor];
     }
 
     // ---- readers (snapshot: what is in force at the month step being computed)
@@ -271,6 +298,13 @@ public sealed class CommandState
                     return Superseded(l.Design, _cGen[l.Design.Slot].Current[a]);
                 Set(_cStamp[l.Design.Slot], a, stamp);
                 Set(_cGen[l.Design.Slot], a, l.Design.Generation);
+                break;
+            case RefuseProposal rp:
+                if (!_adviserActors.Contains(a))
+                    return CommandVerdict.Refuse(CommandRefusal.NoAdviser, $"actor {a} has no adviser: there is no proposal to refuse");
+                // One entry per (actor, design, kind, month): the stamp keeps only this month's refusal.
+                Set(rp.Close ? _rCloseStamp[rp.Design.Slot] : _rOpenStamp[rp.Design.Slot], a, stamp);
+                Set(rp.Close ? _rCloseGen[rp.Design.Slot] : _rOpenGen[rp.Design.Slot], a, rp.Design.Generation);
                 break;
             case StartMasteryProgramme or CancelMasteryProgramme:
                 int number = command is StartMasteryProgramme sp ? sp.ProcessNumber : ((CancelMasteryProgramme)command).ProcessNumber;

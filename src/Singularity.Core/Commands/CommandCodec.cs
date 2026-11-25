@@ -91,6 +91,9 @@ public static class CommandCodec
             case CancelMasteryProgramme q:
                 sb.Append(",\"process\":").Append(I(q.ProcessNumber));
                 break;
+            case RefuseProposal rp:
+                Handle(sb, rp.Design).Append(",\"close\":").Append(rp.Close ? "true" : "false");
+                break;
             case BuyLicence b:
                 sb.Append(",\"seller\":").Append(I(b.Seller)).Append(",\"gen\":").Append(I(b.Gen));
                 break;
@@ -137,6 +140,7 @@ public static class CommandCodec
             "sell_cohort" => new SellCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32()),
             "start_mastery_programme" => new StartMasteryProgramme(actor, r.GetProperty("process").GetInt32(), r.GetProperty("abroad").GetBoolean()),
             "cancel_mastery_programme" => new CancelMasteryProgramme(actor, r.GetProperty("process").GetInt32()),
+            "refuse_proposal" => new RefuseProposal(actor, ReadHandle(r, "design"), r.GetProperty("close").GetBoolean()),
             "buy_licence" => new BuyLicence(actor, r.GetProperty("seller").GetInt32(), r.GetProperty("gen").GetInt32()),
             "offer_licence" => new OfferLicence(actor, r.GetProperty("gen").GetInt32(), ReadRaw(r.GetProperty("m")), (SaleCircle)r.GetProperty("circle").GetInt32()),
             "fund_programme" => new FundProgramme(actor, r.GetProperty("node").GetInt32(), ReadRaw(r.GetProperty("amount"))),
@@ -193,6 +197,7 @@ public static class CommandCodec
         CommandKind.SellCohort => "sell_cohort",
         CommandKind.StartMasteryProgramme => "start_mastery_programme",
         CommandKind.CancelMasteryProgramme => "cancel_mastery_programme",
+        CommandKind.RefuseProposal => "refuse_proposal",
         CommandKind.BuyLicence => "buy_licence",
         CommandKind.OfferLicence => "offer_licence",
         CommandKind.FundProgramme => "fund_programme",

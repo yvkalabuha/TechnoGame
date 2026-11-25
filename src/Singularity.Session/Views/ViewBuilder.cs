@@ -228,7 +228,21 @@ internal static class ViewBuilder
         var repeats = ImmutableArray.CreateBuilder<int>(w.ProductsLayout.Generations);
         for (int g = 1; g <= w.ProductsLayout.Generations; g++)
             repeats.Add(pol.Repeats(a, g));
-        return new PolicyDecisionView(commands.ToImmutable(), starts.ToImmutable(), closes.ToImmutable(), [.. pol.AiFleetCommands(a, next)], repeats.MoveToImmutable());
+        var proposals = ImmutableArray.CreateBuilder<ProposalView>();
+        foreach (AdviserProposal p in pol.AdviserProposals(a, next))
+        {
+            // The proposal was decided on the snapshot before the last step: drop what the step (the player's own command) has already done.
+            DesignStage stage = w.Products.Stage(a, p.Design);
+            if (p.Kind == ProposalKind.Open
+                ? stage is not (DesignStage.Prototype or DesignStage.InService) || w.Commands.Series(a, p.Design, next) is not null
+                : stage != DesignStage.Series || w.Commands.CloseLine(a, p.Design, next) is not null)
+                continue;
+            proposals.Add(new ProposalView(p.Kind, p.Design, p.Handle, p.Rate, p.Reason));
+        }
+        return new PolicyDecisionView(commands.ToImmutable(), starts.ToImmutable(), closes.ToImmutable(), [.. pol.AiFleetCommands(a, next)], repeats.MoveToImmutable())
+        {
+            Proposals = proposals.ToImmutable(),
+        };
     }
 
     /// <summary>

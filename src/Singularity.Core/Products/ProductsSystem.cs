@@ -1645,6 +1645,13 @@ public sealed partial class ProductsSystem : ITickSystem
                     continue;
                 done = true;
                 var snapshot = (DesignStage)_stage[d].Current[a];
+                if (snapshot == DesignStage.Series && (DesignStage)_stage[d].Next[a] == snapshot && _inputs.PlayerRateCommands(a))
+                {
+                    if (candidates[i].Rate < Fx6.Zero)
+                        throw new ProductsInvariantException(-1, a, $"negative series rate {candidates[i].Rate} for design {d}");
+                    Set(_rateCmd, d, a, candidates[i].Rate);
+                    continue;
+                }
                 // A project cancelled earlier in this step (Next stage «снят») cannot start a series.
                 if (snapshot is (DesignStage.Prototype or DesignStage.InService) && (DesignStage)_stage[d].Next[a] == snapshot)
                     StartSeries(a, d, snapshot, candidates[i]);
