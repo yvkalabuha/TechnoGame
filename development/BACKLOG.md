@@ -185,7 +185,7 @@
 | [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | APPROVED | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
 | [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | IN_PROGRESS | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
 | [TASK-0169](../development/tasks/TASK-0169-red-ci-sketch-order.md) | DONE | Red CI: sketch validates task id and count before opening the sandbox Box | MS-M0 |
-| [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | APPROVED | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
+| [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | DONE | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
 
 ## Гипотезы
 

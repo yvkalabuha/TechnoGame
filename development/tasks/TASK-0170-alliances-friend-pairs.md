@@ -1,7 +1,7 @@
 ---
 id: TASK-0170
 title: "Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: research-scientist         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-25
 approval_ref: O-079
+review_ref: "reviewer: APPROVE; second review agy-sonnet accept 2 low; merge a0e035b"
 created: 2026-11-25
 ---
 
