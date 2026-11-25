@@ -41,4 +41,4 @@ created: 2026-11-25
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано (ветка worktree-agent-a0d58d313e41da42c, коммит 58997ac): флаги Reserve, Institutes, LicenceMarket, Intelligence и советник игрока включены по умолчанию (`SliceRunConfig.Legacy` — всё выключено); правило целей институтов ИИ PATH (#559: `IInstituteInputs.GoalPath`, `InstituteInputsAdapter`, `PickForFreeSlots`); рынок M2 (#560: `AiMaxGenJump` 1, `AiBuyFromFriendsOnly`, `AiPriceK` 1,2, предел 64 каталогов заменён бегущей суммой, друзья SWE–GBR 1945–1990 и SWE–USA 1960–1990); клиент `SimHost` получает актора игрока. Эталоны пересняты один раз (LinkedRun Golden60, Views, TwoWorlds Pinned). Замер Lab на сборке (манифест levers-558-pair, seeds 1–10): G2/G3/G4 = 138 / 269,5 / 388, структура 9 пунктов, §8-d 35, сделок до 1977 — 20; совпадает с песочницей PATH+M2. pace_check --base main: PASS (калибровочный мир Lab по умолчанию LEGACY, дельты 0).
