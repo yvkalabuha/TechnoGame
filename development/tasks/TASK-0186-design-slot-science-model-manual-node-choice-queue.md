@@ -1,7 +1,7 @@
 ---
 id: TASK-0186
 title: "Design: slot science model (manual node choice, queue, focus, research_speed, AI) for gate (#561-#568)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: game-designer
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#561-#568"
+review_ref: "gate: critic + advocate + DeepSeek (docs/reviews/science-slots-gate-summary.md); owner approval #576"
 created: 2026-11-25
 ---
 

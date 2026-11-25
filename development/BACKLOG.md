@@ -200,8 +200,8 @@
 | [TASK-0182](../development/tasks/TASK-0182-fix-ai-fleet-sale-booked-at-a-different-g-front-th.md) | DONE | Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10) | MS-M0 |
 | [TASK-0183](../development/tasks/TASK-0183-pace-tuning-g3-g4-after-owner-play-session-ahead-c.md) | PROPOSED | Pace tuning G3-G4 after owner play session: ahead cost on on-time nodes, epoch budget weighting (#558) | MS-M0 |
 | [TASK-0184](../development/tasks/TASK-0184-data-owners-1945-corrections-from-task-0166-check-.md) | DONE | Data: owners 1945 corrections from TASK-0166 check (Brunei, Ogaden, confidence marks; Tibet/Taiwan/Danzig wait for owner) | MS-M1 |
-| [TASK-0185](../development/tasks/TASK-0185-lab-pilot-node-time-t-n-frontier-width-starting-in.md) | IN_PROGRESS | Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) | MS-M0 |
-| [TASK-0186](../development/tasks/TASK-0186-design-slot-science-model-manual-node-choice-queue.md) | IN_PROGRESS | Design: slot science model (manual node choice, queue, focus, research_speed, AI) for gate (#561-#568) | MS-M0 |
+| [TASK-0185](../development/tasks/TASK-0185-lab-pilot-node-time-t-n-frontier-width-starting-in.md) | REVIEW | Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) | MS-M0 |
+| [TASK-0186](../development/tasks/TASK-0186-design-slot-science-model-manual-node-choice-queue.md) | DONE | Design: slot science model (manual node choice, queue, focus, research_speed, AI) for gate (#561-#568) | MS-M0 |
 
 ## Гипотезы
 
