@@ -140,7 +140,7 @@ defaults:
   - {region: bolivia_el_beni, owner: BOL, controller: BOL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: bolivia_santa_cruz, owner: BOL, controller: BOL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: botswana, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: bratislava_bridgehead, owner: HUN, controller: HUN, status: core, confidence: H, source: "owners-1945-world.md: K6 C33"}
+  - {region: bratislava_bridgehead, owner: HUN, controller: HUN, status: core, confidence: M, source: "owners-1945-world.md: K6 C33; owners-1945-check.md: not verified against a primary source, H lowered to M (TASK-0184)"}
   - {region: brazil_amazonas, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: brazil_bahia, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: brazil_mato_grosso, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
@@ -148,7 +148,7 @@ defaults:
   - {region: brazil_par, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: british_indian_ocean_territory, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: british_virgin_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: brunei, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: brunei, owner: GBR, controller: AUS, status: protectorate, confidence: M, source: "owners-1945-world.md: K1; owners-1945-check.md S2: British Military Administration of Borneo (Australian troops), 1945-09-12..1946-07-01, so controller AUS as in malaysia_borneo (TASK-0184, O-086)"}
   - {region: burkina_faso, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: burundi, owner: BEL, controller: BEL, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
   - {region: cambodia, owner: FRA, controller: JPN, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"}
@@ -198,7 +198,7 @@ defaults:
   - {region: equatorial_guinea, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: eritrea, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
   - {region: ethiopia_amhara, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
-  - {region: ethiopia_ogaden, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; #401: Ogaden under British military administration (owner GBR by decision; Ethiopian de jure sovereignty ignored); status colony is the nearest of the allowed statuses (there is none for military administration)"}
+  - {region: ethiopia_ogaden, owner: ETH, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; owners-1945-check.md S3: Anglo-Ethiopian Agreement of 1945, British military administration continues without prejudice to Ethiopian sovereignty (handed over 1948), so owner ETH, controller GBR (TASK-0184, O-086; replaces #401 owner GBR); status colony is the nearest of the allowed statuses (there is none for military administration)"}
   - {region: ethiopia_oromiya, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
   - {region: falkland_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: federated_states_of_micronesia, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
@@ -350,7 +350,7 @@ defaults:
   - {region: suriname, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: swaziland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: syria, owner: SYR, controller: SYR, status: core, confidence: M, source: "owners-1945-world.md: K2"}
-  - {region: taiwan, owner: JPN, controller: ROC, status: colony, confidence: H, source: "owners-1945-world.md: K7 #313, #338, K6 C19; #402 convention: owner stays JPN until the peace treaty (1952-04-28), controller is ROC from t0 (1945-10-25); status colony per TASK-0109 report"} # Taiwan convention (#402): owner and controller differ on purpose
+  - {region: taiwan, owner: JPN, controller: ROC, status: colony, confidence: M, source: "owners-1945-world.md: K7 #313, #338, K6 C19; owners-1945-check.md S4: controller ROC on 1945-10-01 is a convention, in fact the Japanese administration until 1945-10-25 (TASK-0184, H lowered to M); #402 convention: owner stays JPN until the peace treaty (1952-04-28), controller is ROC from t0 (1945-10-25); status colony per TASK-0109 report"} # Taiwan convention (#402): owner and controller differ on purpose
   - {region: tajikistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
   - {region: tangier, owner: TANGIER, controller: ESP, status: core, confidence: M, source: "owners-1945-world.md: K5"}
   - {region: tanzania_zanzibar, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}

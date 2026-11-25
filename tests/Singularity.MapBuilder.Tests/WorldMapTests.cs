@@ -83,6 +83,18 @@ public class WorldMapTests
         Assert.Equal(map.RegionOwner[id - 1], map.Owners.ToList().IndexOf(owner) + 1);
     }
 
+    // TASK-0184 (O-086): Borneo military administration and the 1945 Ogaden agreement.
+    [GeoTheory]
+    [InlineData("brunei", "GBR", "AUS")]
+    [InlineData("ethiopia_ogaden", "ETH", "GBR")]
+    public void Corrected_1945_owner_and_controller(string region, string owner, string controller)
+    {
+        var (map, _) = Need();
+        var row = Assert.Single(map.Rows, r => r.Region == region);
+        Assert.Equal(owner, row.Owner);
+        Assert.Equal(controller, row.Controller);
+    }
+
     [GeoFact]
     public void Every_region_has_pixels_or_is_tiny_and_every_owner_row_is_known()
     {
