@@ -37,4 +37,4 @@ created: 2026-11-25
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано в `owners.yaml`: brunei controller GBR→AUS (M); ethiopia_ogaden owner GBR→ETH, controller GBR; taiwan H→M; bratislava_bridgehead H→M. AUS и ETH есть в polities.yaml. spratly_is: controller null невозможен (Validator требует политию в controller), оставлен JPN, L. Тесты: WorldMapTests.Corrected_1945_owner_and_controller (2 случая; без правки данных оба падают, проверено), MapBuilder.Tests 128/128. Не сделано (вне зоны developer): строки owners-1945-world.md (brunei, taiwan, bratislava_bridgehead, spratly_is) возвращены Orchestrator.
