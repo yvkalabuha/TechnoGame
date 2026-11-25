@@ -23,7 +23,6 @@
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
 - TASK-0161 [IN_PROGRESS] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0163 [IN_PROGRESS] Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) (developer)
-- TASK-0164 [IN_PROGRESS] M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) (simulation-engineer)
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
 - TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
 - TASK-0176 [IN_PROGRESS] Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) (simulation-engineer)
