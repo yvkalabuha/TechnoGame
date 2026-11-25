@@ -15,7 +15,7 @@
 - **Проекты механик (только документы, #459):** институты и личности ред. 2 (`docs/game-design/civilization/INSTITUTIONS_PERSONALITIES.md`, #461–#463), разведка ред. 3 (`docs/game-design/INTELLIGENCE.md`, O-051).
 - **Внешние исполнители:** Codex — второй ревьюер, при его лимите — Sonnet 5.5 через agy в песочнице (#456, TASK-0146); DeepSeek — третий голос каждого gate; эскизы Gemini через agy (TASK-0141, TASK-0143).
 - **Стек:** .NET 10.0.403 в `~/.dotnet`; Godot 4.7.2 mono в `~/.local/opt/godot`; Python 3 + PyYAML; ffmpeg; gitleaks 8.30.1.
-- **Последний handoff:** `development/handoff/2026-11-20-1.md`.
+- **Последний handoff:** `development/handoff/2026-11-25-1.md` (режим /autopilot).
 
 ## Активные задачи
 <!-- registry:active:start -->
