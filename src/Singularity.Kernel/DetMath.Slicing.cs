@@ -70,7 +70,7 @@ public static partial class DetMath
     /// to be called at load, not on the tick. The error always favours slower change: for decay r is
     /// the largest Q53 value with <c>(1 − r)^Y ≥ 1 − δ</c>; for growth the smallest with <c>≤</c>.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">When Y &lt; 1, δ &gt; 1, or growth per day exceeds 100 %.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">When Y is outside 1..366, δ &gt; 100 % (decay) or δ &lt; −100 % (growth above 100 % a year).</exception>
     public static Rate DayRate(Fx6 annual, int y)
     {
         if (y < 1 || y > MaxYearLength)
@@ -78,6 +78,8 @@ public static partial class DetMath
         long d = annual.Raw;
         if (d > Fx6.Scale)
             throw new ArgumentOutOfRangeException(nameof(annual), annual, "A decay rate above 100 % is not allowed.");
+        if (d < -Fx6.Scale)
+            throw new ArgumentOutOfRangeException(nameof(annual), annual, "Annual growth above 100 % is not allowed (stock error bound of ApplyDayRate).");
         if (d == 0)
             return Rate.Zero;
 
@@ -105,9 +107,7 @@ public static partial class DetMath
         }
 
         // Growth: smallest r in [−Q, 0] whose left side stays at or below the target.
-        long low = -Rate.One, high = 0; // invariant: !AtLeastTarget(high) or the sides are equal
-        if (BigInteger.Pow(one - low, y) * Fx6.Scale <= target)
-            throw new ArgumentOutOfRangeException(nameof(annual), annual, "Daily growth above 100 % is not allowed.");
+        long low = -Rate.One, high = 0; // the answer is within [−Q, 0] for annual growth ≤ 100 %
         while (low < high)
         {
             long mid = low + ((high - low) >> 1);
@@ -121,23 +121,33 @@ public static partial class DetMath
     }
 
     /// <summary>
-    /// One daily step of a decaying or growing stock (ADR-0027 p. 6, O-069, owner #532). Decay:
-    /// <c>x − |r|·x</c>; growth (negative r): <c>x + |r|·x</c>. The change is the floor of the running
-    /// sum of exact products: the sub-raw part (Q53, in 0..2^53−1) stays in <paramref name="remainder"/>,
-    /// a caller-owned column of the same row, and is added to the next step. So floor losses never
-    /// accumulate: over Y steps from a constant annual δ the stock is within Y raw of
-    /// <c>x·(1−δ)</c> plus the DayRate quantization, on the slower-change side for decay and growth.
-    /// Callers use this, never <c>x −= r.MulFloor(x)</c> directly. Start with remainder 0.
-    /// Precondition: <c>stock ≥ 0</c>.
+    /// One daily step of a decaying or growing stock (ADR-0027 p. 6, O-069, owner decision). The stock is
+    /// <c>x</c> plus a hidden sub-raw part kept in <paramref name="remainder"/> (Q53, a caller-owned column of
+    /// the same row, start 0): the true value is <c>V = x·2^53 + remainder</c>. The step changes V by the
+    /// floor of <c>V·|r|</c>, decay downwards and growth (negative r) upwards, so V never moves faster than
+    /// the exact rate. Then x is rounded the slower way: up for decay (<c>remainder ≤ 0</c>), down for
+    /// growth (<c>remainder ≥ 0</c>). Hence after Y steps from a constant annual δ the stock is on the slow
+    /// side of <c>x₀·(1−δ)</c> and within Y raw of it plus the DayRate quantization (about 4·Y·x₀/2^53 raw),
+    /// provided the rate came from <see cref="DayRate"/> (annual growth ≤ 100 %, Y ≤ 366).
+    /// Callers use this, never <c>x −= r.MulFloor(x)</c>. The remainder is written only when the step
+    /// succeeds. Preconditions: <c>stock ≥ 0</c>, <c>|remainder| &lt; 2^53</c>, <c>V ≥ 0</c>, <c>|r| ≤ 2^53</c>.
     /// </summary>
     public static Fx6 ApplyDayRate(Fx6 stock, Rate rate, ref long remainder)
     {
         Debug.Assert(stock.Raw >= 0, "ApplyDayRate needs a non-negative stock.");
-        Debug.Assert(remainder >= 0 && remainder < Rate.One, "remainder must be in 0..2^53-1.");
-        Int128 total = (Int128)stock.Raw * (rate.Raw >= 0 ? rate.Raw : -(Int128)rate.Raw) + remainder;
-        remainder = (long)(total & (Rate.One - 1));
-        long change = checked((long)(total >> Rate.FracBits));
-        return rate.Raw >= 0 ? stock - Fx6.FromRaw(change) : stock + Fx6.FromRaw(change);
+        Debug.Assert(remainder > -Rate.One && remainder < Rate.One, "remainder must be within ±2^53.");
+        Int128 v = ((Int128)stock.Raw << Rate.FracBits) + remainder;
+        Debug.Assert(v >= 0, "The hidden value must not be negative.");
+        bool growth = rate.Raw < 0;
+        Int128 abs = growth ? -(Int128)rate.Raw : rate.Raw;
+        // floor(V·|r|/2^53) = x·|r| + floor(remainder·|r|/2^53); no Int128 overflow for |r| ≤ 2^53.
+        Int128 change = (Int128)stock.Raw * abs + (((Int128)remainder * abs) >> Rate.FracBits);
+        Int128 next = growth ? v + change : v - change;
+        Debug.Assert(next >= 0, "The rate must not exceed 100 % a day.");
+        Int128 whole = growth ? next >> Rate.FracBits : (next + (Rate.One - 1)) >> Rate.FracBits;
+        long newStock = checked((long)whole);
+        remainder = (long)(next - (whole << Rate.FracBits));
+        return Fx6.FromRaw(newStock);
     }
 
     private static Int128 FloorDiv(Int128 n, Int128 d)

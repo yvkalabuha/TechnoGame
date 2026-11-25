@@ -212,18 +212,19 @@ public class DaySlicingTests
         for (int i = 0; i < y; i++)
         {
             x = DetMath.ApplyDayRate(x, r, ref rem);
-            Assert.InRange(rem, 0, Rate.One - 1);
+            Assert.InRange(rem, -Rate.One + 1, Rate.One - 1);
         }
 
-        BigInteger exact = (BigInteger)x0 * (S - d) / S;
-        BigInteger error = (BigInteger)x.Raw - exact;
-        // Strict ADR-0027 bound: Y raw plus 1 Q53 unit of rate error per step (the remainder carries the floor).
-        BigInteger tolerance = y + 1 + (BigInteger)y * y * 2 * x0 / Rate.One;
+        // Compare with the exact rational target x0·(1−δ), not its floor.
+        BigInteger scaled = (BigInteger)x.Raw * S - (BigInteger)x0 * (S - d); // error · 10^6
+        BigInteger error = BigInteger.Divide(scaled, S);
+        // Strict ADR-0027 bound: Y raw plus the rate error (1 Q53 unit a day on at most 2·x0).
+        BigInteger tolerance = y + 4 * (BigInteger)y * x0 / Rate.One + 1;
         Assert.True(BigInteger.Abs(error) <= tolerance, $"d={d} y={y} x0={x0} error={error}");
         if (d > 0)
-            Assert.True(error >= 0, $"decay ran faster than asked: {error}");
+            Assert.True(scaled >= 0, $"decay ran faster than asked: {scaled}/10^6");
         else
-            Assert.True(error <= 0, $"growth ran faster than asked: {error}");
+            Assert.True(scaled <= 0, $"growth ran faster than asked: {scaled}/10^6");
     }
 
     [Fact]
@@ -248,17 +249,65 @@ public class DaySlicingTests
     }
 
     [Theory]
+    [InlineData(-1_000_001L, 366)]
+    [InlineData(-128_746_338L, 12)] // growth ×130: the Y-raw bound of ApplyDayRate no longer holds
     [InlineData(-9_000_000_000_000_000_000L, 366)]
     [InlineData(long.MinValue, 366)]
-    public void DayRate_HugeRepresentableGrowth_DoesNotOverflow(long d, int y)
+    public void DayRate_RefusesAnnualGrowthAbove100Percent(long d, int y) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.FromRaw(d), y));
+
+    [Theory]
+    [InlineData(-1_000_000L, 12)]
+    [InlineData(-1_000_000L, 366)]
+    [InlineData(-1_000_000L, 1)]
+    public void DayRate_AcceptsExactly100PercentGrowth(long d, int y)
     {
-        // S − d overflows long here; the daily rate itself is far below 100 %.
         long r = DetMath.DayRate(Fx6.FromRaw(d), y).Raw;
-        Assert.True(r < 0 && r > -Rate.One);
-        BigInteger left = BigInteger.Pow(Rate.One - r, y) * S;
-        BigInteger right = (S - (BigInteger)d) * (BigInteger.One << (53 * y));
-        Assert.True(left <= right);
-        Assert.True(BigInteger.Pow(Rate.One - (r - 1), y) * S > right);
+        Assert.InRange(r, -Rate.One, -1);
+        Assert.True(BigInteger.Pow(Rate.One - r, y) * S <= (S - (BigInteger)d) * (BigInteger.One << (53 * y)));
+    }
+
+    [Fact]
+    public void ApplyDayRate_RandomRatesAndStocks_StaySlowAndWithinTheBound()
+    {
+        var rng = new Random(2026);
+        for (int n = 0; n < 150; n++)
+        {
+            long d = rng.NextInt64(-1_000_000, 1_000_000);
+            int y = Lengths[rng.Next(3)];
+            long x0 = rng.Next(3) == 0 ? rng.NextInt64(1, 100_000) : rng.NextInt64(1, 1_000_000_000_000_000);
+            Rate r = DetMath.DayRate(Fx6.FromRaw(d), y);
+            Fx6 x = Fx6.FromRaw(x0);
+            long rem = 0;
+            for (int i = 0; i < y; i++)
+                x = DetMath.ApplyDayRate(x, r, ref rem);
+            BigInteger scaled = (BigInteger)x.Raw * S - (BigInteger)x0 * (S - d);
+            Assert.True(d >= 0 ? scaled >= 0 : scaled <= 0, $"d={d} y={y} x0={x0}");
+            Assert.True(BigInteger.Abs(scaled) <= (BigInteger)S * (y + 4 * (BigInteger)y * x0 / Rate.One + 1), $"d={d} y={y} x0={x0}");
+        }
+    }
+
+    [Fact]
+    public void ApplyDayRate_DecayRoundsUpAtTheExactTarget()
+    {
+        // Codex round 3 #1: 1011 raw, 26.2 % a year, Y = 365; exact target 746.118 raw, so 746 would be faster.
+        Rate r = DetMath.DayRate(Fx6.FromRaw(262_000), 365);
+        Fx6 x = Fx6.FromRaw(1_011);
+        long rem = 0;
+        for (int i = 0; i < 365; i++)
+            x = DetMath.ApplyDayRate(x, r, ref rem);
+        Assert.Equal(747, x.Raw);
+        Assert.True(rem <= 0);
+    }
+
+    [Fact]
+    public void ApplyDayRate_OverflowLeavesTheRemainderUntouched()
+    {
+        // Codex round 3 #3: a failed step must not leave a remainder paired with the old stock.
+        long rem = 12345;
+        Assert.Throws<OverflowException>(() =>
+            DetMath.ApplyDayRate(Fx6.FromRaw(long.MaxValue), Rate.FromRaw(-Rate.One / 2), ref rem));
+        Assert.Equal(12345, rem);
     }
 
     [Fact]
