@@ -527,9 +527,32 @@ class GuardDispatchTest(unittest.TestCase):
                         f"---\nid: TASK-{n}\n{TASK_STATUS_LINE.format(st)}\n---\n")
         self.log = self.repo / ".claude" / ".state" / "agents.jsonl"
 
-    def call(self, prompt, description="work", agent="developer"):
-        payload = {"tool_input": {"subagent_type": agent, "description": description, "prompt": prompt}}
+    def call(self, prompt, description="work", agent="developer", facts="\nФакты: нет связанных"):
+        payload = {"tool_input": {"subagent_type": agent, "description": description, "prompt": prompt + facts}}
         return run_hook("guard_dispatch.py", payload, project=self.repo)
+
+    def test_code_agents_need_a_facts_block(self):
+        # #597: developer, simulation-engineer, test-engineer, 3d-modeler prompts carry kb_check related output
+        related = ("\n  Факты:\n  FACT second-review: x  [ADR-0015]\n  DECISION #597 (2026-11-26): y\n\n"
+                   "  Verify: tests\n")
+        for agent in ["developer", "simulation-engineer", "test-engineer", "3d-modeler"]:
+            self.assertEqual(self.call("do TASK-0001", agent=agent, facts=""), 2, agent)
+            self.assertEqual(self.call("no task here", agent=agent, facts=""), 2, agent)
+            self.assertEqual(self.call("do TASK-0001", agent=agent, facts=related), 0, agent)
+        for facts, want in [("\nФакты: нет связанных", 0), ("\n**Факты:** нет связанных", 0),
+                            ("\nФакты:\nnothing related found in FACTS.yaml or DECISIONS_LOG.md", 0),
+                            ("\nФакты:\n\nFACT a: b", 0), ("\nФакты:\n- FACT a: b", 0),
+                            ("\nФакты:\n", 2), ("\nФакты: см. выше", 2), ("\nFACT a: b", 2),
+                            ("\nФакты:\nsome text\n\nFACT a: b", 2)]:
+            self.assertEqual(self.call("do TASK-0001", facts=facts), want, facts)
+
+    def test_other_agents_need_no_facts_block(self):
+        for agent in ["reviewer", "general-purpose", "ui-art-director", "game-designer"]:
+            self.assertEqual(self.call("do TASK-0001", agent=agent, facts=""), 0, agent)
+
+    def test_facts_check_fails_open_on_internal_error(self):
+        payload = {"tool_input": {"subagent_type": "developer", "description": "work", "prompt": 123}}
+        self.assertEqual(run_hook("guard_dispatch.py", payload, project=self.repo), 0)
 
     def agents(self, *recs):
         self.log.parent.mkdir(parents=True, exist_ok=True)
@@ -611,6 +634,143 @@ class GuardDispatchTest(unittest.TestCase):
         self.agents({"t": time.time(), "event": "launched", "agent_id": "a2", "description": 5, "tasks": "TASK-0001"},
                     {"t": time.time(), "event": "launched", "agent_id": "a3", "description": None, "tasks": [7]})
         self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+
+
+def kb_check_module():
+    sys.path.insert(0, str(ROOT / "tools" / "development"))
+    try:
+        import kb_check
+    finally:
+        sys.path.remove(str(ROOT / "tools" / "development"))
+    return kb_check
+
+
+class KbCheckFactsTest(unittest.TestCase):
+    """#597: drift and superseded sources are errors; freshness by reviewed:; stale list; landing gate."""
+
+    def setUp(self):
+        self.kb = kb_check_module()
+
+    def run_facts(self, facts, decisions=None, fresh=True):
+        errors, warnings = [], []
+        self.kb.check_facts(facts, errors, warnings, decisions or {}, fresh=fresh)
+        return errors, warnings
+
+    def test_probe_drift_is_an_error(self):
+        probe = {"file": "tools/development/kb_check.py", "regex": r"STALE_DAYS = (\d+)"}
+        errors, _ = self.run_facts([{"id": "f", "statement": "s", "probe": dict(probe, expect="99")}])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("drifted", errors[0])
+        errors, _ = self.run_facts([{"id": "f", "statement": "s", "probe": dict(probe, expect="30")}])
+        self.assertEqual(errors, [])
+        errors, _ = self.run_facts([{"id": "f", "statement": "s", "probe": {"file": "no/such.file", "count": "x",
+                                                                           "expect": 1}}])
+        self.assertIn("missing", errors[0])
+
+    def test_superseded_source_is_an_error_partial_a_warning(self):
+        dec = {422: "**SUPERSEDED by #565, #569 (2026-11-25).** old goal", 450: "**Verdict part SUPERSEDED by #578.** x",
+               565: "air power"}
+        errors, warnings = self.run_facts([{"id": "a", "statement": "заменена (#422)", "source": "DECISIONS_LOG #565"}], dec)
+        self.assertEqual((errors, warnings), ([], []))  # the statement may name an old decision
+        errors, warnings = self.run_facts([{"id": "b", "statement": "s", "source": "DECISIONS_LOG #418–#422"}], dec)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("#422", errors[0])
+        errors, warnings = self.run_facts([{"id": "c", "statement": "s", "source": "#450"}], dec)
+        self.assertEqual((len(errors), len(warnings)), (0, 1))
+
+    def test_reviewed_must_be_a_date(self):
+        import datetime as dt
+        for value in ["2026-11-26", dt.date(2026, 11, 26), None]:
+            self.assertEqual(self.run_facts([{"id": "a", "statement": "s", "reviewed": value}], fresh=False)[0], [])
+        self.assertEqual(len(self.run_facts([{"id": "a", "statement": "s", "reviewed": "вчера"}])[0]), 1)
+
+    def test_source_changed_after_reviewed_is_a_warning(self):
+        fact = {"id": "a", "statement": "s", "source": "tools/development/kb_check.py; DECISIONS_LOG #1"}
+        _, warnings = self.run_facts([dict(fact, reviewed="2000-01-01")])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("re-check", warnings[0])
+        self.assertEqual(self.run_facts([dict(fact, reviewed="2999-01-01")])[1], [])
+        self.assertEqual(self.run_facts([dict(fact)])[1], [])  # never reviewed: listed by stale, not warned
+        paths = self.kb.fact_source_paths({"source": "docs/decisions/DECISIONS_LOG.md; tools/development/kb_*.py",
+                                           "probe": {"file": "tools/development/land.py"}})
+        self.assertEqual(paths[0], "tools/development/land.py")
+        self.assertIn("tools/development/kb_check.py", paths)
+        self.assertNotIn("docs/decisions/DECISIONS_LOG.md", paths)
+
+    def test_stale_lists_old_and_unreviewed_facts(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        facts = tmp / "FACTS.yaml"
+        facts.write_text("facts:\n  - {id: old, statement: s, reviewed: 2026-10-01}\n"
+                         "  - {id: new, statement: s, reviewed: 2026-11-20}\n  - {id: never, statement: s}\n",
+                         encoding="utf-8")
+        out = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, sys.argv[1]); import kb_check;"
+                              "kb_check.FACTS = __import__('pathlib').Path(sys.argv[2]);"
+                              "sys.exit(kb_check.main(['stale', '--today', '2026-11-26']))",
+                              str(ROOT / "tools/development"), str(facts)], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("STALE old: reviewed 2026-10-01 (56 days ago)", out.stdout)
+        self.assertIn("STALE never: never reviewed", out.stdout)
+        self.assertNotIn("STALE new", out.stdout)
+
+    def test_decision_rows(self):
+        text = "| # | Дата | Решение | Ссылка |\n|---|---|---|---|\n| 7 | 2026-11-26 | a \\| b | ref |\n| x | y |\n"
+        self.assertEqual(self.kb.decision_rows(text), {7: "a \\| b"})
+
+    def landing_repo(self):
+        repo = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, repo, True)
+        git_in(repo, "init", "-b", "main")
+        commit_file(repo, "development/FACTS.yaml",
+                    "facts:\n  - {id: codex, statement: s, keywords: [Codex]}\n  - {id: map, statement: m, keywords: [карта]}\n")
+        commit_file(repo, "docs/decisions/DECISIONS_LOG.md", "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old | r |\n")
+        return repo, git_in(repo, "rev-parse", "HEAD")
+
+    def test_landing_needs_facts_for_a_new_decision(self):
+        repo, base = self.landing_repo()
+        log = "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old, edited | r |\n"
+        commit_file(repo, "docs/decisions/DECISIONS_LOG.md", log)  # an edited row is not a new decision
+        self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
+        commit_file(repo, "docs/decisions/DECISIONS_LOG.md", log + "| 2 | d | новое про Codex | r |\n")
+        problems = self.kb.landing_problems(repo, base, "HEAD")
+        self.assertEqual(len(problems), 1)
+        self.assertIn("#2", problems[0])
+        self.assertIn("codex", problems[0])
+        self.assertNotIn("map", problems[0])
+        self.assertEqual(self.kb.landing_problems(repo, base, "HEAD", "merge\n\nfacts-ok: #2"), [])
+        self.assertEqual(len(self.kb.landing_problems(repo, base, "HEAD", "facts-ok: #3")), 1)
+        commit_file(repo, "x.txt", "x", msg="docs: confirm\n\nfacts-ok: #1, #2")
+        self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
+
+    def test_landing_accepts_a_changed_fact(self):
+        repo, base = self.landing_repo()
+        commit_file(repo, "docs/decisions/DECISIONS_LOG.md",
+                    "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old | r |\n| 2 | d | Codex new | r |\n")
+        commit_file(repo, "development/FACTS.yaml", "facts:\n  - {id: codex, statement: s, keywords: [Codex], "
+                    "reviewed: 2026-11-26}\n  - {id: map, statement: m, keywords: [карта]}\n")
+        self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
+
+
+class KbGuardDecisionTest(unittest.TestCase):
+    def call(self, ti):
+        payload = {"tool_name": "Edit", "tool_input": dict(ti, file_path=str(ROOT / "docs/decisions/DECISIONS_LOG.md"))}
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(ROOT))
+        return subprocess.run([sys.executable, str(HOOKS / "kb_guard.py"), "file"], input=json.dumps(payload),
+                              text=True, capture_output=True, env=env).stdout
+
+    def test_new_decision_row_prints_its_facts(self):
+        out = self.call({"old_string": "| 595 | x |", "new_string": "| 595 | x |\n| 597 | y |"})
+        self.assertIn("DECISION #597", out)
+        self.assertIn("facts-ok: #597", out)
+        self.assertNotIn("DECISION #595", out)
+
+    def test_write_of_known_rows_prints_no_facts(self):
+        text = (ROOT / "docs/decisions/DECISIONS_LOG.md").read_text(encoding="utf-8")
+        committed = subprocess.run(["git", "show", "HEAD:docs/decisions/DECISIONS_LOG.md"], cwd=ROOT,
+                                   capture_output=True, text=True).stdout
+        if text != committed:
+            self.skipTest("decisions log has uncommitted rows")
+        self.assertNotIn("DECISION #", self.call({"content": text}))
 
 
 class KbCheckDecisionsLogTest(unittest.TestCase):

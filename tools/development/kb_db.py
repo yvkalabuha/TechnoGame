@@ -11,13 +11,14 @@ land_failures), which keep soft-deleted rows (deleted_at) between rebuilds.
   kb_db.py forget TABLE KEY_PREFIX    soft-delete a journal row
 
 Tables: items, links, decisions, orch, debt, questions, errors, agents,
-refusals, landfails.  Filters: key=value  key!=value  key~text (full text, russian +
+facts, refusals, landfails.  Filters: key=value  key!=value  key~text (full text, russian +
 simple, or substring)  key>v  key<v  key>=v  key<=v, plus since=DATE until=DATE
 limit=N order=[-]col, and silent>2h for agents.  For text columns "=" is a
 case-insensitive match; for debt area, titles and texts it is a substring match.
 Examples:
   kb_db.py q debt status=open area=Lab
   kb_db.py q decisions text~наука since=2026-11-20
+  kb_db.py q facts text~институт        (facts of development/FACTS.yaml; drift=true: probe disagrees)
   kb_db.py q items status=REVIEW agent=developer
   kb_db.py q agents 'silent>2h'     (quote it: the shell reads > as a redirect; silent=2h also works)
 
@@ -46,7 +47,7 @@ DEFAULT_DB = "singularity_kb"
 PSQL_TIMEOUT = 60
 GIT_TIMEOUT = 10
 # Bump when a table or column changes: it forces a rebuild of an index made by older code.
-SCHEMA = 1
+SCHEMA = 2
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # --------------------------------------------------------------------------
@@ -82,6 +83,9 @@ TABLES: dict[str, dict] = {
     "agents": dict(sql="agent_runs", text="description", date="start_t", show=["agent_id", "type", "start_t", "stop_t", "tasks", "description"],
                    cols={"agent_id": "text", "type": "text", "description": "text", "tasks": "text",
                          "start_t": "ts", "stop_t": "ts", "session": "text"}, fuzzy={"description", "tasks"}),
+    "facts": dict(sql="facts", text="statement", date="reviewed", show=["id", "reviewed", "drift", "statement"],
+                  cols={"id": "text", "statement": "text", "source": "text", "keywords": "text", "reviewed": "date",
+                        "drift": "bool", "drift_text": "text"}, fuzzy={"statement", "source", "keywords"}),
     "refusals": dict(sql="hook_refusals", text="msg", date="t", show=["key", "t", "hook", "msg"],
                      cols={"key": "text", "t": "ts", "hook": "text", "msg": "text"}, fuzzy={"msg"}, journal=True),
     "landfails": dict(sql="land_failures", text="msg", date="t", show=["key", "t", "branch", "msg"],
@@ -89,14 +93,14 @@ TABLES: dict[str, dict] = {
 }
 
 PRIMARY_KEY = {"items": ["id"], "links": ["from_id", "to_id", "kind"], "decisions": ["num"], "orch": ["id"],
-               "debt": ["id"], "questions": ["id"], "errors": ["id"], "agents": ["agent_id"],
+               "debt": ["id"], "questions": ["id"], "errors": ["id"], "agents": ["agent_id"], "facts": ["id"],
                "refusals": ["key"], "landfails": ["key"]}
 
 PG_TYPES = {"text": "text", "int": "integer", "date": "date", "bool": "boolean", "ts": "timestamptz"}
 
 # Derived tables in COPY order (journals are kept, see build_script).
-DERIVED = ["items", "links", "decisions", "orch", "debt", "questions", "errors", "agents"]
-FTS_TABLES = ["items", "decisions", "orch", "debt", "questions", "errors", "agents"]
+DERIVED = ["items", "links", "decisions", "orch", "debt", "questions", "errors", "agents", "facts"]
+FTS_TABLES = ["items", "decisions", "orch", "debt", "questions", "errors", "agents", "facts"]
 INDEXES = {"items": ["status", "agent", "type", "priority"], "links": ["from_id", "to_id"],
            "decisions": ["date"], "orch": ["date"], "debt": ["status", "area"],
            "questions": ["open"], "errors": ["status", "area", "date"], "agents": ["type", "start_t"]}
@@ -282,6 +286,20 @@ def parse_agent_log(lines: list[str]) -> list[dict]:
     return sorted(out, key=lambda r: (r["start_t"] or r["stop_t"] or "", r["agent_id"]))
 
 
+def parse_facts(facts: list[dict], drift=lambda f: None) -> list[dict]:
+    """Rows of development/FACTS.yaml (O-112); drift(fact) is the probe check of kb_check (None: no drift).
+    A reviewed: value that is not a date is kept out of the date column (kb_check reports it)."""
+    rows = []
+    for f in facts or []:
+        if not isinstance(f, dict) or not f.get("id"):
+            continue
+        why = drift(f)
+        rows.append(dict(id=str(f["id"]), statement=f.get("statement"), source=f.get("source"),
+                         keywords=", ".join(str(k) for k in f.get("keywords") or []),
+                         reviewed=valid_date(str(f.get("reviewed") or "")), drift=why is not None, drift_text=why))
+    return rows
+
+
 def parse_journal(lines: list[str], kind: str) -> list[dict]:
     """Rows of hook_refusals / land_failures; key is the hash of the raw line."""
     rows = []
@@ -337,9 +355,20 @@ def source_files() -> list[Path]:
              for n in sorted(p.name for p in (ROOT / t.folder).glob(f"{t.prefix}-*.md"))]
     files += [ROOT / "docs/decisions/DECISIONS_LOG.md", ROOT / "docs/decisions/ORCH_DECISIONS.md",
               ROOT / "development/TECH_DEBT.md", ROOT / "development/OPEN_QUESTIONS.md",
-              ROOT / "development/errors.yaml", state_dir() / "agents.jsonl"]
+              ROOT / "development/errors.yaml", state_dir() / "agents.jsonl", ROOT / "development/FACTS.yaml"]
+    files += probe_files()  # the drift column depends on them
     files += sorted(state_dir().glob("hook_refusals*.jsonl")) + sorted(state_dir().glob("land_failures*.jsonl"))
     return [f for f in files if f.exists()]
+
+
+def probe_files() -> list[Path]:
+    import yaml
+    try:
+        facts = (yaml.safe_load(read_text(ROOT / "development/FACTS.yaml")) or {}).get("facts") or []
+    except yaml.YAMLError:
+        return []
+    return [ROOT / f["probe"]["file"] for f in facts
+            if isinstance(f, dict) and isinstance(f.get("probe"), dict) and f["probe"].get("file")]
 
 
 def fingerprint() -> str:
@@ -388,7 +417,13 @@ def collect() -> dict[str, list[dict]]:
         questions=parse_questions(read_text(ROOT / "development/OPEN_QUESTIONS.md")),
         errors=parse_errors(yaml.safe_load(read_text(err_path)) if err_path.exists() else None),
         agents=parse_agent_log(read_text(log).splitlines()),
+        facts=collect_facts(),
         refusals=refusals, landfails=fails)
+
+
+def collect_facts() -> list[dict]:
+    import kb_check  # probe and loader of development/FACTS.yaml; this directory is already on sys.path
+    return parse_facts(kb_check.load_facts(), kb_check.probe_drift)
 
 
 # --------------------------------------------------------------------------
@@ -489,7 +524,7 @@ def build_script(data: dict[str, list[dict]], fp: str) -> str:
         out.append(create_table(spec["sql"], spec))
         out.append(copy_block(spec["sql"], list(spec["cols"]), data[key]))
         pk = {"items": "id", "decisions": "num", "orch": "id", "debt": "id", "errors": "id",
-              "agents": "agent_id", "questions": "id"}.get(key)
+              "agents": "agent_id", "questions": "id", "facts": "id"}.get(key)
         if pk:
             out.append(f"alter table {spec['sql']} add primary key ({pk});\n")
         for col in INDEXES.get(key, []):

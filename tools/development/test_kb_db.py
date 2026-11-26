@@ -116,6 +116,20 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(runs["a2"]["stop_t"])
         self.assertEqual(runs["a1"]["tasks"], "TASK-1,TASK-2")
 
+    def test_facts_rows(self):
+        import datetime as dt
+        facts = [{"id": "a", "statement": "s", "source": "x", "keywords": [1945, "карта"], "reviewed": dt.date(2026, 11, 26)},
+                 {"id": "b", "statement": "t", "reviewed": "never"}, {"statement": "no id"}, "junk"]
+        rows = kb_db.parse_facts(facts, lambda f: "drifted" if f["id"] == "b" else None)
+        self.assertEqual([r["id"] for r in rows], ["a", "b"])
+        self.assertEqual((rows[0]["keywords"], rows[0]["reviewed"], rows[0]["drift"]), ("1945, карта", "2026-11-26", False))
+        self.assertEqual((rows[1]["reviewed"], rows[1]["drift"], rows[1]["drift_text"]), (None, True, "drifted"))
+
+    def test_facts_and_probe_files_are_in_the_fingerprint(self):
+        files = {p.relative_to(kb_db.ROOT).as_posix() for p in kb_db.source_files() if kb_db.ROOT in p.parents}
+        self.assertIn("development/FACTS.yaml", files)
+        self.assertIn("src/Singularity.Session/Slice/SliceWorld.cs", files)  # probe of schema-version
+
     def test_journal_key_is_stable(self):
         line = json.dumps({"t": 5, "hook": "guard", "msg": "no"})
         a = kb_db.parse_journal([line], "hook")[0]
@@ -269,6 +283,12 @@ class DatabaseTests(unittest.TestCase):
 
     def test_05_text_search_forms(self):
         self.assertTrue(json.loads(self.run_q("q", "decisions", "text~наука", "--json")))
+
+    def test_06_facts_table(self):
+        rows = json.loads(self.run_q("q", "facts", "text~институт", "--json"))
+        self.assertIn("institutes-count", {r["id"] for r in rows})
+        self.assertEqual(json.loads(self.run_q("q", "facts", "drift=true", "--json")), [])  # kb_check: no drift
+        self.assertTrue(json.loads(self.run_q("q", "facts", "id=schema-version", "--json")))
 
 
 if __name__ == "__main__":
