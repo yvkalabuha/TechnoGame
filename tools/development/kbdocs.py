@@ -40,7 +40,7 @@ LIVING = ["development/ROADMAP.md", "docs/architecture/ARCHITECTURE.md", "docs/v
           "docs/ui/UI_DESIGN_SYSTEM.md", "docs/game-design/M_PLAY_LOOP.md"]
 LIVING_GLOBS = [".claude/skills/*/SKILL.md"]
 MONTH_LOG = re.compile(r"^docs/decisions/log/\d{4}-\d{2}\.md$")
-LIMITS = {"always": 6 * KB, "living": 30 * KB, "monthly": 60 * KB}
+LIMITS = {"always": 6 * KB, "living": 30 * KB, "monthly": 150 * KB}  # monthly: #608 (was 60 KB in #600)
 
 
 def in_scope(rel: str) -> bool:

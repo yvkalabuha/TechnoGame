@@ -23,6 +23,9 @@ So main never holds a commit that was not built and tested as merged.
      (`kb_check.py landing`), and no fact may drift on the branch head. Checked before the second
      review, so a refusal costs no review run.
 
+After a landing, kblog.py rollover runs on the target and its move is committed as a follow-up commit (#610);
+a rollover problem is printed and never undoes the landing.
+
 Exit codes: 0 landed, 1 verify failed, 3 merge conflict, 4 main moved or is dirty,
 5 the branch changes registry status fields, 6 second review missing or not passed,
 7 a new decision without its facts updated or confirmed, a fact drifting on the branch head,
@@ -249,6 +252,46 @@ def run_verify(cmd: list[str], cwd: Path, steps: dict[str, float]) -> int:
     return rc
 
 
+JOURNAL_PATHS = ["docs/decisions/DECISIONS_LOG.md", "docs/decisions/log", "development/TECH_DEBT.md",
+                 "development/archive"]
+
+
+def rollover_after_landing(root: Path, message: str) -> str:
+    """#610: after a landing, move decision rows and closed debts out of the main journal files
+    (tools/development/kblog.py rollover) and commit the move on the checked-out target. Fail-open: any
+    problem is returned as a note and the landing stands. Journal files with local edits are left alone."""
+    script = root / "tools" / "development" / "kblog.py"
+    if not script.exists():
+        return "rollover skipped: no kblog.py on the target"
+    try:
+        dirty = git("status", "--porcelain", "--", *JOURNAL_PATHS, cwd=root, check=False).stdout.strip()
+        if dirty:
+            return "rollover skipped: journal files have local changes"
+        r = subprocess.run([sys.executable, str(script), "rollover"], cwd=root, text=True, capture_output=True,
+                           timeout=120)
+        if r.returncode != 0:
+            git("checkout", "--", *JOURNAL_PATHS, cwd=root, check=False)
+            git("clean", "-fdq", "--", *JOURNAL_PATHS, cwd=root, check=False)
+            return f"rollover failed (exit {r.returncode}): {(r.stdout + r.stderr).strip()[-300:]}"
+        st = git("status", "--porcelain", "-uall", "--", *JOURNAL_PATHS, cwd=root, check=False).stdout
+        moved = [l[3:] for l in st.splitlines() if l.strip()]
+        if not moved:
+            return "rollover: nothing to move"
+        git("add", "-A", "--", *moved, cwd=root)
+        trailers = "\n".join(l for l in message.splitlines() if l.lower().startswith("co-authored-by:"))
+        msg = "chore(kb): rollover of the decisions log and closed debts after landing (#610)\n\n" + r.stdout.strip()
+        c = git("commit", "-q", "-m", msg + ("\n\n" + trailers if trailers else ""), "--", *moved,
+                cwd=root, check=False)
+        if c.returncode != 0:
+            git("reset", "-q", "--", *moved, cwd=root, check=False)
+            git("checkout", "--", *JOURNAL_PATHS, cwd=root, check=False)
+            git("clean", "-fdq", "--", *JOURNAL_PATHS, cwd=root, check=False)
+            return f"rollover not committed: {(c.stdout + c.stderr).strip()[-300:]}"
+        return "rollover committed: " + r.stdout.strip()
+    except Exception as ex:  # never undo or fail a landing
+        return f"rollover failed: {type(ex).__name__}: {ex}"
+
+
 def main_worktree() -> Path:
     out = subprocess.run(["git", "worktree", "list", "--porcelain"], text=True,
                          capture_output=True, check=True).stdout
@@ -428,6 +471,7 @@ def run(info: dict | None = None) -> int:
             print(ff.stdout + ff.stderr)
             return 4
         print(f"land: {args.branch} landed on {args.target} as {sha[:7]}")
+        print("land:", rollover_after_landing(root, args.message))
         return 0
     finally:
         git("worktree", "remove", "--force", str(tmp), cwd=root, check=False)

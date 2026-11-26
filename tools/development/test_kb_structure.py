@@ -24,6 +24,7 @@ try:
     import kb_db
     import kbdocs
     import kblog
+    import land
     import metrics
 finally:
     sys.path.remove(str(HERE))
@@ -125,6 +126,46 @@ class JournalLayoutTest(unittest.TestCase):
         self.assertIn(archived[0][0], kb_check.known_ids()["debt"])  # a closed debt id is still a known id
 
 
+class LandRolloverTest(unittest.TestCase):
+    """#610: land.py runs kblog.py rollover on the target after a landing and commits the move; fail-open."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, True)
+        for name in ("kblog.py", "kb_check.py", "kb_db.py", "registry.py"):
+            write(self.root, f"tools/development/{name}", (HERE / name).read_text(encoding="utf-8"))
+        write(self.root, kblog.DECISIONS, sample_log())
+        write(self.root, kblog.DEBT, sample_debt())
+        write(self.root, ".gitignore", "__pycache__/\n")
+        self.git("init", "-q", "-b", "main")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "start")
+
+    def git(self, *a):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=self.root, check=True,
+                              capture_output=True, text=True).stdout
+
+    def test_rollover_is_committed_after_landing(self):
+        note = land.rollover_after_landing(self.root, "merge: x\n\nCo-Authored-By: A <a@b>")
+        self.assertIn("rollover committed", note)
+        self.assertEqual(self.git("status", "--porcelain"), "")
+        log = self.git("log", "-1", "--format=%B")
+        self.assertIn("#610", log)
+        self.assertIn("Co-Authored-By: A <a@b>", log)
+        self.assertEqual(len(kb_check.decision_rows(kblog.text("decisions", self.root))), 11)
+        self.assertEqual(land.rollover_after_landing(self.root, "m"), "rollover: nothing to move")
+
+    def test_rollover_problems_never_fail_the_landing(self):
+        (self.root / kblog.DECISIONS).write_text(sample_log() + "\n", encoding="utf-8")  # a local edit
+        self.assertIn("local changes", land.rollover_after_landing(self.root, "m"))
+        self.git("checkout", "--", kblog.DECISIONS)
+        write(self.root, "tools/development/kblog.py", "raise SystemExit(3)\n")
+        self.git("commit", "-qam", "broken kblog")
+        note = land.rollover_after_landing(self.root, "m")
+        self.assertIn("rollover failed (exit 3)", note)
+        self.assertEqual(self.git("status", "--porcelain"), "")  # nothing half-done
+
+
 class TagsAndLimitsTest(unittest.TestCase):
     """Items 1, 3, 8: tag rules, header links, size limits by date."""
 
@@ -161,7 +202,7 @@ class TagsAndLimitsTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         write(tmp, "CLAUDE.md", "x" * (6 * 1024 + 1))
-        write(tmp, "docs/decisions/log/2026-11.md", "y" * (60 * 1024))  # at the limit: fine
+        write(tmp, "docs/decisions/log/2026-11.md", "y" * (150 * 1024))  # at the limit (#608: 150 KB): fine
         ids = {"items": set(), "max_decision": 1, "debt": set(), "risk": set(), "orch": set()}
         with mock.patch.object(kb_check, "ROOT", tmp):
             for day, sink in ((dt.date(2026, 12, 2), 1), (dt.date(2026, 12, 3), 0)):
@@ -173,6 +214,7 @@ class TagsAndLimitsTest(unittest.TestCase):
         self.assertEqual(kbdocs.size_class(".claude/agents/developer.md")[0], "always")
         self.assertEqual(kbdocs.size_class(".claude/skills/land/SKILL.md")[0], "living")
         self.assertIsNone(kbdocs.size_class("docs/decisions/log/archive-0001-0400.md"))
+        self.assertEqual(kbdocs.size_class("docs/decisions/log/2026-11.md"), ("monthly", 150 * 1024))
 
     def test_summary_prefers_the_short_conclusion(self):
         body = "# T\n\nfirst paragraph\n\n## Цель\n\n## Краткий вывод\n\n- a\n- b\n\n## Next\nz"
