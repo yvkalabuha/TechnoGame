@@ -1,7 +1,7 @@
 ---
 id: TASK-0194
 title: "Air power goal (#565): Session goal state parity/superiority/dominance and a header indicator in the client"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
