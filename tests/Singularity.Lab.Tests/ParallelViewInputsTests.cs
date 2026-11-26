@@ -76,7 +76,7 @@ public sealed class ParallelViewInputsTests : IDisposable
     [Fact]
     public void ParallelView_EqualsSequentialView_AcrossThreadsAndChunkSizes()
     {
-        var spec = new SynthWorldSpec(24, 180, SynthGraph.CrossEdges);
+        var spec = new SynthWorldSpec(24, 250, SynthGraph.CrossEdges);
         SynthWorld w = SynthWorldGenerator.Build(spec, Path.Combine(_tmp, spec.Name));
         (string views, string hash) = Run(w, 1, 8);
         Assert.Contains("Inputs=MonthInputsView", views);

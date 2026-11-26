@@ -16,7 +16,7 @@ public static class SynthChecks
         ("synth: generator — same spec → same overlay bytes, other seed → other bytes, the 24 grid points load with exact counts", () => Generator(tmp)),
         ("synth: clones keep the source columns; Clones has no edge between copies, CrossEdges only adds edges between copies", () => CloneColumns(tmp)),
         ("synth: overlay of 5 actors × all core nodes reproduces the core run (same StateHash after 12 months)", () => RoundTrip(tmp)),
-        ("synth: (24, 180, cross) 12 months — same StateHash at threads 1/4/8/16 and ChunkSize 1/8/32", () => ThreadInvariance(tmp)),
+        ("synth: (24, 250, cross) 12 months — same StateHash at threads 1/4/8/16 and ChunkSize 1/8/32", () => ThreadInvariance(tmp)),
         ("synth: full scale (200, 2000) of both graphs passes the start checks of a session; (96, 500, cross) 3 months — same StateHash at t1 and t8", () => FullScale(tmp)),
     ];
 
@@ -59,11 +59,12 @@ public static class SynthChecks
             var spec = new SynthWorldSpec(6, 500, g);
             SynthWorld w = SynthWorldGenerator.Build(spec, Dir(tmp, spec, "cols"));
             NodeTable n = w.Data.Nodes;
+            int stride = w.Stats.NumberStride;
             int crossReq = 0, crossInf = 0;
             for (int r = 0; r < n.Count; r++)
             {
-                int copy = n.Number[r] / SynthWorldGenerator.NumberStride;
-                int src = Source(n, r);
+                int copy = n.Number[r] / stride;
+                int src = Source(n, r, stride);
                 if (src < 0)
                     return $"{n.Id[r]}: no source node";
                 if (n.Type[r] != n.Type[src] || n.Gen[r] != n.Gen[src] || n.Discipline[r] != n.Discipline[src] || n.Cluster[r] != n.Cluster[src]
@@ -77,8 +78,8 @@ public static class SynthChecks
                 for (int gr = n.Requires.GroupStart[r]; gr < n.Requires.GroupStart[r + 1]; gr++)
                 {
                     int[] m = n.Requires.GroupMembers(gr).ToArray();
-                    if (m.All(x => n.Number[x] / SynthWorldGenerator.NumberStride == copy))
-                        own.Add(string.Join("|", m.Select(x => n.Number[Source(n, x)]).Order()));
+                    if (m.All(x => n.Number[x] / stride == copy))
+                        own.Add(string.Join("|", m.Select(x => n.Number[Source(n, x, stride)]).Order()));
                     else if (m.Length == 1)
                         crossReq++;
                     else
@@ -91,7 +92,7 @@ public static class SynthChecks
                     return $"{n.Id[r]}: requires differ from {n.Id[src]}";
                 for (int e = n.InformsStart[r]; e < n.InformsStart[r + 1]; e++)
                 {
-                    if (n.Number[n.InformsTo[e]] / SynthWorldGenerator.NumberStride != copy)
+                    if (n.Number[n.InformsTo[e]] / stride != copy)
                         crossInf++;
                 }
             }
@@ -103,9 +104,9 @@ public static class SynthChecks
         return null;
     }
 
-    private static int Source(NodeTable n, int row)
+    private static int Source(NodeTable n, int row, int stride)
     {
-        int number = n.Number[row] % SynthWorldGenerator.NumberStride;
+        int number = n.Number[row] % stride;
         for (int r = 0; r < n.Count; r++)
         {
             if (n.Number[r] == number)
@@ -137,7 +138,7 @@ public static class SynthChecks
 
     private static string? ThreadInvariance(string tmp)
     {
-        var spec = new SynthWorldSpec(24, 180, SynthGraph.CrossEdges);
+        var spec = new SynthWorldSpec(24, 250, SynthGraph.CrossEdges);
         SynthWorld w = SynthWorldGenerator.Build(spec, Dir(tmp, spec, "thr"));
         var cfg = SliceRunConfig.Legacy with { Seed = 3, ScenarioId = w.ScenarioId };
         string h = Run(w.Data, cfg with { Threads = 1, ChunkSize = 8 }, Months);

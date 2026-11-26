@@ -26,7 +26,10 @@ public static class SliceChecks
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront.
     // Re-recorded in TASK-0187/TASK-0188 (one golden batch): 57 new nodes 100-156 (#575) change every trajectory; the default Lab config is the legacy
     // build (levers off, shares model), which the slot model leaves unchanged (S11), so this equals Session MainSeed1Month149 of TASK-0188. Old value 3d466f77…f82f68.
-    private const string Golden150 = "c79505d72eb10f41fbed33785979c82d7475ab0f5712d52b9212d1fffcbad401";
+    // Re-recorded in TASK-0193: 55 new nodes 160-214 (tree 1990–2030) change every trajectory; equals Session MainSeed1Month149 of TASK-0193
+    // (b56cc312). Old value c79505d7…cbad401.
+    // Re-recorded in TASK-0193: 55 nodes 1990–2030 and O-105 late prerequisites.
+    private const string Golden150 = "01deeebdab9c81a4d12f2775f3b6e099f92df0a859242881972afee9ef67a174";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 

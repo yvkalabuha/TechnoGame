@@ -91,6 +91,7 @@ public sealed class BenchJson : IDisposable
         j.WriteString("data_hash", w.Data.DataHash);
         j.WriteString("overlay_sha256", w.OverlaySha256);
         j.WriteNumber("copies", w.Stats.Copies);
+        j.WriteNumber("number_stride", w.Stats.NumberStride);
         j.WriteNumber("cross_requires", w.Stats.CrossRequires);
         j.WriteNumber("cross_informs", w.Stats.CrossInforms);
         j.WriteNumber("build_ms", buildMs);

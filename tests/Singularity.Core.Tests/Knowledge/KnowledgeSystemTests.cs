@@ -203,8 +203,8 @@ public class KnowledgeSystemTests
     {
         var p = new KnowledgeParams();
         KnowledgeGraph g = KnowledgeGraph.FromData(Data.Nodes, Scenario.Disciplines, p);
-        Assert.Equal(156, g.Count);
-        Assert.Equal(60, g.IsHazard.Count(h => h)); // spec §1.3: 11 key + 9 hz, plus 6 key + 5 hz of nodes 62-81 (TASK-0133), plus 14 of nodes 82-99 (TASK-0147), plus 15 of nodes 100-156 (#575)
+        Assert.Equal(211, g.Count);
+        Assert.Equal(77, g.IsHazard.Count(h => h)); // spec §1.3: 11 key + 9 hz, plus 6 key + 5 hz of nodes 62-81 (TASK-0133), plus 14 of nodes 82-99 (TASK-0147), plus 15 of nodes 100-156 (#575), plus 17 of nodes 160-214 (TASK-0193)
         int app = g.RowOf(58);
         Assert.Equal(-1, g.Discipline[app]);
         Assert.Equal(Fx6.FromRaw(4_800_000), g.CostN[g.RowOf(19)]); // ENG G2: 3 × 1.6
