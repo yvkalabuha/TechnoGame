@@ -56,13 +56,14 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
 
     public bool Released(int actorRow, int nodeRow) => world.Knowledge.Released(actorRow, nodeRow);
 
-    public Fx6 AirPowerRatio(int actorRow, long month) => world.AirPowerRatio(actorRow, month);
+    public Fx6 AirPowerRatio(int actorRow, long month) => world.AirPowerRatio(actorRow);   // read from the column of the last refresh: no fleet value is computed on the tick path
 
     // Returned money over the research money of the last step; what the slots left out of a budget that is the share of the actor's income.
-    public Fx6 SurplusShare(int actorRow)
+    public Fx6 SurplusShare(int actorRow, long month)
     {
+        // The money the slots saw in that step (after projects and upkeep): the same figure their coverage was computed against.
         Fx6 returned = world.Knowledge.ReturnedToBudget(actorRow);
-        Fx6 budget = world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow);
+        Fx6 budget = _knowledge.ResearchBudget(actorRow, month);
         return budget > Fx6.Zero ? returned / budget : Fx6.Zero;
     }
 

@@ -5,7 +5,7 @@ namespace Singularity.Core.Data;
 
 /// <summary>
 /// The 13 science directions (docs/research/notes/directions-nodes-institutes.md, O-091) and the checks of the <c>directions</c> field of nodes and institutes.
-/// Data only: the core does not read the field yet. An absent field is an empty list (a mod may omit it); a present one is validated.
+/// The slot model reads the field (overlap of node and institute, experience); it is part of the data hashes. An absent field is an empty list (a mod may omit it); a present one is validated.
 /// </summary>
 public static class Directions
 {

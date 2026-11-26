@@ -5,7 +5,7 @@ namespace Singularity.Core.Institutes;
 
 /// <summary>
 /// Constants of the slot science model (SCIENCE_SLOTS.md, #561–#576, O-088..O-092; numbers from the Lab pilot TASK-0185). A run without these parameters is the
-/// old shares model, byte for byte (S11). All dimensionless or per month; no calendar.
+/// old shares model (S11: the `Legacy` configuration is byte for byte the build before). All dimensionless or per month; no calendar.
 /// </summary>
 public sealed record SlotParams
 {

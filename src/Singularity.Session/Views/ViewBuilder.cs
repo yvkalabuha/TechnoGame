@@ -99,7 +99,7 @@ internal static class ViewBuilder
             standing += node[k] >= 0 ? 1 : 0;
             free += node[k] == 0 ? 1 : 0;
         }
-        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.AirPower(a, month), w.AirPowerRatio(a, month), inst.SlotParameters.SpeedCap, w.Config.PlayerActor == a ? inst.FreeNoticeMonth(a) : -1);
+        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.Mpi(a), w.AirPowerRatio(a), inst.SlotParameters.SpeedCap, w.Config.PlayerActor == a ? inst.FreeNoticeMonth(a) : -1);
     }
 
     // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.
@@ -393,7 +393,7 @@ internal static class ViewBuilder
 
     // With intelligence and a named player, what another actor knows is not the player's to read: its node block is not carried, the count of its unknown nodes
     // shrinks to "some left or none" (the exact count is what the estimate of the intelligence card gives as a range), and its own intelligence card is not published.
-    private static bool HiddenFromPlayer(SliceWorld w, int a) => w.Intel is not null && w.Config.PlayerActor is int viewer && viewer != a;
+    internal static bool HiddenFromPlayer(SliceWorld w, int a) => w.Intel is not null && w.Config.PlayerActor is int viewer && viewer != a;
 
     // The licence of an actor. For the player's own eyes another actor's deal is a hidden event: it is shown only when intelligence sees it (#508), else empty.
     private static LicenceView LicenceOf(SliceWorld w, int a, ImmutableArray<long> refusals)

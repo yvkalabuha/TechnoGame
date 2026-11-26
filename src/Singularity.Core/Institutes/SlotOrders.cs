@@ -139,7 +139,48 @@ public sealed class SlotOrders
         for (int i = at; i + 1 < n; i++)
             list[i] = list[i + 1];
         Write(h, list[..(n - 1)]);
+        ClearOrphanFocus(c.Actor);
         return CommandVerdict.Ok;
+    }
+
+    // A focus is bought for one node of one institute (§4.2): when that node has left every list of the actor the focus is gone, so a later assignment of the node starts without it.
+    private void ClearOrphanFocus(int actor)
+    {
+        for (int k = 0; k < _l.SlotCount(actor); k++)
+        {
+            int node = _node[k].Current[actor];
+            if (node != 0 && (_level[k].Current[actor] != 0 || _reserve[k].Current[actor] != 0) && !Holds(actor, node, out _))
+            {
+                Set(_level[k], actor, 0);
+                Set(_node[k], actor, 0);
+                Set(_reserve[k], actor, 0);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A node an institute works on that stands in the queue of another institute of the actor (the free institute took it, O-089c) moves into the list of the one that works on it:
+    /// the donor's queue loses it (§4.1) and the worker can unassign it. False when the worker's list is full.
+    /// </summary>
+    public bool Transfer(int actor, int toSlot, int node)
+    {
+        if (!Holds(actor, node, out int from) || from == toSlot)
+            return false;
+        var to = new InstituteHandle(actor, toSlot);
+        Span<int> target = stackalloc int[Length + 1];
+        int tn = Entries(to, target[1..]);
+        if (tn >= Length)
+            return false;
+        target[0] = node;
+        var donor = new InstituteHandle(actor, from);
+        Span<int> source = stackalloc int[Length];
+        int sn = Entries(donor, source);
+        int at = source[..sn].IndexOf(node);
+        for (int i = at; i + 1 < sn; i++)
+            source[i] = source[i + 1];
+        Write(donor, source[..(sn - 1)]);
+        Write(to, target[..(tn + 1)]);
+        return true;
     }
 
     /// <summary><c>reorder_queue</c>: the new order is a permutation of the queued nodes (the active one stays first).</summary>
@@ -166,10 +207,16 @@ public sealed class SlotOrders
     public CommandVerdict Apply(ApplyQueues c)
     {
         var seen = new List<int>();
-        foreach (QueuePlan p in c.Plan)
+        for (int i = 0; i < c.Plan.Length; i++)
         {
+            QueuePlan p = c.Plan[i];
             if (CheckSlot(c.Actor, p.Slot) is { Accepted: false } bad)
                 return bad;
+            for (int j = 0; j < i; j++)
+            {
+                if (c.Plan[j].Slot == p.Slot)
+                    return CommandVerdict.Refuse(CommandRefusal.NotInList, $"slot {p.Slot} stands twice in the plan");
+            }
             if (p.Nodes.Length > Length)
                 return CommandVerdict.Refuse(CommandRefusal.QueueFull, $"the list of slot {p.Slot} holds {_p.QueueLength} queued and the active node");
             foreach (int n in p.Nodes)
@@ -185,6 +232,7 @@ public sealed class SlotOrders
         }
         foreach (QueuePlan p in c.Plan)
             Write(new InstituteHandle(c.Actor, p.Slot), p.Nodes.AsSpan());
+        ClearOrphanFocus(c.Actor);
         return CommandVerdict.Ok;
     }
 
@@ -216,6 +264,7 @@ public sealed class SlotOrders
                 list[n++] = old[i];
         }
         Write(h, list[..n]);
+        ClearOrphanFocus(c.Actor);
         return CommandVerdict.Ok;
     }
 
@@ -228,8 +277,11 @@ public sealed class SlotOrders
         int active = _probe.ActiveNode(c.Actor, c.Slot, month);
         if (c.Level == 0)
         {
+            // Off is allowed at any time, but it counts as a choice: switching on again waits out the period like any other change.
+            if (FocusLevel(h) == 0)
+                return CommandVerdict.Ok;
             Set(_level[c.Slot], c.Actor, 0);
-            Set(_node[c.Slot], c.Actor, 0);
+            Set(_stamp[c.Slot], c.Actor, checked((int)month) + 1);
             return CommandVerdict.Ok;
         }
         if (active == 0)
@@ -238,8 +290,8 @@ public sealed class SlotOrders
         if (same && FocusFromReserve(h) == c.FromReserve)
             return CommandVerdict.Ok;
         long last = FocusMonth(h);
-        if (FocusLevel(h) > 0 && FocusNode(h) == active && last >= 0 && month - last < _p.FocusRepeatMonths)
-            return CommandVerdict.Refuse(CommandRefusal.FocusTooSoon, $"the focus of slot {c.Slot} was set in month {last}; the next change is allowed in month {last + _p.FocusRepeatMonths}");
+        if (FocusNode(h) == active && last >= 0 && month - last < _p.FocusRepeatMonths)
+            return CommandVerdict.Refuse(CommandRefusal.FocusTooSoon, $"the focus of slot {c.Slot} was changed in month {last}; the next change is allowed in month {last + _p.FocusRepeatMonths}");
         Set(_level[c.Slot], c.Actor, c.Level);
         Set(_node[c.Slot], c.Actor, active);
         Set(_stamp[c.Slot], c.Actor, checked((int)month) + 1);

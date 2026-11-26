@@ -69,8 +69,8 @@ public interface IInstituteInputs
     /// <summary>Own air power over the best rival's (#565); 1 when there is none to compare.</summary>
     Fx6 AirPowerRatio(int actorRow, long month) => Fx6.One;
 
-    /// <summary>Share of the research money the slots left unused in the last step (returned to the budget).</summary>
-    Fx6 SurplusShare(int actorRow) => Fx6.Zero;
+    /// <summary>Share of the research money (the money the slots were given) they left unused in the last step (returned to the budget).</summary>
+    Fx6 SurplusShare(int actorRow, long month) => Fx6.Zero;
 
     /// <summary><c>T_n</c> of the node in months.</summary>
     Fx6 NodeMonths(int nodeRow) => Fx6.One;
@@ -244,7 +244,8 @@ public sealed partial class InstituteSystem : ITickSystem
         if (!any)
             return Fx6.One;
         Fx6 keep = Fx6.One - take;
-        return keep > Fx6.Zero ? keep * (Fx6.One + give) : Fx6.Zero;
+        // The slot model has no capacity gain: an institute is a slot, and money the share never held cannot enter the research money (it would come back as a "surplus" the actor did not budget).
+        return keep > Fx6.Zero ? _slots is null ? keep * (Fx6.One + give) : keep : Fx6.Zero;
     }
 
     // The sum of the shares of the research money that running projects and upkeep take, and the capacity of the built institutes.

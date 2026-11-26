@@ -190,7 +190,10 @@ internal sealed class SliceWorld
             InstituteOrders = orders;
             Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this), slots: SlotsOn ? new SlotParams() : null);
             if (SlotsOn)
+            {
                 SlotOrders = new SlotOrders(Table, layout, new SlotParams(), new SlotOrderProbe(this));
+                _mpi = Table.AddLong("inst.mpi");
+            }
         }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
             ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
@@ -402,6 +405,8 @@ internal sealed class SliceWorld
     /// <summary>The slot science model runs (see <see cref="SliceRunConfig.ScienceSlots"/>).</summary>
     public bool SlotsOn { get; }
 
+    private readonly LongColumn? _mpi;
+
     /// <summary>The player's lists and focus of the slot model; null without it.</summary>
     public SlotOrders? SlotOrders { get; }
 
@@ -412,19 +417,49 @@ internal sealed class SliceWorld
     public Fx6 AirPower(int actor, long month) => Products.MaxFleetValue(actor, Fx6.One, PolicyParameters.FvBudget, month);
 
     /// <summary>
+    /// Writes the air power index of every actor into the column `inst.mpi` (slot model): once per actor at the end of each monthly step, between ticks, so the AI of the next step reads
+    /// a number and no system of the tick path computes a fleet value. A pure function of the state; <paramref name="month"/> is the month the next step computes.
+    /// </summary>
+    internal void RefreshAirPower(long month)
+    {
+        if (_mpi is null)
+            return;
+        var values = new long[Table.RowCount];
+        for (int a = 0; a < values.Length; a++)
+            values[a] = AirPower(a, month).Raw;
+        _mpi.Load(values);
+    }
+
+    /// <summary>
+    /// After a monthly step: a node a player's institute works on that was taken from the queue of another institute (a free one takes an unstarted node, O-089c) leaves that queue
+    /// and stands in the list of the institute that works on it (§4.1), between ticks like every write of the lists.
+    /// </summary>
+    internal void SettleBorrowed()
+    {
+        if (Institutes is not { } inst || SlotOrders is not { } orders || Config.PlayerActor is not int a)
+            return;
+        for (int k = 0; k < inst.Layout.SlotCount(a); k++)
+        {
+            int node = inst.ActiveNode(new InstituteHandle(a, k));
+            if (node != 0 && inst.Standing(new InstituteHandle(a, k)))
+                orders.Transfer(a, k, node);
+        }
+    }
+
+    /// <summary>The air power index of the actor as of the last refresh (the column; 0 without the slot model).</summary>
+    public Fx6 Mpi(int actor) => _mpi is null ? Fx6.Zero : Fx6.FromRaw(_mpi.Current[actor]);
+
+    /// <summary>
     /// Own air power over the best of the others (#565): 1 when nobody has any, a large number when only the actor has. Parity ≥ 1, superiority ≥ 1.5, dominance ≥ 2.
     /// </summary>
-    public Fx6 AirPowerRatio(int actor, long month)
+    public Fx6 AirPowerRatio(int actor)
     {
-        Fx6 own = AirPower(actor, month);
+        Fx6 own = Mpi(actor);
         Fx6 best = Fx6.Zero;
         for (int b = 0; b < Table.RowCount; b++)
         {
-            if (b == actor)
-                continue;
-            Fx6 v = AirPower(b, month);
-            if (v > best)
-                best = v;
+            if (b != actor && Mpi(b) > best)
+                best = Mpi(b);
         }
         if (best == Fx6.Zero)
             return own == Fx6.Zero ? Fx6.One : Fx6.FromInt(100);

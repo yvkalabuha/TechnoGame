@@ -50,6 +50,9 @@ public sealed partial class InstituteSystem
     /// <summary>The slot model runs.</summary>
     public bool SlotsOn => _slots is not null;
 
+    /// <summary>The node number the slot worked on in the last decision (0 = none): the column the AI and the knowledge layer agree on.</summary>
+    public int ActiveNode(InstituteHandle h) => _act[h.Slot].Current[h.Actor];
+
     public SlotParams SlotParameters => _slots ?? throw new InvalidOperationException("The slot model is off.");
 
     /// <summary>Entries of a player's list: the active one and the queue.</summary>
@@ -377,18 +380,22 @@ public sealed partial class InstituteSystem
         if (credit <= Fx6.Zero)
             return;
         var dirs = _g.Directions[row];
-        bool full = DirectionCount(h) >= _slots!.MaxDirections;
+        // The directions the institute has, counted as the loop gives it new ones: two missing directions that cross their first level in one step must not make five (S10, #572).
+        int owned = DirectionCount(h);
         for (int i = 0; i < dirs.Length; i++)
         {
             int d = dirs[i];
-            if (full && DirLevel(h, d) == 0)
+            bool isNew = DirLevel(h, d) == 0;
+            if (isNew && owned >= _slots!.MaxDirections)
                 continue;
-            Fx6 add = credit * SlotMath.DirectionWeight(i, dirs.Length, _slots.MainWeight);
+            Fx6 add = credit * SlotMath.DirectionWeight(i, dirs.Length, _slots!.MainWeight);
             long frac = _xf[k][d].Current[a] + add.Raw;
             int whole = (int)(frac / Fx6.One.Raw);
             _xf[k][d].Next[a] = frac - whole * (long)Fx6.One.Raw;
             if (whole > 0)
                 _dx[k][d].Next[a] = _dx[k][d].Current[a] + whole;
+            if (isNew && InstituteMath.DirectionLevelOf(_dx[k][d].Current[a] + whole, _l.DirNodesIn[d], _p) > 0)
+                owned++;
         }
     }
 
@@ -397,7 +404,7 @@ public sealed partial class InstituteSystem
     private void StepAiFocus(int a, long t, int slots, ReadOnlySpan<int> node)
     {
         int want = 0, bestSlot = -1;
-        if (_inputs.SurplusShare(a) >= _slots!.AiFocusMargin)
+        if (_inputs.SurplusShare(a, t) >= _slots!.AiFocusMargin)
         {
             Fx6 ratio = _inputs.AirPowerRatio(a, t);
             want = ratio < _slots.AiFocusRatio2 ? 2 : ratio < _slots.AiFocusRatio1 ? 1 : 0;

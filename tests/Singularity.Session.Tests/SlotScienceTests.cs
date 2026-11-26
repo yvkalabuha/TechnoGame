@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Session;
 using Singularity.Core.Data;
 using Singularity.Core.Policy;
 using Singularity.Core.Institutes;
@@ -118,6 +119,7 @@ public class SlotScienceTests
     [Fact]
     public void TheSharesModel_HasNoSlotColumns_S11()
     {
+        // S11 is pinned by the goldens of every test on SliceRunConfig.Legacy (unchanged); this one shows that slots off adds no slot columns.
         SliceSession off = Make(slots: false);
         Assert.False(off.World.SlotsOn);
         Assert.DoesNotContain(off.World.Table.Columns, c => c.Name.StartsWith("inst.act", StringComparison.Ordinal) || c.Name.StartsWith("know.sprog", StringComparison.Ordinal)
@@ -144,8 +146,12 @@ public class SlotScienceTests
         Assert.Contains(s.Outcomes, o => o.Contains("rejected: QueueFull"));
         Assert.Contains(s.Outcomes, o => o.Contains("rejected: NodeTaken"));
         Span<int> entries = stackalloc int[6];
-        Assert.Equal(6, w.SlotOrders!.Entries(new InstituteHandle(fra, 0), entries));
+        // Slot 1 took f1 from the queue of slot 0, and the node moved to its list (§4.1).
+        Assert.Equal(5, w.SlotOrders!.Entries(new InstituteHandle(fra, 0), entries));
         Assert.Equal(f[0], entries[0]);
+        Assert.Equal(1, w.SlotOrders.Entries(new InstituteHandle(fra, 1), entries));
+        Assert.Equal(f[1], entries[0]);
+        w.SlotOrders.Entries(new InstituteHandle(fra, 0), entries);
         int[] work = Resolved(s, fra, 1);
         Assert.Equal([f[0], f[1]], work[..2]);   // the other slots of FRA are candidates, not built
         for (long t = 1; t < 4; t++)
@@ -159,26 +165,37 @@ public class SlotScienceTests
         Assert.Equal(f[2], Resolved(s, fra, 5)[0]);
         Assert.Equal(progress, w.Knowledge.Prog(fra, w.Graph.RowOf(f[0])).Raw);
         // Reordering the queue is free and changes who comes next.
-        Assert.True(s.Submit(SourceClass.Player, 0, n0++, new ReorderQueue(fra, 0, [f[1], f[5], f[4], f[3], f[2]])).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, n0++, new ReorderQueue(fra, 0, [f[2], f[5], f[4], f[3]])).Accepted);
         s.StepThroughMonth(5);
         Assert.DoesNotContain(s.Outcomes, o => o.Contains("rejected: NotInList"));
-        Assert.Equal(5, w.SlotOrders.Entries(new InstituteHandle(fra, 0), entries));
+        Assert.Equal(4, w.SlotOrders.Entries(new InstituteHandle(fra, 0), entries));
         Assert.Equal(f[5], entries[1]);
     }
 
     [Fact]
-    public void AFreeInstituteTakesAnUnstartedNodeOfAnotherQueue_O089c()
+    public void AFreeInstituteTakesAnUnstartedNodeOfAnotherQueue_AndTheNodeLeavesThatQueue_O089c_41()
     {
         SliceSession s = Make(2, player: 0);
         int[] f = Frontier(s, 0);
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0])).Accepted);
-        Assert.True(s.Submit(SourceClass.Player, 0, 1, new AssignNode(0, 0, f[1])).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new AssignNode(0, 0, f[1], Acknowledged: true)).Accepted);
         s.StepThroughMonth(0);
         int[] node = Resolved(s, 0, 1);
         Assert.Equal(f[0], node[0]);
         Assert.Equal(f[1], node[1]);   // slot 1 has no list: it took the queued node of slot 0
         Span<int> entries = stackalloc int[6];
-        Assert.Equal(2, s.World.SlotOrders!.Entries(new InstituteHandle(0, 0), entries));   // the list still holds both: the borrowed node is only worked elsewhere
+        var donor = new InstituteHandle(0, 0);
+        var worker = new InstituteHandle(0, 1);
+        // §4.1: the donor's queue lost it, the worker's list holds it: the donor can no longer stop the worker by unassigning, the worker can.
+        Assert.Equal(1, s.World.SlotOrders!.Entries(donor, entries));
+        Assert.Equal(f[0], entries[0]);
+        Assert.Equal(1, s.World.SlotOrders.Entries(worker, entries));
+        Assert.Equal(f[1], entries[0]);
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new Unassign(0, 0, f[1])).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new Unassign(0, 1, f[1])).Accepted);
+        s.StepThroughMonth(1);
+        Assert.Single(s.Outcomes, o => o.Contains("rejected: NotInList"));   // the donor's one
+        Assert.Equal(0, s.World.SlotOrders.Entries(worker, entries));
     }
 
     [Fact]
@@ -549,5 +566,325 @@ public class SlotScienceTests
             if (tierShares[r] == 1)
                 Assert.Equal(1, tierSlots[r]);
         }
+    }
+
+    [Fact]
+    public void FocusOffThenOnBeforeSixMonths_IsFocusTooSoon_ButOffIsFreeAtAnyTime()
+    {
+        SliceSession s = Make(2, player: 0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetFocus(0, 0, 2, false)).Accepted);
+        s.StepThroughMonth(0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new SetFocus(0, 0, 0, false)).Accepted);   // off at once
+        s.StepThroughMonth(1);
+        Assert.DoesNotContain(s.Outcomes, o => o.Contains("rejected"));
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new SetFocus(0, 0, 1, false)).Accepted);   // on again: the period runs from the off
+        s.StepThroughMonth(2);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: FocusTooSoon"));
+        for (long t = 3; t < 8; t++)
+            s.StepThroughMonth(t);
+        Assert.True(s.Submit(SourceClass.Player, 0, 4, new SetFocus(0, 0, 1, false)).Accepted);
+        s.StepThroughMonth(8);
+        Assert.Equal(1, s.World.SlotOrders!.FocusLevel(new InstituteHandle(0, 0)));
+    }
+
+    [Fact]
+    public void ApplyQueues_WithAnInstituteTwice_IsRefused()
+    {
+        SliceSession s = Make(2, player: 0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new ApplyQueues(0, [new QueuePlan(0, [f[0]]), new QueuePlan(0, [f[1]])])).Accepted);   // the form is fine; the state refuses
+        s.StepThroughMonth(0);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: NotInList") && o.Contains("twice"));
+        Span<int> entries = stackalloc int[6];
+        Assert.Equal(0, s.World.SlotOrders!.Entries(new InstituteHandle(0, 0), entries));
+    }
+
+    [Fact]
+    public void TwoStartsSentInOneMonth_AreJudgedTogether_O096()
+    {
+        SliceSession s = Make(2, player: 0);
+        SliceWorld w = s.World;
+        var inputs = new KnowledgeInputsAdapter(w);
+        BudgetShares sh = w.SharesOf(0);
+        BudgetShares With(Fx6 research) => new(research, sh.Capability, sh.Effort, sh.Procurement, sh.Quality, sh.Security);
+        // Find the research money that covers one node of the first institute exactly: start tiny, read the coverage of one start, scale up.
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, With(sh.Research / Fx6.FromInt(200)))).Accepted);
+        s.StepThroughMonth(0);
+        int[] f = Frontier(s, 0);
+        var inst = w.Institutes!;
+        SlotWork Work(int slot, int number) { int row = w.Graph.RowOf(number); return new SlotWork(slot, row, inst.InstituteMultiplier(new InstituteHandle(0, slot), row), 0); }
+        Fx6 s1 = inputs.ResearchBudget(0, 1), c1 = w.Knowledge.CoverageWith(0, 1, [Work(0, f[0])]);
+        Assert.True(c1 < Fx6.One && c1 > Fx6.Zero);
+        Fx6 ask0 = s1 / c1;
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetBudgetShares(0, With(sh.Research / Fx6.FromInt(200) * (ask0 / s1)))).Accepted);
+        s.StepThroughMonth(1);
+        Fx6 one = w.Knowledge.CoverageWith(0, 2, [Work(0, f[0])]);
+        Fx6 two = w.Knowledge.CoverageWith(0, 2, [Work(0, f[0]), Work(1, f[1])]);
+        Assert.True(one >= new SlotParams().UnderfundedBelow && two < new SlotParams().UnderfundedBelow, $"the setup: one start covers {one}, two cover {two}");
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new AssignNode(0, 0, f[0])).Accepted);
+        CommandVerdict second = s.Submit(SourceClass.Player, 0, 3, new AssignNode(0, 1, f[1]));
+        Assert.Equal(CommandRefusal.NeedsConfirmation, second.Reason);
+    }
+
+    [Fact]
+    public void TheAirPowerIndexOfTheAi_IsReadFromAColumnRefreshedOncePerMonth_NotComputedInTheStep()
+    {
+        SliceSession s = Make(6);
+        SliceWorld w = s.World;
+        Assert.Contains(w.Table.Columns, c => c.Name == "inst.mpi");
+        for (long t = 0; t < 30; t++)
+        {
+            for (int a = 0; a < w.Scenario.ActorCount; a++)
+                Assert.Equal(w.AirPower(a, t).Raw, w.Mpi(a).Raw);   // the column holds what the fleet value of the month is
+            s.StepThroughMonth(t);
+        }
+        Assert.Contains(Enumerable.Range(0, w.Scenario.ActorCount).Select(a => w.Mpi(a)), v => v > Fx6.Zero);
+        HashAssert.NotEqual(Make(6, slots: false).LastHash, s.LastHash);
+    }
+
+    [Fact]
+    public void UnassigningAFocusedNode_EndsItsFocus_ALaterAssignmentStartsWithoutIt_42()
+    {
+        SliceSession s = Make(2, player: 0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetFocus(0, 0, 2, true)).Accepted);
+        s.StepThroughMonth(0);
+        Assert.Equal(2, s.World.SlotOrders!.FocusLevel(new InstituteHandle(0, 0)));
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new Unassign(0, 0, f[0])).Accepted);
+        s.StepThroughMonth(1);
+        Assert.Equal(0, s.World.SlotOrders.FocusLevel(new InstituteHandle(0, 0)));
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        s.StepThroughMonth(2);
+        var work = new SlotWork[16];
+        int n = s.World.Institutes!.Work(0, 3, work);
+        Assert.Contains(work[..n], w => w.NodeRow == s.World.Graph.RowOf(f[0]));
+        Assert.All(work[..n], w => Assert.Equal(0, w.Focus));
+        Assert.All(work[..n], w => Assert.False(w.FromReserve));
+    }
+
+    [Fact]
+    public void AResearchShareCutSentBeforeAnUnacknowledgedStart_ChangesTheJudgement_ThePlanIsRecheckedAtApplication_43()
+    {
+        SliceSession s = Make(2, player: 0);
+        BudgetShares sh = s.World.SharesOf(0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, new BudgetShares(sh.Research / Fx6.FromInt(500), sh.Capability, sh.Effort, sh.Procurement, sh.Quality, sh.Security))).Accepted);
+        // With the old budget the start covers everything, so Submit lets it through; the applied cut would take it below 60 %.
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new AssignNode(0, 0, f[0])).Accepted);
+        s.StepThroughMonth(0);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: NeedsConfirmation"));
+        Span<int> entries = stackalloc int[6];
+        Assert.Equal(0, s.World.SlotOrders!.Entries(new InstituteHandle(0, 0), entries));
+    }
+
+    [Fact]
+    public void ResearchMoneyIsNeverAboveTheShareMinusProjectsAndUpkeep_NoCapacityBonus_S3_44()
+    {
+        SliceSession s = Make(3);
+        SliceWorld w = s.World;
+        var inputs = new KnowledgeInputsAdapter(w);
+        bool built = false;
+        for (long t = 0; t < 175; t++)
+        {
+            for (int a = 0; a < w.Scenario.ActorCount; a++)
+            {
+                Assert.True(w.Institutes!.BudgetFactor(a, t) <= Fx6.One, $"month {t} actor {a}: the research money is above the share");
+                Fx6 share = w.SharesOf(a).Research * w.Policy.Budget(a);
+                Assert.True(inputs.ResearchBudget(a, t) <= share, $"month {t} actor {a}");
+                for (int k = 0; k < w.Institutes.Layout.SlotCount(a); k++)
+                    built |= w.Institutes.BuiltByProject(new InstituteHandle(a, k));
+            }
+            s.StepThroughMonth(t);
+        }
+        Assert.True(built, "an institute built by a project stood in the run, so a capacity bonus would have shown");
+    }
+
+    private static List<int> FreshFrontier(SliceSession s, int actor, Random rnd, int count)
+    {
+        List<int> f = [.. Frontier(s, actor)];
+        var picked = new List<int>();
+        while (picked.Count < count && f.Count > 0)
+        {
+            int i = rnd.Next(f.Count);
+            picked.Add(f[i]);
+            f.RemoveAt(i);
+        }
+        return picked;
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void IdlingIsNeverBetterThanWorking_RandomStates_ConservationOfTheCommonBudget_S13(int seed)
+    {
+        var rnd = new Random(seed);
+        int actor = rnd.Next(2) == 0 ? 0 : Make().World.Scenario.ActorIndex("SUN");
+        SliceSession working = Make((ulong)seed, player: actor), idle = Make((ulong)seed, player: actor);
+        int slots = working.World.Institutes!.Layout.StartingCount(actor);
+        List<int> nodes = FreshFrontier(working, actor, rnd, 1 + rnd.Next(slots));
+        for (int i = 0; i < nodes.Count; i++)
+            Assert.True(working.Submit(SourceClass.Player, 0, i, new AssignNode(actor, i, nodes[i], Acknowledged: true)).Accepted);
+        Fx6 gain = Fx6.Zero;
+        for (long t = 0; t < 36; t++)
+        {
+            working.StepThroughMonth(t);
+            idle.StepThroughMonth(t);
+            KnowledgeSystem kw = working.World.Knowledge, ki = idle.World.Knowledge;
+            // The same research money; what is not asked comes back to the common budget, nothing is made or lost.
+            Assert.Equal((kw.LastSpent(actor) + kw.ReturnedToBudget(actor)).Raw, (ki.LastSpent(actor) + ki.ReturnedToBudget(actor)).Raw);
+            // The idle actor's procurement is larger by exactly what the working one spent on research this month.
+            Fx6 extra = idle.World.ProcurementBase(actor) - working.World.ProcurementBase(actor);
+            Assert.Equal((kw.LastSpent(actor) - ki.LastSpent(actor)).Raw, extra.Raw);
+            gain += extra;
+        }
+        Fx6 progress(SliceSession s) { Fx6 p = Fx6.Zero; for (int r = 0; r < s.World.Graph.Count; r++) p += s.World.Knowledge.Prog(actor, r); return p; }
+        Assert.True(progress(working) > progress(idle), "what the money was spent on: progress the idle institutes do not have");
+        Assert.True(working.World.Knowledge.KnownCount(actor) >= idle.World.Knowledge.KnownCount(actor));
+        Assert.True(gain >= Fx6.Zero);
+    }
+
+    [Fact]
+    public void ConflictingCommandsOfOneMonth_AreOrderedByTheirKeys_NotByArrival_S14()
+    {
+        SliceSession first = Make(2, player: 0), second = Make(2, player: 0);
+        int[] f = Frontier(first, 0);
+        // The same two commands on one node, sent in opposite orders of arrival: the key (source id before local number) decides, the first key wins.
+        Assert.True(first.Submit(SourceClass.Player, 1, 0, new AssignNode(0, 1, f[0], Acknowledged: true)).Accepted);
+        Assert.True(first.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        Assert.True(second.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        Assert.True(second.Submit(SourceClass.Player, 1, 0, new AssignNode(0, 1, f[0], Acknowledged: true)).Accepted);
+        first.StepThroughMonth(0);
+        second.StepThroughMonth(0);
+        HashAssert.Equal(first.LastHash, second.LastHash);
+        Assert.Equal(f[0], Resolved(first, 0, 1)[0]);
+        Assert.Contains(first.Outcomes, o => o.Contains("rejected: NodeTaken"));
+        // Turned round (the other slot has the first key), the other slot wins.
+        SliceSession turned = Make(2, player: 0);
+        Assert.True(turned.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 1, f[0], Acknowledged: true)).Accepted);
+        Assert.True(turned.Submit(SourceClass.Player, 1, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        turned.StepThroughMonth(0);
+        Assert.Equal(f[0], Resolved(turned, 0, 1)[1]);
+    }
+
+    [Fact]
+    public void ThePlayersListsAndFocus_SurviveSaveAndLoad_AndContinueIdentically_S6()
+    {
+        SliceSession one = Make(7, player: 0), loaded = Make(7, player: 0);
+        int[] f = Frontier(one, 0);
+        for (int i = 0; i < 4; i++)
+            Assert.True(one.Submit(SourceClass.Player, 0, i, new AssignNode(0, 0, f[i], Acknowledged: true)).Accepted);
+        Assert.True(one.Submit(SourceClass.Player, 0, 4, new SetFocus(0, 0, 2, true)).Accepted);
+        for (long t = 0; t < 20; t++)
+            one.StepThroughMonth(t);
+        using var snapshot = new MemoryStream();
+        one.WriteSnapshot(snapshot);
+        loaded.LoadSnapshot(new MemoryStream(snapshot.ToArray()));
+        Span<int> a = stackalloc int[6], b = stackalloc int[6];
+        for (int k = 0; k < 3; k++)
+        {
+            int na = one.World.SlotOrders!.Entries(new InstituteHandle(0, k), a), nb = loaded.World.SlotOrders!.Entries(new InstituteHandle(0, k), b);
+            Assert.Equal(na, nb);
+            Assert.True(a[..na].SequenceEqual(b[..nb]));
+            Assert.Equal(one.World.SlotOrders.FocusLevel(new InstituteHandle(0, k)), loaded.World.SlotOrders.FocusLevel(new InstituteHandle(0, k)));
+        }
+        for (long t = 20; t < 40; t++)
+        {
+            one.StepThroughMonth(t);
+            loaded.StepThroughMonth(t);
+            HashAssert.Equal(one.LastHash, loaded.LastHash);
+        }
+    }
+
+    [Fact]
+    public void ThePlannerQueries_OfAnotherActor_AreHiddenWithIntelligence_47()
+    {
+        SliceSession s = Make(2, player: 0);
+        s.StepThroughMonth(0);
+        Assert.True(s.World.Intel is not null && s.World.Config.PlayerActor == 0);
+        int goal = s.World.ProductsLayout.GenApp[2];
+        int[] f = Frontier(s, 1);
+        Assert.Empty(s.FitInstitutes(1, f[0]));
+        Assert.Empty(s.FocusQuote(1, f[0], 0));
+        Assert.Null(s.PathToGoal(1, goal));
+        Assert.Empty(s.SuggestQueues(1, goal));
+        Assert.NotEmpty(s.FitInstitutes(0, Frontier(s, 0)[0]));
+        Assert.NotNull(s.PathToGoal(0, goal));
+    }
+
+    [Fact]
+    public void ThePickOfAnAlternativeGroup_IsTheQuickestMember_EvenWhenItsNumberIsHigher_ATieGoesToTheLowerNumber_48()
+    {
+        int[] numbers = [5, 9, 7];
+        Fx6 F(int v) => Fx6.FromInt(v);
+        // The old rule kept the lower number unless the higher one was both lower in number and no slower: a faster, higher-numbered member could never win.
+        Assert.Equal(1, SlotPlanner.PickQuickest([0, 1], m => m == 0 ? F(4) : F(2), m => numbers[m]));
+        Assert.Equal(2, SlotPlanner.PickQuickest([0, 1, 2], m => F(new[] { 3, 2, 2 }[m]), m => numbers[m]));   // a tie between members 1 and 2: the lower number (7)
+        Assert.Equal(0, SlotPlanner.PickQuickest([0, 1], m => F(2), m => numbers[m]));
+    }
+
+    [Fact]
+    public void TheClosureOfAGoal_TakesTheQuickestMemberOfEveryUnknownAlternativeGroup_48()
+    {
+        SliceSession s = Make(2, player: 0);
+        SliceWorld w = s.World;
+        var req = w.Graph.Requires;
+        int checkedGroups = 0;
+        for (int r = 0; r < w.Graph.Count; r++)
+        {
+            for (int g = req.GroupStart[r]; g < req.GroupStart[r + 1]; g++)
+            {
+                int[] members = [.. req.GroupMembers(g).ToArray()];
+                if (members.Length < 2 || members.Any(m => w.Knowledge.IsKnown(0, m)))
+                    continue;
+                int quickest = SlotPlanner.PickQuickest(members, m => w.Knowledge.EffectiveMonths(0, m, 1), m => w.Graph.Number[m]);
+                Assert.Contains(quickest, SlotPlanner.Closure(w, 0, r, 1));
+                checkedGroups++;
+            }
+        }
+        Assert.True(checkedGroups > 0, "the data has groups of alternatives");
+    }
+
+    [Fact]
+    public void OneCreditNeverGivesAnInstituteAFifthDirection_S10_49()
+    {
+        SliceSession s = Make(1, player: 0);
+        SliceWorld w = s.World;
+        InstituteSystem inst = w.Institutes!;
+        InstituteLayout l = inst.Layout;
+        // An institute with three directions and a node that has two directions it lacks: put both just below their first level, with a fraction that tips over at the first credit.
+        for (int k = 0; k < l.StartingCount(0); k++)
+        {
+            var h = new InstituteHandle(0, k);
+            if (inst.DirectionCount(h) != 3)
+                continue;
+            foreach (int number in Frontier(s, 0))
+            {
+                int row = w.Graph.RowOf(number);
+                int[] missing = [.. w.Graph.Directions[row].Where(d => inst.DirLevel(h, d) == 0)];
+                if (missing.Length < 2)
+                    continue;
+                foreach (int d in missing.Take(2))
+                {
+                    int[] dx = w.Table.GetInt($"inst.dx.{k}.{l.DirectionNames[d]}").Current.ToArray();
+                    dx[0] = InstituteMath.Threshold(1, l.DirNodesIn[d], inst.Parameters) - 1;
+                    w.Table.GetInt($"inst.dx.{k}.{l.DirectionNames[d]}").Load(dx);
+                    long[] xf = w.Table.GetLong($"inst.xf.{k}.{l.DirectionNames[d]}").Current.ToArray();
+                    xf[0] = Fx6.One.Raw - 1;
+                    w.Table.GetLong($"inst.xf.{k}.{l.DirectionNames[d]}").Load(xf);
+                }
+                Assert.Equal(3, inst.DirectionCount(h));
+                Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, k, number, Acknowledged: true)).Accepted);
+                for (long t = 0; t < 4; t++)
+                    s.StepThroughMonth(t);
+                Assert.Equal(4, inst.DirectionCount(h));   // one of the two crossed, the other is held back at the limit
+                return;
+            }
+        }
+        Assert.Fail("no institute with three directions and a node with two directions it lacks");
     }
 }

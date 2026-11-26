@@ -46,7 +46,7 @@
         },
         "mil_value": { "description": "Military value word (SCIENCE_SLOTS §3.2).", "enum": ["none", "base", "prep", "direct"] },
         "effects": {
-          "description": "research_speed effects (SCIENCE_SLOTS §3.2, §6); read, not used until TASK-0187.",
+          "description": "research_speed effects (SCIENCE_SLOTS §3.2, §6); the slot model adds the bonuses to the research rate R of the listed directions once the node is known.",
           "type": "array",
           "items": {
             "type": "object",
