@@ -208,7 +208,7 @@
 | [TASK-0190](../development/tasks/TASK-0190-tooling-gemini-visual-review-through-agy-subscript.md) | DONE | Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key | MS-M0 |
 | [TASK-0191](../development/tasks/TASK-0191-tooling-llm-worker-research-deepseek-checks-claims.md) | DONE | Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) | MS-M0 |
 | [TASK-0192](../development/tasks/TASK-0192-tech-map-stage-1-node-choice-card-institute-strip-.md) | IN_PROGRESS | Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) | MS-M0 |
-| [TASK-0193](../development/tasks/TASK-0193-research-data-knowledge-tree-1990-2030-avionics-st.md) | IN_PROGRESS | Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 | MS-M0 |
+| [TASK-0193](../development/tasks/TASK-0193-research-data-knowledge-tree-1990-2030-avionics-st.md) | REVIEW | Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 | MS-M0 |
 | [TASK-0194](../development/tasks/TASK-0194-air-power-goal-565-session-goal-state-parity-super.md) | IN_PROGRESS | Air power goal (#565): Session goal state parity/superiority/dominance and a header indicator in the client | MS-M0 |
 
 ## Гипотезы
