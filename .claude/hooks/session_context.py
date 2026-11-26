@@ -60,6 +60,9 @@ def checks(root) -> list[str]:
     w = run(root, "python3", "tools/development/watch.py", "--brief", timeout=10.0)
     if w:
         out.append(f"- Watch: {w}")
+    ap = run(root, "python3", "tools/development/autopilot.py", "status", "--brief")
+    if ap:
+        out.append(f"- {ap}")
     kb = run(root, "python3", "tools/development/kb_check.py", "check", "--brief", timeout=15.0)
     if kb:
         out.append(f"- Knowledge base: {kb}")
