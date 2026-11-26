@@ -11,9 +11,12 @@ errors:
   found_by: owner
   cost: high
   fix: Check git merge-base --is-ancestor f12684f <branch> before a batch; shot_batch.py does it (TASK-0197)
+  prevention:
+    kind: hook
+    ref: .claude/hooks/guard_shots.py
   repeats:
   - '2026-11-26'
-  status: open
+  status: prevented
 - id: ERR-0002
   date: '2026-11-26'
   executor: orchestrator
@@ -24,10 +27,13 @@ errors:
   found_by: self
   cost: medium
   fix: Commit the task before dispatching an agent
+  prevention:
+    kind: hook
+    ref: .claude/hooks/guard_dispatch.py
   repeats:
   - '2026-11-26'
   - '2026-11-26'
-  status: open
+  status: prevented
 - id: ERR-0003
   date: '2026-11-26'
   executor: tool:codex
@@ -62,8 +68,11 @@ errors:
   found_by: self
   cost: medium
   fix: git merge-base --is-ancestor f12684f <branch>; shot_batch.py (TASK-0197)
+  prevention:
+    kind: hook
+    ref: .claude/hooks/guard_shots.py
   repeats: []
-  status: open
+  status: prevented
 - id: ERR-0006
   date: '2026-11-26'
   executor: orchestrator
@@ -74,5 +83,8 @@ errors:
   found_by: self
   cost: medium
   fix: After unblocking an agent by message, do not redispatch; one owner per task (dispatch guard TASK-0202)
+  prevention:
+    kind: hook
+    ref: .claude/hooks/guard_dispatch.py
   repeats: []
-  status: open
+  status: prevented
