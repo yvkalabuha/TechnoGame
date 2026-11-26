@@ -26,9 +26,11 @@
 - TASK-0167 [IN_PROGRESS] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
 - TASK-0192 [IN_PROGRESS] Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) (developer)
 - TASK-0194 [IN_PROGRESS] Air power goal (#565): Session goal state parity/superiority/dominance and a header indicator in the client (developer)
+- TASK-0195 [IN_PROGRESS] Era price of research nodes: node cost grows with era so leaders spend science money after 1990 (#579) (simulation-engineer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0193 [REVIEW] Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 (research-scientist)
+- TASK-0196 [APPROVED] Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) (ui-art-director)
 <!-- registry:active:end -->
 
 ## Блокеры

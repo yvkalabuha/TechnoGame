@@ -210,6 +210,8 @@
 | [TASK-0192](../development/tasks/TASK-0192-tech-map-stage-1-node-choice-card-institute-strip-.md) | IN_PROGRESS | Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) | MS-M0 |
 | [TASK-0193](../development/tasks/TASK-0193-research-data-knowledge-tree-1990-2030-avionics-st.md) | REVIEW | Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 | MS-M0 |
 | [TASK-0194](../development/tasks/TASK-0194-air-power-goal-565-session-goal-state-parity-super.md) | IN_PROGRESS | Air power goal (#565): Session goal state parity/superiority/dominance and a header indicator in the client | MS-M0 |
+| [TASK-0195](../development/tasks/TASK-0195-era-node-price.md) | IN_PROGRESS | Era price of research nodes: node cost grows with era so leaders spend science money after 1990 (#579) | MS-M0 |
+| [TASK-0196](../development/tasks/TASK-0196-tech-map-stage2-design.md) | APPROVED | Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) | MS-M0 |
 
 ## Гипотезы
 
