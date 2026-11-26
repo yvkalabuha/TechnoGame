@@ -25,7 +25,8 @@ errors:
   found_by: self
   cost: medium
   fix: Commit the task before dispatching an agent
-  repeats: []
+  repeats:
+  - '2026-11-26'
   status: open
   key: process|agents|agent dispatched before the task file was committed the work
 - id: ERR-0003
