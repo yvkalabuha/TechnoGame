@@ -48,11 +48,18 @@ def check_branch(branch: str) -> str | None:
     """None when the branch may be shot, else the reason."""
     if git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}")[0] != 0:
         return "branch not found"
-    if git("merge-base", "--is-ancestor", MODEL_COMMIT, branch)[0] != 0:
+    rc, _ = git("merge-base", "--is-ancestor", MODEL_COMMIT, branch)
+    if rc == 1:
         return f"lacks {MODEL_COMMIT} (new model): merge main"
-    _, behind = git("log", "--format=%h", f"{branch}..main", "--", CLIENT_DIR)
+    if rc != 0:
+        return "freshness check failed (git error)"
+    rc, behind = git("log", "--format=%h", f"{branch}..main", "--", CLIENT_DIR)
+    if rc != 0:
+        return "freshness check failed (git error)"
     if behind:
         return f"behind main in client sources ({len(behind.splitlines())} commit(s)): merge main"
+    if not worktree_of(branch):
+        return f"no worktree: git worktree add ../shots-{branch.replace('/', '-')} {branch}"
     return None
 
 
@@ -71,7 +78,7 @@ def collect(items) -> list[dict]:
 
 
 def command(row: dict) -> str:
-    wt = worktree_of(row["branch"]) or "<worktree of " + row["branch"] + ">"
+    wt = worktree_of(row["branch"])
     return f"(cd {shlex.quote(wt)} && {LAUNCHER} --shots --only {shlex.quote(row['only'])})"
 
 

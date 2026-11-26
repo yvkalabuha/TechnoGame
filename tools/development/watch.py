@@ -123,13 +123,13 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
     """Pure decision: one action per agent id (see the module docstring). Pass the task statuses and the
     unlanded branches by task id."""
     started: dict[str, dict] = {}
-    stopped: set[str] = set()
+    stopped: dict[str, float] = {}
     for e in events:
         key = e.get("agent_id") or ""
         if not key:
             continue
         if e.get("event") == "stop":
-            stopped.add(key)
+            stopped[key] = e.get("t", 0.0)
         else:
             started.setdefault(key, e)
     out = []
@@ -139,7 +139,9 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
         action = None
         if key not in stopped:
             action = "stop+redispatch" if h > stop_h else "ping" if h > ping_h else None
-        elif any(status_of.get(t) == "IN_PROGRESS" and unlanded.get(t) for t in tasks):
+        elif any(status_of.get(t) == "IN_PROGRESS" and unlanded.get(t) for t in tasks) and not any(
+                o is not e and o.get("t", 0.0) > stopped[key] and set(agent_task(o)[0]) & set(tasks)
+                for o in started.values()):  # a newer agent on the same task is the replacement
             action = "to-review"
         if action:
             out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks, "candidate": candidate,

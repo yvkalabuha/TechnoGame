@@ -198,6 +198,11 @@ class WatchActionsTest(unittest.TestCase):
         ev = [self.started("a", 5), {"event": "stop", "agent_id": "a", "t": self.NOW}]
         self.assertEqual(self.acts(ev), {})
 
+    def test_replacement_agent_after_stop_suppresses_to_review(self):
+        ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
+              self.started("b", 1)]
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{}]}), {})
+
     def test_stopped_in_progress_with_unlanded_branch_goes_to_review(self):
         ev = [self.started("a", 1), {"event": "stop", "agent_id": "a", "t": self.NOW}]
         self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{}]}), {"a": "to-review"})
@@ -230,6 +235,21 @@ class AgentLogShapeTest(unittest.TestCase):
         self.assertEqual(watch.agent_task({"description": "x", "tasks": ["TASK-0001", "TASK-0002"]}),
                          (["TASK-0001"], True))
         self.assertEqual(watch.agent_task({"description": "x", "tasks": ["TASK-0001"]}), (["TASK-0001"], False))
+
+
+class SessionContextTest(unittest.TestCase):
+    def test_prints_autopilot_state(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "CURRENT_STATE.md").write_text("## Сводка\n- x\n", encoding="utf-8")
+        (tmp / "tools" / "development").mkdir(parents=True)
+        shutil.copy(ROOT / "tools/development/autopilot.py", tmp / "tools/development/autopilot.py")
+        state = tmp / "state.json"
+        state.write_text(json.dumps({"state": "stop", "since": "2026-11-26 10:00"}))
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp), AUTOPILOT_STATE=str(state))
+        out = subprocess.run([sys.executable, str(HOOKS / "session_context.py")], input="{}", text=True,
+                             capture_output=True, env=env).stdout
+        self.assertIn("autopilot: stop since 2026-11-26 10:00", out)
 
 
 class AutopilotTest(unittest.TestCase):
@@ -268,6 +288,10 @@ class ShotBatchTest(unittest.TestCase):
         self.commit("model", "b.txt")
         shot_batch.MODEL_COMMIT = self.g("rev-parse", "HEAD")
         self.g("branch", "fresh")
+        wt = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, wt, True)
+        self.wt = wt / "fresh"
+        self.g("worktree", "add", str(self.wt), "fresh")
 
     def g(self, *a):
         env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
@@ -287,6 +311,12 @@ class ShotBatchTest(unittest.TestCase):
         self.assertIn("not found", shot_batch.check_branch("nope"))
         self.commit("client change", shot_batch.CLIENT_DIR + "/c.cs")
         self.assertIn("behind main", shot_batch.check_branch("fresh"))
+
+    def test_no_worktree_is_not_ready_and_git_error_is_not_ready(self):
+        self.g("branch", "bare")
+        self.assertIn("no worktree: git worktree add", shot_batch.check_branch("bare"))
+        shot_batch.MODEL_COMMIT = "0" * 40  # unknown object: git errors instead of answering
+        self.assertIn("git error", shot_batch.check_branch("fresh"))
 
     def test_collect_selects_waiting_client_tasks_with_shots(self):
         class It:
