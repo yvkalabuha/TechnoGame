@@ -199,7 +199,10 @@ public sealed class SlotOrders
         return true;
     }
 
-    /// <summary><c>reorder_queue</c>: the new order is a permutation of the queued nodes (the active one stays first).</summary>
+    /// <summary>
+    /// <c>reorder_queue</c>: the order is a permutation either of the whole list (the active node first) or of the published queue, which is the list without the node the slot works
+    /// on (<c>InstituteView.Queue</c>, DEBT-0115); in the second form the active node stays first.
+    /// </summary>
     public CommandVerdict Apply(ReorderQueue c, long month)
     {
         if (CheckSlot(c.Actor, c.Slot) is { Accepted: false } bad)
@@ -207,15 +210,30 @@ public sealed class SlotOrders
         var h = new InstituteHandle(c.Actor, c.Slot);
         Span<int> list = stackalloc int[Length];
         int n = Entries(h, list);
-        if (c.Order.IsDefault || c.Order.Length != n)
-            return CommandVerdict.Refuse(CommandRefusal.NotInList, $"the order names {(c.Order.IsDefault ? 0 : c.Order.Length)} nodes, the list of slot {c.Slot} holds {n}");
+        int active = _probe.ActiveNode(c.Actor, c.Slot, month);
+        Span<int> rest = stackalloc int[Length];
+        int rn = 0;
         for (int i = 0; i < n; i++)
         {
-            if (list[..n].IndexOf(c.Order[i]) < 0 || c.Order.IndexOf(c.Order[i]) != i)
+            if (list[i] != active)
+                rest[rn++] = list[i];
+        }
+        int got = c.Order.IsDefault ? 0 : c.Order.Length;
+        bool queueForm = got == rn && rn != n;
+        if (!queueForm && got != n)
+            return CommandVerdict.Refuse(CommandRefusal.NotInList, $"the order names {got} nodes, the list of slot {c.Slot} holds {n}");
+        ReadOnlySpan<int> pool = queueForm ? rest[..rn] : list[..n];
+        for (int i = 0; i < got; i++)
+        {
+            if (pool.IndexOf(c.Order[i]) < 0 || c.Order.IndexOf(c.Order[i]) != i)
                 return CommandVerdict.Refuse(CommandRefusal.NotInList, $"node {c.Order[i]} is not in the list of slot {c.Slot} or repeats");
         }
-        c.Order.CopyTo(list);
-        Write(h, list[..n]);
+        Span<int> next = stackalloc int[Length];
+        int m = 0;
+        if (queueForm)
+            next[m++] = active;
+        c.Order.CopyTo(next[m..]);
+        Write(h, next[..(m + got)]);
         return CommandVerdict.Ok;
     }
 

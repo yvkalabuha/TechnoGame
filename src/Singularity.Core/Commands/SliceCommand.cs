@@ -275,9 +275,10 @@ public readonly record struct QueuePlan(int Slot, ImmutableArray<int> Nodes);
 
 /// <summary>
 /// <c>apply_queues(plan)</c> (§4.3, #562): the player's lists of several institutes replaced at once by a plan the game proposed (<c>SuggestQueues</c>) and the player confirmed or edited.
-/// A node stands once in the plan; the institutes not in the plan keep their lists.
+/// A node stands once in the plan; the institutes not in the plan keep their lists. <paramref name="Acknowledged"/> confirms the starts the plan makes when the money will cover less than 60 %
+/// of what the institutes ask (as for <see cref="AssignNode"/>, O-096).
 /// </summary>
-public sealed record ApplyQueues(int Actor, ImmutableArray<QueuePlan> Plan) : SliceCommand(Actor)
+public sealed record ApplyQueues(int Actor, ImmutableArray<QueuePlan> Plan, bool Acknowledged = false) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.ApplyQueues;
 }

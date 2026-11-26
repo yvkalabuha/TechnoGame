@@ -194,6 +194,14 @@ public sealed partial class SliceSession
             slotWarning = $"accepted; the money covers only {percent} of what the institutes ask after the start";
         }
 
+        if (command is ApplyQueues plan && PlanCoverage(plan, NextStepMonth, out Fx6 planBefore) is { } planAfter && planAfter < _world.Institutes!.SlotParameters.UnderfundedBelow)
+        {
+            string percent = $"{planAfter.Raw * 100 / Fx6.Scale} %";
+            if (planBefore >= _world.Institutes.SlotParameters.UnderfundedBelow && !plan.Acknowledged)
+                return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the plan starts its nodes the money covers {percent} of what the institutes ask (now {planBefore.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to apply anyway");
+            slotWarning = $"accepted; the money covers only {percent} of what the institutes ask after the plan starts";
+        }
+
         int at = _pending.FindIndex(p => p.Key > logged.Key);
         _pending.Insert(at < 0 ? _pending.Count : at, logged);
         RememberLocal(source, sourceId, localN);
@@ -727,6 +735,36 @@ public sealed partial class SliceSession
         return _world.Knowledge.CoverageWith(a.Actor, month, [mine]);
     }
 
+    // The coverage after the starts an ApplyQueues plan would make at once: the first node of the list of each free institute of the plan, when it is in the frontier and no institute works on it.
+    // Null when the plan starts nothing now.
+    private Fx6? PlanCoverage(ApplyQueues plan, long month, out Fx6 before)
+    {
+        before = Fx6.One;
+        if (!_world.SlotsOn || (uint)plan.Actor >= (uint)_world.Scenario.ActorCount)
+            return null;
+        InstituteSystem inst = _world.Institutes!;
+        int slots = inst.Layout.SlotCount(plan.Actor);
+        var node = new int[slots];
+        inst.Resolve(plan.Actor, month, node, new byte[slots]);
+        var starts = new List<SlotWork>();
+        var taken = new List<int>(node);
+        foreach (QueuePlan q in plan.Plan)
+        {
+            if ((uint)q.Slot >= (uint)slots || node[q.Slot] != 0 || q.Nodes.IsDefaultOrEmpty || !inst.Standing(new InstituteHandle(plan.Actor, q.Slot)))
+                continue;
+            int n = q.Nodes[0];
+            int row = _world.Graph.RowOf(n);
+            if (row < 0 || taken.Contains(n) || !_world.Knowledge.InFrontier(plan.Actor, row) || _world.Knowledge.Released(plan.Actor, row))
+                continue;
+            taken.Add(n);
+            starts.Add(new SlotWork(q.Slot, row, inst.InstituteMultiplier(new InstituteHandle(plan.Actor, q.Slot), row), 0));
+        }
+        if (starts.Count == 0)
+            return null;
+        before = _world.Knowledge.CoverageWith(plan.Actor, month, []);
+        return _world.Knowledge.CoverageWith(plan.Actor, month, starts.ToArray());
+    }
+
     // The slot work an AssignNode would begin in the month (a free institute, the node in the frontier, not worked on elsewhere), or null.
     private SlotWork? StartOf(AssignNode a, long month)
     {
@@ -823,6 +861,9 @@ public sealed partial class SliceSession
         if (command is AssignNode { Acknowledged: false } start && StartCoverage(start, month, out Fx6 before) is { } after
             && before >= institutes.SlotParameters.UnderfundedBelow && after < institutes.SlotParameters.UnderfundedBelow)
             return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {after.Raw * 100 / Fx6.Scale} % of what the institutes ask (it was {before.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to start anyway");
+        if (command is ApplyQueues { Acknowledged: false } queued && PlanCoverage(queued, month, out Fx6 planBefore) is { } planAfter
+            && planBefore >= institutes.SlotParameters.UnderfundedBelow && planAfter < institutes.SlotParameters.UnderfundedBelow)
+            return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the plan starts its nodes the money covers {planAfter.Raw * 100 / Fx6.Scale} % of what the institutes ask (it was {planBefore.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to apply anyway");
         if (command is SetFocus f && f.Level > 0 && !institutes.Standing(new InstituteHandle(f.Actor, f.Slot)))
             return CommandVerdict.Refuse(CommandRefusal.NoActiveNode, $"the institute in slot {f.Slot} is not built");
         return CommandVerdict.Ok;

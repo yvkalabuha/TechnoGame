@@ -373,8 +373,8 @@ public class SlotScienceTests
         int fra = s.World.Config.PlayerActor!.Value;
         int[] f = Frontier(s, fra);
         var plan = ImmutableArray.Create(new QueuePlan(0, [f[0], f[1]]), new QueuePlan(1, [f[2], f[3]]));
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new ApplyQueues(fra, plan)).Accepted);
-        Assert.True(s.Submit(SourceClass.Player, 0, 1, new ApplyQueues(fra, [new QueuePlan(0, [f[4], f[4]])])).Accepted);   // the form is fine; the state refuses
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new ApplyQueues(fra, plan, Acknowledged: true)).Accepted);   // a small country is short of money: the plan is confirmed (O-096)
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new ApplyQueues(fra, [new QueuePlan(0, [f[4], f[4]])], Acknowledged: true)).Accepted);   // the form is fine; the state refuses
         s.StepThroughMonth(0);
         Assert.Contains(s.Outcomes, o => o.Contains("rejected: NodeTaken"));
         Span<int> entries = stackalloc int[6];
