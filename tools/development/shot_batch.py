@@ -84,6 +84,8 @@ def collect(items) -> list[dict]:
                 bad_flags = True
             problem = None if branch and only else "shots needs both branch and only"
             problem = problem or ("malformed flags: " + flags if bad_flags else None)
+            if not problem and any(f == "--only" or f.startswith("--only=") for f in shlex.split(flags)):
+                problem = "flags must not set --only (the entry's only mask is used)"
             if not problem and not {"--shots", "--map-frames"} & set(shlex.split(flags)):
                 problem = "interactive command (flags need --shots or --map-frames)"
             problem = problem or check_branch(branch)
@@ -97,7 +99,14 @@ def command(row: dict) -> str:
     return f"(cd {shlex.quote(wt)} && {LAUNCHER} {flags} --only {shlex.quote(row['only'])})"
 
 
+def main_root() -> Path:
+    """The main checkout (parent of the git common dir): task files are read there, not from a worktree."""
+    rc, out = git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    return Path(out).parent if rc == 0 and out else ROOT
+
+
 def main() -> int:
+    registry.ROOT = main_root()
     items = [i for i in registry.load_items([]) if i.type.prefix == "TASK"]
     rows = collect(items)
     ready = [r for r in rows if not r["problem"]]

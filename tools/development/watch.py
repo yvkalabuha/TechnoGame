@@ -181,21 +181,23 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
     out = []
     for key, e in started.items():
         tasks, candidate = agent_task(e)
+        mine = e.get("branch") or AGENT_BRANCH + key  # a replacement works on the branch it was given
         h = (now - e.get("t", now)) / 3600.0
         action = None
         if key not in stopped:
             action = "stop+redispatch" if h > stop_h else "ping" if h > ping_h else None
         elif any(status_of.get(t) == "IN_PROGRESS"
-                 and any(b.get("name") == AGENT_BRANCH + key for b in unlanded.get(t, []))
+                 and any(b.get("name") == mine for b in unlanded.get(t, []))
                  for t in tasks) and not any(
                 o is not e and ok not in stopped and o.get("t", 0.0) > stopped[key]
-                and set(agent_task(o)[0]) & set(tasks) and same_branch(o, AGENT_BRANCH + key)
+                and set(agent_task(o)[0]) & set(tasks) and same_branch(o, mine)
                 for ok, o in started.items()):  # a newer agent still running on the same branch is the replacement
             action = "to-review"
         if action:
             out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks, "candidate": candidate,
-                        "agent_type": e.get("agent_type", "?"), "branch": AGENT_BRANCH + key})
-    return out
+                        "agent_type": e.get("agent_type", "?"), "branch": mine})
+    seen: set[str] = set()  # one to-review per branch (the original and its replacement name the same one)
+    return [a for a in out if a["action"] != "to-review" or not (a["branch"] in seen or seen.add(a["branch"]))]
 
 
 def main() -> int:
@@ -222,7 +224,7 @@ def main() -> int:
         acts = agent_actions(agent_events(), now, args.ping_hours, args.stop_hours, status, by_task)
         for a in acts:
             print(f"{a['action']:<16} {a['agent_id']}  {a['agent_type']:<20} {fmt(a['hours'])}  "
-                  f"{','.join(a['tasks']) or '-'}{' (candidate)' if a['candidate'] else ''}")
+                  f"{','.join(a['tasks']) or '-'}{' (candidate)' if a['candidate'] else ''}  {a['branch']}")
         orphans = orphan_branches(br, agent_events(), status, {a["branch"] for a in acts if a["action"] == "to-review"},
                                   now, args.ping_hours)
         for b in orphans:

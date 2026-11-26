@@ -205,6 +205,14 @@ class WatchActionsTest(unittest.TestCase):
               dict(self.started("b", 1), branch="worktree-agent-a")]
         self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{"name": "worktree-agent-a"}]}), {})
 
+    def test_timed_out_replacement_redispatched_on_its_own_branch(self):
+        ev = [self.started("a", 6), {"event": "stop", "agent_id": "a", "t": self.NOW - 5 * 3600},
+              dict(self.started("b", 4), branch="worktree-agent-a")]
+        got = {a["agent_id"]: a for a in watch.agent_actions(ev, self.NOW, 2.0, 3.0, {}, {})}
+        self.assertEqual((got["b"]["action"], got["b"]["branch"]), ("stop+redispatch", "worktree-agent-a"))
+        ev = [self.started("c", 4)]
+        self.assertEqual(watch.agent_actions(ev, self.NOW, 2.0, 3.0, {}, {})[0]["branch"], "worktree-agent-c")
+
     def test_replacement_finishing_gets_to_review(self):
         ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
               dict(self.started("b", 1), branch="worktree-agent-a"),
@@ -322,11 +330,16 @@ class AutopilotTest(unittest.TestCase):
     def test_switch_waits_for_the_lock(self):
         self.state.parent.mkdir(parents=True)
         fd = os.open(self.state.parent, os.O_RDONLY)
-        self.addCleanup(lambda: os.close(fd) if fd >= 0 else None)
+        self.addCleanup(os.close, fd)  # closing also drops the lock, so the child can never hang the run
         fcntl.flock(fd, fcntl.LOCK_EX)
         proc = subprocess.Popen([sys.executable, str(ROOT / "tools/development/autopilot.py"), "stop"],
                                 env=self.env, stdout=subprocess.DEVNULL)
-        self.addCleanup(proc.wait)
+
+        def reap():
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait(timeout=10)
+        self.addCleanup(reap)
         time.sleep(0.5)
         self.assertIsNone(proc.poll())
         self.assertFalse(self.state.exists())
@@ -415,6 +428,22 @@ class ShotBatchTest(unittest.TestCase):
         self.assertEqual([(r["id"], r["problem"]) for r in rows],
                          [("TASK-1", "missing shots field"), ("TASK-2", None), ("TASK-2", None)])
         self.assertIn("--map-frames --only 'map1945_*'", shot_batch.command(rows[2]))
+
+    def test_only_mask_reaches_every_command(self):
+        class It:
+            def __init__(s, i, **m):
+                s.id, s.meta = i, m
+        rows = shot_batch.collect([It("TASK-1", status="REVIEW", category="client", shots=[
+            {"branch": "fresh", "only": "m1_*"},
+            {"branch": "fresh", "only": "m2_*", "flags": "--map-frames"},
+            {"branch": "fresh", "only": "m3", "flags": "--shots --only=other"}])])
+        self.assertIn("--only 'm1_*'", shot_batch.command(rows[0]))
+        self.assertIn("--only 'm2_*'", shot_batch.command(rows[1]))
+        self.assertIn("must not set --only", rows[2]["problem"])
+
+    def test_registry_is_read_from_the_main_checkout(self):
+        shot_batch.ROOT = self.wt
+        self.assertEqual(shot_batch.main_root().resolve(), self.repo.resolve())
 
     def test_bare_launch_is_interactive_not_ready(self):
         class It:
