@@ -25,10 +25,17 @@ public sealed record HostSnapshot(
     long Tick, CivilDate Date, SliceView View, int Speed,
     CmdResult Last, int Pending, long CmdSeq, string LastOutcome, long Seq,
     ImmutableArray<BudgetShares?> SharesInForce,
-    int WhyActor, WhyNotTarget? Target, IReadOnlyList<Link> Links, string WhyError, double LastTickMs, string JobError = "")
+    int WhyActor, WhyNotTarget? Target, IReadOnlyList<Link> Links, string WhyError, double LastTickMs, string JobError = "", ScienceSnap Science = null)
 {
     public bool LastRejected => Last.Status == CmdStatus.Rejected;
 }
+
+/// <summary>What the tech map asks of the session for the node and the goal it shows (TASK-0192): reads of the month of the view, made on the simulation thread.
+/// <paramref name="NoticeSeq"/> counts the pauses for «an institute is free» (S12); the UI shows the banner when it changes.</summary>
+public sealed record ScienceSnap(int Node, int Goal, ImmutableArray<InstituteFitView> Fit, ImmutableArray<ImmutableArray<FocusQuoteView>> Focus, PathView Path, ImmutableArray<QueuePlan> Plan, long FreeNoticeMonth, int NoticeSeq);
+
+/// <summary>The node (number, 0 = none) and the goal (number, 0 = none) the tech map shows.</summary>
+public readonly record struct ScienceAsk(int Node, int Goal);
 
 /// <summary>
 /// Runs SliceSession on a background thread. The UI thread never touches the session: it reads <see cref="Snap"/>, and sends
@@ -82,6 +89,15 @@ public sealed class SimHost : IDisposable
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
     /// <summary>The actor the player plays; its nodes are always in the view (the audio reads them). Set once by the UI.</summary>
     public int PlayerActor { get => Volatile.Read(ref _playerActor); set => Volatile.Write(ref _playerActor, value); }
+    ScienceAsk _ask, _lastAsk;
+    readonly FreeNoticeThrottle _notice = new();
+    int _noticeSeq;
+    /// <summary>The adviser fills the free institutes of the player (the old behaviour, O-099): off in play, where the player chooses; the unattended runs of the shot script switch it on.</summary>
+    public volatile bool AutoFillFreeInstitutes;
+    /// <summary>Asks the session for the fit, focus quotes, path and layout of a node and a goal; answered in the next snapshot.</summary>
+    public void AskScience(int node, int goal) { lock (_askLock) _ask = new ScienceAsk(node, goal); }
+    readonly object _askLock = new();
+    ScienceAsk CurrentAsk() { lock (_askLock) return _ask; }
     public int WhyActor { get => Volatile.Read(ref _whyActor); set { Volatile.Write(ref _whyActor, value); } }
 
     /// <summary>Queues a command of the player (source class Player, id 0). While paused it stays pending and applies at the first tick after unpause.</summary>
@@ -166,7 +182,7 @@ public sealed class SimHost : IDisposable
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }
-                if (WhyActor != _lastWhyActor || _sub.Stale(PlayerActor, WhyActor)) Publish();
+                if (WhyActor != _lastWhyActor || _sub.Stale(PlayerActor, WhyActor) || CurrentAsk() != _lastAsk) Publish();
                 Thread.Sleep(sp == 0 ? 20 : 8);
             }
         }
@@ -183,6 +199,7 @@ public sealed class SimHost : IDisposable
         {
             _session.Step(1);
             FillFreeInstitutes();
+            WatchFreeNotice();
             if (_pending > 0)
             {
                 // A tick applies every accepted command: the last result becomes «applied» only if it is still the pending one
@@ -198,10 +215,19 @@ public sealed class SimHost : IDisposable
 
     long _filledMonth = -2;
 
-    // The client has no research screen of its own yet (TASK-0192): once a month the free institutes of the player's country take what the adviser proposes (O-099).
+    // S12: «an institute is free» pauses the game at most once in 25 real seconds; a notice that comes too early is dropped (the banner of the tech map still shows the free card).
+    void WatchFreeNotice()
+    {
+        if (PlayerActor < 0 || PlayerActor >= _session.View.Actors.Length || _session.View.Actors[PlayerActor].Slots is not { } slots) return;
+        if (!_notice.ShouldPause(slots.FreeNoticeMonth, Environment.TickCount64)) return;
+        Speed = 0;
+        _noticeSeq++;
+    }
+
+    // With the tech map the player chooses; the adviser fills the free institutes only on request (AutoFillFreeInstitutes), once a month (O-099).
     void FillFreeInstitutes()
     {
-        if (PlayerActor < 0 || _session.View.Month == _filledMonth)
+        if (!AutoFillFreeInstitutes || PlayerActor < 0 || _session.View.Month == _filledMonth)
             return;
         _filledMonth = _session.View.Month;
         foreach (AssignNode start in _session.AdviserStarts(PlayerActor))
@@ -230,7 +256,23 @@ public sealed class SimHost : IDisposable
             _lastWhyView = v; _lastWhyActor = wa;
         }
         _lastOutcome = _session.Outcomes.Count > 0 ? _session.Outcomes[^1] : "";
-        _snap = new HostSnapshot(_session.Tick, _session.Date, v, Speed, _last, _pending, _cmdSeq, _lastOutcome, ++_seq, _shares, wa, _target, _links, _whyErr, _lastTickMs, _jobError);
+        ScienceSnap sci = null;
+        ScienceAsk ask = CurrentAsk();
+        _lastAsk = ask;
+        if (PlayerActor >= 0 && ask != default && v.Actors.Length > PlayerActor && v.Actors[PlayerActor].Slots is { } slotView)
+        {
+            try
+            {
+                var fit = ask.Node > 0 ? _session.FitInstitutes(PlayerActor, ask.Node) : ImmutableArray<InstituteFitView>.Empty;
+                var focus = ImmutableArray.CreateBuilder<ImmutableArray<FocusQuoteView>>(fit.Length);
+                foreach (var f in fit) focus.Add(f.Standing ? _session.FocusQuote(PlayerActor, ask.Node, f.Slot) : ImmutableArray<FocusQuoteView>.Empty);
+                sci = new ScienceSnap(ask.Node, ask.Goal, fit, focus.MoveToImmutable(), ask.Goal > 0 ? _session.PathToGoal(PlayerActor, ask.Goal) : null,
+                    ask.Goal > 0 ? _session.SuggestQueues(PlayerActor, ask.Goal) : ImmutableArray<QueuePlan>.Empty, slotView.FreeNoticeMonth, _noticeSeq);
+            }
+            catch (Exception e) { _jobError = "science: " + e.Message; }
+        }
+        sci ??= new ScienceSnap(0, 0, ImmutableArray<InstituteFitView>.Empty, ImmutableArray<ImmutableArray<FocusQuoteView>>.Empty, null, ImmutableArray<QueuePlan>.Empty, -1, _noticeSeq);
+        _snap = new HostSnapshot(_session.Tick, _session.Date, v, Speed, _last, _pending, _cmdSeq, _lastOutcome, ++_seq, _shares, wa, _target, _links, _whyErr, _lastTickMs, _jobError, sci);
     }
 
     /// <summary>Stops the simulation thread; called from the node's _ExitTree.</summary>

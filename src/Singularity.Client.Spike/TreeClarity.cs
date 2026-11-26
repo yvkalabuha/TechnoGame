@@ -78,7 +78,7 @@ public static class TreeClarity
     };
 
     /// <summary>The tree inspector reports only the command it owns (the mastery focus); a budget or design command of another screen is not news here (it read as "resources allocated" under the focus button).</summary>
-    public static bool ShowsCommand(string labelKey) => labelKey == "cmd.focus";
+    public static bool ShowsCommand(string labelKey) => labelKey is "cmd.focus" or "cmd.sci";
 
     /// <summary>Developer vocabulary that must not appear in the text the player reads (C6).</summary>
     public static readonly Regex Forbidden = new(@"\bAPI\b|NodeEffects|\bP10|\bтик|макет|\bядр|симуляци|\btick\b|\bmock\b|spike|ADR-", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);

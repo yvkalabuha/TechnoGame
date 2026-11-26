@@ -451,3 +451,96 @@ fx.more,"{0} more","ещё {0}"
 inset.why.node,"What blocks «{0}»:","Что мешает узлу «{0}»:"
 inset.why.node.free,"Nothing blocks it: all requirements are known, it can be opened.","Ничего не мешает: все требования известны, узел можно открыть."
 tree.effects.none,effects: no data,эффекты: нет данных
+refusal.NeedsConfirmation,the money would cover less than 60 % of what the institutes ask: confirm to start anyway,"денег хватит меньше чем на 60 % от заявленного институтами: подтвердите, чтобы начать всё равно"
+refusal.NodeTaken,the node is in a list of an institute already,узел уже стоит в списке одного из институтов
+refusal.QueueFull,the list of this institute is full,список этого института заполнен
+refusal.NotInList,the node is not in this list,узла нет в этом списке
+refusal.NodeKnown,the node is known already,узел уже освоен
+refusal.BadSlot,no such institute,нет такого института
+refusal.FocusTooSoon,the focus was changed a short time ago,"фокус меняли недавно, подождите"
+refusal.NoActiveNode,the institute works on no node: nothing to focus on,институт не ведёт узел: фокусировать нечего
+refusal.BuildRefused,the institute cannot be built now,институт сейчас нельзя построить
+refusal.PriorityNotAvailable,the institute is not built,институт не построен
+cmd.sci,research order,заказ исследований
+sci.hint,Pick a node on the map or an institute in the strip below.,Выберите узел на карте или институт в полосе внизу.
+sci.strip.head,Institutes: {0} of {1} · free: {2},Институты: {0} из {1} · свободно: {2}
+sci.strip.page,{0}–{1},{0} из {1}
+sci.strip.name,I{0} · {1},И{0} · {1}
+sci.strip.progress,{0} / {1} mo. (left {2} mo.),{0} / {1} мес. (ост. {2} мес.)
+sci.strip.queue,Queue {0} / {1},Очередь {0} / {1}
+sci.strip.free,FREE — assign,СВОБОДЕН — назначить
+sci.strip.building,Building: {0} mo. left,Строится: ост. {0} мес.
+sci.strip.buildprog,{0} / {1} mo.,{0} / {1} мес.
+sci.strip.unavail,Slot not built,Слот не построен
+sci.strip.tip.0,Free institute: it works on nothing yet.,Свободный институт: пока ничего не исследует.
+sci.strip.tip.1,The institute works on a node.,Институт ведёт узел.
+sci.strip.tip.2,The institute is being built.,Институт строится.
+sci.strip.tip.3,The slot is not built.,Слот не построен.
+sci.focus.0,No focus,Без фокуса
+sci.focus.1,Focus 1,Фокус 1
+sci.focus.2,Focus 2,Фокус 2
+sci.focus.head,FOCUS (paid acceleration),ФОКУС (платное ускорение)
+sci.focus.when,The focus is bought when an institute works on the node.,"Фокус покупается, когда институт ведёт этот узел."
+sci.reserve,From the reserve,Из резерва
+sci.months,{0} mo.,{0} мес.
+sci.units,{0} units,{0} ед.
+sci.notice,An institute is free: give it a node.,Институт свободен: назначьте ему тему.
+sci.notice.ok,Got it,Понятно
+sci.confirm,The money will cover less than 60 % of what the institutes ask. Start anyway?,Денег хватит меньше чем на 60 % от заявленного институтами. Начать всё равно?
+sci.confirm.go,Start anyway,Начать всё равно
+sci.dirs,Directions: {0},Направления: {0}
+sci.main,main,осн.
+sci.wait,Waiting for the figures…,Ждём расчёт…
+sci.known,Known already.,Уже освоено.
+sci.nodata,No figures: no institute is built.,Нет данных: нет построенного института.
+sci.numbers,Price: {0} · Time: ≈ {1},Цена: {0} · Срок: ≈ {1}
+sci.mil,Military value: {0},Военная ценность: {0}
+mil.direct,direct,прямая
+mil.prep,preparation,подготовка
+mil.base,base,база
+sci.assign,Research in an institute,Исследовать в институте
+sci.why.known,Already known.,Уже освоено.
+sci.why.none,No institute is built.,Нет построенного института.
+sci.why.held,Already assigned: institute {0}.,Уже назначено: институт {0}.
+sci.why.full,All queues are full ({0}).,Очереди полны ({0}).
+sci.why.need,Requires: {0},Требуется: {0}
+sci.why.need.unknown,Not on the frontier of discoveries yet.,Пока не на границе открытий.
+sci.table,INSTITUTES AGAINST THE NODE,ИНСТИТУТЫ ДЛЯ ЭТОГО УЗЛА
+sci.nobonus,no bonus: other directions,без бонуса: другие направления
+sci.match,{0} of {1}: {2},{0} из {1}: {2}
+sci.row.free,free,свободен
+sci.row.full,queue full ({0}),очередь полна ({0})
+sci.row.busy,"busy, free in {0}","занят, свободен через {0}"
+sci.best,best,лучший
+sci.row,I{0} · {1} · speed ×{2} · {3} · {4},И{0} · {1} · скорость ×{2} · {3} · {4}
+sci.blocks,WHAT BLOCKS IT,ЧТО МЕШАЕТ
+sci.blocks.none,Nothing.,Ничего.
+sci.opens,WHAT IT OPENS NEXT,ЧТО ОТКРОЕТ ДАЛЬШЕ
+sci.goal.set,Path to this node,Путь к этому узлу
+sci.goal.clear,Clear the goal,Убрать цель
+sci.build,Build the institute,Построить институт
+sci.build.cancel,Cancel the build,Отменить стройку
+sci.build.cancel.go,Cancel for sure,Отменить окончательно
+sci.build.lost,The money already spent is not returned.,Потраченные деньги не возвращаются.
+sci.panel.free,The institute is free. Pick a node on the map.,Институт свободен. Выберите узел на карте.
+sci.queue,QUEUE,ОЧЕРЕДЬ
+sci.queue.note,The queue does not reserve money.,Очередь не резервирует средства.
+sci.up,Up,Выше
+sci.down,Down,Ниже
+sci.remove,Remove,Убрать
+sci.path,PATH TO THE GOAL,ПУТЬ К ЦЕЛИ
+sci.path.goal,Goal: {0},Цель: {0}
+sci.path.sum,To the goal: {0} nodes · {1} · ≈ {2} with the institutes working in parallel · an estimate,К цели: {0} узлов · {1} · ≈ {2} с учётом параллельной работы институтов · оценка
+sci.path.nodata,The goal is not calculated.,Цель не посчитана.
+sci.path.done,The goal is reached.,Цель достигнута.
+sci.path.ready,available,доступен
+sci.path.waits,waits for an earlier node,ждёт предыдущего
+sci.path.next,Next on the path,Следующий на пути
+sci.path.layout,Spread over the institutes,Разложить по институтам
+sci.path.noplan,No layout: no institute is built.,Нет раскладки: нет построенного института.
+sci.plan.note,Queues do not reserve money. Nothing is applied until «Apply».,Очереди не резервируют средства. Ничего не применяется до «Применить».
+sci.plan.group,I{0} · total {1} · {2},И{0} · итого {1} · {2}
+sci.plan.waits,waits,ждёт
+sci.plan.move,To another institute,В другой институт
+sci.plan.apply,Apply,Применить
+sci.plan.cancel,Cancel,Отмена

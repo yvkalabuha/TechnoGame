@@ -37,6 +37,7 @@ public sealed partial class TechTree : Control
     bool _modelDirty = true, _insetDirty = true;
     SliceView _lastView; CmdResult _lastCmd; long _drawnTick = -1; CivilDate _date;
     int _selected = -1;                              // node row
+    int _lastSciNode;
     St[] _state; bool[] _route; int _root = -1, _goal = -1;
     List<int> _path = new();                         // root -> goal chain (route line)
     NodeView[] _nv; int[] _depth;
@@ -123,6 +124,7 @@ public sealed partial class TechTree : Control
         AddChild(_closeBtn);
         _menu = new MenuLayer(this); AddChild(_menu);
         VisibilityChanged += () => { if (!Visible) CloseMenu(); };
+        BuildStrip();
         _legendOpen = true;   // the legend is visible by default (Gemini finding, TASK-0149)
         Loc.Changed += Invalidate;
         TreeExiting += () => Loc.Changed -= Invalidate;
@@ -184,7 +186,7 @@ public sealed partial class TechTree : Control
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
     /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
     public float InsetLimit => LegendOpen ? Size.Y - (6 + StampH + StampGap + LegendH + 14) : Size.Y - 100;
-    public void Select(int row) { _selected = row; _insetDirty = true; Redraw(); }
+    public void Select(int row) { _selected = row; if (row >= 0) { _selInst = -1; _planOpen = false; } _insetDirty = true; AskScience(); Redraw(); }
 
     // ---------------- model ----------------
     public override void _Process(double delta)
@@ -217,9 +219,10 @@ public sealed partial class TechTree : Control
             Rebuild(s);
             _insetDirty = true; _drawnTick = -1;
         }
-        if (_insetDirty || !ReferenceEquals(s.Last, _lastCmd))
+        UpdateStrip(s);
+        if (_insetDirty || !ReferenceEquals(s.Last, _lastCmd) || (SlotsUi && s.Science.Node != _lastSciNode))
         {
-            _insetDirty = false; _lastCmd = s.Last;
+            _insetDirty = false; _lastCmd = s.Last; _lastSciNode = s.Science?.Node ?? 0;
             BuildInset(s);
         }
         if (s.Tick != _drawnTick) { _drawnTick = s.Tick; _date = s.Date; Redraw(); }   // the clock follows the session date
@@ -259,6 +262,12 @@ public sealed partial class TechTree : Control
                     var cl = Closure(i, known);
                     for (int k = 0; k < n; k++) _route[k] |= cl[k];
                 }
+        }
+        if (_goalNum > 0 && _rowOfNumber.TryGetValue(_goalNum, out int pg) && !known[pg])
+        {
+            _goal = pg;
+            var cl = Closure(pg, known);
+            for (int k = 0; k < n; k++) _route[k] |= cl[k];
         }
         _dep = new List<int>[n];
         for (int i = 0; i < n; i++) _dep[i] = new List<int>();
@@ -344,7 +353,7 @@ public sealed partial class TechTree : Control
     }
 
     // ---------------- drawing ----------------
-    Rect2 Area => new(0, 44, Size.X * 0.6f - 8, Size.Y - 52);
+    Rect2 Area => new(0, 44, Size.X * 0.6f - 8, Size.Y - 52 - (_stripShown ? StripH + 6 : 0));
     // The legend never takes room from the disc (spec task-0117-rail-and-legend §3): it docks in the right column above the sheet stamp.
     Vector2 BaseCentre => Area.Position + new Vector2(Area.Size.X * 0.5f, (Area.Size.Y - 76) * 0.5f + 4);
     Vector2 Centre => BaseCentre + _pan;
@@ -1724,6 +1733,7 @@ public sealed partial class TechTree : Control
         var nodes = _host.Data.Nodes;
         string id = _host.Layout.ActorIds[_actor];
         _inset.AddChild(Ui.Lbl(Loc.T("inset.title", Names.Actor(id)), 20, null, FontKind.Draft));
+        if (SlotsUi) { BuildScienceInset(s); return; }
         if (_selected >= 0)
         {
             Sec("inset.node");
