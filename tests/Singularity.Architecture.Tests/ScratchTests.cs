@@ -26,6 +26,8 @@ public class ScratchTests
         // Configuration objects with constant arrays (cost tables, the start state): read by the system, never written.
         "KnowledgeSystem._p",
         "KnowledgeSystem._start",
+        // Slot model: T_n of every node, computed once from the graph and the parameters in AddSlotColumns (TASK-0187).
+        "KnowledgeSystem._tn",
         // The per-tick channel to IndustrySystem: filled in compute, drained and cleared by IndustrySystem (whose own list of mailboxes is [Scratch]).
         "ProductsSystem._mailbox",
         "PolicySystem._mailbox",

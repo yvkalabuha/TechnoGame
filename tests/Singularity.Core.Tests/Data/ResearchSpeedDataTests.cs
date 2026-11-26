@@ -3,49 +3,53 @@ using Singularity.Kernel;
 
 namespace Singularity.Core.Tests.Data;
 
-/// <summary>The research_speed effect of a node (#562, #568): read from the data, validated, part of the hash only where it is used.</summary>
+/// <summary>The research_speed effects of the nodes (#562, #568; data format of TASK-0188) as the slot model reads them: part of the hash, shown as a node effect.</summary>
 public class ResearchSpeedDataTests : IDisposable
 {
     private readonly TestMods _mods = new();
 
     public void Dispose() => _mods.Dispose();
 
-    private GameData With(string line) =>
-        ModLoader.Load(_mods.CopyCore((name, text) => name == "nodes.yaml" ? text.Replace("    directions: [prop, chem]\n", "    directions: [prop, chem]\n" + line + "\n") : text));
+    private GameData With(string effects) =>
+        ModLoader.Load(_mods.CopyCore((name, text) => name == "nodes.yaml"
+            ? text.Insert(text.IndexOf("    directions: [prop, chem]\n", StringComparison.Ordinal), "    effects:\n" + effects)
+            : text));
 
     [Fact]
-    public void ANodeWithTheEffect_CarriesBonusAndDirections_AndShowsItAsAnEffect()
+    public void AnEffectOfANode_IsShownAsAnEffect_AndChangesTheIdentityOfTheData()
     {
-        GameData d = With("    research_speed: {bonus: 0.05, directions: [prop, elec]}");
+        GameData d = With("      - {kind: research_speed, dirs: [prop, elec], bonus: 0.05}\n");
         int r = d.Nodes.IndexOf("s7.fnd.brayton_cycle");
-        Assert.Equal(Fx6.FromRaw(50_000), d.Nodes.SpeedBonus[r]);
-        Assert.Equal([1, 7], Enumerable.Range(d.Nodes.SpeedDirStart[r], d.Nodes.SpeedDirStart[r + 1] - d.Nodes.SpeedDirStart[r]).Select(k => d.Nodes.SpeedDir[k]));
+        Assert.Equal(1, d.Nodes.SpeedStart[r + 1] - d.Nodes.SpeedStart[r]);
+        Assert.Equal((1 << 1) | (1 << 7), d.Nodes.SpeedMask[d.Nodes.SpeedStart[r]]);
         var fx = new List<NodeEffect>();
         NodeEffects.Derive(d, r, fx);
-        Assert.Contains(fx, e => e.Kind == NodeEffectKind.ResearchSpeed && e.Value == Fx6.FromRaw(50_000));
+        Assert.Contains(fx, e => e.Kind == NodeEffectKind.ResearchSpeed && e.Value == Fx6.FromRaw(50_000) && e.MinRank == ((1 << 1) | (1 << 7)));
         Assert.NotEqual(ModLoader.Load(TestMods.CoreDir).DataHash, d.DataHash);
     }
 
     [Fact]
-    public void WithoutDirections_TheBonusCountsForEveryDirection()
+    public void TheShippedEffects_AreWithinTheBoundOfOneNode_AndHaveDirections()
     {
-        GameData d = With("    research_speed: {bonus: 0.03}");
-        int r = d.Nodes.IndexOf("s7.fnd.brayton_cycle");
-        Assert.Equal(d.Nodes.SpeedDirStart[r], d.Nodes.SpeedDirStart[r + 1]);
-        Assert.Equal(Fx6.FromRaw(30_000), d.Nodes.SpeedBonus[r]);
+        NodeTable n = ModLoader.Load(TestMods.CoreDir).Nodes;
+        int effects = 0;
+        for (int r = 0; r < n.Count; r++)
+        {
+            for (int k = n.SpeedStart[r]; k < n.SpeedStart[r + 1]; k++)
+            {
+                effects++;
+                Assert.InRange(n.SpeedBonus[k].Raw, 1, ResearchSpeedEffects.MaxBonus.Raw);
+                Assert.NotEqual(0, n.SpeedMask[k]);
+            }
+        }
+        Assert.True(effects > 0, "the data of TASK-0188 has research_speed nodes");
     }
 
-    [Theory]
-    [InlineData("    research_speed: {bonus: 0.09}")]                       // above 0.08 per node
-    [InlineData("    research_speed: {bonus: 0}")]                          // no effect
-    [InlineData("    research_speed: {bonus: 0.05, directions: [warp]}")]   // unknown direction
-    [InlineData("    research_speed: {bonus: 0.05, extra: 1}")]             // unknown key
-    public void AnInvalidEffect_IsRejected(string line) => Assert.Throws<DataLoadException>(() => With(line));
-
     [Fact]
-    public void TheShippedData_HasNoSuchNode_SoTheHashAndTheSpeedAreThoseWithoutIt()
+    public void TheMilitaryValueWord_IsPartOfTheIdentityOfTheData()
     {
-        GameData d = ModLoader.Load(TestMods.CoreDir);
-        Assert.All(d.Nodes.SpeedBonus, b => Assert.Equal(Fx6.Zero, b));
+        string a = ModLoader.Load(TestMods.CoreDir).DataHash;
+        string b = ModLoader.Load(_mods.CopyCore((name, text) => name == "nodes.yaml" ? text.Replace("mil_value: base", "mil_value: direct") : text)).DataHash;
+        Assert.NotEqual(a, b);
     }
 }

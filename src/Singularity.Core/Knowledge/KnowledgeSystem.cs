@@ -188,7 +188,7 @@ public sealed partial class KnowledgeSystem : ITickSystem
         for (int c = 0; c < chunkCount; c++)
             _opened[c] = new();
         if (_slots is not null)
-            InitSlots(table);
+            AddSlotColumns(table);
     }
 
     public int SystemId { get; }

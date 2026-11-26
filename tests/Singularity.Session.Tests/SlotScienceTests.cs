@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Data;
 using Singularity.Core.Policy;
 using Singularity.Core.Institutes;
 using Singularity.Core.Knowledge;
@@ -122,7 +123,7 @@ public class SlotScienceTests
         Assert.DoesNotContain(off.World.Table.Columns, c => c.Name.StartsWith("inst.act", StringComparison.Ordinal) || c.Name.StartsWith("know.sprog", StringComparison.Ordinal)
             || c.Name.StartsWith("inst.q.", StringComparison.Ordinal) || c.Name == "run.slots");
         Assert.Contains(Make().World.Table.Columns, c => c.Name == "run.slots");
-        Assert.NotEqual(Make(slots: false).LastHash, Make().LastHash);
+        HashAssert.NotEqual(Make(slots: false).LastHash, Make().LastHash);
     }
 
     [Fact]
@@ -470,49 +471,49 @@ public class SlotScienceTests
     }
 
     [Fact]
-    public void WithoutResearchSpeedNodes_RIsOne_AndAKnownOneAddsItsBonus_CappedAtTheSum_S9()
+    public void TheResearchFactor_IsOnePlusTheKnownBonuses_WeightedByDirection_AndStopsAtTheCap_S9()
     {
-        SliceSession plain = Make(2);
-        Assert.All(Enumerable.Range(0, plain.World.Graph.Count), r => Assert.Equal(Fx6.One, plain.World.Knowledge.ResearchFactor(0, r)));
-        string dir = Path.Combine(Path.GetTempPath(), "singularity-rs-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        try
+        SliceSession s = Make(2);
+        SliceWorld w = s.World;
+        NodeTable nodes = w.Data.Nodes;
+        Fx6 cap = new SlotParams().ResearchSpeedCap, main = new SlotParams().MainWeight;
+        int above = 0;
+        for (long t = 0; t < 180; t++)
         {
-            string core = Path.Combine(SliceTestData.RepoRoot, "mods", "core");
-            foreach (string file in Directory.GetFiles(core))
+            s.StepThroughMonth(t);
+            if (t % 30 != 29)
+                continue;
+            for (int a = 0; a < w.Scenario.ActorCount; a++)
             {
-                string text = File.ReadAllText(file);
-                if (Path.GetFileName(file) == "nodes.yaml")
+                for (int r = 0; r < w.Graph.Count; r++)
+                {
+                    // Brute force from the data: bonus per direction of the node, the main direction 0.5 and the rest sharing 0.5; an effect for all directions counts whole.
+                    var dirs = w.Graph.Directions[r];
+                    Fx6 all = Fx6.Zero, sum = Fx6.Zero;
+                    var perDir = new Fx6[dirs.Length];
+                    for (int e = 0; e < nodes.Count; e++)
                     {
-                    int at = text.IndexOf("    directions: [prop, chem]\n", StringComparison.Ordinal);
-                    text = text.Insert(at, "    research_speed: {bonus: 0.05}\n");   // node 1 only
+                        if (!w.Knowledge.IsKnown(a, e))
+                            continue;
+                        for (int k = nodes.SpeedStart[e]; k < nodes.SpeedStart[e + 1]; k++)
+                        {
+                            if (nodes.SpeedMask[k] == ResearchSpeedEffects.AllMask)
+                                all += nodes.SpeedBonus[k];
+                            else
+                                for (int i = 0; i < dirs.Length; i++)
+                                    perDir[i] += (nodes.SpeedMask[k] & (1 << dirs[i])) != 0 ? nodes.SpeedBonus[k] : Fx6.Zero;
+                        }
+                    }
+                    sum = all;
+                    for (int i = 0; i < dirs.Length; i++)
+                        sum += SlotMath.DirectionWeight(i, dirs.Length, main) * perDir[i];
+                    Fx6 expected = Fx6.One + (sum > cap ? cap : sum);
+                    Assert.Equal(expected, w.Knowledge.ResearchFactor(a, r));
+                    above += expected > Fx6.One ? 1 : 0;
                 }
-                File.WriteAllText(Path.Combine(dir, Path.GetFileName(file)), text);
             }
-            foreach (string sub in Directory.GetDirectories(core))
-                CopyDirectory(sub, Path.Combine(dir, Path.GetFileName(sub)));
-            SliceSession fast = SliceSession.Create(Singularity.Core.Data.ModLoader.Load(dir), new SliceRunConfig { Seed = 2 });
-            int node1 = fast.World.Graph.RowOf(1);
-            Assert.Equal(Fx6.FromRaw(50_000), fast.World.Graph.SpeedBonus[node1]);
-            int knower = Enumerable.Range(0, fast.World.Scenario.ActorCount).First(a => fast.World.Knowledge.IsKnown(a, node1));
-            Assert.Equal(Fx6.One + Fx6.FromRaw(50_000), fast.World.Knowledge.ResearchFactor(knower, node1));
-            int other = Enumerable.Range(0, fast.World.Scenario.ActorCount).FirstOrDefault(a => !fast.World.Knowledge.IsKnown(a, node1), -1);
-            if (other >= 0)
-                Assert.Equal(Fx6.One, fast.World.Knowledge.ResearchFactor(other, node1));
         }
-        finally
-        {
-            Directory.Delete(dir, true);
-        }
-    }
-
-    private static void CopyDirectory(string from, string to)
-    {
-        Directory.CreateDirectory(to);
-        foreach (string file in Directory.GetFiles(from))
-            File.Copy(file, Path.Combine(to, Path.GetFileName(file)));
-        foreach (string sub in Directory.GetDirectories(from))
-            CopyDirectory(sub, Path.Combine(to, Path.GetFileName(sub)));
+        Assert.True(above > 0, "the speed nodes of the data act once an actor knows them");
     }
 
     [Fact]

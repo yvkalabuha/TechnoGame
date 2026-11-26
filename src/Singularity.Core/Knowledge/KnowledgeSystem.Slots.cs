@@ -18,7 +18,7 @@ public sealed partial class KnowledgeSystem
     private IntColumn[] _snode = [];
     private LongColumn? _cover, _returned;
 
-    private void InitSlots(Table table)
+    private void AddSlotColumns(Table table)
     {
         _tn = new Fx6[_n];
         for (int r = 0; r < _n; r++)

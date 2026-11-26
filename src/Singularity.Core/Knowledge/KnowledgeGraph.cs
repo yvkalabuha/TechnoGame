@@ -188,7 +188,7 @@ public sealed class KnowledgeGraph
             InformedFrom = [.. informedFrom],
             InformedWeight = [.. informedWeight],
             DisciplineNames = [.. disciplineNames],
-            DirectionNames = [.. directionNames ?? disciplineNames],
+            DirectionNames = ImmutableArray.CreateRange(directionNames ?? disciplineNames),
             SpeedEffects = ImmutableArray.CreateRange(nodes.Select(s => s.Speed is { } e ? ImmutableArray.Create(e) : ImmutableArray<(int Mask, Fx6 Bonus)>.Empty)),
             SpeedNodes = ImmutableArray.CreateRange(order.Where(r => nodes[r].Speed is { Length: > 0 })),
             Order = [.. order],

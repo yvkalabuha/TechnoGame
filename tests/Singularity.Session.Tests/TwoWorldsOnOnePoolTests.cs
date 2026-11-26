@@ -50,9 +50,10 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
     // Re-recorded in TASK-0188 (#575): 57 new nodes 100-156 (9 new processes) change every trajectory on the current data; explanation in the task file.
+    // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10).
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "6eab6511ecc81817d2f9ce1542d040b9178f37795c359e6ad726e8cf22088992", [2] = "4dbd4904bac0659384052e2eecea9a9f9b7e01dac3dbd29d461adcc5c401e5da", [3] = "a85354af63c62bc8035db18d32a9e2afd015a90df80aabdc2119e2e6d8365910", [4] = "9a2018ccb7cc242ad76276a1288c33e53108e187f5bbadbec56cf204d9471974", [5] = "d2930e5abf5c022d46f81a3999de6f1e4ffaa3b7d732a03e09ea6d8f71b7deaf", [7] = "f0346228f469321a9c8f164365d5cb25b847f381dc1dd6b80d7562b1e904542e",
+        [1] = "4b86d1d565ba3e8c5ada4333f4fba5b17599876111962475971a9ac4d109eecf", [2] = "2d359650d313f3fc03980846bda47259a061deceda7ad5a7abb46a4126bf2814", [3] = "50f516c1183b3565d135328ba8b7f9b962a0f459ce45c313f59298623b743812", [4] = "9f01489beaa3e567f30e3efcb20cfb0cd58bfa03889c0c481544232a597dcab9", [5] = "10827fe596659fbdcec88629f0125a6cd74c6feef4c61f406feda98b1d368383", [7] = "e9578f6e01b7c25b1c65d47e4b1b448592ad63cdbd47d2c727ae7cf8a3bf131b",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

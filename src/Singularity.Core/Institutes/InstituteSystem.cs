@@ -162,7 +162,7 @@ public sealed partial class InstituteSystem : ITickSystem
             }
         }
         if (slots is not null)
-            InitSlots(table);
+            AddSlotColumns(table);
     }
 
     public int SystemId { get; }

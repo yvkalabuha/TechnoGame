@@ -529,7 +529,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-        HashAssert.Equal("c79505d72eb10f41fbed33785979c82d7475ab0f5712d52b9212d1fffcbad401", a.LastHash);
+        // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10).
+        HashAssert.Equal("0b63a0831dfc862b33af06b566781f22a7824c50550eeb839e74a9933fcf8115", a.LastHash);
     }
 
     [Fact]

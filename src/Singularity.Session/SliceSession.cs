@@ -184,19 +184,19 @@ public sealed partial class SliceSession
         if (command is RetireCohort { Acknowledged: false } retire && NeedsConfirmation(retire) is { } warning)
             return warning;
 
-        string? warning = null;
+        string? slotWarning = null;
         if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
         {
             string percent = $"{after.Raw * 100 / Fx6.Scale} %";
             if (before >= _world.Institutes.SlotParameters.UnderfundedBelow && !assign.Acknowledged)
                 return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {percent} of what the institutes ask (now {before.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to start anyway");
-            warning = $"accepted; the money covers only {percent} of what the institutes ask after the start";
+            slotWarning = $"accepted; the money covers only {percent} of what the institutes ask after the start";
         }
 
         int at = _pending.FindIndex(p => p.Key > logged.Key);
         _pending.Insert(at < 0 ? _pending.Count : at, logged);
         RememberLocal(source, sourceId, localN);
-        return warning is null ? CommandVerdict.Ok : new CommandVerdict(CommandRefusal.None, warning);
+        return slotWarning is null ? CommandVerdict.Ok : new CommandVerdict(CommandRefusal.None, slotWarning);
     }
 
     // Levers doc 1.2: a player actor under an adviser runs at most MaxLines lines. A start on a design that is already a line only changes its rate.

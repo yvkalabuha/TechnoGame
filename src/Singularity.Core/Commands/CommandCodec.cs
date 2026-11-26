@@ -184,7 +184,7 @@ public static class CommandCodec
             "build_institute" => new BuildInstitute(actor, r.GetProperty("slot").GetInt32()),
             "assign_node" => new AssignNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32(), r.TryGetProperty("ack", out JsonElement ackA) && ackA.GetBoolean()),
             "cancel_build" => new CancelBuild(actor, r.GetProperty("slot").GetInt32()),
-            "apply_queues" => new ApplyQueues(actor, [.. r.GetProperty("plan").EnumerateArray().Select(p => new QueuePlan(p.GetProperty("slot").GetInt32(), ReadInts(p.GetProperty("nodes"))))]),
+            "apply_queues" => new ApplyQueues(actor, ImmutableArray.CreateRange(r.GetProperty("plan").EnumerateArray().Select(p => new QueuePlan(p.GetProperty("slot").GetInt32(), ReadInts(p.GetProperty("nodes")))))),
             "unassign" => new Unassign(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
             "reorder_queue" => new ReorderQueue(actor, r.GetProperty("slot").GetInt32(), ReadInts(r.GetProperty("order"))),
             "set_focus" => new SetFocus(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("level").GetInt32(), r.GetProperty("reserve").GetBoolean()),

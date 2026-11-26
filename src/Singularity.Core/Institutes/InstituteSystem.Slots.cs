@@ -18,7 +18,7 @@ public sealed partial class InstituteSystem
     private IntColumn[][] _dx = [];
     private IntColumn? _busy, _notice;
 
-    private void InitSlots(Table table)
+    private void AddSlotColumns(Table table)
     {
         int d = _l.DirectionNames.Length;
         _dx = new IntColumn[_l.MaxSlots][];
