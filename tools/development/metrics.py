@@ -343,6 +343,18 @@ def runs_dir() -> Path:
     return Path(os.environ.get("SINGULARITY_LLM_RUNS") or (kb_db.git_common_parent() or ROOT) / "tools" / "llm_worker" / "runs")
 
 
+def rejection_rows(since: str, until: str) -> list[dict]:
+    """Share of new review findings that repeat a finding rejected earlier (rejection journal, #591)."""
+    sys.path.insert(0, str(ROOT))
+    from tools.llm_worker import rejections as rej
+    try:
+        entries = rej.load(rej.journal_path(ROOT))
+    except (ValueError, OSError):
+        entries = []
+    s = rej.repeat_stats(entries, rej.load_records(runs_dir()), since, until)
+    return [{"findings": s["findings"], "repeating_rejected": s["repeats"], "share_pct": s["share_pct"]}]
+
+
 def ledger_path() -> Path:
     base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
     return Path(os.environ.get("SINGULARITY_LEDGER", Path(base) / "singularity-llm" / "ledger.jsonl"))
@@ -551,7 +563,8 @@ def report_data(since: str, until: str, limit: int | None = 15) -> dict:
         verify_steps=rows(f"""select e.k step, count(*) runs, round(avg(e.v::numeric)) avg_s, round(max(e.v::numeric)) max_s
             from landings l cross join lateral jsonb_each_text(l.steps::jsonb) e(k, v)
             where l.deleted_at is null and e.k like 'verify:%' and {p('l.t')}
-            group by e.k order by sum(e.v::numeric) desc, e.k {lim}"""))
+            group by e.k order by sum(e.v::numeric) desc, e.k {lim}"""),
+        rejections=rejection_rows(since, until))
 
 
 def summary(d: dict) -> dict[str, float]:
@@ -561,7 +574,8 @@ def summary(d: dict) -> dict[str, float]:
     return {"agent runs": s("by_agent", "runs"), "claude output tokens": s("tokens", "out_tokens"),
             "claude input tokens": s("tokens", "in_tokens"), "claude cache read tokens": s("tokens", "cache_read_tokens"), "llm calls (run records)": s("llm", "calls"),
             "ledger entries": s("spend", "entries"), "llm usd (ledger)": round(s("spend", "usd"), 4),
-            "review records": s("rounds", "reviews"), "reviews with changes requested": s("rounds", "changes"),
+            "review records": s("rounds", "reviews"), "review findings": s("rejections", "findings"),
+            "findings repeating a rejected one": s("rejections", "repeating_rejected"), "reviews with changes requested": s("rounds", "changes"),
             "errors": s("errors", "errors"), "landings": land, "landings failed": land - ok,
             "verify wall s": s("landings", "verify_wall_s"), "hours in task statuses": s("stalls", "hours"),
             "owner answers": s("owner", "answered")}
@@ -586,6 +600,7 @@ def render(d: dict, since: str, until: str) -> str:
            table("LLM calls by provider and kind (run records; they carry no cost)", d["llm"]),
            table("LLM spend by model (ledger; run records and ledger share no id, so they are not joined)", d["spend"]),
            table("Review rounds per task", d["rounds"]),
+           table("Review findings that repeat a finding rejected earlier (rejection journal, heuristic match)", d["rejections"]),
            table("Errors by executor (errors.yaml)", d["errors"]),
            table("Where tasks stand: time in a status clipped to the period, ongoing included (DONE, REJECTED, DEFERRED excluded)", d["stalls"]),
            table("Owner wait (question to answer)", d["owner"]),

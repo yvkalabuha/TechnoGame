@@ -36,3 +36,5 @@ lab/results/
 # Client --shots output (key frames are copied into docs/ui by hand, TASK-0097)
 shots-out/
 development/handoff/auto-checkpoint.md
+development/.*.yaml.lock
+development/.*.yaml.*.tmp

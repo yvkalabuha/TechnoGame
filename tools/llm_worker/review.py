@@ -14,7 +14,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from . import agyreview, codex, config, context, gitleaks, jsonschema_lite, limitstate, paths, risk
+from . import agyreview, codex, config, context, gitleaks, jsonschema_lite, limitstate, paths, rejections, risk
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import OpenAICompatProvider
 from .worktree import GitError
@@ -101,9 +101,7 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
     root = Path(root)
     head, base = _resolve(root, head), _resolve(root, base)
     task_path, goal = task_goal(root, head, task_id)
-    names = _git(root, "diff", "--name-only", "--no-renames", "-z", f"{base}...{head}").decode(
-        "utf-8", "surrogateescape").split("\0")
-    names = [n for n in names if n]
+    names = _changed_files(root, base, head)
     shown = [n for n in names if paths.normalize(n) and not context.excluded(paths.normalize(n))]
     withheld = [n for n in names if n not in shown]
     diff = _git(root, "--literal-pathspecs", "diff", "--no-renames", f"{base}...{head}", "--", *shown).decode("utf-8", "replace") if shown else ""
@@ -150,7 +148,8 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
 
 
 REJECTED_NOTE = (" The data block PREVIOUSLY REJECTED FINDINGS lists findings the Orchestrator checked and rejected, "
-                 "with reasons. Do not repeat them unless you have new arguments that the stated reason does not answer.")
+                 "with reasons (also from earlier tasks in the same files). Do not repeat them unless you have new arguments that the stated "
+                 "reason does not answer.")
 
 REVIEW_SYSTEM = (
     "You are a strict second code reviewer. Review the DIFF against the task goal and acceptance criteria. "
@@ -252,15 +251,18 @@ def confirm_path(record_path):
     return Path(str(record_path) + CONFIRM_SUFFIX)
 
 
-def mark_finding(record_path, number, confirmed, reason=None):
+def mark_finding(record_path, number, confirmed, reason=None, journal=None, ref="", today=None):
     """Mark in the sidecar `<record>.confirm.json` (the record itself, and its sha256, never change):
-    `confirmed[str(N)]` (N is 1-based) becomes true or false. Returns the number of findings. ReviewError('bad_input') on an unreadable record or a bad number."""
+    `confirmed[str(N)]` (N is 1-based) becomes true or false. Returns the number of findings. ReviewError('bad_input') on an unreadable record or a bad number.
+    Review and gate records are accepted. With `journal` (a rejections.py file) a rejection is also written there
+    (rejection memory, #591) and a confirmation removes the entry written from the same finding."""
     path = Path(record_path)
     try:
         rec = json.loads(path.read_text(encoding="utf-8"))
-        findings = rec["result"]["findings"]
-        if rec["kind"] != "review" or not isinstance(findings, list):
-            raise ValueError("not a review record")
+        gate = rec["kind"] == "gate"
+        findings = rec["result"]["FINDINGS" if gate else "findings"]
+        if rec["kind"] not in ("review", "gate") or not isinstance(findings, list):
+            raise ValueError("not a review or gate record")
     except (OSError, ValueError, KeyError, TypeError) as e:
         raise ReviewError("bad_input", f"{path}: not a review record ({type(e).__name__})") from None
     if not 1 <= number <= len(findings):
@@ -273,6 +275,19 @@ def mark_finding(record_path, number, confirmed, reason=None):
             raise ValueError("confirmed")
     except (OSError, ValueError, KeyError, TypeError):
         raise ReviewError("bad_input", f"{side}: unreadable sidecar") from None
+    source = f"{path.name}#{number}"
+    entry = None
+    if journal and not confirmed:
+        f = findings[number - 1]
+        try:
+            if gate:
+                area, summary = str(rec["item"]), f"{f['item']}: {f['reason']}"
+            else:
+                area, summary = str(f["path"]), str(f["claim"])
+        except (KeyError, TypeError):
+            raise ReviewError("bad_input", f"{path}: finding {number} has no text to remember") from None
+        entry = (str(rec.get("provider") or "?"), area, summary)
+        _scan(" ".join((*entry, reason or "", ref)))  # the journal is committed and read into prompts
     marks[str(number)] = bool(confirmed)
     reasons = old_reasons
     if reason:
@@ -285,6 +300,14 @@ def mark_finding(record_path, number, confirmed, reason=None):
     tmp = side.with_name(side.name + ".tmp")
     tmp.write_bytes((json.dumps(body, indent=2, sort_keys=True) + "\n").encode())
     tmp.replace(side)
+    if journal:
+        try:
+            if entry:
+                rejections.add(journal, *entry[:2], entry[2], reason or "no reason recorded", ref, source, today)
+            elif confirmed:
+                rejections.drop_source(journal, source)
+        except (OSError, ValueError) as e:
+            raise ReviewError("bad_input", f"rejection journal not updated: {e}") from None
     return len(findings)
 
 
@@ -321,6 +344,11 @@ def rejected_findings(runs_dir, task_id, log=print):
             log(f"warning: rejected findings of {rec_path.name} skipped ({type(e).__name__})")
     found.sort(key=lambda t: t[:3])
     return [t[3] for t in found[-MAX_REJECTED:]]
+
+
+def _changed_files(root, base, head):
+    out = _git(root, "diff", "--name-only", "--no-renames", "-z", f"{base}...{head}").decode("utf-8", "surrogateescape")
+    return [n for n in out.split("\0") if n]
 
 
 def _fit_rejected(items, parts, max_bytes, work_room):
@@ -457,6 +485,9 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
     if reset:
         log(f"codex limited until {reset.isoformat(timespec='minutes')}: using {chain[0]}")
     rejected = rejected_findings(runs_dir, task_id, log)
+    seen = {x["claim"] for x in rejected}  # the journal adds what other tasks rejected in the same files
+    rejected = [x for x in rejections.as_items(rejections.load_relevant(root, _changed_files(root, base, head), log=log))
+                if x["claim"] not in seen] + rejected
     texts = {}  # one prompt per reader: the worktree is named in the prompt before the data hashes are computed
     for prov in chain:
         if prov == "deepseek":
@@ -699,6 +730,13 @@ def run_gate(item, head="HEAD", stance="third", root=config.REPO_ROOT, runs_dir=
              thinking=True, effort=config.DEFAULT_REASONING_EFFORT):
     """One DeepSeek request. Returns (record path or None, record). dry_run builds and scans the input only."""
     text, meta = build_gate_input(item, head, root, max_bytes)
+    past = rejections.as_items(rejections.load_relevant(root, [meta["item"], *meta["files"]], Path(meta["item"]).stem))
+    system = GATE_SYSTEM
+    if past:
+        fence = _fit_rejected(past, [text], max_bytes, max_bytes)
+        if fence:
+            text += "\n\n" + fence
+            system += REJECTED_NOTE
     _scan(text)
     key = "gate:" + "-".join(Path(meta["item"]).stem.split("-")[:2])
     record = {"kind": "gate", "stance": stance, "item": meta["item"], "head": meta["head"], "files": meta["files"],
@@ -710,7 +748,7 @@ def run_gate(item, head="HEAD", stance="third", root=config.REPO_ROOT, runs_dir=
     make_provider = make_provider or (lambda: paid_provider(profile_name, key, thinking=thinking, effort=effort))
     stem = f"gate-{Path(meta['item']).stem}-{meta['head'][:8]}-{stance}"
     try:
-        answer, usage, think = _deepseek_call(make_provider(), GATE_SYSTEM, text, GATE_SCHEMA, "gate", max_tokens)
+        answer, usage, think = _deepseek_call(make_provider(), system, text, GATE_SCHEMA, "gate", max_tokens)
     except Exception as e:
         _keep_first_raw(e, runs_dir, stem + "-invalid.json", {**record, "provider": profile_name})
         raise

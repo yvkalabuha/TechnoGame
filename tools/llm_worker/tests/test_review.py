@@ -15,7 +15,7 @@ from helpers import FakeProvider, TempRepo
 from test_ledger import MODEL, prices
 from test_provider_context import FakeOpener
 
-from tools.llm_worker import codex, config, gitleaks, review
+from tools.llm_worker import codex, config, gitleaks, rejections as rej, review
 from tools.llm_worker.ledger import Guard, Ledger
 from tools.llm_worker.provider import OpenAICompatProvider
 from tools.llm_worker.review import ReviewError
@@ -277,6 +277,51 @@ class RunTest(unittest.TestCase):
 
         self.run_review("codex", codex_runner=runner)
         self.assertNotIn("PREVIOUSLY REJECTED", got[0])
+
+    def _journal(self):
+        return self.repo.root / "development" / "review-rejections.yaml"
+
+    def test_journal_entries_of_other_tasks_reach_codex_and_deepseek_prompts(self):
+        rej.add(self._journal(), "codex", "tools/a.py", "x should be a constant", "style is fixed by ADR-9", "ADR-9")
+        rej.add(self._journal(), "codex", "other/file.py", "unrelated old finding", "not relevant")
+        got = []
+
+        def runner(prompt, wt):
+            got.append(prompt)
+            return json.dumps(GOOD), {}
+
+        self.run_review("codex", codex_runner=runner)
+        self.assertIn("PREVIOUSLY REJECTED FINDINGS", got[0])
+        self.assertIn("style is fixed by ADR-9 (ADR-9)", got[0])
+        self.assertNotIn("unrelated old finding", got[0])
+        fake = FakeProvider([GOOD])
+        self.run_review("deepseek", make_provider=lambda: fake)
+        self.assertIn("style is fixed by ADR-9", fake.calls[0]["messages"][1]["content"])
+        self.assertIn("PREVIOUSLY REJECTED", fake.calls[0]["messages"][0]["content"])
+
+    def test_journal_text_is_scanned(self):
+        rej.add(self._journal(), "codex", "tools/a.py", "finding", "SECRET-IN-REASON")
+        seen = []
+        with mock.patch("tools.llm_worker.gitleaks.scan_text", side_effect=seen.append):
+            self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        self.assertTrue(any("SECRET-IN-REASON" in s for s in seen))
+
+    def test_rejection_goes_to_journal_and_confirmation_removes_it(self):
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        j = self._journal()
+        review.mark_finding(path, 1, False, "checked", journal=j, ref="#7", today="2026-11-26")
+        es = rej.load(j)
+        self.assertEqual([(e["provider"], e["area"], e["summary"], e["reason"], e["ref"], e["date"]) for e in es],
+                         [("deepseek", "a.py", "c", "checked", "#7", "2026-11-26")])
+        review.mark_finding(path, 2, True, journal=j)  # another finding: the entry stays
+        self.assertEqual(len(rej.load(j)), 1)
+        review.mark_finding(path, 1, True, journal=j)
+        self.assertEqual(rej.load(j), [])
+
+    def test_no_journal_argument_writes_no_journal(self):
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "why")
+        self.assertFalse(self._journal().exists())
 
     def test_reason_saved_in_sidecar(self):
         path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
@@ -572,6 +617,20 @@ class GateTest(unittest.TestCase):
                             make_provider=lambda: fake)
         self.assertEqual(cm.exception.code, "schema_invalid")
 
+    def test_gate_rejection_is_remembered_and_sent_to_the_next_gate(self):
+        fake = FakeProvider([GATE_OK, GATE_OK])
+        path, rec = review.run_gate(self.item, self.head, "third", root=self.repo.root, runs_dir=self.tmp / "runs",
+                                    make_provider=lambda: fake)
+        j = self.repo.root / "development" / "review-rejections.yaml"
+        review.mark_finding(path, 1, False, "out of scope, see #592", journal=j, ref="#592")
+        e = rej.load(j)[0]
+        self.assertEqual((e["area"], e["provider"], e["ref"]), (rec["item"], "deepseek-v4-pro", "#592"))
+        review.run_gate(self.item, self.head, "third", root=self.repo.root, runs_dir=self.tmp / "runs2",
+                        make_provider=lambda: fake)
+        self.assertIn("out of scope, see #592", fake.calls[1]["messages"][1]["content"])
+        self.assertNotIn("PREVIOUSLY REJECTED", fake.calls[0]["messages"][1]["content"])
+        self.assertIn("PREVIOUSLY REJECTED", fake.calls[1]["messages"][0]["content"])
+
     def test_dry_run_sends_nothing(self):
         path, rec = review.run_gate(self.item, self.head, "third", root=self.repo.root, runs_dir=self.tmp / "runs",
                                     make_provider=lambda: self.fail("must not be called"), dry_run=True)
@@ -706,6 +765,14 @@ class CodexBwrapTest(unittest.TestCase):
             # .nvm only holds the read-only Node install that runs codex
             self.assertLessEqual(visible, {".codex", ".nvm"})
             self.assertEqual(codex.tree_digest(wt), before)
+
+
+_JOURNAL = config.REPO_ROOT / "development" / "review-rejections.yaml"
+_JOURNAL_BEFORE = _JOURNAL.read_bytes() if _JOURNAL.exists() else None
+
+
+def tearDownModule():  # a test must never write the real rejection journal (#591)
+    assert (_JOURNAL.read_bytes() if _JOURNAL.exists() else None) == _JOURNAL_BEFORE, "real journal changed"
 
 
 if __name__ == "__main__":

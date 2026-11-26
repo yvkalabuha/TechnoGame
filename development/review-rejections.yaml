@@ -1,0 +1,3 @@
+# Rejected review findings and why (owner #591). Written by llm_worker review-confirm --rejected and
+# tools/development/rejections.py add; read into review, gate and research prompts. Do not edit ids.
+rejections: []
