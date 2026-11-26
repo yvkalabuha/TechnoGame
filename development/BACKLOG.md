@@ -225,6 +225,7 @@
 | [TASK-0207](../development/tasks/TASK-0207-release-model.md) | DONE | Release model: release.py rc|check|approve|release|rollback, RC report, /release skill, client build (#594) | MS-M0 |
 | [TASK-0208](../development/tasks/TASK-0208-kb-upkeep.md) | IN_PROGRESS | Knowledge base upkeep: fact drift is an error, decision-to-facts check at landing, freshness, /fact, facts in kb_db and mandatory facts block for code/data agents, agent DB access read-only (#597) | MS-M0 |
 | [TASK-0209](../development/tasks/TASK-0209-kb-structure.md) | APPROVED | Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599) | MS-M0 |
+| [TASK-0210](../development/tasks/TASK-0210-ci-land-syspath.md) | IN_PROGRESS | CI fix: land.py imports redis_kv without putting tools/development first on sys.path (llm_worker test_rejections collision) | MS-M0 |
 
 ## Гипотезы
 
