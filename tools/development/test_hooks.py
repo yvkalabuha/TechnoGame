@@ -716,6 +716,11 @@ class KbCheckFactsTest(unittest.TestCase):
     def test_decision_rows(self):
         text = "| # | Дата | Решение | Ссылка |\n|---|---|---|---|\n| 7 | 2026-11-26 | a \\| b | ref |\n| x | y |\n"
         self.assertEqual(self.kb.decision_rows(text), {7: "a \\| b"})
+        wrapped = "| 8 | d | head:\n- one\n- two | ref |\n| 9 | d | x | r |\n"
+        self.assertEqual(self.kb.decision_rows(wrapped), {8: "head: - one - two", 9: "x"})
+        real = (ROOT / "docs/decisions/DECISIONS_LOG.md").read_text(encoding="utf-8")
+        import re
+        self.assertEqual(set(self.kb.decision_rows(real)), {int(n) for n in re.findall(r"^\| (\d+) \|", real, re.M)})
 
     def landing_repo(self):
         repo = Path(tempfile.mkdtemp())

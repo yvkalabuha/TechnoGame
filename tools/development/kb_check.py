@@ -82,8 +82,23 @@ STALE_DAYS = 30
 
 
 def decision_rows(text: str) -> dict[int, str]:
-    """Number -> text of every decision row of the decisions log (the only parser of its layout here)."""
-    return {int(m.group(1)): m.group(3) for m in DECISION_ROW.finditer(text)}
+    """Number -> text of every decision row of the decisions log (the only parser of its layout here).
+    A row whose text runs over several lines (lists, blank lines inside the cell) is joined up to its closing pipe."""
+    out: dict[int, str] = {}
+    buf: list[str] = []
+    for line in text.splitlines() + [""]:
+        if buf and (re.match(r"^\| \d+ \|", line) or len(buf) > 200):
+            buf = []  # the row never closed: not a table row
+        if not buf and not re.match(r"^\| \d+ \|", line):
+            continue
+        if line.strip():
+            buf.append(line.strip())
+        if line.rstrip().endswith("|") and not line.rstrip().endswith("\\|"):
+            m = DECISION_ROW.match(" ".join(buf))
+            if m:
+                out[int(m.group(1))] = m.group(3)
+            buf = []
+    return out
 
 
 def related_facts(text: str, facts: list[dict]) -> list[dict]:
