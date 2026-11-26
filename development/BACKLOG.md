@@ -217,6 +217,9 @@
 | [TASK-0199](../development/tasks/TASK-0199-surplus-institutes-era-price.md) | IN_PROGRESS | Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) | MS-M0 |
 | [TASK-0200](../development/tasks/TASK-0200-platform-db-postgres.md) | IN_PROGRESS | Platform DB index in PostgreSQL: kb_db.py build/query from registry, decisions, debt, questions, errors, agent log (#590) | MS-M0 |
 | [TASK-0201](../development/tasks/TASK-0201-platform-redis.md) | APPROVED | Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed | MS-M0 |
+| [TASK-0202](../development/tasks/TASK-0202-repeat-guard-hooks.md) | APPROVED | Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591) | MS-M0 |
+| [TASK-0203](../development/tasks/TASK-0203-skills-shots-recheck-error.md) | APPROVED | Skills /shots, /recheck, /error for the Orchestrator (#591) | MS-M0 |
+| [TASK-0204](../development/tasks/TASK-0204-review-rejection-memory.md) | APPROVED | Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) | MS-M0 |
 
 ## Гипотезы
 
