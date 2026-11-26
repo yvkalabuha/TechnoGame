@@ -127,6 +127,14 @@ public sealed partial class InstituteSystem
         return false;
     }
 
+    private int ListCount(int a, int slot)
+    {
+        int n = 0;
+        for (int j = 0; j <= _slots!.QueueLength; j++)
+            n += _inputs.QueueEntry(new InstituteHandle(a, slot), j) != 0 ? 1 : 0;
+        return n;
+    }
+
     private bool InAnyList(int a, int slots, int number)
     {
         for (int m = 0; m < slots; m++)
@@ -179,7 +187,8 @@ public sealed partial class InstituteSystem
             }
             for (int k = 0; k < slots; k++)
             {
-                if (node[k] != 0)
+                // A node moves into the list of the institute that works on it (§4.1): an institute whose list is full cannot take one over.
+                if (node[k] != 0 || ListCount(a, k) >= ListLength)
                     continue;
                 for (int m = 0; m < slots && node[k] == 0; m++)
                 {

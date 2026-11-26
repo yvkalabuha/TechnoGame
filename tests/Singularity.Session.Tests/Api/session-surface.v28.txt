@@ -227,6 +227,10 @@ type Singularity.Session.ForceProxy [sealed class]
   ctor(Singularity.Session.SliceSession session, System.Int32 rateDivisor)
   method Issue(System.Int64 month) : System.Void
   prop Sent : System.Int32 { get; }
+type Singularity.Session.FreeNoticeThrottle [sealed class]
+  ctor(System.Int64 minRealMilliseconds)
+  field DefaultMinMilliseconds : System.Int64 = 25000 static
+  method ShouldPause(System.Int64 noticeMonth, System.Int64 realMilliseconds) : System.Boolean
 type Singularity.Session.GridCell [struct]
   ctor(Singularity.Session.GridStep KCatch, Singularity.Session.GridStep KDiff, Singularity.Session.GridStep HMax)
   method Deconstruct(Singularity.Session.GridStep& KCatch, Singularity.Session.GridStep& KDiff, Singularity.Session.GridStep& HMax) : System.Void
@@ -700,6 +704,7 @@ type Singularity.Session.SliceRunConfig [sealed class]
   prop XHalfByTier : System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6] { get; init; }
 type Singularity.Session.SliceSession [sealed class]
   field TestApiVersion : System.Int32 = 28 static
+  method AdviserStarts(System.Int32 actor) : System.Collections.Immutable.ImmutableArray`1[Singularity.Core.Commands.AssignNode]
   method Create(Singularity.Core.Data.GameData data, Singularity.Session.SliceRunConfig config) : Singularity.Session.SliceSession static
   method CurrentRequirement(System.Int32 actor) : System.Nullable`1[Singularity.Core.WhyNot.WhyNotTarget]
   method FitInstitutes(System.Int32 actor, System.Int32 nodeNumber) : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.InstituteFitView]
