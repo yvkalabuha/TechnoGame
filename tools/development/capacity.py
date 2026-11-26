@@ -11,6 +11,7 @@ import sys
 import time
 
 import autopilot
+import llm_limits
 import redis_kv
 
 HEAVY = {"test": ("dotnet test", "testhost"), "godot": ("Godot_v",), "land": ("tools/development/land.py",)}
@@ -49,12 +50,14 @@ if __name__ == "__main__":
     s = state()
     if "--json" in sys.argv:
         s["locks"] = lock_holders()
+        s["limits"] = llm_limits.summary()  # advisory (#605): the slots above do not depend on it
         print(json.dumps(s))
     else:
         print(f"cores {s['cores']}  load1 {s['load1']}  test runs {s['test_runs']}  godot {s['heavy']['godot']}  "
               f"landings {s['heavy']['land']}  free agent slots {s['agent_slots_free']}"
               f"{' (autopilot stopped)' if s['autopilot_stopped'] else ''}"
               f"{'  TESTS BLOCKED' if s['block_tests'] else ''}")
+        print(llm_limits.line(llm_limits.summary()))
         for name, h in (lock_holders() or {}).items():
             print(f"lock {name}: held by pid {h.get('pid', '?')} since {time.strftime('%H:%M', time.localtime(h.get('since', 0)))}"
                   f" {h.get('branch') or h.get('cmd') or ''}")

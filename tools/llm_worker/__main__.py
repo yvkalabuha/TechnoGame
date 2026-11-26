@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from . import codexsketch, config, gitleaks, rejections, report, research as research_mod, review as review_mod, sketch as sketch_mod, visual as visual_mod
+from tools.development import llm_limits
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
@@ -224,6 +225,10 @@ def main(argv=None):
 
 
 def _visual(a):
+    if getattr(a, "provider", "agy") == "agy":  # advisory (#605): the request still goes, agy reports its own quota error
+        st = llm_limits.check("gemini-ui")
+        if st["state"] == "out":
+            print(f"warning: gemini-ui limit is out per llmlimits{' until ' + st['resets_at'] if st['resets_at'] else ''}")
     try:
         path, md, rec = visual_mod.run_visual(a.task, a.frames, a.criteria, runs_dir=a.runs, model=a.model,
                                               dry_run=a.dry_run, mode=a.mode, allow_small=a.allow_small,
@@ -295,7 +300,8 @@ def _review_gate(a):
         if a.cmd == "review":
             path, line, rec = review_mod.run_review(a.task, a.base, a.head, a.provider, runs_dir=a.runs,
                                                     log=lambda m: print(m, flush=True),
-                                                    thinking=a.thinking == "on", effort=a.effort)
+                                                    thinking=a.thinking == "on", effort=a.effort,
+                                                    limits=llm_limits.check)
             res = rec["result"]
             print(f"record: {path}")
             print(f"provider: {rec['provider']}" + (f" ({rec['model']})" if rec.get("model") else "")

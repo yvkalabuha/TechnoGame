@@ -374,6 +374,17 @@ class ChainTest(unittest.TestCase):
         att = [json.loads(x) for x in (self.tmp / "attempts" / codex.ATTEMPTS).read_text().splitlines()]
         self.assertEqual([(a["outcome"], a.get("provider")) for a in att], [("codex_limit", None), ("ok", "agy-sonnet")])
 
+    def test_auto_service_says_codex_out_skips_codex_without_calling_it(self):
+        def never(prompt, wt):
+            raise AssertionError("codex must not be called")
+
+        until = "2026-11-28T08:04:03+00:00"
+        limits = lambda c: {"state": "out" if c == "codex" else "ok", "resets_at": until if c == "codex" else None}
+        _, _, rec = self.run_review("auto", codex_runner=never, agy_runner=self.agy_ok(), limits=limits)
+        self.assertEqual((rec["provider"], rec["fallback"], rec["codex_reset_at"]), ("agy-sonnet", "codex_limit_service", until))
+        self.assertEqual(rec["fallbacks"][0]["codex_reset_at"], until)
+        self.assertIsNotNone(limitstate.limited_until(NOW, self.state))
+
     def test_agy_prompt_names_worktree_without_touching_data(self):
         prompts = []
         _, _, rec = self.run_review("agy-sonnet", agy_runner=self.agy_ok(prompts))

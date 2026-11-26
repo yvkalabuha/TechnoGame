@@ -1,0 +1,10 @@
+# Consumers of model limits -> llmlimits provider and windows (TASK-0211, docs/architecture/platform-llmlimits.md).
+# One consumer per line, flow style; read by tools/development/llm_limits.py (stdlib parser, no PyYAML).
+# provider: provider id in /api/v1/status; windows: window ids to watch (the tightest one decides);
+# usd_low: balance windows only - state "low" below this many USD.
+# Gemini groups are mapped separately: advice?provider=gemini merges them, /status keeps them apart.
+claude:     {provider: claude, windows: [5h, 7d]}
+codex:      {provider: codex, windows: [5h, 7d]}
+agy-sonnet: {provider: gemini, windows: [claude-and-gpt-models:5h, claude-and-gpt-models:7d]}
+gemini-ui:  {provider: gemini, windows: [gemini-models:5h, gemini-models:7d]}
+deepseek:   {provider: deepseek, windows: [balance], usd_low: 1.0}
