@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "source",
+    "quote",
+    "value",
+    "note"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "contradicted",
+        "not_found"
+      ]
+    },
+    "source": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20
+    },
+    "quote": {
+      "type": "string",
+      "maxLength": 400
+    },
+    "value": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 600
+    }
+  }
+}

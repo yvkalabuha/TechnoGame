@@ -1,7 +1,7 @@
 ---
 id: TASK-0132
 title: "Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DEFERRED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
