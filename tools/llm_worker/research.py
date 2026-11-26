@@ -25,6 +25,9 @@ MAX_PAGE_BYTES = 3_000_000
 MAX_PAGE_CHARS = 24_000  # per page, what the model sees
 MAX_URLS = 4
 MAX_QUOTE_WORDS = 30
+MIN_QUOTE_WORDS = 6
+MIN_QUOTE_CHARS = 30
+MAX_REDIRECTS = 5
 FETCH_TIMEOUT_S = 30
 VERDICTS = ("confirmed", "contradicted", "not_found")
 SYSTEM = (
@@ -42,40 +45,53 @@ class FetchError(RuntimeError):
 
 
 def check_url(url):
-    """Only http/https with a public host. Returns the host."""
+    """Only http/https with a public host. Returns (host, port, ip): the ip that was checked, to pin in curl."""
     u = urllib.parse.urlparse(url)
     if u.scheme not in ("http", "https") or not u.hostname or u.username or u.password:
         raise FetchError(f"refused url (http/https without credentials only): {url[:80]}")
     try:
-        infos = socket.getaddrinfo(u.hostname, None)
-    except OSError:
+        port = u.port or (443 if u.scheme == "https" else 80)
+        infos = socket.getaddrinfo(u.hostname, port, type=socket.SOCK_STREAM)
+    except (OSError, ValueError):
         raise FetchError(f"cannot resolve {u.hostname}") from None
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if not ip.is_global:
-            raise FetchError(f"refused non-public address for {u.hostname}")
-    return u.hostname
+    ips = [ipaddress.ip_address(i[4][0]) for i in infos]
+    if not ips or not all(ip.is_global for ip in ips):
+        raise FetchError(f"refused non-public address for {u.hostname}")
+    return u.hostname, port, str(ips[0])
 
 
-def curl_fetch(url, timeout_s=FETCH_TIMEOUT_S):
-    """Body bytes via curl. No cookies, no config file, no proxy tricks; redirects stay on http/https."""
-    check_url(url)
-    cmd = ["curl", "-q", "-sS", "-L", "--max-redirs", "5", "--proto", "=http,https", "--proto-redir", "=http,https",
-           "--max-filesize", str(MAX_PAGE_BYTES), "--max-time", str(timeout_s), "--fail", "-A", "singularity-research/1",
-           "-w", "\n%{remote_ip}", "--", url]
-    try:
-        p = subprocess.run(cmd, capture_output=True, timeout=timeout_s + 5)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        raise FetchError(f"curl failed: {type(e).__name__}") from None
-    if p.returncode != 0:
-        raise FetchError(f"curl rc {p.returncode}: {p.stderr.decode('utf-8', 'replace').strip()[:120]}")
-    body, _, ip = p.stdout.rpartition(b"\n")
-    try:
-        if not ipaddress.ip_address(ip.decode().strip()).is_global:  # a redirect may have led inside
-            raise FetchError("refused: final address is not public")
-    except ValueError:
-        pass
-    return body
+def curl_fetch(url, timeout_s=FETCH_TIMEOUT_S, max_hops=MAX_REDIRECTS):
+    """Body bytes via curl. No cookies, no config file, no proxy. Redirects are followed here, one hop at a time:
+    every hop is checked and its address pinned with --resolve, so the checked address is the one curl uses."""
+    for _ in range(max_hops + 1):
+        host, port, ip = check_url(url)
+        pin = f"[{ip}]" if ":" in ip else ip
+        cmd = ["curl", "-q", "-sS", "--noproxy", "*", "--resolve", f"{host}:{port}:{pin}",
+               "--proto", "=http,https", "--max-filesize", str(MAX_PAGE_BYTES), "--max-time", str(timeout_s),
+               "-A", "singularity-research/1", "-w", "\n%{http_code}\n%{redirect_url}\n%{remote_ip}", "--", url]
+        try:
+            p = subprocess.run(cmd, capture_output=True, timeout=timeout_s + 5)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise FetchError(f"curl failed: {type(e).__name__}") from None
+        if p.returncode != 0:
+            raise FetchError(f"curl rc {p.returncode}: {p.stderr.decode('utf-8', 'replace').strip()[:120]}")
+        parts = p.stdout.rsplit(b"\n", 3)
+        if len(parts) != 4:
+            raise FetchError("curl gave no status line")
+        body, code, redirect, remote = parts
+        try:
+            if str(ipaddress.ip_address(remote.decode().strip())) != ip:
+                raise FetchError("refused: curl connected to an address that was not checked")
+        except ValueError:
+            raise FetchError("refused: no usable remote address") from None  # fail closed
+        status = code.decode().strip()
+        if status.startswith("3") and redirect:
+            url = redirect.decode("utf-8", "replace").strip()
+            continue
+        if not status.startswith("2"):
+            raise FetchError(f"HTTP {status}")
+        return body
+    raise FetchError("too many redirects")
 
 
 class _Text(html.parser.HTMLParser):
@@ -111,14 +127,19 @@ def extract_text(raw):
 
 
 def _norm(s):
-    s = s.translate({0x2018: "'", 0x2019: "'", 0x201C: '"', 0x201D: '"', 0x2013: "-", 0x2014: "-", 0xA0: " "})
+    s = s.translate({0x2018: "'", 0x2019: "'", 0x201C: '"', 0x201D: '"', 0x2013: "-", 0x2014: "-", 0xA0: " ", 0x2010: "-", 0x2011: "-", 0xAD: None, 0x2026: "..."})
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
-def quote_in_text(quote, text):
-    """True when the quote (at most 30 words) occurs in the page text, ignoring case, spaces and typographic marks."""
+def quote_in_text(quote, text, value=""):
+    """True when the quote occurs in the page text (case, spaces and typographic marks ignored), has 6 to 30
+    words and at least 30 characters, and contains the stated value when there is one."""
     q = _norm(quote)
-    return bool(q) and len(q.split()) <= MAX_QUOTE_WORDS and q in _norm(text)
+    if len(q) < MIN_QUOTE_CHARS or not MIN_QUOTE_WORDS <= len(q.split()) <= MAX_QUOTE_WORDS:
+        return False
+    if _norm(value) and _norm(value) not in q:
+        return False
+    return q in _norm(text)
 
 
 def load_input(path):
@@ -189,7 +210,7 @@ def judge(provider, item, pages):
     res = {k: data[k] for k in ("verdict", "source", "quote", "value", "note")}
     res["usage"] = comp.usage
     if res["verdict"] in ("confirmed", "contradicted"):
-        if not quote_in_text(res["quote"], pages[res["source"]][1]):
+        if not quote_in_text(res["quote"], pages[res["source"]][1], res["value"]):
             res.update(verdict="not_found", note=f"quote_not_in_page (model said {data['verdict']}): {res['note']}")
             res["quote_verified"] = False
         else:

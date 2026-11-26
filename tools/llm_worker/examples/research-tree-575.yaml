@@ -5,7 +5,8 @@ items:
     year: 1959
     urls:
       - https://en.wikipedia.org/wiki/Reinforced_carbon-carbon
-      - https://en.wikipedia.org/wiki/Carbon_fiber_reinforced_polymer  - id: n32.hip
+      - https://en.wikipedia.org/wiki/Carbon_fiber_reinforced_polymer
+  - id: n32.hip
     claim: Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute.
     year: 1955
     urls:

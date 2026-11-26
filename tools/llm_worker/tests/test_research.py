@@ -73,10 +73,21 @@ class Verdicts(Base):
     def test_long_quote_refused(self):
         words = " ".join(["Hot"] * 31)
         self.assertFalse(research.quote_in_text(words, words))
-        self.assertTrue(research.quote_in_text("HOT  isostatic\npressing", "Hot isostatic pressing was"))
+        self.assertTrue(research.quote_in_text("HOT  isostatic\npressing was invented in", "Hot isostatic pressing was invented in 1955"))
+
+    def test_short_quote_and_value_rules(self):
+        text = "Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute."
+        self.assertFalse(research.quote_in_text("1955", text))  # too short to prove anything
+        self.assertFalse(research.quote_in_text("was invented in 1955", text))  # 4 words
+        self.assertTrue(research.quote_in_text("pressing was invented in 1955 at the Battelle", text, "1955"))
+        self.assertFalse(research.quote_in_text("pressing was invented in 1955 at the Battelle", text, "1962"))
+
+    def test_typographic_marks_normalised(self):
+        text = "A well\N{HYPHEN}known \N{LEFT DOUBLE QUOTATION MARK}first\N{RIGHT DOUBLE QUOTATION MARK} design from the co\N{SOFT HYPHEN}mpany was made in 1955 and later"
+        self.assertTrue(research.quote_in_text('a well-known "first" design from the company was made', text))
 
     def test_contradicted_keeps_corrected_value(self):
-        _, (_, rec, _) = self.run_it([answer("contradicted", "invented in 1955 at the Battelle", "1955-ish")])
+        _, (_, rec, _) = self.run_it([answer("contradicted", "invented in 1955 at the Battelle", "1955")])
         self.assertEqual(rec["items"][0]["verdict"], "contradicted")
 
     def test_schema_invalid_answer_is_not_found(self):
@@ -133,24 +144,71 @@ class Safety(Base):
             with self.assertRaises(research.FetchError, msg=bad):
                 research.check_url(bad)
 
+    def curl_out(self, body=b"body", code=b"200", redirect=b"", remote=b"93.184.216.34"):
+        out = b"\n".join([body, code, redirect, remote])
+        return subprocess.CompletedProcess([], 0, stdout=out, stderr=b"")
+
+    def pinned(self, url):
+        return ("example.org", 443, "93.184.216.34")
+
     def test_curl_command_limits(self):
-        done = subprocess.CompletedProcess([], 0, stdout=b"body\n93.184.216.34", stderr=b"")
-        with mock.patch.object(research, "check_url"), mock.patch.object(research.subprocess, "run", return_value=done) as run:
+        with mock.patch.object(research, "check_url", self.pinned), \
+                mock.patch.object(research.subprocess, "run", return_value=self.curl_out()) as run:
             self.assertEqual(research.curl_fetch("https://example.org/"), b"body")
         cmd = run.call_args.args[0]
-        for flag in ("-q", "--max-filesize", "--proto", "=http,https", "--max-time"):
+        for flag in ("-q", "--max-filesize", "--proto", "=http,https", "--max-time", "--noproxy", "example.org:443:93.184.216.34"):
             self.assertIn(flag, cmd)
+        self.assertNotIn("-L", cmd)  # redirects are followed by us, hop by hop
         self.assertNotIn("-b", cmd)  # no cookie jar
         self.assertEqual(cmd[-2:], ["--", "https://example.org/"])
 
-    def test_curl_refuses_private_final_address(self):
-        done = subprocess.CompletedProcess([], 0, stdout=b"body\n10.0.0.5", stderr=b"")
-        with mock.patch.object(research, "check_url"), mock.patch.object(research.subprocess, "run", return_value=done):
+    def test_curl_refuses_unchecked_or_missing_remote_address(self):
+        for remote in (b"10.0.0.5", b"", b"garbage"):
+            with mock.patch.object(research, "check_url", self.pinned), \
+                    mock.patch.object(research.subprocess, "run", return_value=self.curl_out(remote=remote)):
+                with self.assertRaises(research.FetchError, msg=remote):
+                    research.curl_fetch("https://example.org/")
+
+    def test_redirect_hops_are_each_checked(self):
+        seen = []
+
+        def check(url):
+            seen.append(url)
+            if "internal" in url:
+                raise research.FetchError("refused non-public address")
+            return self.pinned(url)
+
+        hop = self.curl_out(code=b"302", redirect=b"https://internal.example/x")
+        with mock.patch.object(research, "check_url", check), mock.patch.object(research.subprocess, "run", return_value=hop):
+            with self.assertRaises(research.FetchError):
+                research.curl_fetch("https://example.org/")
+        self.assertEqual(seen, ["https://example.org/", "https://internal.example/x"])
+
+    def test_redirect_followed_and_limited(self):
+        runs = [self.curl_out(code=b"301", redirect=b"https://example.org/b"), self.curl_out(body=b"final")]
+        with mock.patch.object(research, "check_url", self.pinned), mock.patch.object(research.subprocess, "run", side_effect=runs):
+            self.assertEqual(research.curl_fetch("https://example.org/a"), b"final")
+        loop = self.curl_out(code=b"302", redirect=b"https://example.org/a")
+        with mock.patch.object(research, "check_url", self.pinned), mock.patch.object(research.subprocess, "run", return_value=loop):
+            with self.assertRaises(research.FetchError):
+                research.curl_fetch("https://example.org/a")
+
+    def test_http_error_status(self):
+        with mock.patch.object(research, "check_url", self.pinned), \
+                mock.patch.object(research.subprocess, "run", return_value=self.curl_out(code=b"404")):
             with self.assertRaises(research.FetchError):
                 research.curl_fetch("https://example.org/")
 
 
 class InputFile(Base):
+    def test_every_example_loads(self):
+        examples = sorted((Path(research.__file__).parent / "examples").glob("*.yaml"))
+        self.assertTrue(examples)
+        for f in examples:
+            for it in research.load_input(f)["items"]:
+                self.assertTrue(all(u.startswith("http") and " " not in u for u in it["urls"]), (f, it["id"]))
+
+
     def test_bad_input(self):
         for text in ("items: []", "items:\n - id: a\n   urls: [x]", "items:\n - {id: a, claim: c}"):
             self.inp.write_text(text, encoding="utf-8")
