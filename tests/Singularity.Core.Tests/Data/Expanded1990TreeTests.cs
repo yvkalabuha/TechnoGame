@@ -17,6 +17,65 @@ public class Expanded1990TreeTests
 
     private static int[] Rows => [.. Enumerable.Range(0, Data.Nodes.Count).Where(r => Data.Nodes.Number[r] >= 160)];
 
+// O-105: late prerequisites that keep nodes of 1990-2030 from opening decades before their anchor year (pacing, not history).
+    private static readonly (string Node, string[] Added)[] LatePrerequisites =
+    [
+        ("s9.eng.massively_parallel_hpc", ["s9.eng.beowulf_commodity_cluster"]),
+        ("s9.prc.euv_lithography", ["s9.prc.finfet_manufacturing"]),
+        ("s5.prc.additive_manufacturing_metal", ["s9.prn.computational_materials_design", "s5.cmp.titanium_aluminide_blade"]),
+        ("s7.eng.reusable_booster_landing", ["s10.eng.heavy_expendable_launcher"]),
+        ("s11.prn.laser_inertial_confinement", ["s9.eng.petaflop_supercomputer"]),
+        ("s5.prc.automated_fibre_placement", ["s8.prc.composite_layup_cure"]),
+        ("s5.prc.friction_stir_welding", ["s5.prc.automated_fibre_placement"]),
+        ("s9.eng.world_wide_web", ["s9.prn.vlsi_design_methodology"]),
+        ("s7.eng.amraam_bvr_missile", ["s8.prn.programmable_signal_processing", "s9.prn.vlsi_design_methodology"]),
+        ("s9.prn.rans_cfd_industrial", ["s9.prn.vlsi_design_methodology"]),
+        ("s8.eng.aesa_fighter_radar_fielded", ["s8.eng.digital_beamforming"]),
+        ("s8.prn.digital_rf_memory_jamming", ["s8.eng.digital_beamforming"]),
+        ("s10.eng.sar_earth_observation_satellite", ["s10.eng.space_shuttle_orbiter"]),
+        ("s5.cmp.ultra_high_temperature_ceramic", ["s10.eng.space_shuttle_orbiter"]),
+        ("s8.prn.passive_coherent_location", ["s8.eng.digital_beamforming"]),
+        ("s10.eng.international_space_station", ["s10.eng.space_telescope"]),
+        ("s10.eng.commercial_high_res_imaging", ["s10.eng.space_telescope"]),
+        ("s7.eng.hit_to_kill_interceptor", ["s7.eng.amraam_bvr_missile"]),
+        ("s9.cmp.multicore_processor", ["s9.eng.massively_parallel_hpc"]),
+        ("s8.prn.helmet_mounted_cueing", ["s8.eng.tactical_data_link16"]),
+        ("s8.eng.electro_optical_targeting_pod", ["s7.eng.satellite_guided_bomb"]),
+        ("s8.eng.lo_multirole_fighter_f35", ["s8.eng.thrust_vectoring_supercruise_engine", "s8.eng.aesa_sensor_fusion"]),
+        ("s8.prn.irst_infrared_search_track", ["s8.eng.aesa_sensor_fusion", "s7.prn.imaging_ir_seeker_high_offboresight"]),
+        ("s5.cmp.composite_airliner_wing_box", ["s9.prn.computational_materials_design"]),
+        ("s5.cmp.titanium_aluminide_blade", ["s9.prn.computational_materials_design"]),
+        ("s9.prc.finfet_manufacturing", ["s9.cmp.multicore_processor"]),
+        ("s7.eng.ramjet_bvr_missile", ["s7.eng.scramjet_flight_x43"]),
+    ];
+
+    [Fact]
+    public void LatePrerequisites_O105_AreRequired_NotNewerThanTheNode_AndMarkedAsPacingInBothLanguages()
+    {
+        NodeTable n = Data.Nodes;
+        Assert.Equal(27, LatePrerequisites.Length);
+        string en = File.ReadAllText(Path.Combine(TestMods.CoreDir, "locale", "en", "data.ftl"));
+        string ru = File.ReadAllText(Path.Combine(TestMods.CoreDir, "locale", "ru", "data.ftl"));
+        foreach ((string node, string[] added) in LatePrerequisites)
+        {
+            int r = n.IndexOf(node);
+            Assert.True(r >= 0, node);
+            var required = new List<int>();
+            for (int g = n.Requires.GroupStart[r]; g < n.Requires.GroupStart[r + 1]; g++)
+                required.AddRange(n.Requires.GroupMembers(g));
+            foreach (string a in added)
+            {
+                int p = n.IndexOf(a);
+                Assert.True(p >= 0, a);
+                Assert.Contains(p, required);
+                Assert.True(n.AnchorYear[p] <= n.AnchorYear[r] && n.Gen[p] <= n.Gen[r], $"{node} <- {a}");
+            }
+            string key = "node-" + node.Replace('.', '-') + " =";
+            Assert.Contains("added for game pacing", en[en.IndexOf(key, StringComparison.Ordinal)..].Split("\n\n")[0]);
+            Assert.Contains("ради темпа игры", ru[ru.IndexOf(key, StringComparison.Ordinal)..].Split("\n\n")[0]);
+        }
+    }
+
     [Fact]
     public void Core_HasThe55NewNodes_Numbered160To214_WithoutGaps()
     {

@@ -1686,7 +1686,7 @@ define:
     discipline: aero
     cluster: ELEC
     directions: [ctrl, nuc, aero]
-    requires: [s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology]
+    requires: [s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology, s9.eng.beowulf_commodity_cluster]
     hazard: none
     mil_value: none
     effects:
@@ -1867,7 +1867,7 @@ define:
     tier: 5
     capability_req: {precision: 5.5, purity: 5.5, quality_control: 5.5}
     directions: [mfg, elec, chem, mat]
-    requires: [s9.prn.vlsi_design_methodology, s9.prn.laser_principle]
+    requires: [s9.prn.vlsi_design_methodology, s9.prn.laser_principle, s9.prc.finfet_manufacturing]
     hazard: key
     labour_p: 8000
     mil_value: prep
@@ -2025,7 +2025,7 @@ define:
     tier: 5
     capability_req: {precision: 5.5, purity: 5, quality_control: 5}
     directions: [mfg, mat, met]
-    requires: [s9.prn.laser_principle, s5.prc.hot_isostatic_pressing]
+    requires: [s9.prn.laser_principle, s5.prc.hot_isostatic_pressing, s9.prn.computational_materials_design, s5.cmp.titanium_aluminide_blade]
     hazard: none
     labour_p: 6000
     mil_value: prep
@@ -2124,7 +2124,7 @@ define:
     discipline: prop
     cluster: AERO
     directions: [prop, space, ctrl, struct]
-    requires: [s7.eng.staged_combustion_hydrogen_engine, s9.eng.massively_parallel_hpc]
+    requires: [s7.eng.staged_combustion_hydrogen_engine, s9.eng.massively_parallel_hpc, s10.eng.heavy_expendable_launcher]
     hazard: hz
     mil_value: none
     anchor:
@@ -2372,7 +2372,7 @@ define:
     discipline: chem
     cluster: NUC
     directions: [nuc, elec, mat]
-    requires: [s9.prn.laser_principle, s9.eng.massively_parallel_hpc]
+    requires: [s9.prn.laser_principle, s9.eng.massively_parallel_hpc, s9.eng.petaflop_supercomputer]
     hazard: key
     mil_value: none
     anchor:
@@ -2389,7 +2389,7 @@ define:
     capability_req: {precision: 4.5, purity: 4, quality_control: 4.5}
     labour_p: 7000
     directions: [mfg, mat, struct]
-    requires: [s5.prn.fibre_composite_laminate_design, s5.cmp.high_modulus_fibre, s6.prc.precision_gear_bearing]
+    requires: [s5.prn.fibre_composite_laminate_design, s5.cmp.high_modulus_fibre, s6.prc.precision_gear_bearing, s8.prc.composite_layup_cure]
     hazard: none
     mil_value: prep
     informs:
@@ -2409,7 +2409,7 @@ define:
     capability_req: {precision: 4.5, purity: 4, quality_control: 4.5}
     labour_p: 4000
     directions: [mfg, met, struct]
-    requires: [s5.cmp.aluminium_alloy_sheet, s6.prc.precision_gear_bearing]
+    requires: [s5.cmp.aluminium_alloy_sheet, s6.prc.precision_gear_bearing, s5.prc.automated_fibre_placement]
     hazard: none
     mil_value: prep
     informs:
@@ -2425,7 +2425,7 @@ define:
     discipline: aero
     cluster: ELEC
     directions: [ctrl, elec]
-    requires: [s9.cmp.microprocessor]
+    requires: [s9.cmp.microprocessor, s9.prn.vlsi_design_methodology]
     hazard: none
     mil_value: none
     effects:
@@ -2441,7 +2441,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [ord, sens, elec, prop]
-    requires: [s8.prn.pulse_doppler_look_down_radar, s9.cmp.microprocessor, s7.prn.composite_solid_propellant]
+    requires: [s8.prn.pulse_doppler_look_down_radar, s9.cmp.microprocessor, s7.prn.composite_solid_propellant, s8.prn.programmable_signal_processing, s9.prn.vlsi_design_methodology]
     hazard: none
     mil_value: direct
     anchor:
@@ -2455,7 +2455,7 @@ define:
     discipline: aero
     cluster: ELEC
     directions: [aero, prop, ctrl]
-    requires: [s9.prn.computational_fluid_dynamics, s9.eng.vector_supercomputer]
+    requires: [s9.prn.computational_fluid_dynamics, s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology]
     hazard: none
     mil_value: base
     informs:
@@ -2506,7 +2506,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [sens, elec, ctrl]
-    requires: [s8.cmp.solid_state_tr_module, s8.prn.phased_array_radar_pesa, s5.cmp.gaas_mmic]
+    requires: [s8.cmp.solid_state_tr_module, s8.prn.phased_array_radar_pesa, s5.cmp.gaas_mmic, s8.eng.digital_beamforming]
     hazard: hz
     mil_value: direct
     informs:
@@ -2518,11 +2518,11 @@ define:
   - id: s8.prn.digital_rf_memory_jamming
     number: 168
     type: PRN
-    gen: 5
+    gen: 6
     discipline: aero
     cluster: AERO
     directions: [elec, sens, ctrl]
-    requires: [s9.prn.vlsi_design_methodology, s8.prn.programmable_signal_processing]
+    requires: [s9.prn.vlsi_design_methodology, s8.prn.programmable_signal_processing, s8.eng.digital_beamforming]
     hazard: none
     mil_value: direct
     informs:
@@ -2554,7 +2554,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [space, sens, elec]
-    requires: [s10.eng.scientific_satellite, s9.eng.vector_supercomputer]
+    requires: [s10.eng.scientific_satellite, s9.eng.vector_supercomputer, s10.eng.space_shuttle_orbiter]
     hazard: none
     mil_value: base
     anchor:
@@ -2584,7 +2584,7 @@ define:
     discipline: chem
     cluster: CHEM
     directions: [mat, prop, struct]
-    requires: [s5.cmp.carbon_carbon_composite]
+    requires: [s5.cmp.carbon_carbon_composite, s10.eng.space_shuttle_orbiter]
     hazard: none
     mil_value: base
     informs:
@@ -2614,11 +2614,11 @@ define:
   - id: s8.prn.passive_coherent_location
     number: 174
     type: PRN
-    gen: 5
+    gen: 6
     discipline: aero
     cluster: AERO
     directions: [sens, elec, ctrl]
-    requires: [s9.cmp.microprocessor, s8.prn.programmable_signal_processing]
+    requires: [s9.cmp.microprocessor, s8.prn.programmable_signal_processing, s8.eng.digital_beamforming]
     hazard: none
     mil_value: base
     informs:
@@ -2634,7 +2634,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [space, struct, ctrl, mat]
-    requires: [s10.eng.space_shuttle_orbiter, s10.eng.crewed_orbital_flight]
+    requires: [s10.eng.space_shuttle_orbiter, s10.eng.crewed_orbital_flight, s10.eng.space_telescope]
     hazard: none
     mil_value: none
     anchor:
@@ -2662,7 +2662,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [space, sens, elec]
-    requires: [s10.eng.reconnaissance_satellite, s9.cmp.microprocessor]
+    requires: [s10.eng.reconnaissance_satellite, s9.cmp.microprocessor, s10.eng.space_telescope]
     hazard: none
     mil_value: base
     anchor:
@@ -2676,7 +2676,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [ord, ctrl, sens]
-    requires: [s7.eng.intercontinental_ballistic_missile, s9.cmp.microprocessor]
+    requires: [s7.eng.intercontinental_ballistic_missile, s9.cmp.microprocessor, s7.eng.amraam_bvr_missile]
     hazard: hz
     mil_value: base
     anchor:
@@ -2721,7 +2721,7 @@ define:
     discipline: aero
     cluster: ELEC
     directions: [elec, ctrl]
-    requires: [s9.cmp.microprocessor, s9.prn.vlsi_design_methodology]
+    requires: [s9.cmp.microprocessor, s9.prn.vlsi_design_methodology, s9.eng.massively_parallel_hpc]
     hazard: none
     mil_value: base
     effects:
@@ -2751,7 +2751,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [sens, ctrl, ord]
-    requires: [s8.eng.infrared_air_to_air_missile, s9.cmp.microprocessor]
+    requires: [s8.eng.infrared_air_to_air_missile, s9.cmp.microprocessor, s8.eng.tactical_data_link16]
     hazard: none
     mil_value: direct
     anchor:
@@ -2809,7 +2809,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [sens, ord, ctrl]
-    requires: [s9.prc.mos_lsi_manufacturing, s9.prn.laser_principle]
+    requires: [s9.prc.mos_lsi_manufacturing, s9.prn.laser_principle, s7.eng.satellite_guided_bomb]
     hazard: none
     mil_value: direct
     informs:
@@ -2857,7 +2857,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [aero, sens, ctrl, mat]
-    requires: [s8.eng.low_observable_airframe, s8.eng.integrated_avionics_architecture, s8.eng.aesa_fighter_radar_fielded]
+    requires: [s8.eng.low_observable_airframe, s8.eng.integrated_avionics_architecture, s8.eng.aesa_fighter_radar_fielded, s8.eng.thrust_vectoring_supercruise_engine, s8.eng.aesa_sensor_fusion]
     hazard: hz
     mil_value: direct
     anchor:
@@ -2871,7 +2871,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [sens, elec, ord]
-    requires: [s8.eng.infrared_air_to_air_missile, s9.cmp.microprocessor]
+    requires: [s8.eng.infrared_air_to_air_missile, s9.cmp.microprocessor, s8.eng.aesa_sensor_fusion, s7.prn.imaging_ir_seeker_high_offboresight]
     hazard: none
     mil_value: direct
     anchor:
@@ -2931,7 +2931,7 @@ define:
     discipline: chem
     cluster: CHEM
     directions: [struct, mat, mfg]
-    requires: [s5.prc.automated_fibre_placement, s8.prc.composite_layup_cure, s5.prc.friction_stir_welding]
+    requires: [s5.prc.automated_fibre_placement, s8.prc.composite_layup_cure, s5.prc.friction_stir_welding, s9.prn.computational_materials_design]
     hazard: none
     mil_value: base
     informs:
@@ -3003,7 +3003,7 @@ define:
     discipline: chem
     cluster: CHEM
     directions: [mat, prop, met]
-    requires: [s5.cmp.titanium_alloy, s5.prc.vacuum_induction_melt, s5.prc.hot_isostatic_pressing]
+    requires: [s5.cmp.titanium_alloy, s5.prc.vacuum_induction_melt, s5.prc.hot_isostatic_pressing, s9.prn.computational_materials_design]
     hazard: none
     mil_value: direct
     informs:
@@ -3023,7 +3023,7 @@ define:
     capability_req: {precision: 5.5, purity: 5.5, quality_control: 5.5}
     labour_p: 4500
     directions: [mfg, elec, chem]
-    requires: [s9.prc.mos_lsi_manufacturing, s9.prn.vlsi_design_methodology]
+    requires: [s9.prc.mos_lsi_manufacturing, s9.prn.vlsi_design_methodology, s9.cmp.multicore_processor]
     hazard: none
     mil_value: prep
     anchor:
@@ -3096,7 +3096,7 @@ define:
     discipline: aero
     cluster: AERO
     directions: [ord, prop, sens]
-    requires: [s7.eng.amraam_bvr_missile, s8.eng.tactical_data_link16]
+    requires: [s7.eng.amraam_bvr_missile, s8.eng.tactical_data_link16, s7.eng.scramjet_flight_x43]
     hazard: none
     mil_value: direct
     anchor:
