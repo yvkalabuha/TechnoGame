@@ -664,7 +664,7 @@ node-s9-eng-massively_parallel_hpc =
     .name = Massively parallel supercomputer (ASCI Red)
     .short = ASCI Red
     .anchor = ASCI Red, 1.06 Tflops, 12.1996
-    .history = ASCI Red reached 1.06 Tflops in December 1996 and served to model the nuclear arsenal without tests.
+    .history = ASCI Red reached 1.06 Tflops in December 1996 and served to model the nuclear arsenal without tests. A prerequisite was added for game pacing (an assumption), not as a historical claim.
 
 node-s9-eng-gpu_accelerated_computing =
     .name = GPU-accelerated scientific computing (CUDA)
@@ -730,7 +730,7 @@ node-s9-prc-euv_lithography =
     .name = Extreme ultraviolet lithography
     .short = EUV
     .anchor = ASML EUV in production, 2019
-    .history = Series chip production with extreme ultraviolet lithography (ASML) began in 2019.
+    .history = Series chip production with extreme ultraviolet lithography (ASML) began in 2019. A prerequisite was added for game pacing (an assumption), not as a historical claim.
 
 node-s8-eng-fire_control_radar_interceptor =
     .name = Interceptor airborne fire-control radar
@@ -790,7 +790,7 @@ node-s5-prc-additive_manufacturing_metal =
     .name = Metal additive manufacturing
     .short = Metal AM
     .anchor = LEAP nozzles delivered, 2016
-    .history = Laser melting was invented in 1995 (Fraunhofer ILT); the first LEAP engines with printed fuel nozzles were delivered to Airbus in 2016.
+    .history = Laser melting was invented in 1995 (Fraunhofer ILT); the first LEAP engines with printed fuel nozzles were delivered to Airbus in 2016. A prerequisite was added for game pacing (an assumption), not as a historical claim.
 
 node-s7-eng-liquid_rocket_engine_g1 =
     .name = Liquid-propellant rocket engine (A-4/V-2)
@@ -832,7 +832,7 @@ node-s7-eng-reusable_booster_landing =
     .name = Reusable booster landing (Falcon 9)
     .short = Booster
     .anchor = Falcon 9 landing, 12.2015
-    .history = The first successful landing of an orbital first stage (Falcon 9) took place in December 2015.
+    .history = The first successful landing of an orbital first stage (Falcon 9) took place in December 2015. A prerequisite was added for game pacing (an assumption), not as a historical claim.
 
 node-s10-eng-sounding_rocket_science =
     .name = Sounding-rocket upper-atmosphere science
@@ -934,7 +934,339 @@ node-s11-prn-laser_inertial_confinement =
     .name = Laser inertial confinement fusion (NIF)
     .short = NIF
     .anchor = NIF first ignition, 08.08.2021
-    .history = The National Ignition Facility reached the first ignited plasma on 8 August 2021; energy output above input followed on 5 December 2022 (from memory).
+    .history = The National Ignition Facility reached the first ignited plasma on 8 August 2021; energy output above input followed on 5 December 2022 (from memory). A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+# Knowledge nodes 1990-2030 (TASK-0193, tree-expansion-1990-2030.md).
+
+node-s5-prc-automated_fibre_placement =
+    .name = Automated fibre placement
+    .short = Fibre place
+    .anchor = Fibre place, 1990 (estimate)
+    .history = Automated fibre placement machines for composite structures were developed from the late 1980s through the 1990s; 1990 is an approximate year. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s5-prc-friction_stir_welding =
+    .name = Friction stir welding
+    .short = FSW
+    .anchor = FSW, 1991
+    .history = Friction stir welding was invented at The Welding Institute (TWI) in 1991. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s9-eng-world_wide_web =
+    .name = World Wide Web
+    .short = WWW
+    .anchor = WWW, 1991
+    .history = The World Wide Web was made publicly available outside CERN in August 1991. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s7-eng-amraam_bvr_missile =
+    .name = Active-radar beyond-visual-range air-to-air missile (AIM-120 AMRAAM)
+    .short = AIM-120
+    .anchor = AIM-120, 1991
+    .history = The AIM-120 AMRAAM active-radar missile has been deployed since September 1991. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s9-prn-rans_cfd_industrial =
+    .name = Industrial Reynolds-averaged Navier–Stokes CFD (Spalart–Allmaras)
+    .short = RANS CFD
+    .anchor = RANS CFD, 1992
+    .history = The Spalart–Allmaras turbulence model, a basis of industrial Reynolds-averaged CFD, was published in 1992. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s8-eng-tactical_data_link16 =
+    .name = Tactical data link (Link 16)
+    .short = Link 16
+    .anchor = Link 16, 1994 (estimate)
+    .history = Link 16 entered service in the mid 1990s; the exact year is approximate.
+
+node-s9-eng-beowulf_commodity_cluster =
+    .name = Commodity computer cluster (Beowulf)
+    .short = Beowulf
+    .anchor = Beowulf, 1994
+    .history = The first Beowulf commodity cluster was built at NASA Goddard Space Flight Center in 1994.
+
+node-s8-eng-aesa_fighter_radar_fielded =
+    .name = AESA radar on a production fighter (J/APG-1)
+    .short = J/APG-1
+    .anchor = J/APG-1, 1995
+    .history = The Mitsubishi J/APG-1 on the F-2 was among the earliest AESA radars in operational use on a fighter aircraft (about 1995). A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s8-prn-digital_rf_memory_jamming =
+    .name = Digital radio-frequency memory (DRFM) jamming
+    .short = DRFM
+    .anchor = DRFM, 1995 (estimate)
+    .history = Digital radio-frequency memory (DRFM) jammers became widely deployed in electronic warfare during the 1990s; the year 1995 is an estimate. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s10-eng-gps_operational_constellation =
+    .name = GPS full operational capability
+    .short = GPS FOC
+    .anchor = GPS FOC, 1995
+    .history = GPS reached full operational capability in April 1995.
+
+node-s10-eng-sar_earth_observation_satellite =
+    .name = SAR Earth-observation satellite (RADARSAT-1)
+    .short = RADARSAT-1
+    .anchor = RADARSAT-1, 1995
+    .history = RADARSAT-1, a synthetic-aperture radar satellite, was launched on 4 November 1995. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s8-eng-cooperative_engagement_capability =
+    .name = Cooperative engagement capability (CEC)
+    .short = CEC
+    .anchor = CEC, 1996 (estimate)
+    .history = The US Navy Cooperative Engagement Capability (CEC) network was tested in the early 1990s; the entry-into-service year is approximate.
+
+node-s5-cmp-ultra_high_temperature_ceramic =
+    .name = Ultra-high-temperature ceramics (ZrB2, HfB2)
+    .short = UHTC
+    .anchor = UHTC, 1997 (estimate)
+    .history = The NASA Ames SHARP-B1 flight experiment in 1997 tested an ultra-high-temperature ceramic nose cone and leading edges. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s9-prn-computational_materials_design =
+    .name = Computational materials design (ICME)
+    .short = ICME
+    .anchor = ICME, 1997 (estimate)
+    .history = Integrated computational materials engineering (ICME) combines computational tools to design materials; commercial alloy-design software appeared in the 1990s, the year 1997 is an estimate.
+
+node-s8-prn-passive_coherent_location =
+    .name = Passive coherent location radar
+    .short = PCL
+    .anchor = PCL, 1998 (estimate)
+    .history = The Silent Sentry passive coherent location system (Lockheed Martin) was developed in the late 1990s. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s10-eng-international_space_station =
+    .name = International Space Station
+    .short = ISS
+    .anchor = ISS, 1998
+    .history = The first ISS module, Zarya, was launched on 20 November 1998. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s7-eng-satellite_guided_bomb =
+    .name = GPS-guided bomb kit (JDAM)
+    .short = JDAM
+    .anchor = JDAM, 1999
+    .history = The JDAM GPS guidance kit has been delivered since 1999 and was used in combat in 1999.
+
+node-s10-eng-commercial_high_res_imaging =
+    .name = Commercial high-resolution imaging satellite (IKONOS)
+    .short = IKONOS
+    .anchor = IKONOS, 1999
+    .history = IKONOS was launched on 24 September 1999 and provided one-metre resolution imagery for general use. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s7-eng-hit_to_kill_interceptor =
+    .name = Hit-to-kill ballistic missile interceptor
+    .short = Hit-to-kill
+    .anchor = Hit-to-kill, 1999
+    .history = A hit-to-kill intercept was achieved in flight test IFT-3 of the US Ground-based Midcourse Defense on 2 October 1999. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s5-prn-metamaterial_electromagnetic =
+    .name = Electromagnetic metamaterials (negative index)
+    .short = Metamaterial
+    .anchor = Metamaterial, 2000
+    .history = In 2000 a team around David Smith demonstrated a composite metamaterial with a negative refractive index at microwave frequencies.
+
+node-s8-eng-armed_reconnaissance_uav =
+    .name = Armed reconnaissance UAV (MQ-1 Predator)
+    .short = Predator
+    .anchor = Predator, 2001
+    .history = The MQ-1 Predator fired a Hellfire missile in a test in February 2001.
+
+node-s9-cmp-multicore_processor =
+    .name = Multicore processor
+    .short = Multicore
+    .anchor = Multicore, 2001
+    .history = IBM POWER4, released in 2001, was a dual-core microprocessor for non-embedded systems. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s10-eng-heavy_expendable_launcher =
+    .name = Evolved expendable launch vehicle (Atlas V)
+    .short = Atlas V
+    .anchor = Atlas V, 2002
+    .history = Atlas V first launched on 21 August 2002.
+
+node-s8-prn-helmet_mounted_cueing =
+    .name = Helmet-mounted cueing system (JHMCS)
+    .short = JHMCS
+    .anchor = JHMCS, 2003
+    .history = The Joint Helmet Mounted Cueing System (JHMCS) was fielded on the US Navy F/A-18 in 2003. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s7-eng-stealth_cruise_missile =
+    .name = Stealth cruise missile (AGM-158 JASSM)
+    .short = JASSM
+    .anchor = JASSM, 2003 (estimate)
+    .history = The AGM-158 JASSM reached initial capability around 2003; one source gives USAF entry into service in 2009, so the year is an estimate.
+
+node-s10-eng-cubesat_small_satellite =
+    .name = CubeSat small satellites
+    .short = CubeSat
+    .anchor = CubeSat, 2003
+    .history = The first CubeSats were launched on 30 June 2003.
+
+node-s7-prn-imaging_ir_seeker_high_offboresight =
+    .name = Imaging-infrared high off-boresight short-range missile (AIM-9X)
+    .short = AIM-9X
+    .anchor = AIM-9X, 2003
+    .history = The AIM-9X Sidewinder entered service in November 2003.
+
+node-s8-eng-electro_optical_targeting_pod =
+    .name = Electro-optical targeting pod
+    .short = EO pod
+    .anchor = EO pod, 2004 (estimate)
+    .history = Electro-optical targeting pods became standard in the 2000s (Sniper contract 2001, ATP-SE in 2014); the year 2004 is an estimate. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s7-eng-scramjet_flight_x43 =
+    .name = Scramjet flight test (X-43A, Mach 9.6)
+    .short = X-43A
+    .anchor = X-43A, 2004
+    .history = The NASA X-43A reached about Mach 9.6 under scramjet power on 16 November 2004.
+
+node-s8-cmp-gan_tr_module =
+    .name = Gallium-nitride AESA transmit/receive module
+    .short = GaN module
+    .anchor = GaN module, 2010 (estimate)
+    .history = Gallium-nitride transmit/receive modules for AESA radars entered production in the 2000s; the year 2010 is an estimate.
+
+node-s8-eng-lo_multirole_fighter_f35 =
+    .name = Low-observable multirole fighter with sensor fusion (F-35)
+    .short = F-35
+    .anchor = F-35, 2006
+    .history = The first F-35A (AA-1) made its first flight on 15 December 2006. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s8-prn-irst_infrared_search_track =
+    .name = Fighter infrared search and track (IRST)
+    .short = IRST
+    .anchor = IRST, 2007 (estimate)
+    .history = The PIRATE infrared search and track system on the Eurofighter Typhoon entered service around 2007; the year is an estimate. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s10-eng-kinetic_antisatellite_test =
+    .name = Kinetic anti-satellite test (2007)
+    .short = ASAT 2007
+    .anchor = ASAT 2007, 2007
+    .history = China destroyed the Fengyun-1C satellite with a kinetic kill vehicle on 11 January 2007.
+
+node-s7-eng-long_range_sam_s400 =
+    .name = Long-range surface-to-air missile system (S-400)
+    .short = S-400
+    .anchor = S-400, 2007
+    .history = The S-400 Triumf was accepted into Russian service on 28 April 2007.
+
+node-s9-eng-petaflop_supercomputer =
+    .name = Petaflop supercomputer (IBM Roadrunner)
+    .short = Roadrunner
+    .anchor = Roadrunner, 2008
+    .history = IBM Roadrunner exceeded one petaflop in 2008.
+
+node-s5-cmp-composite_airliner_wing_box =
+    .name = Composite airliner wing and fuselage (Boeing 787)
+    .short = Boeing 787
+    .anchor = Boeing 787, 2009
+    .history = The Boeing 787 Dreamliner first flew on 15 December 2009 with a mainly carbon-fibre composite airframe. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s10-eng-reusable_uncrewed_spaceplane =
+    .name = Reusable uncrewed spaceplane (X-37B)
+    .short = X-37B
+    .anchor = X-37B, 2010
+    .history = The uncrewed Boeing X-37B spaceplane first launched on 22 April 2010.
+
+node-s7-eng-antiship_ballistic_missile =
+    .name = Anti-ship ballistic missile (DF-21D)
+    .short = DF-21D
+    .anchor = DF-21D, 2010 (estimate)
+    .history = The DF-21D anti-ship ballistic missile was assessed by the US DoD as reaching initial capability around 2010.
+
+node-s7-eng-scramjet_sustained_x51 =
+    .name = Sustained scramjet flight (X-51A Waverider)
+    .short = X-51A
+    .anchor = X-51A, 2010
+    .history = The X-51A Waverider flew for about 200 seconds, about 140 of them under scramjet power, on 26 May 2010.
+
+node-s8-eng-lo_unmanned_combat_air_vehicle =
+    .name = Low-observable unmanned combat air vehicle (X-47B)
+    .short = X-47B
+    .anchor = X-47B, 2011
+    .history = The Northrop Grumman X-47B made its first flight on 4 February 2011.
+
+node-s5-cmp-titanium_aluminide_blade =
+    .name = Titanium aluminide turbine blades
+    .short = TiAl blades
+    .anchor = TiAl blades, 2011 (estimate)
+    .history = Titanium aluminide low-pressure turbine blades have been in service in GEnx engines since about 2011. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s9-prc-finfet_manufacturing =
+    .name = FinFET tri-gate transistor manufacturing
+    .short = FinFET
+    .anchor = FinFET, 2011
+    .history = Intel began volume production of 22 nm tri-gate (FinFET) transistors in 2011 (Ivy Bridge). A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s10-eng-missile_warning_satellite_geo =
+    .name = Geosynchronous missile-warning satellite (SBIRS GEO-1)
+    .short = SBIRS GEO
+    .anchor = SBIRS GEO, 2011
+    .history = The SBIRS GEO-1 missile-warning satellite was launched on 7 May 2011.
+
+node-s8-eng-distributed_aperture_system =
+    .name = Distributed aperture system (F-35 EO DAS)
+    .short = EO DAS
+    .anchor = EO DAS, 2015
+    .history = The F-35 Electro-Optical Distributed Aperture System (AN/AAQ-37) provides spherical infrared coverage; the F-35B reached initial operational capability in 2015.
+
+node-s8-eng-multifunction_rf_aperture_ew =
+    .name = Integrated multifunction RF/EW suite (AN/ASQ-239)
+    .short = AN/ASQ-239
+    .anchor = AN/ASQ-239, 2015 (estimate)
+    .history = The AN/ASQ-239 electronic warfare suite of the F-35 integrates radar warning, jamming and electronic support; the year 2015 is an estimate.
+
+node-s5-cmp-cmc_hot_section_in_service =
+    .name = Ceramic matrix composite hot-section parts in service (LEAP)
+    .short = LEAP
+    .anchor = LEAP, 2016
+    .history = The CFM LEAP engine, in service since 2016, has ceramic matrix composite turbine shrouds.
+
+node-s7-eng-ramjet_bvr_missile =
+    .name = Ramjet-powered beyond-visual-range missile (Meteor)
+    .short = Meteor
+    .anchor = Meteor, 2016
+    .history = The MBDA Meteor ramjet air-to-air missile entered service in 2016 on the Gripen. A prerequisite was added for game pacing (an assumption), not as a historical claim.
+
+node-s8-prn-ml_target_recognition =
+    .name = Machine-learning target recognition (Project Maven)
+    .short = Maven
+    .anchor = Maven, 2017
+    .history = Project Maven was established in April 2017 to analyse drone imagery with machine learning.
+
+node-s8-eng-loyal_wingman_uav =
+    .name = Loyal wingman UAV (XQ-58 Valkyrie)
+    .short = XQ-58
+    .anchor = XQ-58, 2019
+    .history = The XQ-58 Valkyrie made its first flight in March 2019.
+
+node-s9-prn-quantum_advantage_demo =
+    .name = Quantum supremacy demonstration (Sycamore)
+    .short = Sycamore
+    .anchor = Sycamore, 2019
+    .history = Google reported quantum supremacy with its 53-qubit Sycamore processor in October 2019; IBM disputed the result.
+
+node-s10-eng-leo_megaconstellation =
+    .name = LEO mega-constellation (Starlink)
+    .short = Starlink
+    .anchor = Starlink, 2019
+    .history = SpaceX launched the first 60 operational Starlink satellites on 24 May 2019.
+
+node-s7-eng-hypersonic_glide_vehicle =
+    .name = Hypersonic glide vehicle (Avangard)
+    .short = Avangard
+    .anchor = Avangard, 2019
+    .history = The Avangard hypersonic glide vehicle was placed on combat duty in December 2019.
+
+node-s7-eng-hypersonic_cruise_missile =
+    .name = Scramjet hypersonic cruise missile (3M22 Zircon)
+    .short = Zircon
+    .anchor = Zircon, 2023
+    .history = The 3M22 Zircon was put into service on 4 January 2023; its first test launch was in 2020.
+
+node-s9-eng-exascale_supercomputer =
+    .name = Exascale supercomputer (Frontier)
+    .short = Frontier
+    .anchor = Frontier, 2022
+    .history = The Frontier supercomputer at Oak Ridge reached 1.1 exaflops in 2022 and topped the TOP500 list.
+
+node-s10-eng-fully_reusable_heavy_launcher =
+    .name = Fully reusable super-heavy launcher (Starship)
+    .short = Starship
+    .anchor = Starship, 2023
+    .history = The first integrated flight test of Starship took place on 20 April 2023.
 
 # Product classes and the scenario.
 

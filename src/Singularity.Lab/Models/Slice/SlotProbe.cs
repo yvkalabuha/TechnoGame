@@ -33,6 +33,8 @@ internal sealed class SlotProbe
     private readonly byte[] _focus = new byte[InstituteSystem.MaxSlotsLimit];
     private readonly long[] _c;              // [actor][period][metric]
     private readonly long[] _returned, _science, _returned1, _science1, _returned2, _science2, _upkeepMax, _lastWorkable, _institutesMax;   // per actor (TASK-0187 review: the smoke gates of SCIENCE_SLOTS §10)
+    private readonly long[] _nodeMonths;      // [actor][node number]: slot-months 1947–1990 on the node (TASK-0193: which nodes hold the slots in the gate window)
+    private readonly int _numbers;
     private long _firstViolation = -1;
     private int _firstViolationActor = -1;
 
@@ -56,7 +58,12 @@ internal sealed class SlotProbe
         _lastWorkable = new long[ids.Length];
         _institutesMax = new long[ids.Length];
         Array.Fill(_lastWorkable, -1);
+        _numbers = _w.Graph.Number.Max() + 1;
+        _nodeMonths = new long[ids.Length * _numbers];
     }
+
+    /// <summary>Anchor year from which a node counts as late in the 1947–1990 window: the 1990–2030 tree (TASK-0193).</summary>
+    public const int LateAnchorYear = 1991;
 
     private int At(int a, long t, int m) => (a * 2 + (t <= Period1LastMonth ? 0 : 1)) * Metrics + m;
 
@@ -81,10 +88,15 @@ internal sealed class SlotProbe
                 standing++;
                 if (node[k] == 0)
                     idle++;
-                else if (focus[k] == 1)
-                    _c[At(a, t, MFocus1)]++;
-                else if (focus[k] >= 2)
-                    _c[At(a, t, MFocus2)]++;
+                else
+                {
+                    if (t >= GateFirstMonth && t <= Period1LastMonth)
+                        _nodeMonths[a * _numbers + node[k]]++;
+                    if (focus[k] == 1)
+                        _c[At(a, t, MFocus1)]++;
+                    else if (focus[k] >= 2)
+                        _c[At(a, t, MFocus2)]++;
+                }
             }
             int workable = 0, untaken = 0;
             for (int r = 0; r < g.Count; r++)
@@ -168,6 +180,20 @@ internal sealed class SlotProbe
             yield return new($"slot_{_ids[a]}_upkeep_max_ppm", I(_upkeepMax[a]));
             yield return new($"slot_{_ids[a]}_workable_last", I(_lastWorkable[a]));
             yield return new($"slot_{_ids[a]}_institutes_max", I(_institutesMax[a]));
+            // Slot-months 1947–1990 on nodes anchored in 1991 or later, and those nodes as "number:months" (TASK-0193 GAP36 diagnosis).
+            long late = 0;
+            var lateNodes = new List<string>();
+            for (int number = 1; number < _numbers; number++)
+            {
+                long m = _nodeMonths[a * _numbers + number];
+                int row = _w.Graph.RowOf(number);
+                if (m == 0 || row < 0 || _w.Graph.AnchorYear[row] < LateAnchorYear)
+                    continue;
+                late += m;
+                lateNodes.Add($"{I(number)}:{I(m)}");
+            }
+            yield return new($"slot_w47_{_ids[a]}_late_months", I(late));
+            yield return new($"slot_w47_{_ids[a]}_late_nodes", string.Join(";", lateNodes));
         }
         for (int a = 0; a < _ids.Length; a++)
         {

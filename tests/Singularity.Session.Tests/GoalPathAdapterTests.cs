@@ -19,7 +19,7 @@ public class GoalPathAdapterTests
         KnowledgeGraph g = s.World.Graph;
         bool sawAnyOf = false;
         // Walk the run until some actor has an unsatisfied any_of group on its path (the early path has none).
-        for (long m = 0; m < 400 && !sawAnyOf; m += 12)
+        for (long m = 0; m < 700 && !sawAnyOf; m += 12)   // TASK-0193: the 1990-2030 nodes move the trajectory; the first such group now appears later
         {
             if (m > 0)
                 s.StepThroughMonth(m);

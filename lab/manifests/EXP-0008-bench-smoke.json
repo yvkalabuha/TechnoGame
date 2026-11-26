@@ -12,8 +12,8 @@
   "measure_months": 3,
   "hash_checkpoints": false,
   "blocks": [
-    {"id": "A", "points": [[6, 180, "cross"]], "threads": [2], "seeds": [1, 2, 3], "replicas": 2, "note": "outcome (smoke)"},
-    {"id": "B", "points": [[6, 180, "cross"]], "threads": [1], "seeds": [1, 2], "note": "record (smoke)"}
+    {"id": "A", "points": [[6, 250, "cross"]], "threads": [2], "seeds": [1, 2, 3], "replicas": 2, "note": "outcome (smoke)"},
+    {"id": "B", "points": [[6, 250, "cross"]], "threads": [1], "seeds": [1, 2], "note": "record (smoke)"}
   ],
   "gate": {
     "foreign_cpus_max": 16,
@@ -42,15 +42,15 @@
     "fref_tail_s": 2
   },
   "reference": {
-    "validity": {"actors": "6", "nodes": "180", "graph": "cross", "seeds": "1", "months": "2"},
+    "validity": {"actors": "6", "nodes": "250", "graph": "cross", "seeds": "1", "months": "2"},
     "variants": [
       {"id": "hc", "block": "A", "seeds": [1, 2], "switches": {"hash-checkpoints": "true"}}
     ],
     "modes": [
-      {"id": "r1", "mode": "r1", "args": {"points": "6x180", "warmup": "2", "calls": "5"}},
-      {"id": "r2", "mode": "r2", "args": {"actors": "6", "nodes": "180", "variants": "a,b,c,e", "warmup": "2", "reps": "5"}},
-      {"id": "r2d-s1", "mode": "r2", "args": {"actors": "6", "nodes": "180", "variants": "d", "seed": "1", "threads-list": "1,2", "month-warmup": "1", "months": "4"}},
-      {"id": "r3", "mode": "r3", "args": {"actors": "6", "nodes": "180", "warmup": "2", "calls": "5"}}
+      {"id": "r1", "mode": "r1", "args": {"points": "6x250", "warmup": "2", "calls": "5"}},
+      {"id": "r2", "mode": "r2", "args": {"actors": "6", "nodes": "250", "variants": "a,b,c,e", "warmup": "2", "reps": "5"}},
+      {"id": "r2d-s1", "mode": "r2", "args": {"actors": "6", "nodes": "250", "variants": "d", "seed": "1", "threads-list": "1,2", "month-warmup": "1", "months": "4"}},
+      {"id": "r3", "mode": "r3", "args": {"actors": "6", "nodes": "250", "warmup": "2", "calls": "5"}}
     ],
     "profile": {"block": "A", "seed": 1, "warmup_months": 1, "measure_months": 2, "runs": "daily", "tool": "dotnet-trace", "tool_args": ["collect", "--profile", "dotnet-sampled-thread-time"]}
   }

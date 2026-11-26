@@ -20,9 +20,9 @@ public static class HarnessChecks
         ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names/ancestors/idle", GateDecide),
         ("bench: series verdict — A 4/15 excluded INCONCLUSIVE, 3/15 not; seed 2/5 INCONCLUSIVE; series 23/114 INCONCLUSIVE, 22/114 not", GateVerdict),
         ("bench: EXP-0008 manifest — gate equals the П5 numbers (calibrated keys: proposal or П5.6 grid), plan = EXP-0007 plan, reference modes parse; calibration manifest = block A, same gate; bad gate key rejected", Manifests),
-        ("bench: alloc direct split (6, 180) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, run-thread count (DEBT-0060): tick + snapshot = run-thread bytes, process = run thread + other threads every month, noise_floor_bytes = max other threads, both paths > 0; format 5: settle condition, events flushed, pause blocks", () => AllocSplit(tmp)),
+        ("bench: alloc direct split (6, 250) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, run-thread count (DEBT-0060): tick + snapshot = run-thread bytes, process = run thread + other threads every month, noise_floor_bytes = max other threads, both paths > 0; format 5: settle condition, events flushed, pause blocks", () => AllocSplit(tmp)),
         ("bench: GC pause pairing (#416) — SuspendEE→RestartEE pauses, kind by GCStart type/depth (deepest in the pause), BGC final suspension → Background, non-GC suspension apart, unpaired counted; window summary max/p99/blocking gen2; series attempt gc copy", GcPairing),
-        ("bench: process (6, 180) 1+2 months — format 3, settle condition, settle pause > 0, events flushed and complete (GC and gen2 counts = runtime), pauses per run, net bytes = all − sampler − meter − listener", () => ProcessGc(tmp)),
+        ("bench: process (6, 250) 1+2 months — format 3, settle condition, settle pause > 0, events flushed and complete (GC and gen2 counts = runtime), pauses per run, net bytes = all − sampler − meter − listener", () => ProcessGc(tmp)),
     ];
 
     private static GcEventListener.GcEvent E(int ms, string name, int gen = -1, int reason = -1, int type = -1, int count = -1) =>
@@ -68,7 +68,7 @@ public static class HarnessChecks
 
     private static string? ProcessGc(string tmp)
     {
-        var spec = new SynthWorldSpec(6, 180, SynthGraph.CrossEdges);
+        var spec = new SynthWorldSpec(6, 250, SynthGraph.CrossEdges);
         string dir = Path.Combine(tmp, "bench-process-gc");
         string f = Path.Combine(dir, "process.json");
         var p = new BenchProcess(0, 0, "selftest", spec, 1, 1, 1, 0);
@@ -102,7 +102,7 @@ public static class HarnessChecks
 
     private static string? AllocSplit(string tmp)
     {
-        var spec = new SynthWorldSpec(6, 180, SynthGraph.CrossEdges);
+        var spec = new SynthWorldSpec(6, 250, SynthGraph.CrossEdges);
         string dir = Path.Combine(tmp, "bench-alloc");
         SynthWorld w = SynthWorldGenerator.Build(spec, Path.Combine(dir, "worlds", spec.Name));
         string f = Path.Combine(dir, "alloc.json");

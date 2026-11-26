@@ -1686,7 +1686,7 @@ define:
     discipline: aero
     cluster: ELEC
     directions: [ctrl, nuc, aero]
-    requires: [s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology]
+    requires: [s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology, s9.eng.beowulf_commodity_cluster]
     hazard: none
     mil_value: none
     effects:
@@ -1867,7 +1867,7 @@ define:
     tier: 5
     capability_req: {precision: 5.5, purity: 5.5, quality_control: 5.5}
     directions: [mfg, elec, chem, mat]
-    requires: [s9.prn.vlsi_design_methodology, s9.prn.laser_principle]
+    requires: [s9.prn.vlsi_design_methodology, s9.prn.laser_principle, s9.prc.finfet_manufacturing]
     hazard: key
     labour_p: 8000
     mil_value: prep
@@ -2025,7 +2025,7 @@ define:
     tier: 5
     capability_req: {precision: 5.5, purity: 5, quality_control: 5}
     directions: [mfg, mat, met]
-    requires: [s9.prn.laser_principle, s5.prc.hot_isostatic_pressing]
+    requires: [s9.prn.laser_principle, s5.prc.hot_isostatic_pressing, s9.prn.computational_materials_design, s5.cmp.titanium_aluminide_blade]
     hazard: none
     labour_p: 6000
     mil_value: prep
@@ -2124,7 +2124,7 @@ define:
     discipline: prop
     cluster: AERO
     directions: [prop, space, ctrl, struct]
-    requires: [s7.eng.staged_combustion_hydrogen_engine, s9.eng.massively_parallel_hpc]
+    requires: [s7.eng.staged_combustion_hydrogen_engine, s9.eng.massively_parallel_hpc, s10.eng.heavy_expendable_launcher]
     hazard: hz
     mil_value: none
     anchor:
@@ -2372,10 +2372,848 @@ define:
     discipline: chem
     cluster: NUC
     directions: [nuc, elec, mat]
-    requires: [s9.prn.laser_principle, s9.eng.massively_parallel_hpc]
+    requires: [s9.prn.laser_principle, s9.eng.massively_parallel_hpc, s9.eng.petaflop_supercomputer]
     hazard: key
     mil_value: none
     anchor:
       year: 2021
       source: "R575-60"
+      estimated: false
+  - id: s5.prc.automated_fibre_placement
+    number: 160
+    type: PRC
+    gen: 5
+    discipline: chem
+    cluster: CHEM
+    tier: 4
+    capability_req: {precision: 4.5, purity: 4, quality_control: 4.5}
+    labour_p: 7000
+    directions: [mfg, mat, struct]
+    requires: [s5.prn.fibre_composite_laminate_design, s5.cmp.high_modulus_fibre, s6.prc.precision_gear_bearing, s8.prc.composite_layup_cure]
+    hazard: none
+    mil_value: prep
+    informs:
+      - {to: s8.eng.composite_airframe, weight: 0.3}
+      - {to: s8.prc.composite_layup_cure, weight: 0.3}
+    anchor:
+      year: 1990
+      source: "R1990-01"
+      estimated: true
+  - id: s5.prc.friction_stir_welding
+    number: 161
+    type: PRC
+    gen: 5
+    discipline: chem
+    cluster: CHEM
+    tier: 4
+    capability_req: {precision: 4.5, purity: 4, quality_control: 4.5}
+    labour_p: 4000
+    directions: [mfg, met, struct]
+    requires: [s5.cmp.aluminium_alloy_sheet, s6.prc.precision_gear_bearing, s5.prc.automated_fibre_placement]
+    hazard: none
+    mil_value: prep
+    informs:
+      - {to: s8.prc.stressed_skin_assembly, weight: 0.3}
+    anchor:
+      year: 1991
+      source: "R1990-02"
+      estimated: false
+  - id: s9.eng.world_wide_web
+    number: 162
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec]
+    requires: [s9.cmp.microprocessor, s9.prn.vlsi_design_methodology]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: all, bonus: 0.005}
+    anchor:
+      year: 1991
+      source: "R1990-03"
+      estimated: false
+  - id: s7.eng.amraam_bvr_missile
+    number: 163
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [ord, sens, elec, prop]
+    requires: [s8.prn.pulse_doppler_look_down_radar, s9.cmp.microprocessor, s7.prn.composite_solid_propellant, s8.prn.programmable_signal_processing, s9.prn.vlsi_design_methodology]
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 1991
+      source: "R1990-04"
+      estimated: false
+  - id: s9.prn.rans_cfd_industrial
+    number: 164
+    type: PRN
+    gen: 5
+    discipline: aero
+    cluster: ELEC
+    directions: [aero, prop, ctrl]
+    requires: [s9.prn.computational_fluid_dynamics, s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.turbofan_g5, weight: 0.3}
+      - {to: s8.prn.rcs_computational_prediction, weight: 0.3}
+    effects:
+      - {kind: research_speed, dirs: [aero, prop], bonus: 0.005}
+    anchor:
+      year: 1992
+      source: "R1990-05"
+      estimated: false
+  - id: s8.eng.tactical_data_link16
+    number: 165
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ctrl, elec, sens]
+    requires: [s9.cmp.microprocessor, s8.eng.integrated_avionics_architecture]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 1994
+      source: "R1990-06"
+      estimated: true
+  - id: s9.eng.beowulf_commodity_cluster
+    number: 166
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, aero, nuc]
+    requires: [s9.cmp.microprocessor, s9.eng.world_wide_web]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [ctrl, aero, nuc], bonus: 0.005}
+    anchor:
+      year: 1994
+      source: "R1990-07"
+      estimated: false
+  - id: s8.eng.aesa_fighter_radar_fielded
+    number: 167
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, elec, ctrl]
+    requires: [s8.cmp.solid_state_tr_module, s8.prn.phased_array_radar_pesa, s5.cmp.gaas_mmic, s8.eng.digital_beamforming]
+    hazard: hz
+    mil_value: direct
+    informs:
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 1995
+      source: "R1990-08"
+      estimated: false
+  - id: s8.prn.digital_rf_memory_jamming
+    number: 168
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [elec, sens, ctrl]
+    requires: [s9.prn.vlsi_design_methodology, s8.prn.programmable_signal_processing, s8.eng.digital_beamforming]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 1995
+      source: "R1990-09"
+      estimated: true
+  - id: s10.eng.gps_operational_constellation
+    number: 169
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [space, ctrl, sens]
+    requires: [s10.eng.satellite_navigation_gps, s9.cmp.microprocessor]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 1995
+      source: "R1990-10"
+      estimated: false
+  - id: s10.eng.sar_earth_observation_satellite
+    number: 170
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, elec]
+    requires: [s10.eng.scientific_satellite, s9.eng.vector_supercomputer, s10.eng.space_shuttle_orbiter]
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 1995
+      source: "R1990-11"
+      estimated: false
+  - id: s8.eng.cooperative_engagement_capability
+    number: 171
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ctrl, sens, elec]
+    requires: [s8.eng.tactical_data_link16, s9.eng.vector_supercomputer]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 1996
+      source: "R1990-12"
+      estimated: true
+  - id: s5.cmp.ultra_high_temperature_ceramic
+    number: 172
+    type: CMP
+    gen: 5
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, prop, struct]
+    requires: [s5.cmp.carbon_carbon_composite, s10.eng.space_shuttle_orbiter]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.adaptive_cycle_engine, weight: 0.3}
+    anchor:
+      year: 1997
+      source: "R1990-13"
+      estimated: true
+  - id: s9.prn.computational_materials_design
+    number: 173
+    type: PRN
+    gen: 5
+    discipline: aero
+    cluster: ELEC
+    directions: [mat, met, chem]
+    requires: [s9.eng.massively_parallel_hpc, s5.prn.gamma_prime_alloy_design]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s5.prc.single_crystal_casting, weight: 0.3}
+    effects:
+      - {kind: research_speed, dirs: [mat, met], bonus: 0.005}
+    anchor:
+      year: 1997
+      source: "R1990-14"
+      estimated: true
+  - id: s8.prn.passive_coherent_location
+    number: 174
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, elec, ctrl]
+    requires: [s9.cmp.microprocessor, s8.prn.programmable_signal_processing, s8.eng.digital_beamforming]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.low_observable_airframe, weight: 0.3}
+    anchor:
+      year: 1998
+      source: "R1990-15"
+      estimated: true
+  - id: s10.eng.international_space_station
+    number: 175
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [space, struct, ctrl, mat]
+    requires: [s10.eng.space_shuttle_orbiter, s10.eng.crewed_orbital_flight, s10.eng.space_telescope]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1998
+      source: "R1990-16"
+      estimated: false
+  - id: s7.eng.satellite_guided_bomb
+    number: 176
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [ord, ctrl, sens]
+    requires: [s10.eng.gps_operational_constellation, s8.eng.inertial_navigation_system]
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 1999
+      source: "R1990-17"
+      estimated: false
+  - id: s10.eng.commercial_high_res_imaging
+    number: 177
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, elec]
+    requires: [s10.eng.reconnaissance_satellite, s9.cmp.microprocessor, s10.eng.space_telescope]
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 1999
+      source: "R1990-18"
+      estimated: false
+  - id: s7.eng.hit_to_kill_interceptor
+    number: 178
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [ord, ctrl, sens]
+    requires: [s7.eng.intercontinental_ballistic_missile, s9.cmp.microprocessor, s7.eng.amraam_bvr_missile]
+    hazard: hz
+    mil_value: base
+    anchor:
+      year: 1999
+      source: "R1990-19"
+      estimated: false
+  - id: s5.prn.metamaterial_electromagnetic
+    number: 179
+    type: PRN
+    gen: 5
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, elec, sens]
+    requires: [s9.prn.vlsi_design_methodology, s9.eng.massively_parallel_hpc]
+    hazard: hz
+    mil_value: base
+    informs:
+      - {to: s8.prn.low_observable_shaping, weight: 0.3}
+      - {to: s8.prn.rcs_computational_prediction, weight: 0.3}
+    anchor:
+      year: 2000
+      source: "R1990-20"
+      estimated: false
+  - id: s8.eng.armed_reconnaissance_uav
+    number: 180
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [aero, ctrl, ord, sens]
+    requires: [s10.eng.gps_operational_constellation, s9.cmp.microprocessor]
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 2001
+      source: "R1990-21"
+      estimated: false
+  - id: s9.cmp.multicore_processor
+    number: 181
+    type: CMP
+    gen: 6
+    discipline: aero
+    cluster: ELEC
+    directions: [elec, ctrl]
+    requires: [s9.cmp.microprocessor, s9.prn.vlsi_design_methodology, s9.eng.massively_parallel_hpc]
+    hazard: none
+    mil_value: base
+    effects:
+      - {kind: research_speed, dirs: [ctrl, elec], bonus: 0.005}
+    anchor:
+      year: 2001
+      source: "R1990-22"
+      estimated: false
+  - id: s10.eng.heavy_expendable_launcher
+    number: 182
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, prop, ctrl]
+    requires: [s7.eng.staged_combustion_hydrogen_engine, s9.eng.beowulf_commodity_cluster]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 2002
+      source: "R1990-23"
+      estimated: false
+  - id: s8.prn.helmet_mounted_cueing
+    number: 183
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, ctrl, ord]
+    requires: [s8.eng.infrared_air_to_air_missile, s9.cmp.microprocessor, s8.eng.tactical_data_link16]
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 2003
+      source: "R1990-24"
+      estimated: false
+  - id: s7.eng.stealth_cruise_missile
+    number: 184
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, prop, sens, ctrl]
+    requires: [s5.prn.single_crystal_growth, s8.eng.inertial_navigation_system, s10.eng.gps_operational_constellation]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.low_observable_airframe, weight: 0.3}
+    anchor:
+      year: 2003
+      source: "R1990-25"
+      estimated: true
+  - id: s10.eng.cubesat_small_satellite
+    number: 185
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, elec, mfg]
+    requires: [s10.eng.scientific_satellite, s9.cmp.multicore_processor]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 2003
+      source: "R1990-26"
+      estimated: false
+  - id: s7.prn.imaging_ir_seeker_high_offboresight
+    number: 186
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, sens, ctrl]
+    requires: [s8.eng.infrared_air_to_air_missile, s8.prn.helmet_mounted_cueing]
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 2003
+      source: "R1990-27"
+      estimated: false
+  - id: s8.eng.electro_optical_targeting_pod
+    number: 187
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, ord, ctrl]
+    requires: [s9.prc.mos_lsi_manufacturing, s9.prn.laser_principle, s7.eng.satellite_guided_bomb]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.integrated_avionics_architecture, weight: 0.3}
+    anchor:
+      year: 2004
+      source: "R1990-28"
+      estimated: true
+  - id: s7.eng.scramjet_flight_x43
+    number: 188
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [prop, aero, mat]
+    requires: [s9.prn.computational_fluid_dynamics, s5.cmp.carbon_carbon_composite, s8.prn.variable_cycle_engine]
+    hazard: hz
+    mil_value: none
+    informs:
+      - {to: s8.eng.adaptive_cycle_engine, weight: 0.3}
+    anchor:
+      year: 2004
+      source: "R1990-29"
+      estimated: false
+  - id: s8.cmp.gan_tr_module
+    number: 189
+    type: CMP
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, elec, mat]
+    requires: [s8.cmp.solid_state_tr_module, s5.cmp.gaas_mmic, s8.eng.aesa_fighter_radar_fielded]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 2010
+      source: "R1990-30"
+      estimated: true
+  - id: s8.eng.lo_multirole_fighter_f35
+    number: 190
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [aero, sens, ctrl, mat]
+    requires: [s8.eng.low_observable_airframe, s8.eng.integrated_avionics_architecture, s8.eng.aesa_fighter_radar_fielded, s8.eng.thrust_vectoring_supercruise_engine, s8.eng.aesa_sensor_fusion]
+    hazard: hz
+    mil_value: direct
+    anchor:
+      year: 2006
+      source: "R1990-31"
+      estimated: false
+  - id: s8.prn.irst_infrared_search_track
+    number: 191
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, elec, ord]
+    requires: [s8.eng.infrared_air_to_air_missile, s9.cmp.microprocessor, s8.eng.aesa_sensor_fusion, s7.prn.imaging_ir_seeker_high_offboresight]
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 2007
+      source: "R1990-32"
+      estimated: true
+  - id: s10.eng.kinetic_antisatellite_test
+    number: 192
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, ord, ctrl]
+    requires: [s10.eng.reconnaissance_satellite, s7.eng.hit_to_kill_interceptor]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2007
+      source: "R1990-33"
+      estimated: false
+  - id: s7.eng.long_range_sam_s400
+    number: 193
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, sens, ctrl]
+    requires: [s8.eng.aesa_fighter_radar_fielded, s7.eng.amraam_bvr_missile]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.prn.low_observable_shaping, weight: 0.3}
+    anchor:
+      year: 2007
+      source: "R1990-34"
+      estimated: false
+  - id: s9.eng.petaflop_supercomputer
+    number: 194
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, nuc, mat, aero]
+    requires: [s9.eng.massively_parallel_hpc, s9.cmp.multicore_processor]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [nuc, mat, aero, prop], bonus: 0.005}
+    anchor:
+      year: 2008
+      source: "R1990-35"
+      estimated: false
+  - id: s5.cmp.composite_airliner_wing_box
+    number: 195
+    type: CMP
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    directions: [struct, mat, mfg]
+    requires: [s5.prc.automated_fibre_placement, s8.prc.composite_layup_cure, s5.prc.friction_stir_welding, s9.prn.computational_materials_design]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.composite_airframe, weight: 0.3}
+    anchor:
+      year: 2009
+      source: "R1990-36"
+      estimated: false
+  - id: s10.eng.reusable_uncrewed_spaceplane
+    number: 196
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, struct, mat, ctrl]
+    requires: [s10.eng.space_shuttle_orbiter, s5.cmp.ultra_high_temperature_ceramic]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2010
+      source: "R1990-37"
+      estimated: false
+  - id: s7.eng.antiship_ballistic_missile
+    number: 197
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, ctrl, sens, space]
+    requires: [s7.eng.hit_to_kill_interceptor, s10.eng.commercial_high_res_imaging]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2010
+      source: "R1990-38"
+      estimated: true
+  - id: s7.eng.scramjet_sustained_x51
+    number: 198
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [prop, aero, mat, ord]
+    requires: [s7.eng.scramjet_flight_x43, s5.cmp.ultra_high_temperature_ceramic]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2010
+      source: "R1990-39"
+      estimated: false
+  - id: s8.eng.lo_unmanned_combat_air_vehicle
+    number: 199
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [aero, ctrl, mat]
+    requires: [s8.eng.low_observable_airframe, s8.eng.armed_reconnaissance_uav]
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 2011
+      source: "R1990-40"
+      estimated: false
+  - id: s5.cmp.titanium_aluminide_blade
+    number: 200
+    type: CMP
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, prop, met]
+    requires: [s5.cmp.titanium_alloy, s5.prc.vacuum_induction_melt, s5.prc.hot_isostatic_pressing, s9.prn.computational_materials_design]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.turbofan_g5, weight: 0.3}
+      - {to: s8.eng.adaptive_cycle_engine, weight: 0.3}
+    anchor:
+      year: 2011
+      source: "R1990-41"
+      estimated: true
+  - id: s9.prc.finfet_manufacturing
+    number: 201
+    type: PRC
+    gen: 6
+    discipline: aero
+    cluster: MECH
+    tier: 5
+    capability_req: {precision: 5.5, purity: 5.5, quality_control: 5.5}
+    labour_p: 4500
+    directions: [mfg, elec, chem]
+    requires: [s9.prc.mos_lsi_manufacturing, s9.prn.vlsi_design_methodology, s9.cmp.multicore_processor]
+    hazard: none
+    mil_value: prep
+    anchor:
+      year: 2011
+      source: "R1990-42"
+      estimated: false
+  - id: s10.eng.missile_warning_satellite_geo
+    number: 202
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, ord]
+    requires: [s10.eng.reconnaissance_satellite, s9.eng.massively_parallel_hpc]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 2011
+      source: "R1990-43"
+      estimated: false
+  - id: s8.eng.distributed_aperture_system
+    number: 203
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [sens, elec, ctrl]
+    requires: [s8.prn.irst_infrared_search_track, s9.eng.massively_parallel_hpc]
+    hazard: hz
+    mil_value: direct
+    anchor:
+      year: 2015
+      source: "R1990-44"
+      estimated: false
+  - id: s8.eng.multifunction_rf_aperture_ew
+    number: 204
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [elec, sens, ctrl]
+    requires: [s8.prn.digital_rf_memory_jamming, s8.cmp.gan_tr_module]
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 2015
+      source: "R1990-45"
+      estimated: true
+  - id: s5.cmp.cmc_hot_section_in_service
+    number: 205
+    type: CMP
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, prop, met]
+    requires: [s5.cmp.ceramic_matrix_composite, s5.prc.cmc_fabrication, s5.prc.additive_manufacturing_metal]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.adaptive_cycle_engine, weight: 0.3}
+      - {to: s8.eng.turbofan_g5, weight: 0.3}
+    anchor:
+      year: 2016
+      source: "R1990-46"
+      estimated: false
+  - id: s7.eng.ramjet_bvr_missile
+    number: 206
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, prop, sens]
+    requires: [s7.eng.amraam_bvr_missile, s8.eng.tactical_data_link16, s7.eng.scramjet_flight_x43]
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 2016
+      source: "R1990-47"
+      estimated: false
+  - id: s8.prn.ml_target_recognition
+    number: 207
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ctrl, sens, ord]
+    requires: [s9.eng.gpu_accelerated_computing]
+    hazard: hz
+    mil_value: base
+    anchor:
+      year: 2017
+      source: "R1990-48"
+      estimated: false
+  - id: s8.eng.loyal_wingman_uav
+    number: 208
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [aero, ctrl, sens]
+    requires: [s8.eng.armed_reconnaissance_uav, s8.prn.ml_target_recognition]
+    hazard: hz
+    mil_value: direct
+    anchor:
+      year: 2019
+      source: "R1990-49"
+      estimated: false
+  - id: s9.prn.quantum_advantage_demo
+    number: 209
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec, mat]
+    requires: [s9.eng.petaflop_supercomputer, s9.prn.laser_principle]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2019
+      source: "R1990-50"
+      estimated: false
+  - id: s10.eng.leo_megaconstellation
+    number: 210
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, elec, mfg]
+    requires: [s10.eng.cubesat_small_satellite, s7.eng.reusable_booster_landing]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2019
+      source: "R1990-51"
+      estimated: false
+  - id: s7.eng.hypersonic_glide_vehicle
+    number: 211
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, aero, mat, ctrl]
+    requires: [s7.eng.scramjet_flight_x43, s5.cmp.ultra_high_temperature_ceramic, s9.eng.petaflop_supercomputer]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2019
+      source: "R1990-52"
+      estimated: false
+  - id: s7.eng.hypersonic_cruise_missile
+    number: 212
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [ord, prop, aero, sens]
+    requires: [s7.eng.scramjet_sustained_x51, s7.eng.hypersonic_glide_vehicle]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2023
+      source: "R1990-53"
+      estimated: false
+  - id: s9.eng.exascale_supercomputer
+    number: 213
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, nuc, mat, chem]
+    requires: [s9.eng.petaflop_supercomputer, s9.eng.gpu_accelerated_computing]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [nuc, mat, aero, prop, chem], bonus: 0.005}
+    anchor:
+      year: 2022
+      source: "R1990-54"
+      estimated: false
+  - id: s10.eng.fully_reusable_heavy_launcher
+    number: 214
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    directions: [space, prop, ctrl, struct]
+    requires: [s7.eng.reusable_booster_landing, s10.eng.heavy_expendable_launcher]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2023
+      source: "R1990-55"
       estimated: false
