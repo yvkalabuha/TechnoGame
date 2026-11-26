@@ -34,7 +34,8 @@ STATE = ROOT / ".claude" / ".state"
 DIGEST_DIR = ROOT / "docs" / "reviews"
 SOURCES = ("hook_refusals.jsonl", "land_failures.jsonl")
 MUTATING = ("add", "repeat", "close", "import")
-CI_MARK = "ci_last_run.txt"  # newest CI run id already imported
+CI_MARK = "ci_seen_runs.txt"  # ids of the last CI runs already imported (at most CI_SEEN_KEEP)
+CI_SEEN_KEEP = 50
 IGNORED_HOOKS = {"guard_load"}  # a busy CPU is an expected back-off, not an error
 
 KINDS = ("process", "code", "data", "ui", "comms", "tooling", "determinism")
@@ -87,7 +88,17 @@ def save(path: Path, entries: list[dict]) -> None:
     ordered = [{k: e[k] for k in FIELDS if k in e} for e in entries]
     body = yaml.safe_dump({"errors": ordered}, sort_keys=False, allow_unicode=True, width=110)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(HEADER + body, encoding="utf-8")
+    # Temp file in the same directory, fsync, then rename: any error leaves the old file whole.
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            f.write(HEADER + body)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def validate(entries: list[dict]) -> list[str]:
@@ -437,10 +448,10 @@ def execute(args) -> int:
             import watch
             mark = args.state / CI_MARK
             try:
-                since = int(mark.read_text().strip())
+                seen = {int(x) for x in mark.read_text().split()}
             except (OSError, ValueError):
-                since = 0
-            events, newest = watch.red_ci_events(since)
+                seen = set()
+            events, fetched = watch.red_ci_events(seen)
             for ev in events:
                 drafts.append({"date": ev["date"], "executor": "tool:ci", "kind": "code", "area": "ci",
                                "symptom": f"red CI on main: {ev['title']}", "found_by": "ci"})
@@ -454,8 +465,9 @@ def execute(args) -> int:
             return 2
         if drafts:
             save(args.file, entries)
-        if args.ci and newest:
-            mark.write_text(str(newest), encoding="utf-8")
+        if args.ci and fetched:
+            keep = sorted(seen | set(fetched))[-CI_SEEN_KEEP:]
+            mark.write_text(" ".join(map(str, keep)), encoding="utf-8")
         for p in (q for ps in claimed.values() for q in ps):
             p.unlink()  # after the save: a crash keeps the claimed files for the next import
         print(f"import: {len(drafts)} event(s), {new} new draft(s), {skipped} ignored")

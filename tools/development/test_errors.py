@@ -225,15 +225,28 @@ class ErrorsTest(unittest.TestCase):
         real = watch.subprocess.run
         watch.subprocess.run = lambda *a, **k: subprocess.CompletedProcess(a, 0, json.dumps(runs), "")
         try:
-            (self.state / "ci_last_run.txt").write_text("5")
+            (self.state / "ci_seen_runs.txt").write_text("7 3")
             _, out = self.run_cli("import", "--ci")
-            self.assertIn("1 event(s), 1 new draft(s)", out)
-            self.assertEqual((self.state / "ci_last_run.txt").read_text(), "7")
+            self.assertIn("1 event(s), 1 new draft(s)", out)  # run 6 finished late with an older id than 7: not skipped
+            self.assertEqual((self.state / "ci_seen_runs.txt").read_text(), "3 6 7")
             _, out = self.run_cli("import", "--ci")
             self.assertIn("0 event(s)", out)
         finally:
             watch.subprocess.run = real
         self.assertIn("broke", errors.load(self.file)[0]["symptom"])
+
+    def test_save_is_atomic_and_keeps_old_file_on_error(self):
+        self.run_cli("add", *BASE)
+        before = self.file.read_text(encoding="utf-8")
+        real = errors.os.replace
+        errors.os.replace = lambda *a: (_ for _ in ()).throw(OSError("disk"))
+        try:
+            with self.assertRaises(OSError):
+                errors.save(self.file, [{"id": "ERR-0009"}])
+        finally:
+            errors.os.replace = real
+        self.assertEqual(self.file.read_text(encoding="utf-8"), before)
+        self.assertEqual([p.name for p in self.tmp.iterdir() if p.suffix == ".tmp" or p.name.startswith(".")], [])
 
     def test_land_failure_log(self):
         land.log_failure(self.tmp, 1, "agent-x")  # branch comes from the parsed args (run(info))
