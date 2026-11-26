@@ -971,6 +971,13 @@ class WatchBeatsTest(unittest.TestCase):
         ev = [self.started("busy", 5), self.started("young", 1)]
         self.assertEqual(self.acts(ev, None), {"busy": "stop+redispatch"})
 
+    def test_default_silent_min_covers_a_long_tool_call(self):
+        # the beat comes after a tool call: a 30-minute build must not read as silent
+        ev = [self.started("build", 5), self.started("dead", 5)]
+        beats = {"build": self.NOW - 30 * 60, "dead": self.NOW - 50 * 60}
+        acts = {a["agent_id"]: a["action"] for a in watch.agent_actions(ev, self.NOW, 2.0, 3.0, {}, {}, beats)}
+        self.assertEqual(acts, {"dead": "ping"})
+
     def test_stopped_agent_ignores_beats(self):
         ev = [self.started("a", 5), {"event": "stop", "agent_id": "a", "t": self.NOW}]
         self.assertEqual(self.acts(ev, {"a": self.NOW - 90 * 60}), {})
@@ -1071,6 +1078,41 @@ class GuardBashDenyDbTest(unittest.TestCase):
                     "echo redis-cli", "SINGULARITY_KB_TEST=1 psql -d kbtest_x -c 'select 1'"]:
             self.assertEqual(self.call(cmd), 0, cmd)
         self.assertEqual(self.call("psql -d kbtest_x", env={"SINGULARITY_KB_TEST": "1"}), 0)
+
+    def test_db_word_as_argument_of_a_wrapped_command_passes(self):
+        # reviewer finding: wrappers were skipped with their arguments, so the next mention counted as a call
+        for cmd in ["nice -n 10 grep psql x", "timeout 60 rg redis-cli docs", "xargs grep psql",
+                    "env A=1 git grep psql", "command -v psql", "sudo -u me grep -r redis-cli ."]:
+            self.assertEqual(self.call(cmd), 0, cmd)
+
+    def test_wrapped_db_call_is_denied(self):
+        for cmd in ["nice psql -c 1", "nice -n 10 psql", "nice -10 psql", "timeout 5 redis-cli ping",
+                    "timeout -s KILL 5 psql", "env X=1 psql", "env -S 'psql -c 1'", "xargs psql", "xargs -0 -n1 psql",
+                    "sudo -u postgres psql", "stdbuf -oL redis-cli ping", "ionice -c3 psql", "chrt 10 psql",
+                    "taskset 0x3 redis-cli", "time psql", "nice timeout 5 env X=1 psql"]:
+            self.assertEqual(self.call(cmd), 2, cmd)
+
+    def test_heredoc_body_is_not_a_command(self):
+        for cmd in ["cat <<'EOF' > notes.md\npsql -d kb\nredis-cli ping\nEOF",
+                    "git commit -F - <<EOF\npsql is not used\nEOF",
+                    "cat <<-EOF\n\tpsql\n\tEOF\necho done",
+                    "cat <<'EOF'\n$(psql -c 1)\nEOF"]:
+            self.assertEqual(self.call(cmd), 0, cmd)
+        for cmd in ["cat <<EOF\n$(psql -c 1)\nEOF", "cat <<EOF\nx\nEOF\npsql -c 1", "cat <<'A' <<B\nx\nA\ny\nB\npsql"]:
+            self.assertEqual(self.call(cmd), 2, cmd)
+
+    def test_kb_test_only_for_kbtest_databases(self):
+        for cmd in ["SINGULARITY_KB_TEST=1 psql -d kbtest_ok", "SINGULARITY_KB_TEST=1 psql --dbname=kbtest_ok -c 1",
+                    "SINGULARITY_KB_TEST=1 psql kbtest_ok", "env SINGULARITY_KB_TEST=1 psql -dkbtest_ok",
+                    "SINGULARITY_KB_TEST=1 psql postgresql://u@localhost/kbtest_ok?sslmode=disable",
+                    "SINGULARITY_KB_TEST=1 psql 'host=x dbname=kbtest_ok'"]:
+            self.assertEqual(self.call(cmd), 0, cmd)
+        for cmd in ["SINGULARITY_KB_TEST=1 psql -d prod", "SINGULARITY_KB_TEST=1 psql",
+                    "SINGULARITY_KB_TEST=1 psql -d kbtest", "SINGULARITY_KB_TEST=1 psql postgresql://u@h/singularity",
+                    "SINGULARITY_KB_TEST=1 psql -c 'select 1' kb"]:
+            self.assertEqual(self.call(cmd), 2, cmd)
+        for cmd, want in [("psql -d prod", 2), ("psql", 2), ("psql -d kbtest_ok", 0)]:
+            self.assertEqual(self.call(cmd, env={"SINGULARITY_KB_TEST": "1"}), want, cmd)
 
     def test_allow_list_mode_unchanged(self):
         args = ["--agent", "reviewer", "--allow", "git diff"]

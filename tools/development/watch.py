@@ -21,7 +21,8 @@ What it reports:
   ping              no stop record for more than --ping-hours: ask it for a status (SendMessage);
   stop+redispatch   no stop record for more than --stop-hours: TaskStop, then redispatch on its branch;
                     with Redis up (#590), an agent that has a heartbeat (hook agent_beat.py) is judged by it instead:
-                    ping after --silent-min minutes (default 20) without a beat, stop+redispatch after 3 x that;
+                    ping after --silent-min minutes (default 45: a beat comes after each tool call, and one
+                    call - a build, a test run - may take half an hour) without a beat, stop+redispatch after 3 x that;
                     an agent without any beat, or Redis down, keeps the log rule above;
   to-review         it stopped, its task is still IN_PROGRESS and its own branch (worktree-agent-<agent_id>)
                     has commits not in main:
@@ -188,7 +189,7 @@ def same_branch(o: dict, branch: str) -> bool:
 
 def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
                   status_of: dict[str, str], unlanded: dict[str, list],
-                  beats: dict[str, float] | None = None, silent_min: float = 20.0) -> list[dict]:
+                  beats: dict[str, float] | None = None, silent_min: float = 45.0) -> list[dict]:
     """Pure decision: one action per agent id (see the module docstring). Pass the task statuses and the
     unlanded branches by task id. beats (agent id -> time of its last heartbeat, None when Redis is down) replaces
     the time-since-start rule for an agent that has beaten: ping after silent_min minutes without a beat,
@@ -237,7 +238,7 @@ def main() -> int:
     ap.add_argument("--actions", action="store_true")
     ap.add_argument("--ping-hours", type=float, default=2.0)
     ap.add_argument("--stop-hours", type=float, default=3.0)
-    ap.add_argument("--silent-min", type=float, default=20.0)
+    ap.add_argument("--silent-min", type=float, default=45.0)
     args = ap.parse_args()
     now = time.time()
 
