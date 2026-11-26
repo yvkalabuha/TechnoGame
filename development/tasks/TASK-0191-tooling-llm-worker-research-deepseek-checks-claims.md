@@ -1,7 +1,7 @@
 ---
 id: TASK-0191
 title: "Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#577"
+review_ref: "reviewer: APPROVE (re-review on main after landing); codex 3 returns, waived by #432, DEBT-0114; merge c1b9100"
 created: 2026-11-25
 ---
 
