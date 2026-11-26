@@ -11,6 +11,9 @@ Owner #591, platform errors ERR-0002 and ERR-0006 (development/errors.yaml):
 The task is the one named in the description, else the ones named as development/tasks/TASK-NNNN paths in the
 prompt, else every TASK id in the prompt (same rule as tools/development/watch.py agent_task).
 Read-only agent types are not checked. Any git error lets the dispatch through: only evidence blocks.
+
+Owner #597: the prompt of an agent that writes code or data (FACTS_AGENTS) carries a "Факты:" block, the output of
+`python3 tools/development/kb_check.py related "<topic>"` (FACT / DECISION lines) or the line "Факты: нет связанных".
 """
 import json
 import re
@@ -24,6 +27,22 @@ READ_ONLY = {"reviewer", "critic", "advocate", "claude-code-guide", "Explore", "
 # Running agents of these types never hold a task: they review or research beside the agent that writes it.
 NOT_OWNERS = READ_ONLY | {"ui-art-director", "research-scientist", "Plan"}
 TASK_RE = re.compile(r"TASK-\d{4}")
+FACTS_AGENTS = {"developer", "simulation-engineer", "test-engineer", "3d-modeler"}
+FACTS_HEAD = re.compile(r"^[ \t>*-]*Факты\s*:(.*)$", re.M)
+FACTS_LINE = re.compile(r"^[ \t>*-]*(?:FACT|DECISION)\s+\S", re.M)
+FACTS_NONE = re.compile(r"нет\s+связанных|nothing related found", re.I)
+
+
+def has_facts_block(prompt: str) -> bool:
+    """A 'Факты:' header followed (in the same paragraph) by FACT/DECISION lines, or saying there are none."""
+    for m in FACTS_HEAD.finditer(prompt):
+        if FACTS_NONE.search(m.group(1)):
+            return True
+        after = prompt[m.end():]
+        para = re.split(r"\n[ \t]*\n", after.lstrip("\n"), maxsplit=1)[0]
+        if FACTS_LINE.search(para) or FACTS_NONE.search(para.split("\n", 1)[0]):
+            return True
+    return False
 STALE_H = 3.0
 
 
@@ -127,8 +146,13 @@ def running_agents(root, tasks: set[str], now: float) -> list[str]:
 def main() -> None:
     data = read_input()
     ti = data.get("tool_input") or {}
-    if (ti.get("subagent_type") or "general-purpose") in READ_ONLY:
+    agent = ti.get("subagent_type") or "general-purpose"
+    if agent in READ_ONLY:
         return
+    if agent in FACTS_AGENTS and not has_facts_block(ti.get("prompt") or ""):
+        block(f"Blocked dispatch (#597): a {agent} prompt needs a 'Факты:' block. Run "
+              "python3 tools/development/kb_check.py related \"<task topic>\" and paste its FACT/DECISION lines "
+              "under a line 'Факты:', or write 'Факты: нет связанных' when it finds nothing.")
     tasks = target_tasks(ti)
     if not tasks:
         return
