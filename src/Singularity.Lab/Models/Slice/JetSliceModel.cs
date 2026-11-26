@@ -248,6 +248,17 @@ public sealed class JetSliceModel : ISessionModel
 
     public IReadOnlyList<MetricTableSpec> MetricTables { get; }
 
+    // The index of a probe table by name: the probes append their tables in a fixed order, so a position counted from the end is wrong as soon as two are on.
+    private int TableIndex(MetricTableSpec table)
+    {
+        for (int i = 0; i < MetricTables.Count; i++)
+        {
+            if (MetricTables[i].Name == table.Name)
+                return i;
+        }
+        throw new InvalidOperationException($"The metric table {table.Name} is not in this run.");
+    }
+
     public SessionRunResult Run(IMetricSink sink)
     {
         SliceSession s = SliceSession.Create(_data, _p.Config);
@@ -265,10 +276,10 @@ public sealed class JetSliceModel : ISessionModel
         // TASK-0173: the scripted institute player and the P-7/P-8 probes; null without INST_* keys, so those runs are unchanged.
         bool probe = _p.Institutes is { Probe: true };
         InstituteScript? inst = _p.Institutes is { } ispec
-            ? new InstituteScript(s, ispec, sink, probe ? MetricTables.Count - 2 : -1, probe ? MetricTables.Count - 1 : -1)
+            ? new InstituteScript(s, ispec, sink, probe ? TableIndex(InstituteSpec.GoalTable) : -1, probe ? TableIndex(InstituteSpec.BuildTable) : -1)
             : null;
         inst?.Issue(0);
-        MarketProbe? market = _p.MarketProbe ? new MarketProbe(s, sink, MetricTables.Count - 1) : null;
+        MarketProbe? market = _p.MarketProbe ? new MarketProbe(s, sink, TableIndex(MarketProbe.Table)) : null;
         observer.Start(s.View);
         int logSeen = 0;
         for (long t = 0; t < months; t++)
