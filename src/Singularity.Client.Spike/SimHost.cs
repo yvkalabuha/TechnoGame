@@ -133,8 +133,7 @@ public sealed class SimHost : IDisposable
             _status = "status.session";
             // The player's actor: the institutes and the product lines of it are only proposed by the AI (the adviser), its licences move by commands.
             int player = _playerActorId == null ? -1 : Data.Scenario(SliceRunConfig.DefaultScenario).ActorIndex(_playerActorId);
-            var config = new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed };
-            if (player >= 0) config = config with { PlayerActor = player, LicenceExternalActors = [player] };
+            SliceRunConfig config = SliceRunConfig.ForClient((ulong)_seed, player);
             _session = SliceSession.Create(Data, config);
             Layout = _session.Layout;
             StartHash = _session.LastHash;

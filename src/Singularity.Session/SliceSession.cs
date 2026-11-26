@@ -186,7 +186,7 @@ public sealed partial class SliceSession
             return warning;
 
         string? slotWarning = null;
-        if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before, below: logged.Key) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
+        if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
         {
             string percent = $"{after.Raw * 100 / Fx6.Scale} %";
             if (before >= _world.Institutes.SlotParameters.UnderfundedBelow && !assign.Acknowledged)
@@ -715,28 +715,20 @@ public sealed partial class SliceSession
         return CommandVerdict.Ok;
     }
 
-    // §1.2, O-096: a node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the start moves the coverage of the money from
+    // §1.2, O-096: Submit judges a start by the state and the command alone, never by the other commands waiting (their order of arrival must not decide, S14); the starts that
+    // together cross the line are judged again at application, in key order, on the budget the commands before them made. A node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the start moves the coverage of the money from
     // 60 % or more to less; when the money already covers less, the start goes with a warning. Returns the coverage after the start, or null when the node would not start now.
-    private Fx6? StartCoverage(AssignNode a, long month, out Fx6 before, bool withPending = true, CommandKey? below = null)
+    private Fx6? StartCoverage(AssignNode a, long month, out Fx6 before)
     {
         before = Fx6.One;
-        if (StartOf(a, month, null) is not { } mine)
+        if (StartOf(a, month) is not { } mine)
             return null;
-        // At Submit the starts the player queued for this month already count: two nodes sent in one month are judged together. At application the earlier ones are in the lists.
-        var queued = new List<SlotWork>();
-        foreach (LoggedCommand p in withPending ? _pending : [])
-        {
-            // Only the commands that sort before this one count: they are applied before it, whatever the order of arrival (S14).
-            if (p.Command is AssignNode other && other.Actor == a.Actor && (below is not { } bound || p.Key < bound) && StartOf(other, month, queued) is { } work)
-                queued.Add(work);
-        }
-        before = _world.Knowledge.CoverageWith(a.Actor, month, queued.ToArray());
-        queued.Add(mine);
-        return _world.Knowledge.CoverageWith(a.Actor, month, queued.ToArray());
+        before = _world.Knowledge.CoverageWith(a.Actor, month, []);
+        return _world.Knowledge.CoverageWith(a.Actor, month, [mine]);
     }
 
-    // The slot work an AssignNode would begin in the month (a free institute, the node in the frontier, not worked on elsewhere nor by an earlier queued start), or null.
-    private SlotWork? StartOf(AssignNode a, long month, List<SlotWork>? queued)
+    // The slot work an AssignNode would begin in the month (a free institute, the node in the frontier, not worked on elsewhere), or null.
+    private SlotWork? StartOf(AssignNode a, long month)
     {
         InstituteSystem institutes = _world.Institutes!;
         int row = _world.Graph.RowOf(a.Node);
@@ -745,7 +737,7 @@ public sealed partial class SliceSession
             return null;
         var node = new int[institutes.Layout.SlotCount(a.Actor)];
         institutes.Resolve(a.Actor, month, node, new byte[node.Length]);
-        if (node[a.Slot] != 0 || node.Contains(a.Node) || (queued is not null && queued.Exists(w => w.Slot == a.Slot || w.NodeRow == row)))
+        if (node[a.Slot] != 0 || node.Contains(a.Node))
             return null;
         return new SlotWork(a.Slot, row, institutes.InstituteMultiplier(new InstituteHandle(a.Actor, a.Slot), row), 0);
     }
@@ -828,7 +820,7 @@ public sealed partial class SliceSession
                 return CommandVerdict.Refuse(CommandRefusal.NodeKnown, $"node {a.Node} is already known to actor {a.Actor}");
         }
         // The budget the month will have is only known once the commands before this one are applied (a cut of the research share sent earlier in the batch): judge again, as at Submit.
-        if (command is AssignNode { Acknowledged: false } start && StartCoverage(start, month, out Fx6 before, withPending: false) is { } after
+        if (command is AssignNode { Acknowledged: false } start && StartCoverage(start, month, out Fx6 before) is { } after
             && before >= institutes.SlotParameters.UnderfundedBelow && after < institutes.SlotParameters.UnderfundedBelow)
             return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {after.Raw * 100 / Fx6.Scale} % of what the institutes ask (it was {before.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to start anyway");
         if (command is SetFocus f && f.Level > 0 && !institutes.Standing(new InstituteHandle(f.Actor, f.Slot)))

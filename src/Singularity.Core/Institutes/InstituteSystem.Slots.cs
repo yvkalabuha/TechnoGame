@@ -135,15 +135,14 @@ public sealed partial class InstituteSystem
         return n;
     }
 
-    private bool InAnyList(int a, int slots, int number)
+    // The node stands in the list of the institute itself. A node taken from another queue moves into the list of the one that works on it before the next month (§4.1), so this is
+    // also the rule for a borrowed node; a plan that gives the node to another institute takes it from this one.
+    private bool InOwnList(int a, int slot, int number)
     {
-        for (int m = 0; m < slots; m++)
+        for (int j = 0; j <= _slots!.QueueLength; j++)
         {
-            for (int j = 0; j <= _slots!.QueueLength; j++)
-            {
-                if (_inputs.QueueEntry(new InstituteHandle(a, m), j) == number)
-                    return true;
-            }
+            if (_inputs.QueueEntry(new InstituteHandle(a, slot), j) == number)
+                return true;
         }
         return false;
     }
@@ -169,7 +168,7 @@ public sealed partial class InstituteSystem
             if (node[k] != 0)
                 continue;
             int cur = _act[k].Current[a];
-            if (cur != 0 && Workable(a, cur, out _) && !Taken(node, cur) && (!player || InAnyList(a, slots, cur)))
+            if (cur != 0 && Workable(a, cur, out _) && !Taken(node, cur) && (!player || InOwnList(a, k, cur)))
                 node[k] = cur;
         }
         if (player)

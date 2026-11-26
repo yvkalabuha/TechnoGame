@@ -438,6 +438,7 @@ internal sealed class SliceWorld
     {
         if (Institutes is not { } inst || SlotOrders is not { } orders || Config.PlayerActor is not int a)
             return;
+        orders.DropKnown(a);
         for (int k = 0; k < inst.Layout.SlotCount(a); k++)
         {
             int node = inst.ActiveNode(new InstituteHandle(a, k));

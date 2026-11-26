@@ -200,6 +200,17 @@ public sealed partial record SliceRunConfig
     /// <summary>All five levers of wave 1 off: the build before TASK-0150..0160 (the hash and every old golden). Tests that pin old behaviour start from it.</summary>
     public static SliceRunConfig Legacy => new() { Reserve = false, Institutes = false, Intelligence = false, LicenceMarket = false, AdviserForPlayer = false, ScienceSlots = false };
 
+    /// <summary>
+    /// The run of the game client: with a player (<paramref name="player"/> ≥ 0) the player's actor has its licences moved by commands and its institutes proposed to the adviser (the client fills them,
+    /// <see cref="SliceSession.AdviserStarts"/>), while its product lines stay with the AI as before: the production adviser would hand them to a screen the client does not have yet, so the
+    /// player could never start a line. Without a player the run is the plain one.
+    /// </summary>
+    public static SliceRunConfig ForClient(ulong seed, int player)
+    {
+        var config = new SliceRunConfig { Seed = seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed };
+        return player >= 0 ? config with { PlayerActor = player, LicenceExternalActors = [player], AdviserForPlayer = false } : config;
+    }
+
     /// <summary>How long a refused proposal stays silent, in years (a yearly norm; the policy turns it into months).</summary>
     public int AdviserRefuseYears { get; init; } = 1;
 

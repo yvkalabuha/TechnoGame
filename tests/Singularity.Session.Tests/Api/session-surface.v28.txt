@@ -634,6 +634,7 @@ type Singularity.Session.SliceRunConfig [sealed class]
   method Equals(Singularity.Session.SliceRunConfig? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method FixAll(System.UInt64 seed) : Singularity.Session.SliceRunConfig static
+  method ForClient(System.UInt64 seed, System.Int32 player) : Singularity.Session.SliceRunConfig static
   method GetHashCode() : System.Int32
   method ToString() : System.String
   prop AdviserActors : System.Collections.Immutable.ImmutableArray`1[System.Int32] { get; init; }

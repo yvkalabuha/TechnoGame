@@ -158,6 +158,22 @@ public sealed class SlotOrders
         }
     }
 
+    /// <summary>Drops the nodes that are known now from the stored lists of the actor (S8: a known node leaves its queue within a month); the readers skip them meanwhile.</summary>
+    public void DropKnown(int actor)
+    {
+        Span<int> list = stackalloc int[Length];
+        for (int k = 0; k < _l.SlotCount(actor); k++)
+        {
+            var h = new InstituteHandle(actor, k);
+            int n = Entries(h, list);
+            bool stale = false;
+            for (int j = 0; j < Length; j++)
+                stale |= (j < n ? list[j] : 0) != _q[k][j].Current[actor];
+            if (stale)
+                Write(h, list[..n]);
+        }
+    }
+
     /// <summary>
     /// A node an institute works on that stands in the queue of another institute of the actor (the free institute took it, O-089c) moves into the list of the one that works on it:
     /// the donor's queue loses it (§4.1) and the worker can unassign it. False when the worker's list is full.

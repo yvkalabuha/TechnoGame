@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Products;
 using Singularity.Core.Knowledge;
 using Singularity.Session;
 using Singularity.Core.Data;
@@ -633,9 +634,13 @@ public class SlotScienceTests
         Fx6 one = w.Knowledge.CoverageWith(0, 2, [Work(0, f[0])]);
         Fx6 two = w.Knowledge.CoverageWith(0, 2, [Work(0, f[0]), Work(1, f[1])]);
         Assert.True(one >= new SlotParams().UnderfundedBelow && two < new SlotParams().UnderfundedBelow, $"the setup: one start covers {one}, two cover {two}");
+        // Submit judges each command by the state alone (S14: the order of arrival must not decide); the pair is judged at application, in key order.
         Assert.True(s.Submit(SourceClass.Player, 0, 2, new AssignNode(0, 0, f[0])).Accepted);
-        CommandVerdict second = s.Submit(SourceClass.Player, 0, 3, new AssignNode(0, 1, f[1]));
-        Assert.Equal(CommandRefusal.NeedsConfirmation, second.Reason);
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new AssignNode(0, 1, f[1])).Accepted);
+        s.StepThroughMonth(2);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: NeedsConfirmation"));
+        Assert.Equal(f[0], Resolved(s, 0, 3)[0]);
+        Assert.NotEqual(f[1], Resolved(s, 0, 3)[1]);
     }
 
     [Fact]
@@ -1040,5 +1045,99 @@ public class SlotScienceTests
         Assert.True(min < max, "the range does not collapse to the schedule");
         (Fx6 m2, _, _) = SlotPlanner.Schedule([F(10), F(1), F(1)], [[], [], [1]], 3);
         Assert.Equal(F(10), m2);
+    }
+
+    [Fact]
+    public void StartsAndABudgetIncrease_GiveOneFinalState_InEveryOrderOfArrival_S14()
+    {
+        // One start fits the budget, two do not; a budget increase with the first key covers both. Whatever the order of arrival, the increase is applied first and both start.
+        var hashes = new List<string>();
+        int[][] orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+        foreach (int[] order in orders)
+        {
+            SliceSession s = Make(2, player: 0);
+            CalibrateOneStartBut_NotTwo(s, out int[] f);
+            BudgetShares full = s.World.Policy.Shares(0);   // the split of the profile, before the cut
+            SliceCommand[] commands =
+            [
+                new SetBudgetShares(0, full),
+                new AssignNode(0, 0, f[0]),
+                new AssignNode(0, 1, f[1]),
+            ];
+            foreach (int i in order)
+                s.Submit(SourceClass.Player, i, i == 0 ? 300 : 0, commands[i]);
+            s.StepThroughMonth(2);
+            int[] node = Resolved(s, 0, 3);
+            Assert.Equal(f[0], node[0]);
+            Assert.Equal(f[1], node[1]);
+            hashes.Add(s.LastHash);
+        }
+        Assert.All(hashes, h => HashAssert.Equal(hashes[0], h));
+    }
+
+    [Fact]
+    public void AQueuePlanThatSwapsTwoInstitutes_IsKept_TheActiveNodeDoesNotGoBack_58()
+    {
+        SliceSession s = Make(2, player: 0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        s.StepThroughMonth(0);
+        Assert.Equal(f[0], Resolved(s, 0, 1)[0]);
+        // X = f0 was active in slot 0: the plan gives slot 0 to Y = f1 and X to slot 1.
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new ApplyQueues(0, [new QueuePlan(0, [f[1]]), new QueuePlan(1, [f[0]])])).Accepted);
+        s.StepThroughMonth(1);
+        s.StepThroughMonth(2);
+        Assert.DoesNotContain(s.Outcomes, o => o.Contains("rejected"));
+        int[] node = Resolved(s, 0, 3);
+        Assert.Equal(f[1], node[0]);
+        Assert.Equal(f[0], node[1]);
+        Span<int> entries = stackalloc int[6];
+        Assert.Equal(1, s.World.SlotOrders!.Entries(new InstituteHandle(0, 0), entries));
+        Assert.Equal(f[1], entries[0]);
+        Assert.Equal(1, s.World.SlotOrders.Entries(new InstituteHandle(0, 1), entries));
+        Assert.Equal(f[0], entries[0]);
+    }
+
+    [Fact]
+    public void AKnownNodeLeavesTheStoredQueues_WithinAMonth_S8_59()
+    {
+        SliceSession s = Make(2, player: Make().World.Scenario.ActorIndex("FRA"));
+        SliceWorld w = s.World;
+        int fra = w.Config.PlayerActor!.Value;
+        int[] f = Frontier(s, fra);
+        for (int i = 0; i < 3; i++)
+            Assert.True(s.Submit(SourceClass.Player, 0, i, new AssignNode(fra, 0, f[i], Acknowledged: true)).Accepted);
+        s.StepThroughMonth(0);   // slot 1 took f1; f2 waits in the queue of slot 0
+        // The node becomes known (as by a licence or a discovery): no command touches the queue, the stored column must still lose it.
+        int[] known = w.Table.GetInt($"know.known.{f[2]}").Current.ToArray();
+        known[fra] = 1;
+        w.Table.GetInt($"know.known.{f[2]}").Load(known);
+        s.StepThroughMonth(1);
+        for (int j = 0; j < 6; j++)
+        {
+            Assert.NotEqual(f[2], w.Table.GetInt($"inst.q.0.{j}").Current[fra]);
+            Assert.NotEqual(f[2], w.Table.GetInt($"inst.q.1.{j}").Current[fra]);
+        }
+    }
+
+    [Fact]
+    public void TheClientRun_LeavesTheProductLinesOfThePlayerToTheAi_NotToAnAdviserNobodyAnswers_O099()
+    {
+        SliceRunConfig client = SliceRunConfig.ForClient(3, 0);
+        Assert.False(client.AdviserForPlayer);
+        Assert.Equal(0, client.PlayerActor);
+        SliceSession withAi = SliceTestData.Create(client with { HashCheckpoints = true }), withAdviser = SliceTestData.Create(client with { HashCheckpoints = true, AdviserForPlayer = true });
+        Assert.False(withAi.World.Policy.IsAdviser(0));
+        Assert.True(withAdviser.World.Policy.IsAdviser(0));
+        // With the adviser the policy clears the AI decisions of the player's actor (its lines wait for answers); the client has no screen for them, so its run keeps the AI there.
+        for (long t = 0; t < 24; t++)
+        {
+            withAi.StepThroughMonth(t);
+            withAdviser.StepThroughMonth(t);
+        }
+        Assert.False(withAi.World.Policy.IsAdviser(0));
+        Assert.Null(withAi.World.Policy.Adviser);
+        Assert.NotNull(withAdviser.World.Policy.Adviser);
+        Assert.Null(SliceRunConfig.ForClient(3, -1).PlayerActor);
     }
 }
