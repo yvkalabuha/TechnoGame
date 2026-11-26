@@ -36,7 +36,14 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано: tools/development/release.py (rc, check, approve, release, run, reject, rollback) и tools/development/test_release.py (36 тестов на временном git-репозитории с настоящим errors.py; зелёные). Теги создаются локально, без push и без переписывания истории; клиент сам не запускается.
+- check в временном worktree на коммите RC: verify --full, CI трёх ОС (gh), pace_check --strict (WARN блокирует), серии Lab TASK-0187 (core, player, L2 threads 1+2) с воротами slot_core; результаты Lab принимаются только если у каждого прогона core_commit = коммит RC и дерево не грязное; коммит записан в отчёт («Проверено на коммите»). Сборка клиента. Кадры — печать команды (git worktree add ... <rc>, затем разрешение владельца).
+- approve: нужны все шесть обязательных строк PASS на этом коммите и статус отчёта «НА ПРОВЕРКЕ»; сначала сборка клиента в ~/singularity-releases/vX.N (через временную папку и rename; существующая или symlink-папка отказ, ничего не удаляется), только после успеха тег vX.N, заметки и статус. Сбой сборки: ни тега, ни заметок, запись в каталог ошибок.
+- Запуск релиза: python3 tools/development/release.py run vX.N (печатает команду снимка), с --exec запускает; без правки корневого скрипта запуска.
+- Ошибки пишутся через настоящий errors.py add (причина в symptom, RC в cause, id ERR в отчёте RC); отчёт RC содержит метрики периода из metrics.py report, если он есть (иначе пометка).
+Первый релиз без v-тега: `check --pace-base self` (или тег/sha самого RC) — RC сам себе база, pace PASS по определению, в отчёте помечено. CI: PASS только при success всех трёх ОС на коммите RC. approve отказывает RC старше последнего v-тега; документы пишутся во временные файлы до сборки и тега. Экспортированный клиент запускается с `--main-pack` своего pck. run-client.sh намеренно заменён `release.py run`.
+Проверка: nice -n 10 python3 -m unittest tools/development/test_release.py (один прогон). Новые тесты на прежнем release.py (cae5e4d4): 27 из 36 падают.
+Не проверено: реальные verify --full, gh, Godot, pace_check и серии Lab из check (в тестах подставлены); формат generated-манифеста L2 (RC-L2.json: threads [1,2], seeds 2, серия SLOTS) и флаги errors.py в реальной работе кроме тестов; запуск metrics.py report с PostgreSQL.
 
 ## Цель
 #594: релиз перед каждой партией владельца и не реже раза в неделю. План: docs/reviews/platform-metrics-release-2026-11-26.md §2.
