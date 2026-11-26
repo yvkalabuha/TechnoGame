@@ -1,7 +1,7 @@
 ---
 id: TASK-0199
 title: "Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589)"
-status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
