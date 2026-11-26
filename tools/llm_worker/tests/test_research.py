@@ -118,6 +118,39 @@ class Verdicts(Base):
         rec = json.loads(next(runs.glob("research-*.json")).read_text(encoding="utf-8"))
         self.assertEqual(([i["id"] for i in rec["items"]], rec["complete"]), (["hip"], False))
 
+    def test_quote_must_start_and_end_on_word_boundaries(self):
+        text = "Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute."
+        self.assertFalse(research.quote_in_text("ot isostatic pressing was invented in 1955 at the", text))
+        self.assertFalse(research.quote_in_text("pressing was invented in 195 at the Battelle", text.replace("1955", "1955")))
+        self.assertFalse(research.quote_in_text("isostatic pressing was invented in 1955 at the Battell", text))
+        self.assertTrue(research.quote_in_text("isostatic pressing was invented in 1955 at the Battelle", text))
+
+    def test_decade_where_year_claimed_is_precision_not_found(self):
+        self.fetch = lambda url: b"<p>Hot isostatic pressing was invented in the 1950s at the Battelle Memorial Institute.</p>"
+        for verdict in ("confirmed", "contradicted"):
+            a = answer(verdict, quote="invented in the 1950s at the Battelle Memorial", value="1950s")
+            _, (_, rec, _) = self.run_it([a, a])  # the second item (a question) uses the same page
+            it = rec["items"][0]
+            self.assertEqual(it["verdict"], "not_found", verdict)
+            self.assertIn("precision_decade_only", it["note"])
+
+    def test_credentials_in_url_never_reach_records(self):
+        url = "https://user:s3cretpw@example.org/hip"
+        self.inp.write_text("items:\n  - id: c\n    claim: x\n    urls: ['%s']\n" % url, encoding="utf-8")
+        path, rec, md = research.run_research(self.inp, runs_dir=self.tmp / "runs", make_provider=lambda: FakeProvider([]),
+                                              fetch=research.curl_fetch, cache_dir=self.tmp / "cache")
+        blob = path.read_text(encoding="utf-8") + md
+        self.assertNotIn("s3cretpw", blob)
+        self.assertNotIn("user:", blob)
+        self.assertIn("refused url", rec["items"][0]["pages"][0]["error"])
+        self.assertEqual(research.redact_url("https://u:p@h.org:8080/a?b=1"), "https://h.org:8080/a?b=1")
+
+    def test_duplicate_urls_fetched_once(self):
+        self.inp.write_text("items:\n  - id: d\n    claim: Hot isostatic pressing was invented in 1955.\n    year: 1955\n"
+                            "    urls: [https://example.org/hip, https://example.org/hip]\n", encoding="utf-8")
+        self.run_it([answer()])
+        self.assertEqual(self.fetched, ["https://example.org/hip"])
+
     def test_year_must_match_whole_token(self):
         text = "Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute."
         self.assertFalse(research.quote_in_text("pressing was invented in 1955 at the Battelle", text, "955"))
@@ -230,7 +263,7 @@ class Safety(Base):
                 mock.patch.object(research, "_run_capped", return_value=self.curl_out()) as run:
             self.assertEqual(research.curl_fetch("https://example.org/"), b"body")
         cmd = run.call_args.args[0]
-        for flag in ("-q", "--max-filesize", "--proto", "=http,https", "--max-time", "--noproxy", "example.org:443:93.184.216.34"):
+        for flag in ("-q", "--globoff", "--max-filesize", "--proto", "=http,https", "--max-time", "--noproxy", "example.org:443:93.184.216.34"):
             self.assertIn(flag, cmd)
         self.assertNotIn("-L", cmd)  # redirects are followed by us, hop by hop
         self.assertNotIn("-b", cmd)  # no cookie jar
