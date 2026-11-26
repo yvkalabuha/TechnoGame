@@ -21,7 +21,7 @@ REGISTRY = ROOT / "tools" / "development" / "registry.py"
 
 
 def run_hook(script: str, payload: dict, *args: str, project: Path = ROOT) -> int:
-    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project), SINGULARITY_NO_REFUSAL_LOG="1")
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project), SINGULARITY_NO_REFUSAL_LOG="1", SINGULARITY_NO_REDIS="1")
     proc = subprocess.run([sys.executable, str(HOOKS / script), *args],
                           input=json.dumps(payload), text=True,
                           capture_output=True, env=env)
@@ -337,7 +337,7 @@ class AutopilotTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         self.state = tmp / "sub" / "autopilot.json"
-        self.env = dict(os.environ, AUTOPILOT_STATE=str(self.state))
+        self.env = dict(os.environ, AUTOPILOT_STATE=str(self.state), SINGULARITY_NO_REDIS="1")
 
     def run_tool(self, script, *args):
         return subprocess.run([sys.executable, str(ROOT / "tools/development" / script), *args],
@@ -648,7 +648,7 @@ class GuardShotsBranchTest(unittest.TestCase):
 
     def call(self, cmd, cwd=None):
         env = dict(os.environ, HOME=str(self.home), SINGULARITY_MODEL_COMMIT=self.model,
-                   SINGULARITY_NO_REFUSAL_LOG="1", CLAUDE_PROJECT_DIR=str(self.repo))
+                   SINGULARITY_NO_REFUSAL_LOG="1", CLAUDE_PROJECT_DIR=str(self.repo), SINGULARITY_NO_REDIS="1")
         payload = {"tool_input": {"command": cmd}, "cwd": str(cwd or self.repo)}
         return subprocess.run([sys.executable, str(HOOKS / "guard_shots.py")], input=json.dumps(payload),
                               text=True, capture_output=True, env=env).returncode
@@ -707,6 +707,354 @@ class GuardShotsBranchTest(unittest.TestCase):
         launcher = "./run-globe" + "-spike.sh"
         self.assertEqual(self.call(launcher, cwd=self.wt["old"]), 0)  # interactive launch: permit only
         self.assertEqual(self.call(f"{launcher} --shots --only a", cwd=self.home), 2)
+
+
+# --- TASK-0201: Redis heartbeat, lock holders, permit, agents without psql/redis-cli (#590, #597) -----------------
+
+import redis_kv  # noqa: E402
+import socketserver  # noqa: E402
+import threading  # noqa: E402
+
+
+class FakeRedis:
+    """Enough of Redis for redis_kv: PING AUTH SET(EX,NX) GET MGET DEL TTL and the two EVAL scripts it sends."""
+
+    def __init__(self):
+        self.data, self.exp, self.lock = {}, {}, threading.Lock()
+
+    def _get(self, k):
+        if k in self.exp and self.exp[k] <= time.time():
+            self.data.pop(k, None)
+            self.exp.pop(k, None)
+        return self.data.get(k)
+
+    def _set(self, k, v, ex):
+        self.data[k] = v
+        if ex is None:
+            self.exp.pop(k, None)
+        else:
+            self.exp[k] = time.time() + int(ex)
+
+    def call(self, *a):
+        with self.lock:
+            a = [x.decode() if isinstance(x, bytes) else str(x) for x in a]
+            op = a[0].upper()
+            if op in ("PING", "AUTH"):
+                return "PONG" if op == "PING" else "OK"
+            if op == "SET":
+                k, v, opts = a[1], a[2], [x.upper() for x in a[3:]]
+                ex = a[3 + opts.index("EX") + 1] if "EX" in opts else None
+                if "NX" in opts and self._get(k) is not None:
+                    return None
+                self._set(k, v, ex)
+                return "OK"
+            if op == "GET":
+                return self._get(a[1])
+            if op == "MGET":
+                return [self._get(k) for k in a[1:]]
+            if op == "DEL":
+                n = sum(1 for k in a[1:] if self._get(k) is not None)
+                for k in a[1:]:
+                    self.data.pop(k, None)
+                return n
+            if op == "TTL":
+                return int(self.exp[a[1]] - time.time()) if self._get(a[1]) is not None and a[1] in self.exp else -1
+            if op == "EVAL":
+                script, key, args = a[1], a[3], a[4:]
+                cur = self._get(key)
+                if "del" in script:  # redis_kv.RELEASE
+                    if cur == args[0]:
+                        self.data.pop(key, None)
+                        return 1
+                    return 0
+                if cur == args[0] or cur is None:  # compare-and-set of holder_set
+                    self._set(key, args[1], args[2])
+                    return "OK"
+                return None
+            raise ValueError("ERR unknown command " + op)
+
+    def pipeline(self, cmds):
+        return [self.call(*c) for c in cmds]
+
+    def close(self):
+        pass
+
+
+class FakeRedisServer:
+    """FakeRedis behind a real socket on 127.0.0.1 (RESP2), for hooks that run as subprocesses."""
+
+    def __init__(self):
+        store = self.store = FakeRedis()
+
+        class H(socketserver.StreamRequestHandler):
+            def handle(self):
+                while True:
+                    line = self.rfile.readline()
+                    if not line:
+                        return
+                    n = int(line[1:-2])
+                    args = []
+                    for _ in range(n):
+                        size = int(self.rfile.readline()[1:-2])
+                        args.append(self.rfile.read(size + 2)[:-2])
+                    try:
+                        out = self.enc(store.call(*args))
+                    except ValueError as e:
+                        out = b"-" + str(e).encode() + b"\r\n"
+                    self.wfile.write(out)
+
+            def enc(self, v):
+                if v is None:
+                    return b"$-1\r\n"
+                if isinstance(v, int):
+                    return b":%d\r\n" % v
+                if isinstance(v, list):
+                    return b"*%d\r\n" % len(v) + b"".join(self.enc(x) for x in v)
+                b = str(v).encode()
+                return b"$%d\r\n%s\r\n" % (len(b), b)
+
+        socketserver.ThreadingTCPServer.allow_reuse_address = True
+        self.srv = socketserver.ThreadingTCPServer(("127.0.0.1", 0), H)
+        self.srv.daemon_threads = True
+        self.port = self.srv.server_address[1]
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def env(self):
+        env = dict(os.environ, SINGULARITY_REDIS_HOST="127.0.0.1", SINGULARITY_REDIS_PORT=str(self.port))
+        env.pop("SINGULARITY_NO_REDIS", None)
+        return env
+
+    def stop(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+
+
+def use_fake(test, fake=None):
+    """Point redis_kv at a fake (None: Redis down) for the duration of the test."""
+    fake = fake if fake is not None else None
+    old = redis_kv._factory
+    redis_kv._factory = (lambda: fake) if fake is not None else (lambda: None)
+    test.addCleanup(setattr, redis_kv, "_factory", old)
+    return fake
+
+
+class RedisKvTest(unittest.TestCase):
+    def test_real_protocol_against_fake_server(self):
+        srv = FakeRedisServer()
+        self.addCleanup(srv.stop)
+        c = redis_kv.Client("127.0.0.1", srv.port, 1.0, "pw")
+        self.addCleanup(c.close)
+        self.assertEqual(c.call("SET", "a", "x y", "EX", 5), "OK")
+        self.assertEqual(c.pipeline([("GET", "a"), ("GET", "none"), ("MGET", "a", "none"), ("DEL", "a")]),
+                         ["x y", None, ["x y", None], 1])
+        with self.assertRaises(redis_kv.RedisError):
+            c.call("NOPE")
+
+    def test_beat_and_last_beats(self):
+        fake = use_fake(self, FakeRedis())
+        self.assertTrue(redis_kv.beat("ag1", 1000.0))
+        self.assertEqual(fake.call("TTL", "agent:ag1:beat") > 590, True)
+        self.assertGreater(fake.call("TTL", "agent:ag1:seen"), 600)
+        self.assertEqual(redis_kv.last_beats(["ag1", "ag2", ""]), {"ag1": 1000.0})
+
+    def test_redis_down_is_silent(self):
+        use_fake(self, None)
+        self.assertFalse(redis_kv.beat("ag1"))
+        self.assertIsNone(redis_kv.last_beats(["ag1"]))
+        self.assertIsNone(redis_kv.holder_set("land", {}, 60))
+        self.assertEqual(redis_kv.permit_get(), (False, None))
+
+    def test_unreachable_port_is_silent_and_fast(self):
+        with socket_free_port() as port:
+            env = dict(SINGULARITY_REDIS_HOST="127.0.0.1", SINGULARITY_REDIS_PORT=str(port))
+            with mock_env(env):
+                t = time.monotonic()
+                self.assertFalse(redis_kv.beat("ag1"))
+                self.assertLess(time.monotonic() - t, 0.5)
+
+    def test_holder_keeps_live_holder_replaces_dead_and_clears_only_own(self):
+        fake = use_fake(self, FakeRedis())
+        tok = redis_kv.holder_set("land", {"branch": "b1"}, 60)
+        self.assertIsNotNone(tok)
+        self.assertIsNone(redis_kv.holder_set("land", {"branch": "b2"}, 60))  # our own pid is alive
+        redis_kv.holder_clear("land", "not-the-token")
+        self.assertEqual(json.loads(fake.call("GET", "lock:land"))["branch"], "b1")
+        redis_kv.holder_clear("land", tok)
+        self.assertIsNone(fake.call("GET", "lock:land"))
+        fake.call("SET", "lock:land", json.dumps({"pid": 2 ** 22 + 12345}), "EX", 60)  # no such process
+        tok = redis_kv.holder_set("land", {"branch": "b3"}, 60)
+        self.assertEqual(json.loads(fake.call("GET", "lock:land"))["branch"], "b3")
+        self.assertEqual(redis_kv.holders(["land", "test"]), {"land": json.loads(tok)})
+
+    def test_lock_is_flock_with_or_without_redis(self):
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        for fake in (FakeRedis(), None):
+            use_fake(self, fake)
+            with redis_kv.lock("test", 60, 0, d) as ok:
+                self.assertTrue(ok)
+                if fake is not None:
+                    self.assertIsNotNone(fake.call("GET", "lock:test"))
+                with redis_kv.lock("test", 60, 0, d) as again:  # the flock refuses a second holder
+                    self.assertFalse(again)
+            if fake is not None:
+                self.assertIsNone(fake.call("GET", "lock:test"))
+
+
+import contextlib  # noqa: E402
+import socket  # noqa: E402
+
+
+@contextlib.contextmanager
+def socket_free_port():
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()  # nothing listens there now
+    yield port
+
+
+@contextlib.contextmanager
+def mock_env(env):
+    old = {k: os.environ.get(k) for k in [*env, "SINGULARITY_NO_REDIS"]}
+    os.environ.update(env)
+    os.environ.pop("SINGULARITY_NO_REDIS", None)
+    try:
+        yield
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+class AgentBeatHookTest(unittest.TestCase):
+    def run_beat(self, payload, env):
+        t = time.monotonic()
+        rc = subprocess.run([sys.executable, str(HOOKS / "agent_beat.py")], input=json.dumps(payload), text=True,
+                            capture_output=True, env=env).returncode
+        return rc, time.monotonic() - t
+
+    def test_agent_beats_main_session_does_not(self):
+        srv = FakeRedisServer()
+        self.addCleanup(srv.stop)
+        self.assertEqual(self.run_beat({"tool_name": "Bash", "agent_id": "abc123"}, srv.env())[0], 0)
+        self.assertIsNotNone(srv.store.call("GET", "agent:abc123:beat"))
+        self.assertIsNotNone(srv.store.call("GET", "agent:abc123:seen"))
+        self.run_beat({"tool_name": "Bash"}, srv.env())
+        self.assertEqual(sorted(srv.store.data), ["agent:abc123:beat", "agent:abc123:seen"])
+
+    def test_redis_down_exits_zero(self):
+        with socket_free_port() as port:
+            env = dict(os.environ, SINGULARITY_REDIS_HOST="127.0.0.1", SINGULARITY_REDIS_PORT=str(port))
+            rc, took = self.run_beat({"agent_id": "abc"}, env)
+        self.assertEqual(rc, 0)
+        self.assertLess(took, 2.0)  # interpreter start dominates; the socket wait is 30 ms
+
+
+class WatchBeatsTest(unittest.TestCase):
+    NOW = 100 * 3600.0
+
+    def started(self, key, hours):
+        return {"event": "launched", "agent_id": key, "t": self.NOW - hours * 3600, "tasks": ["TASK-0001"]}
+
+    def acts(self, events, beats):
+        return {a["agent_id"]: a["action"] for a in watch.agent_actions(events, self.NOW, 2.0, 3.0, {}, {}, beats, 20.0)}
+
+    def test_beat_replaces_the_log_rule(self):
+        ev = [self.started("busy", 5), self.started("quiet", 1), self.started("gone", 1), self.started("never", 5)]
+        beats = {"busy": self.NOW - 60, "quiet": self.NOW - 25 * 60, "gone": self.NOW - 70 * 60}
+        self.assertEqual(self.acts(ev, beats), {"quiet": "ping", "gone": "stop+redispatch", "never": "stop+redispatch"})
+
+    def test_redis_down_keeps_the_log_rule(self):
+        ev = [self.started("busy", 5), self.started("young", 1)]
+        self.assertEqual(self.acts(ev, None), {"busy": "stop+redispatch"})
+
+    def test_stopped_agent_ignores_beats(self):
+        ev = [self.started("a", 5), {"event": "stop", "agent_id": "a", "t": self.NOW}]
+        self.assertEqual(self.acts(ev, {"a": self.NOW - 90 * 60}), {})
+
+
+class ClientPermitTest(unittest.TestCase):
+    def setUp(self):
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        self.file = d / "client-launch-ok"
+        import client_permit
+        self.cp = client_permit
+
+    def test_file_decides_when_redis_is_down(self):
+        use_fake(self, None)
+        self.assertFalse(self.cp.live(self.file))
+        self.file.write_text(str(time.time() + 600))
+        self.assertTrue(self.cp.live(self.file))
+        self.file.write_text(str(time.time() - 1))
+        self.assertFalse(self.cp.live(self.file))
+
+    def test_redis_can_only_refuse(self):
+        fake = use_fake(self, FakeRedis())
+        exp = time.time() + 600
+        self.file.write_text(str(exp))
+        self.assertFalse(self.cp.live(self.file))  # granted while Redis was down: grant again
+        self.assertTrue(redis_kv.permit_set(exp))
+        self.assertTrue(self.cp.live(self.file))
+        self.file.unlink()  # revoked while Redis was down: the key left in Redis must not bring it back
+        self.assertFalse(self.cp.live(self.file))
+        self.assertTrue(redis_kv.permit_clear())
+        self.assertIsNone(fake.call("GET", redis_kv.PERMIT_KEY))
+
+    def test_guard_shots_reads_redis(self):
+        srv = FakeRedisServer()
+        self.addCleanup(srv.stop)
+        home = self.file.parent / "home"
+        permit = home / ".cache" / "singularity" / "client-launch-ok"
+        permit.parent.mkdir(parents=True)
+        permit.write_text(str(time.time() + 600))
+        env = dict(srv.env(), HOME=str(home), SINGULARITY_NO_REFUSAL_LOG="1")
+        payload = {"tool_input": {"command": "./run-client" + ".sh"}, "cwd": str(home)}
+
+        def rc():
+            return subprocess.run([sys.executable, str(HOOKS / "guard_shots.py")], input=json.dumps(payload),
+                                  text=True, capture_output=True, env=env).returncode
+        self.assertEqual(rc(), 2)  # file permit but no Redis key
+        srv.store.call("SET", redis_kv.PERMIT_KEY, str(time.time() + 600), "EX", 600)
+        self.assertEqual(rc(), 0)
+        env["SINGULARITY_NO_REDIS"] = "1"
+        srv.store.call("DEL", redis_kv.PERMIT_KEY)
+        self.assertEqual(rc(), 0)  # Redis down: the file alone, as before
+
+
+class GuardBashDenyDbTest(unittest.TestCase):
+    def call(self, cmd, agent="a1", env=None):
+        payload = {"tool_input": {"command": cmd}}
+        if agent:
+            payload["agent_id"] = agent
+        e = dict(os.environ, SINGULARITY_NO_REFUSAL_LOG="1", **(env or {}))
+        e.pop("SINGULARITY_KB_TEST", None) if not env else None
+        return subprocess.run([sys.executable, str(HOOKS / "guard_bash.py"), "--deny-db"], input=json.dumps(payload),
+                              text=True, capture_output=True, env=e).returncode
+
+    def test_agents_may_not_run_db_clients(self):
+        for cmd in ["psql -d kb", "redis-cli KEYS '*'", "nice -n 10 psql", "cd /tmp && /usr/bin/redis-cli ping",
+                    "bash -lc 'psql -c 1'", "sudo -u postgres psql", "X=1 redis-cli get a", "ls | xargs psql",
+                    "eval redis-cli ping"]:
+            self.assertEqual(self.call(cmd), 2, cmd)
+
+    def test_main_session_mentions_and_kb_test_pass(self):
+        self.assertEqual(self.call("psql -d kb", agent=None), 0)
+        for cmd in ["git commit -m 'psql and redis-cli'", "git grep psql", "python3 tools/development/kb_db.py status",
+                    "echo redis-cli", "SINGULARITY_KB_TEST=1 psql -d kbtest_x -c 'select 1'"]:
+            self.assertEqual(self.call(cmd), 0, cmd)
+        self.assertEqual(self.call("psql -d kbtest_x", env={"SINGULARITY_KB_TEST": "1"}), 0)
+
+    def test_allow_list_mode_unchanged(self):
+        args = ["--agent", "reviewer", "--allow", "git diff"]
+        for cmd, want in [("git diff", 0), ("psql", 2), ("git diff; ls", 2)]:
+            rc = subprocess.run([sys.executable, str(HOOKS / "guard_bash.py"), *args],
+                                input=json.dumps({"tool_input": {"command": cmd}}), text=True, capture_output=True,
+                                env=dict(os.environ, SINGULARITY_NO_REFUSAL_LOG="1")).returncode
+            self.assertEqual(rc, want, cmd)
 
 
 if __name__ == "__main__":

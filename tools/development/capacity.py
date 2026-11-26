@@ -8,8 +8,10 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 import autopilot
+import redis_kv
 
 HEAVY = {"test": ("dotnet test", "testhost"), "godot": ("Godot_v",), "land": ("tools/development/land.py",)}
 LOAD_START = 0.75   # start a new heavy agent only below this share of the cores (1-minute load)
@@ -38,12 +40,21 @@ def state():
             "block_tests": load1 > cores * LOAD_BLOCK or runs >= MAX_TEST_RUNS}
 
 
+def lock_holders():
+    """Holders of the land/test/godot locks recorded in Redis (#590); None when Redis is down."""
+    return redis_kv.holders(["land", "test", "godot"])
+
+
 if __name__ == "__main__":
     s = state()
     if "--json" in sys.argv:
+        s["locks"] = lock_holders()
         print(json.dumps(s))
     else:
         print(f"cores {s['cores']}  load1 {s['load1']}  test runs {s['test_runs']}  godot {s['heavy']['godot']}  "
               f"landings {s['heavy']['land']}  free agent slots {s['agent_slots_free']}"
               f"{' (autopilot stopped)' if s['autopilot_stopped'] else ''}"
               f"{'  TESTS BLOCKED' if s['block_tests'] else ''}")
+        for name, h in (lock_holders() or {}).items():
+            print(f"lock {name}: held by pid {h.get('pid', '?')} since {time.strftime('%H:%M', time.localtime(h.get('since', 0)))}"
+                  f" {h.get('branch') or h.get('cmd') or ''}")

@@ -15,6 +15,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -34,11 +35,25 @@ WRAPPERS = {"nice", "env", "exec", "time", "timeout", "nohup", "setsid", "stdbuf
 ASSIGN = re.compile(r"^[A-Za-z_]\w*=")
 
 
-def permit_live() -> bool:
+def file_permit_live() -> bool:
     try:
         return float(PERMIT.read_text().strip()) > time.time()
     except (OSError, ValueError):
         return False
+
+
+def permit_live() -> bool:
+    """The file permit, narrowed by Redis when it answers (client_permit.live, #590). If that module cannot be
+    loaded, the file alone decides, as before."""
+    if not file_permit_live():
+        return False
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "development"))
+        import client_permit
+        client_permit.PERMIT = PERMIT
+        return client_permit.live()
+    except Exception:
+        return True
 
 
 def analyse(raw: str, cwd: str) -> tuple[list[tuple[str | None, bool, bool]], str | None]:
