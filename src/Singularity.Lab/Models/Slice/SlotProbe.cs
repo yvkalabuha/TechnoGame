@@ -17,6 +17,9 @@ internal sealed class SlotProbe
     /// <summary>Last month of the first period: 1990-12 when month 0 is 1945-09.</summary>
     public const long Period1LastMonth = 543;
 
+    /// <summary>First month of the gate window 1947–1990 of the money and discovery gates (Orchestrator, 2026-11-26): 1947-01.</summary>
+    public const long GateFirstMonth = 16;
+
     private const int Metrics = 8;
     private const int MSlots = 0, MIdle = 1, MIdleFree = 2, MFocus1 = 3, MFocus2 = 4, MFrontier = 5, MShort = 6, MMonths = 7;
     private static readonly string[] Names = ["slot_months", "idle", "idle_free", "focus1", "focus2", "frontier", "short_months", "months"];
@@ -29,7 +32,7 @@ internal sealed class SlotProbe
     private readonly int[] _node = new int[InstituteSystem.MaxSlotsLimit];
     private readonly byte[] _focus = new byte[InstituteSystem.MaxSlotsLimit];
     private readonly long[] _c;              // [actor][period][metric]
-    private readonly long[] _returned, _science, _returned1, _science1, _upkeepMax, _lastWorkable, _institutesMax;   // per actor (TASK-0187 review: the smoke gates of SCIENCE_SLOTS §10)
+    private readonly long[] _returned, _science, _returned1, _science1, _returned2, _science2, _upkeepMax, _lastWorkable, _institutesMax;   // per actor (TASK-0187 review: the smoke gates of SCIENCE_SLOTS §10)
     private long _firstViolation = -1;
     private int _firstViolationActor = -1;
 
@@ -47,6 +50,8 @@ internal sealed class SlotProbe
         _science = new long[ids.Length];
         _returned1 = new long[ids.Length];
         _science1 = new long[ids.Length];
+        _returned2 = new long[ids.Length];
+        _science2 = new long[ids.Length];
         _upkeepMax = new long[ids.Length];
         _lastWorkable = new long[ids.Length];
         _institutesMax = new long[ids.Length];
@@ -96,8 +101,10 @@ internal sealed class SlotProbe
             // The research money the step of t reads, and the upkeep share of the institutes built by a project (the share the ceiling of #574 limits).
             long science = (_w.SharesOf(a).Research * _w.Policy.Budget(a)).Raw;
             _science[a] += science;
-            if (t <= Period1LastMonth)
+            if (t >= GateFirstMonth && t <= Period1LastMonth)
                 _science1[a] += science;
+            else if (t > Period1LastMonth)
+                _science2[a] += science;
             long upkeep = 0;
             for (int k = 0; k < slots; k++)
             {
@@ -135,8 +142,10 @@ internal sealed class SlotProbe
             if (_know.Coverage(a) < Singularity.Kernel.Fx6.One)
                 _c[At(a, t, MShort)]++;
             _returned[a] += _know.ReturnedToBudget(a).Raw;
-            if (t <= Period1LastMonth)
+            if (t >= GateFirstMonth && t <= Period1LastMonth)
                 _returned1[a] += _know.ReturnedToBudget(a).Raw;
+            else if (t > Period1LastMonth)
+                _returned2[a] += _know.ReturnedToBudget(a).Raw;
         }
     }
 
@@ -152,8 +161,10 @@ internal sealed class SlotProbe
         {
             yield return new($"slot_{_ids[a]}_returned_raw", I(_returned[a]));
             yield return new($"slot_{_ids[a]}_science_raw", I(_science[a]));
-            yield return new($"slot_p1_{_ids[a]}_returned_raw", I(_returned1[a]));
-            yield return new($"slot_p1_{_ids[a]}_science_raw", I(_science1[a]));
+            yield return new($"slot_w47_{_ids[a]}_returned_raw", I(_returned1[a]));   // 1947-01..1990-12, the gate window (Orchestrator, 2026-11-26)
+            yield return new($"slot_w47_{_ids[a]}_science_raw", I(_science1[a]));
+            yield return new($"slot_p2_{_ids[a]}_returned_raw", I(_returned2[a]));    // 1991-01.., information
+            yield return new($"slot_p2_{_ids[a]}_science_raw", I(_science2[a]));
             yield return new($"slot_{_ids[a]}_upkeep_max_ppm", I(_upkeepMax[a]));
             yield return new($"slot_{_ids[a]}_workable_last", I(_lastWorkable[a]));
             yield return new($"slot_{_ids[a]}_institutes_max", I(_institutesMax[a]));

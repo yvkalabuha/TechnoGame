@@ -16,7 +16,7 @@ def month(year):
 
 
 def write_series(d, seeds=10, g=(1953.7, 1960.0, 1970.0), idle_free=0, gap_months=12, returned=0.05, upkeep=100_000, leader=0,
-                 series="SLOTS", elapsed=1000):
+                 series="SLOTS", elapsed=1000, returned_after=0.05, late_gap=0):
     os.makedirs(os.path.join(d, "runs"), exist_ok=True)
     runs, gens, nodes, summ = [], [], [], []
     for s in range(1, seeds + 1):
@@ -30,9 +30,14 @@ def write_series(d, seeds=10, g=(1953.7, 1960.0, 1970.0), idle_free=0, gap_month
                     info[f"slot_p{p}_{a}_{k}"] = str(v)
             info[f"slot_{a}_returned_raw"] = str(int(returned * 1_000_000))
             info[f"slot_{a}_science_raw"] = "1000000"
+            info[f"slot_w47_{a}_returned_raw"] = str(int(returned * 1_000_000))
+            info[f"slot_w47_{a}_science_raw"] = "1000000"
+            info[f"slot_p2_{a}_returned_raw"] = str(int(returned_after * 1_000_000))
+            info[f"slot_p2_{a}_science_raw"] = "1000000"
             info[f"slot_{a}_upkeep_max_ppm"] = str(upkeep)
             info[f"slot_{a}_workable_last"] = "600"
-            for i, t in enumerate(range(0, 601, gap_months)):
+            months = [m for m in range(0, 601, gap_months) if not (late_gap and 544 <= m < 544 + late_gap)]
+            for i, t in enumerate(months):
                 nodes.append(f"{run},{a},{i + 1},{t},,,,0")
             for gen, y in zip((2, 3, 4), g):
                 gens.append(f"{run},{a},{gen},-1,{month(y) if a == 'USA' else -1},-1,")
@@ -115,6 +120,17 @@ class SlotCoreTest(unittest.TestCase):
         self.assertEqual(sc.max_gap([10, 20], 70), 50)
         self.assertEqual(sc.max_gap([10, 20, 90], 30), 10)
         self.assertEqual(sc.max_gap([], -1), 0)
+        # Orchestrator 2026-11-26: the window 1947-01..1990-12; a long first discovery in 1945-1946 and gaps after 1990 do not count.
+        self.assertEqual(sc.max_gap([40, 50, 700], 900, sc.GATE_FIRST, sc.PERIOD1_LAST), 543 - 50)
+        self.assertEqual(sc.max_gap([5, 30, 60, 540], 900, sc.GATE_FIRST, sc.PERIOD1_LAST), 480)
+        self.assertEqual(sc.max_gap([20, 50], 40, sc.GATE_FIRST, sc.PERIOD1_LAST), 20)
+
+    def test_after_1990_is_information_only(self):
+        # Orchestrator 2026-11-26: money returned and long gaps after 1990 are printed, not gated.
+        code, text = self.run_main(self.series("late", returned_after=0.9, late_gap=120))
+        self.assertEqual(code, 0, text)
+        self.assertIn("после 1990 (печать) 90.0%", text)
+        self.assertIn("после 1990 (печать) max 56", text)   # no discovery from 1991-01 (month 544) to the end of the frontier (600)
 
 
 if __name__ == "__main__":

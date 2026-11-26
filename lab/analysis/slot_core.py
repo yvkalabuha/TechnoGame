@@ -6,8 +6,9 @@ Reads matrix directories of lab/manifests/TASK-0187-core.json / TASK-0187-player
   LIVE0   idle AI slot-months while a workable frontier node was left = 0, per AI actor (invariant of the core);
   LIVE5   the same as a share of slot-months <= 5 % per AI actor (median over seeds; SCIENCE_SLOTS §10 smoke);
   IDLE90  idle slot-months 1945-1990 <= 5 % per AI actor (median over seeds; slot-model-pilot.md §7.1);
-  GAP36   months between two discoveries of an AI actor <= 36 until its workable frontier runs out (every seed);
-  RET20   money returned to the budget <= 20 % of the research money, per AI actor (median over seeds);
+  GAP36   months between two discoveries of an AI actor <= 36 in 1947-1990 (Orchestrator, 2026-11-26), until its workable frontier runs out (every seed);
+  RET20   money returned to the budget <= 20 % of the research money in 1947-1990 (Orchestrator, 2026-11-26), per AI actor (median over seeds);
+          after 1990 both are printed as information (the 1990-2030 tree is a task of its own);
   CEIL    upkeep share of the institutes built by a project <= the ceiling (slot_upkeep_ceiling_ppm), every actor and month;
   BANDS   first unit of any actor, median over seeds: G2 1948-1962, G3 1952-1970, G4 1962-1985 (both bounds, whole years);
   LEAD77  leader of 1977 (summary.lead_all, majority of the months of 1977) is USA or SUN in >= 70 % of seeds;
@@ -32,6 +33,7 @@ C4_10 = {2: (-INF, 1963.0), 3: (1944.0, 1972.0), 4: (1957.0, 1986.0)}       # pr
 C4_8 = {2: (-INF, 1961.0), 3: (1946.0, 1970.0), 4: (1959.0, 1984.0)}
 LEADERS = ("USA", "SUN")
 PERIOD1_LAST = 543   # 1990-12 when month 0 is 1945-09
+GATE_FIRST = 16      # 1947-01: the window of GAP36 and RET20 is 1947-01..1990-12 (Orchestrator, 2026-11-26)
 YEAR1977 = (376, 388)
 LIMITS = {"LIVE5": 0.05, "IDLE90": 0.05, "GAP36": 36, "RET20": 0.20, "LEAD77": 0.70, "SPREAD": 15.0, "G4BY2030": 0.90, "TIME": 1.5}
 
@@ -87,13 +89,15 @@ def load(d):
     return runs, first, known, summary, info, elapsed, actors
 
 
-def max_gap(months, workable_last):
-    """Largest gap in months between discoveries (from month 0) up to the last month the workable frontier was not empty."""
-    if workable_last < 0:
+def max_gap(months, workable_last, start=0, end=None):
+    """Largest gap in months between discoveries in [start; end] (the window opens at start), up to the last month the workable
+    frontier was not empty (or end, whichever is first)."""
+    stop = workable_last if end is None else min(workable_last, end)
+    if stop < start:
         return 0
-    pts = [0] + sorted(m for m in months if m <= workable_last)
+    pts = [start] + sorted(m for m in months if start < m <= stop)
     gaps = [b - a for a, b in zip(pts, pts[1:])]
-    gaps.append(workable_last - pts[-1])
+    gaps.append(stop - pts[-1])
     return max(gaps)
 
 
@@ -122,10 +126,13 @@ def gates_for_series(rs, first, known, summary, info, actors):
         out.append(("LIVE5", a, share <= LIMITS["LIVE5"], f"{share:.1%}"))
         idle90 = med([c(r, 1, a, "idle") / max(1, c(r, 1, a, "slot_months")) for r in rs])
         out.append(("IDLE90", a, idle90 <= LIMITS["IDLE90"], f"{idle90:.1%}"))
-        gaps = [max_gap(known[r][a], int(info[r][f"slot_{a}_workable_last"])) for r in rs]
-        out.append(("GAP36", a, max(gaps) <= LIMITS["GAP36"], f"max {max(gaps)} мес."))
-        ret = med([int(info[r][f"slot_{a}_returned_raw"]) / max(1, int(info[r][f"slot_{a}_science_raw"])) for r in rs])
-        out.append(("RET20", a, ret <= LIMITS["RET20"], f"{ret:.1%}"))
+        wl = {r: int(info[r][f"slot_{a}_workable_last"]) for r in rs}
+        gaps = [max_gap(known[r][a], wl[r], GATE_FIRST, PERIOD1_LAST) for r in rs]
+        after = [max_gap(known[r][a], wl[r], PERIOD1_LAST + 1) for r in rs]
+        out.append(("GAP36", a, max(gaps) <= LIMITS["GAP36"], f"1947–1990 max {max(gaps)} мес.; после 1990 (печать) max {max(after)} мес."))
+        ret = med([int(info[r][f"slot_w47_{a}_returned_raw"]) / max(1, int(info[r][f"slot_w47_{a}_science_raw"])) for r in rs])
+        ret2 = med([int(info[r][f"slot_p2_{a}_returned_raw"]) / max(1, int(info[r][f"slot_p2_{a}_science_raw"])) for r in rs])
+        out.append(("RET20", a, ret <= LIMITS["RET20"], f"1947–1990 {ret:.1%}; после 1990 (печать) {ret2:.1%}"))
     for a in actors:
         ceil = int(info[rs[0]]["slot_upkeep_ceiling_ppm"])
         up = max(int(info[r][f"slot_{a}_upkeep_max_ppm"]) for r in rs)
@@ -193,8 +200,7 @@ def report(d, countries, out=print):
             p2 = med([int(info[r][f"slot_p2_{a}_idle"]) / max(1, int(info[r][f"slot_p2_{a}_slot_months"])) for r in rs])
             f1 = med([int(info[r][f"slot_p1_{a}_focus1"]) for r in rs]), med([int(info[r][f"slot_p1_{a}_focus2"]) for r in rs])
             sh = med([int(info[r][f"slot_p1_{a}_short_months"]) / max(1, int(info[r][f"slot_p1_{a}_months"])) for r in rs])
-            r1 = med([int(info[r].get(f"slot_p1_{a}_returned_raw", 0)) / max(1, int(info[r].get(f"slot_p1_{a}_science_raw", 0))) for r in rs])
-            out(f"  печать {a}: простой после 1990 {p2:.1%}; фокус 1/2 до 1990 {f1[0]}/{f1[1]} мес.; недостача денег до 1990 {sh:.0%}; возврат до 1990 {r1:.0%}")
+            out(f"  печать {a}: простой после 1990 {p2:.1%}; фокус 1/2 до 1990 {f1[0]}/{f1[1]} мес.; недостача денег до 1990 {sh:.0%}")
     for s, gate, subject, passed, detail in time_gate(series, elapsed):
         out(f"  {'PASS' if passed else 'FAIL'} {gate:8} {s:8} {detail}")
         ok &= passed
