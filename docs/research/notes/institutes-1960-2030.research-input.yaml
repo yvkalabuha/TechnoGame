@@ -1,0 +1,94 @@
+items:
+  - id: usa_marshall
+    claim: "marshall (USA) was founded or opened in 1960"
+    urls: ["https://en.wikipedia.org/wiki/Marshall_Space_Flight_Center"]
+  - id: usa_jsc
+    claim: "jsc (USA) was founded or opened in 1961"
+    urls: ["https://en.wikipedia.org/wiki/Lyndon_B._Johnson_Space_Center"]
+  - id: usa_slac
+    claim: "slac (USA) was founded or opened in 1962"
+    urls: ["https://en.wikipedia.org/wiki/SLAC_National_Accelerator_Laboratory"]
+  - id: usa_fermilab
+    claim: "fermilab (USA) was founded or opened in 1967"
+    urls: ["https://en.wikipedia.org/wiki/Fermilab"]
+  - id: usa_parc
+    claim: "parc (USA) was founded or opened in 1970"
+    urls: ["https://en.wikipedia.org/wiki/PARC_(company)"]
+  - id: usa_nrel
+    claim: "nrel (USA) was founded or opened in 1977"
+    urls: ["https://en.wikipedia.org/wiki/National_Renewable_Energy_Laboratory"]
+  - id: usa_sematech
+    claim: "sematech (USA) was founded or opened in 1987"
+    urls: ["https://en.wikipedia.org/wiki/Sematech"]
+  - id: sun_ihep
+    claim: "ihep (SUN) was founded or opened in 1963"
+    urls: ["https://en.wikipedia.org/wiki/Institute_for_High_Energy_Physics"]
+  - id: sun_iki
+    claim: "iki (SUN) was founded or opened in 1965"
+    urls: ["https://en.wikipedia.org/wiki/Space_Research_Institute"]
+  - id: sun_mikron
+    claim: "mikron (SUN) was founded or opened in 1964"
+    urls: ["https://en.wikipedia.org/wiki/Mikron_Group"]
+  - id: sun_inr
+    claim: "inr (SUN) was founded or opened in 1970"
+    urls: ["https://en.wikipedia.org/wiki/Institute_for_Nuclear_Research"]
+  - id: sun_molniya
+    claim: "molniya (SUN) was founded or opened in 1976"
+    urls: ["https://en.wikipedia.org/wiki/NPO_Molniya"]
+  - id: sun_skoltech
+    claim: "skoltech (SUN) was founded or opened in 2011"
+    urls: ["https://en.wikipedia.org/wiki/Skolkovo_Institute_of_Science_and_Technology"]
+  - id: gbr_culham
+    claim: "culham (GBR) was founded or opened in 1965"
+    urls: ["https://en.wikipedia.org/wiki/Culham_Centre_for_Fusion_Energy"]
+  - id: gbr_daresbury
+    claim: "daresbury (GBR) was founded or opened in 1962"
+    urls: ["https://en.wikipedia.org/wiki/Daresbury_Laboratory"]
+  - id: gbr_wmg
+    claim: "wmg (GBR) was founded or opened in 1980"
+    urls: ["https://en.wikipedia.org/wiki/WMG"]
+  - id: gbr_diamond
+    claim: "diamond (GBR) was founded or opened in 2001"
+    urls: ["https://en.wikipedia.org/wiki/Diamond_Light_Source"]
+  - id: gbr_turing
+    claim: "turing (GBR) was founded or opened in 2015"
+    urls: ["https://en.wikipedia.org/wiki/Alan_Turing_Institute"]
+  - id: gbr_ngi
+    claim: "ngi (GBR) was founded or opened in 2015"
+    urls: ["https://en.wikipedia.org/wiki/National_Graphene_Institute"]
+  - id: fra_inria
+    claim: "inria (FRA) was founded or opened in 1967"
+    urls: ["https://en.wikipedia.org/wiki/Inria"]
+  - id: fra_ill
+    claim: "ill (FRA) was founded or opened in 1967"
+    urls: ["https://en.wikipedia.org/wiki/Institut_Laue–Langevin"]
+  - id: fra_leti
+    claim: "leti (FRA) was founded or opened in 1967"
+    urls: ["https://en.wikipedia.org/wiki/CEA-Leti"]
+  - id: fra_ganil
+    claim: "ganil (FRA) was founded or opened in 1983"
+    urls: ["https://en.wikipedia.org/wiki/GANIL"]
+  - id: fra_esrf
+    claim: "esrf (FRA) was founded or opened in 1994"
+    urls: ["https://en.wikipedia.org/wiki/European_Synchrotron_Radiation_Facility"]
+  - id: fra_soleil
+    claim: "soleil (FRA) was founded or opened in 2006"
+    urls: ["https://en.wikipedia.org/wiki/SOLEIL"]
+  - id: swe_esrange
+    claim: "esrange (SWE) was founded or opened in 1966"
+    urls: ["https://en.wikipedia.org/wiki/Esrange"]
+  - id: swe_ssc
+    claim: "ssc (SWE) was founded or opened in 1972"
+    urls: ["https://en.wikipedia.org/wiki/Swedish_Space_Corporation"]
+  - id: swe_sics
+    claim: "sics (SWE) was founded or opened in 1985"
+    urls: ["https://en.wikipedia.org/wiki/Swedish_Institute_of_Computer_Science"]
+  - id: swe_rise
+    claim: "rise (SWE) was founded or opened in 1997"
+    urls: ["https://en.wikipedia.org/wiki/Research_Institutes_of_Sweden"]
+  - id: swe_ess
+    claim: "ess (SWE) was founded or opened in 2015"
+    urls: ["https://en.wikipedia.org/wiki/European_Spallation_Source"]
+  - id: swe_maxiv
+    claim: "maxiv (SWE) was founded or opened in 2016"
+    urls: ["https://en.wikipedia.org/wiki/MAX_IV_Laboratory"]

@@ -213,7 +213,7 @@
 | [TASK-0195](../development/tasks/TASK-0195-era-node-price.md) | IN_PROGRESS | Era price of research nodes: node cost grows with era so leaders spend science money after 1990 (#579) | MS-M0 |
 | [TASK-0196](../development/tasks/TASK-0196-tech-map-stage2-design.md) | IN_PROGRESS | Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) | MS-M0 |
 | [TASK-0197](../development/tasks/TASK-0197-autopilot-tooling.md) | DONE | Autopilot tooling: watch acts on silent and finished-unsubmitted agents, shared shot batch collector, autopilot stop flag (#583) | MS-M0 |
-| [TASK-0198](../development/tasks/TASK-0198-error-catalogue.md) | IN_PROGRESS | Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584) | MS-M0 |
+| [TASK-0198](../development/tasks/TASK-0198-error-catalogue.md) | DONE | Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584) | MS-M0 |
 | [TASK-0199](../development/tasks/TASK-0199-surplus-institutes-era-price.md) | IN_PROGRESS | Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) | MS-M0 |
 | [TASK-0200](../development/tasks/TASK-0200-platform-db-postgres.md) | DONE | Platform DB index in PostgreSQL: kb_db.py build/query from registry, decisions, debt, questions, errors, agent log (#590) | MS-M0 |
 | [TASK-0201](../development/tasks/TASK-0201-platform-redis.md) | APPROVED | Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed | MS-M0 |

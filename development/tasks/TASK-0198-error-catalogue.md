@@ -1,7 +1,7 @@
 ---
 id: TASK-0198
 title: "Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #584"
+review_ref: "reviewer: APPROVE 4277329d; codex: 5 rounds, waived per owner #592 (DEBT-0117)"
 created: 2026-11-26
 ---
 
