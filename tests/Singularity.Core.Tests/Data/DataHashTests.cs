@@ -15,7 +15,8 @@ public class DataHashTests : IDisposable
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 and the rev 3.1 requires/informs of nodes 65-81 change the core data.
     // Re-recorded in TASK-0180 (#555): real prerequisites (requires) of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99), no new nodes.
     // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10). Old value 68a3defd…159030.
-    private const string CoreDataHash = "2cdb99275aa9539f241276ec7bd638ed57b63369400e57ea6a75f4aa09bf9067";
+    // Re-recorded once in TASK-0193: 55 new nodes 160-214 (1990-2030: avionics, stealth, composites, computing, space, missiles), 3 new processes, 7 research_speed effects. Old value 2cdb9927…bf9067.
+    private const string CoreDataHash = "a81f3ba5f2b1d1f45ed172fffdec6d4331a2de1adf5461fdad785d6c70b5f96a";
 
     private readonly TestMods _mods = new();
 

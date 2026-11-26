@@ -936,6 +936,338 @@ node-s11-prn-laser_inertial_confinement =
     .anchor = NIF, зажигание, 08.08.2021
     .history = На National Ignition Facility первая «зажжённая» плазма получена 8 августа 2021 года; выход энергии выше затраченной зафиксирован 5 декабря 2022 года (по памяти).
 
+# Knowledge nodes 1990-2030 (TASK-0193, tree-expansion-1990-2030.md).
+
+node-s5-prc-automated_fibre_placement =
+    .name = Автоматизированная выкладка волокна
+    .short = Выкладка
+    .anchor = Выкладка, 1990 (оценка)
+    .history = Машины автоматизированной выкладки волокна для композитных конструкций разрабатывались с конца 1980-х и в 1990-х годах; 1990 — приблизительный год.
+
+node-s5-prc-friction_stir_welding =
+    .name = Сварка трением с перемешиванием
+    .short = Сварка FSW
+    .anchor = Сварка FSW, 1991
+    .history = Сварку трением с перемешиванием изобрели в The Welding Institute (TWI) в 1991 году.
+
+node-s9-eng-world_wide_web =
+    .name = Всемирная паутина и открытый обмен данными
+    .short = WWW
+    .anchor = WWW, 1991
+    .history = Всемирная паутина стала общедоступной за пределами CERN в августе 1991 года.
+
+node-s7-eng-amraam_bvr_missile =
+    .name = Ракета «воздух–воздух» за пределами видимости с активной РЛС ГСН (AIM-120)
+    .short = AIM-120
+    .anchor = AIM-120, 1991
+    .history = Ракета AIM-120 AMRAAM с активной радиолокационной ГСН развёртывается с сентября 1991 года.
+
+node-s9-prn-rans_cfd_industrial =
+    .name = Промышленная CFD на уравнениях Рейнольдса (RANS)
+    .short = RANS CFD
+    .anchor = RANS CFD, 1992
+    .history = Модель турбулентности Спаларта–Аллмараса, основа промышленной CFD на уравнениях Рейнольдса, опубликована в 1992 году.
+
+node-s8-eng-tactical_data_link16 =
+    .name = Тактическая сеть передачи данных (Link 16)
+    .short = Link 16
+    .anchor = Link 16, 1994 (оценка)
+    .history = Сеть Link 16 вошла в строй в середине 1990-х годов; точный год приблизительный.
+
+node-s9-eng-beowulf_commodity_cluster =
+    .name = Кластер из серийных ЭВМ (Beowulf)
+    .short = Beowulf
+    .anchor = Beowulf, 1994
+    .history = Первый кластер Beowulf из серийных ЭВМ построен в NASA Goddard Space Flight Center в 1994 году.
+
+node-s8-eng-aesa_fighter_radar_fielded =
+    .name = АФАР-РЛС на серийном истребителе (J/APG-1)
+    .short = J/APG-1
+    .anchor = J/APG-1, 1995
+    .history = Радар Mitsubishi J/APG-1 на истребителе F-2 стал одной из первых АФАР-РЛС в боевой службе на истребителе (около 1995 года).
+
+node-s8-prn-digital_rf_memory_jamming =
+    .name = Цифровая радиочастотная память (DRFM) постановщик помех
+    .short = DRFM
+    .anchor = DRFM, 1995 (оценка)
+    .history = Постановщики помех с цифровой радиочастотной памятью (DRFM) получили широкое распространение в РЭБ в 1990-х годах; год 1995 оценочный.
+
+node-s10-eng-gps_operational_constellation =
+    .name = Полная орбитальная группировка GPS
+    .short = GPS FOC
+    .anchor = GPS FOC, 1995
+    .history = Полная орбитальная группировка GPS объявлена в апреле 1995 года.
+
+node-s10-eng-sar_earth_observation_satellite =
+    .name = Радиолокационный спутник наблюдения (RADARSAT-1)
+    .short = RADARSAT-1
+    .anchor = RADARSAT-1, 1995
+    .history = Спутник RADARSAT-1 с радаром с синтезированной апертурой запущен 4 ноября 1995 года.
+
+node-s8-eng-cooperative_engagement_capability =
+    .name = Совместное боевое применение сил (CEC)
+    .short = CEC
+    .anchor = CEC, 1996 (оценка)
+    .history = Сеть совместного боевого применения сил (CEC) ВМС США опробована в начале 1990-х; год ввода в строй приблизительный.
+
+node-s5-cmp-ultra_high_temperature_ceramic =
+    .name = Керамика сверхвысоких температур (ZrB2/HfB2)
+    .short = UHTC
+    .anchor = UHTC, 1997 (оценка)
+    .history = Лётный эксперимент SHARP-B1 (NASA Ames, 1997) испытал носовой обтекатель и кромки из керамики сверхвысоких температур.
+
+node-s9-prn-computational_materials_design =
+    .name = Расчётное проектирование материалов
+    .short = ICME
+    .anchor = ICME, 1997 (оценка)
+    .history = Расчётное проектирование материалов (ICME) сочетает вычислительные средства; коммерческое ПО для проектирования сплавов появилось в 1990-х, год 1997 оценочный.
+
+node-s8-prn-passive_coherent_location =
+    .name = Пассивная когерентная локация (против малозаметных)
+    .short = PCL
+    .anchor = PCL, 1998 (оценка)
+    .history = Система пассивной когерентной локации Silent Sentry (Lockheed Martin) разработана в конце 1990-х годов.
+
+node-s10-eng-international_space_station =
+    .name = Международная космическая станция
+    .short = МКС
+    .anchor = МКС, 1998
+    .history = Первый модуль МКС, «Заря», запущен 20 ноября 1998 года.
+
+node-s7-eng-satellite_guided_bomb =
+    .name = Бомба с наведением по GPS (JDAM)
+    .short = JDAM
+    .anchor = JDAM, 1999
+    .history = Комплект JDAM для наведения бомб по GPS поступает с 1999 года; применён в бою в 1999 году.
+
+node-s10-eng-commercial_high_res_imaging =
+    .name = Коммерческая съёмка из космоса высокого разрешения (IKONOS)
+    .short = IKONOS
+    .anchor = IKONOS, 1999
+    .history = Спутник IKONOS запущен 24 сентября 1999 года; он давал снимки с разрешением 1 метр для общего пользования.
+
+node-s7-eng-hit_to_kill_interceptor =
+    .name = Перехватчик «попадание в цель» (кинетический)
+    .short = Перехватчик
+    .anchor = Перехватчик, 1999
+    .history = Кинетический перехват «попаданием в цель» выполнен в лётном испытании IFT-3 системы наземной противоракетной обороны 2 октября 1999 года.
+
+node-s5-prn-metamaterial_electromagnetic =
+    .name = Метаматериалы с отрицательным показателем преломления
+    .short = Метаматериал
+    .anchor = Метаматериал, 2000
+    .history = В 2000 году группа Дэвида Смита продемонстрировала композитный метаматериал с отрицательным показателем преломления на СВЧ.
+
+node-s8-eng-armed_reconnaissance_uav =
+    .name = Вооружённый разведывательный БПЛА (Predator)
+    .short = Predator
+    .anchor = Predator, 2001
+    .history = Беспилотник MQ-1 Predator выпустил ракету Hellfire в испытании в феврале 2001 года.
+
+node-s9-cmp-multicore_processor =
+    .name = Многоядерный процессор
+    .short = Многоядерный
+    .anchor = Многоядерный, 2001
+    .history = Процессор IBM POWER4, выпущенный в 2001 году, был двухъядерным микропроцессором не для встраиваемых систем.
+
+node-s10-eng-heavy_expendable_launcher =
+    .name = Тяжёлая ракета-носитель семейства EELV (Atlas V)
+    .short = Atlas V
+    .anchor = Atlas V, 2002
+    .history = Ракета-носитель Atlas V впервые стартовала 21 августа 2002 года.
+
+node-s8-prn-helmet_mounted_cueing =
+    .name = Шлемовая система целеуказания
+    .short = JHMCS
+    .anchor = JHMCS, 2003
+    .history = Шлемовая система целеуказания JHMCS принята на F/A-18 ВМС США в 2003 году.
+
+node-s7-eng-stealth_cruise_missile =
+    .name = Малозаметная крылатая ракета (JASSM)
+    .short = JASSM
+    .anchor = JASSM, 2003 (оценка)
+    .history = Малозаметная крылатая ракета AGM-158 JASSM достигла начальной боеготовности около 2003 года; ВВС США принимают её в 2009 году, год узла оценочный.
+
+node-s10-eng-cubesat_small_satellite =
+    .name = Малые спутники формата CubeSat
+    .short = CubeSat
+    .anchor = CubeSat, 2003
+    .history = Первые CubeSat запущены 30 июня 2003 года.
+
+node-s7-prn-imaging_ir_seeker_high_offboresight =
+    .name = Ракета ближнего боя с матричной ИК-ГСН и вектором тяги (AIM-9X)
+    .short = AIM-9X
+    .anchor = AIM-9X, 2003
+    .history = Ракета AIM-9X Sidewinder принята на вооружение в ноябре 2003 года.
+
+node-s8-eng-electro_optical_targeting_pod =
+    .name = Оптико-электронный прицельный контейнер
+    .short = ОЭ контейнер
+    .anchor = ОЭ контейнер, 2004 (оценка)
+    .history = Оптико-электронные прицельные контейнеры стали серийными в 2000-х годах (контракт Sniper — 2001, ATP-SE — 2014); год 2004 оценочный.
+
+node-s7-eng-scramjet_flight_x43 =
+    .name = Лётный испытательный ГПВРД (X-43A)
+    .short = X-43A
+    .anchor = X-43A, 2004
+    .history = NASA X-43A достиг около числа Маха 9,6 на ГПВРД 16 ноября 2004 года.
+
+node-s8-cmp-gan_tr_module =
+    .name = Модуль АФАР на нитриде галлия
+    .short = GaN-модуль
+    .anchor = GaN-модуль, 2010 (оценка)
+    .history = Модули приёма-передачи АФАР на нитриде галлия вышли в серию в 2000-х годах; год 2010 оценочный.
+
+node-s8-eng-lo_multirole_fighter_f35 =
+    .name = Малозаметный многоцелевой истребитель с интеграцией датчиков (F-35)
+    .short = F-35
+    .anchor = F-35, 2006
+    .history = Первый F-35A (AA-1) совершил первый полёт 15 декабря 2006 года.
+
+node-s8-prn-irst_infrared_search_track =
+    .name = Инфракрасный поиск и сопровождение (IRST) на истребителе
+    .short = IRST
+    .anchor = IRST, 2007 (оценка)
+    .history = Система ИК-поиска и сопровождения PIRATE на Eurofighter Typhoon вошла в строй около 2007 года; год оценочный.
+
+node-s10-eng-kinetic_antisatellite_test =
+    .name = Кинетическое поражение спутника
+    .short = ПСО 2007
+    .anchor = ПСО 2007, 2007
+    .history = Китай уничтожил спутник «Фэнъюнь-1C» кинетическим перехватчиком 11 января 2007 года.
+
+node-s7-eng-long_range_sam_s400 =
+    .name = Дальняя зенитная ракетная система (С-400)
+    .short = С-400
+    .anchor = С-400, 2007
+    .history = Комплекс С-400 «Триумф» принят на вооружение 28 апреля 2007 года.
+
+node-s9-eng-petaflop_supercomputer =
+    .name = Суперкомпьютер петафлопсного класса (Roadrunner)
+    .short = Roadrunner
+    .anchor = Roadrunner, 2008
+    .history = IBM Roadrunner в 2008 году превысил один петафлопс.
+
+node-s5-cmp-composite_airliner_wing_box =
+    .name = Композитное крыло и фюзеляж лайнера (787)
+    .short = Boeing 787
+    .anchor = Boeing 787, 2009
+    .history = Boeing 787 Dreamliner впервые взлетел 15 декабря 2009 года; крыло и фюзеляж в основном из углепластика.
+
+node-s10-eng-reusable_uncrewed_spaceplane =
+    .name = Многоразовый беспилотный космоплан (X-37B)
+    .short = X-37B
+    .anchor = X-37B, 2010
+    .history = Беспилотный космоплан Boeing X-37B впервые стартовал 22 апреля 2010 года.
+
+node-s7-eng-antiship_ballistic_missile =
+    .name = Противокорабельная баллистическая ракета (DF-21D)
+    .short = DF-21D
+    .anchor = DF-21D, 2010 (оценка)
+    .history = Противокорабельная баллистическая ракета DF-21D по оценке Минобороны США достигла начальной готовности около 2010 года.
+
+node-s7-eng-scramjet_sustained_x51 =
+    .name = Длительный полёт на ГПВРД (X-51A)
+    .short = X-51A
+    .anchor = X-51A, 2010
+    .history = X-51A Waverider летел около 200 секунд (из них около 140 с на ГПВРД) 26 мая 2010 года.
+
+node-s8-eng-lo_unmanned_combat_air_vehicle =
+    .name = Малозаметный ударный БПЛА (X-47B)
+    .short = X-47B
+    .anchor = X-47B, 2011
+    .history = Малозаметный ударный беспилотник Northrop Grumman X-47B совершил первый полёт 4 февраля 2011 года.
+
+node-s5-cmp-titanium_aluminide_blade =
+    .name = Лопатки из алюминида титана
+    .short = TiAl-лопатки
+    .anchor = TiAl-лопатки, 2011 (оценка)
+    .history = Лопатки турбины низкого давления из алюминида титана применяются в двигателях GEnx с 2011 года.
+
+node-s9-prc-finfet_manufacturing =
+    .name = Транзисторы FinFET (трёхмерный затвор)
+    .short = FinFET
+    .anchor = FinFET, 2011
+    .history = Intel начала серийный выпуск 22-нм транзисторов с трёхмерным затвором (FinFET) в 2011 году (Ivy Bridge).
+
+node-s10-eng-missile_warning_satellite_geo =
+    .name = Спутник раннего обнаружения пусков (SBIRS GEO)
+    .short = SBIRS GEO
+    .anchor = SBIRS GEO, 2011
+    .history = Спутник раннего обнаружения SBIRS GEO-1 запущен 7 мая 2011 года.
+
+node-s8-eng-distributed_aperture_system =
+    .name = Распределённая оптическая система кругового обзора
+    .short = EO DAS
+    .anchor = EO DAS, 2015
+    .history = Распределённая оптическая система F-35 (AN/AAQ-37) даёт круговой ИК-обзор; F-35B достиг начальной боеготовности в 2015 году.
+
+node-s8-eng-multifunction_rf_aperture_ew =
+    .name = Многофункциональная ВЧ-система РЭБ и связи
+    .short = AN/ASQ-239
+    .anchor = AN/ASQ-239, 2015 (оценка)
+    .history = Комплекс РЭБ AN/ASQ-239 на F-35 объединяет предупреждение об облучении, помехи и радиотехническую разведку; год 2015 оценочный.
+
+node-s5-cmp-cmc_hot_section_in_service =
+    .name = Керамокомпозит в горячей части двигателя в эксплуатации
+    .short = LEAP
+    .anchor = LEAP, 2016
+    .history = Двигатель CFM LEAP, вошедший в эксплуатацию в 2016 году, имеет турбинные кожухи из керамокомпозита.
+
+node-s7-eng-ramjet_bvr_missile =
+    .name = Ракета с прямоточным двигателем (Meteor)
+    .short = Meteor
+    .anchor = Meteor, 2016
+    .history = Ракета Meteor с прямоточным двигателем (MBDA) принята на вооружение в 2016 году на самолёте Gripen.
+
+node-s8-prn-ml_target_recognition =
+    .name = Распознавание целей машинным обучением
+    .short = Maven
+    .anchor = Maven, 2017
+    .history = Проект Maven создан в апреле 2017 года для анализа снимков беспилотников методами машинного обучения.
+
+node-s8-eng-loyal_wingman_uav =
+    .name = Ведомый беспилотник (XQ-58)
+    .short = XQ-58
+    .anchor = XQ-58, 2019
+    .history = Беспилотник XQ-58 Valkyrie совершил первый полёт в марте 2019 года.
+
+node-s9-prn-quantum_advantage_demo =
+    .name = Демонстрация квантового превосходства
+    .short = Sycamore
+    .anchor = Sycamore, 2019
+    .history = Google сообщила о квантовом превосходстве 53-кубитного процессора Sycamore в октябре 2019 года; результат оспорен IBM.
+
+node-s10-eng-leo_megaconstellation =
+    .name = Низкоорбитальная мегагруппировка (Starlink)
+    .short = Starlink
+    .anchor = Starlink, 2019
+    .history = SpaceX запустила первые 60 спутников Starlink 24 мая 2019 года.
+
+node-s7-eng-hypersonic_glide_vehicle =
+    .name = Гиперзвуковой планирующий боевой блок (Авангард)
+    .short = Авангард
+    .anchor = Авангард, 2019
+    .history = Гиперзвуковой планирующий блок «Авангард» заступил на боевое дежурство в декабре 2019 года.
+
+node-s7-eng-hypersonic_cruise_missile =
+    .name = Гиперзвуковая крылатая ракета с ГПВРД (Циркон)
+    .short = Циркон
+    .anchor = Циркон, 2023
+    .history = Ракета 3M22 «Циркон» принята на вооружение 4 января 2023 года; первый пуск — в 2020 году.
+
+node-s9-eng-exascale_supercomputer =
+    .name = Суперкомпьютер экзафлопсного класса (Frontier)
+    .short = Frontier
+    .anchor = Frontier, 2022
+    .history = Суперкомпьютер Frontier (Oak Ridge) достиг 1,1 эксафлопса в 2022 году и возглавил TOP500.
+
+node-s10-eng-fully_reusable_heavy_launcher =
+    .name = Полностью многоразовая сверхтяжёлая ракета (Starship)
+    .short = Starship
+    .anchor = Starship, 2023
+    .history = Первое интегрированное лётное испытание Starship состоялось 20 апреля 2023 года.
+
 # Product classes and the scenario.
 
 pc-jet_fighter =

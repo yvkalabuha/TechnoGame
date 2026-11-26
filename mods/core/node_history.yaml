@@ -753,3 +753,232 @@ define:
     epic: false
     sources:
       - {url: "https://en.wikipedia.org/wiki/National_Ignition_Facility", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s5.prc.automated_fibre_placement
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Automated_fiber_placement", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s5.prc.friction_stir_welding
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Friction_stir_welding", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.world_wide_web
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/World_Wide_Web", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.amraam_bvr_missile
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AIM-120_AMRAAM", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.rans_cfd_industrial
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Spalart%E2%80%93Allmaras_turbulence_model", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.tactical_data_link16
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Link_16", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.beowulf_commodity_cluster
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Beowulf_cluster", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.aesa_fighter_radar_fielded
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Mitsubishi_J/APG-1", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.prn.digital_rf_memory_jamming
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Digital_radio_frequency_memory", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.gps_operational_constellation
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Global_Positioning_System", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.sar_earth_observation_satellite
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/RADARSAT-1", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.cooperative_engagement_capability
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Cooperative_Engagement_Capability", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.ultra_high_temperature_ceramic
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Ultra-high-temperature_ceramics", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.computational_materials_design
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Integrated_computational_materials_engineering", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.prn.passive_coherent_location
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Passive_radar", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.international_space_station
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/International_Space_Station", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.satellite_guided_bomb
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Joint_Direct_Attack_Munition", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.commercial_high_res_imaging
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/IKONOS", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.hit_to_kill_interceptor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Ground-Based_Midcourse_Defense", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s5.prn.metamaterial_electromagnetic
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Metamaterial", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.armed_reconnaissance_uav
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/General_Atomics_MQ-1_Predator", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.cmp.multicore_processor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/POWER4", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.heavy_expendable_launcher
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Atlas_V", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.prn.helmet_mounted_cueing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Joint_Helmet_Mounted_Cueing_System", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.stealth_cruise_missile
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AGM-158_JASSM", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.cubesat_small_satellite
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/CubeSat", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.prn.imaging_ir_seeker_high_offboresight
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AIM-9_Sidewinder", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.electro_optical_targeting_pod
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AN/AAQ-33_Sniper_Advanced_Targeting_Pod", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.scramjet_flight_x43
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/NASA_X-43", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.cmp.gan_tr_module
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Gallium_nitride", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.lo_multirole_fighter_f35
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Lockheed_Martin_F-35_Lightning_II", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.prn.irst_infrared_search_track
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Infra-red_search_and_track", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.kinetic_antisatellite_test
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/2007_Chinese_anti-satellite_missile_test", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.long_range_sam_s400
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/S-400_missile_system", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.petaflop_supercomputer
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/IBM_Roadrunner", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.composite_airliner_wing_box
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Boeing_787_Dreamliner", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.reusable_uncrewed_spaceplane
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Boeing_X-37", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.antiship_ballistic_missile
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/DF-21", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.scramjet_sustained_x51
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Boeing_X-51_Waverider", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.lo_unmanned_combat_air_vehicle
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Northrop_Grumman_X-47B", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.titanium_aluminide_blade
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Titanium_aluminide", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.prc.finfet_manufacturing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/FinFET", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.missile_warning_satellite_geo
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Space-Based_Infrared_System", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.distributed_aperture_system
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AN/AAQ-37_Electro-optical_Distributed_Aperture_System", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.multifunction_rf_aperture_ew
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AN/ASQ-239", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.cmc_hot_section_in_service
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/CFM_International_LEAP", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.ramjet_bvr_missile
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Meteor_(missile)", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.prn.ml_target_recognition
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Project_Maven", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.loyal_wingman_uav
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Kratos_XQ-58_Valkyrie", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.quantum_advantage_demo
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Quantum_supremacy", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.leo_megaconstellation
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Starlink", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.hypersonic_glide_vehicle
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Avangard_(hypersonic_glide_vehicle)", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.hypersonic_cruise_missile
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/3M22_Zircon", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.exascale_supercomputer
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Frontier_(supercomputer)", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.fully_reusable_heavy_launcher
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/SpaceX_Starship", accessed: "2026-11-26", check: opened, license: other, use: paraphrase}
