@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 
@@ -68,6 +69,22 @@ def matches(path: str, patterns: list[str]) -> bool:
     return any(glob_to_regex(p).match(path) for p in patterns)
 
 
+def log_refusal(message: str) -> None:
+    """Append one refusal line for tools/development/errors.py import (#584). Never fails."""
+    if os.environ.get("SINGULARITY_NO_REFUSAL_LOG"):
+        return
+    try:
+        root = Path(os.environ.get("CLAUDE_PROJECT_DIR") or Path(__file__).resolve().parents[2])
+        path = root / ".claude" / ".state" / "hook_refusals.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rec = {"t": time.time(), "hook": Path(sys.argv[0]).stem, "msg": message[:200]}
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
 def block(message: str) -> None:
+    log_refusal(message)
     print(message, file=sys.stderr)
     sys.exit(2)

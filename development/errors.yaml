@@ -1,0 +1,56 @@
+# Platform error catalogue (owner #584). Edit with tools/development/errors.py; schema: errors.py check.
+# Auto drafts come from errors.py import (land.py, hook refusals, red CI, reviewer CHANGES).
+errors:
+- id: ERR-0001
+  date: '2026-11-25'
+  executor: orchestrator
+  kind: process
+  area: shots
+  symptom: Shots run on an old client version (old science model screens)
+  cause: Shot batch started from a branch without the new model; no branch check
+  found_by: owner
+  cost: high
+  fix: Check git merge-base --is-ancestor f12684f <branch> before a batch; shot_batch.py does it (TASK-0197)
+  repeats:
+  - '2026-11-26'
+  status: open
+  key: process|shots|shots run on an old client version old science model screens
+- id: ERR-0002
+  date: '2026-11-26'
+  executor: orchestrator
+  kind: process
+  area: agents
+  symptom: Agent dispatched before the task file was committed; the worktree lacks the task (TASK-0184, TASK-0185)
+  cause: Worktree is cut from the last commit; the task was only in the working tree
+  found_by: self
+  cost: medium
+  fix: Commit the task before dispatching an agent
+  repeats: []
+  status: open
+  key: process|agents|agent dispatched before the task file was committed the work
+- id: ERR-0003
+  date: '2026-11-26'
+  executor: tool:codex
+  kind: tooling
+  area: review
+  symptom: Codex review fails with input_too_large above 1,000,000 bytes
+  cause: Train diff included lab patches and long notes
+  found_by: self
+  cost: medium
+  fix: Land docs and lab notes on main before the train; keep the review diff under 1 MB
+  repeats: []
+  status: open
+  key: tooling|review|codex review fails with input too large above 1 000 000 byte
+- id: ERR-0004
+  date: '2026-11-26'
+  executor: orchestrator
+  kind: comms
+  area: owner-questions
+  symptom: AskUserQuestion timed out after 2 hours; questions then written as a chat list
+  cause: Owner away; fallback to a chat list broke the interactive rule
+  found_by: owner
+  cost: medium
+  fix: Ask again interactively when the owner is back (#587, memory questions-interactive)
+  repeats: []
+  status: open
+  key: comms|owner-questions|askuserquestion timed out after 2 hours questions then writt
