@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -374,6 +375,10 @@ def lab_provenance(out: Path, sha: str) -> str | None:
     return None
 
 
+# Gates slot_core must print for the series (SCIENCE_SLOTS section 10); a gate that did not run is not a pass. TIME needs a shares series.
+REQUIRED_GATES = ("LIVE0", "LIVE5", "IDLE90", "GAP36", "RET20", "CEIL", "BANDS", "LEAD77", "SPREAD", "G4BY2030")
+
+
 def slot_core_rows(tree: Path, dirs: list[Path], l2: Path) -> list[tuple[str, str, str]]:
     code, text = run_cmd([sys.executable, "lab/analysis/slot_core.py", *map(str, dirs), "--l2", str(l2)], tree, 600)
     fails = [l.split() for l in text.splitlines() if l.strip().startswith("FAIL")]
@@ -381,7 +386,14 @@ def slot_core_rows(tree: Path, dirs: list[Path], l2: Path) -> list[tuple[str, st
     gate_fails = [f"{f[1]} {f[2] if len(f) > 2 else ''}".strip() for f in fails if len(f) > 1 and f[1] != "DET"]
     if code != 0 and not fails:
         return [("Lab slot_core gates", "FAIL", f"slot_core exit {code}: {tail_of(text)}"), ("L2 determinism (Lab)", "FAIL", "slot_core did not finish")]
-    gates = ("FAIL", "failed gates: " + ", ".join(gate_fails)[:150]) if gate_fails else ("PASS", "all gates PASS")
+    seen = {m.group(1) for m in re.finditer(r"^\s*(?:PASS|FAIL)\s+([A-Z0-9]+)\b", text, re.M)}
+    missing = [g for g in REQUIRED_GATES if g not in seen]
+    if gate_fails:
+        gates = ("FAIL", "failed gates: " + ", ".join(gate_fails)[:150])
+    elif "FAIL RUNS" in text or missing:
+        gates = ("FAIL", ("gates not run: " + ", ".join(missing)) if missing else "a matrix has runs that are not ok")
+    else:
+        gates = ("PASS", f"all {len(REQUIRED_GATES)} required gates ran and PASS")
     l2s = ("PASS", "DET PASS") if det and det[0][0] == "PASS" else ("FAIL", "DET missing or FAIL")
     return [("Lab slot_core gates", *gates), ("L2 determinism (Lab)", *l2s)]
 
@@ -529,6 +541,47 @@ def render_notes(tag: str, rc: str, tasks: list[tuple[str, str]], owner_ref: str
     return "\n".join(lines)
 
 
+GEO_DIR = "mods/core/map/geo"
+
+
+def add_generated_data(root: Path, snapshot: Path) -> str | None:
+    """git archive holds no generated map data (geo/ is built, ADR-0011): copy arcs.bin from the checkout into the snapshot
+    and check it against the snapshot's own geo/manifest.json. None when right, else the reason."""
+    try:
+        want = json.loads((snapshot / GEO_DIR / "manifest.json").read_text(encoding="utf-8"))["files"]["arcs.bin"]["sha256"]
+    except (OSError, ValueError, KeyError):
+        return "geo/manifest.json of the snapshot is missing or has no arcs.bin entry"
+    target = snapshot / GEO_DIR / "arcs.bin"
+    if not target.is_file():
+        source = root / GEO_DIR / "arcs.bin"
+        if not source.is_file():
+            return f"{GEO_DIR}/arcs.bin is missing in the checkout: run python3 tools/map/ensure_geo.py"
+        shutil.copyfile(source, target)
+    if hashlib.sha256(target.read_bytes()).hexdigest() != want:
+        target.unlink()
+        return "arcs.bin does not match the manifest of the tag: run python3 tools/map/ensure_geo.py on that commit"
+    return None
+
+
+def smoke_start(snapshot: Path, bin_dir: Path) -> str | None:
+    """Headless start of the deployed build that quits after one frame (no window). None when it starts clean, else the reason."""
+    project = snapshot / CLIENT_DIR
+    if not (project / "project.godot").is_file():
+        return "project.godot is missing in the snapshot"
+    godot = godot_path()
+    env = dict(os.environ, PATH=f"{Path.home() / '.dotnet'}:{os.environ.get('PATH', '')}")
+    run_godot([str(godot), "--headless", "--path", str(project), "--import"], project, env)   # imports are cheap when cached; errors show in the start below
+    exe = bin_dir / "singularity"
+    cmd = [str(exe), "--headless", "--quit"] if exe.is_file() else [str(godot), "--headless", "--path", str(project), "--quit"]
+    try:
+        r = subprocess.run(cmd, cwd=project, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=GODOT_TIMEOUT_S)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return type(e).__name__
+    if r.returncode != 0 or "SCRIPT ERROR" in r.stdout:
+        return f"exit {r.returncode}: " + " / ".join([l for l in r.stdout.splitlines() if l.strip()][-2:])[:200]
+    return None
+
+
 def deploy(root: Path, tag: str, sha: str) -> tuple[str, str]:
     """Snapshot of sha (git archive) + client build into <releases>/<tag>, via a staging directory made here and renamed.
     An existing or symlinked destination is refused, nothing is deleted except the staging directory of this call."""
@@ -545,9 +598,15 @@ def deploy(root: Path, tag: str, sha: str) -> tuple[str, str]:
         tar = subprocess.run(["tar", "-x", "-C", str(src)], input=arch.stdout, stderr=subprocess.PIPE)
         if tar.returncode != 0:
             return "FAIL", "tar: " + tar.stderr.decode(errors="replace").strip()[-200:]
+        why = add_generated_data(root, src)
+        if why:
+            return "FAIL", why
         status, detail = build_client(src, stage / "bin")
         if status != "PASS":
             return "FAIL", f"client build {status}: {detail}"
+        why = smoke_start(src, stage / "bin")
+        if why:
+            return "FAIL", "smoke start: " + why
         (stage / "RELEASE").write_text(f"{tag} {sha}\n", encoding="utf-8")
         os.rename(stage, dest)
         return "PASS", f"{dest}: {detail}"

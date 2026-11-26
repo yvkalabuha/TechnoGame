@@ -1,5 +1,6 @@
 """Tests of release.py on temporary git repositories (no push, no client, no network; the real errors.py is used)."""
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -46,9 +47,15 @@ class Repo(unittest.TestCase):
         (self.root / "src" / "Singularity.Client.Spike").mkdir(parents=True)
         (self.root / "src" / "Singularity.Client.Spike" / "project.godot").write_text("x", encoding="utf-8")
         (self.root / "run-globe-spike.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+        geo = self.root / "mods" / "core" / "map" / "geo"   # generated data: arcs.bin is git-ignored, its manifest is tracked
+        geo.mkdir(parents=True)
+        (geo / "arcs.bin").write_bytes(b"arcs-data")
+        (geo / "manifest.json").write_text(json.dumps({"files": {"arcs.bin": {"sha256": hashlib.sha256(b"arcs-data").hexdigest()}}}), encoding="utf-8")
+        (self.root / ".gitignore").write_text("mods/core/map/geo/arcs.bin\n", encoding="utf-8")
         self.commit("init")
         os.environ["SINGULARITY_RELEASES"] = str(self.base / "rel")
-        self.godot_ok = script(self.base / "godot-ok", "exit 0")
+        self.godot_ok = script(self.base / "godot-ok", 'case "$*" in *--build-solutions*|*--import*) exit 0;; esac\n'
+                               'echo "$*" >> "$(dirname "$0")/smoke.log"\n[ -n "$SMOKE_TEXT" ] && echo "$SMOKE_TEXT"\nexit ${SMOKE_EXIT:-0}')
         self.godot_bad = script(self.base / "godot-bad", "echo boom; exit 1")
         os.environ["GODOT"] = str(self.godot_ok)
 
@@ -195,6 +202,48 @@ class TestApprove(Repo):
         errs = self.catalogue()
         self.assertEqual(len(errs), 1)
         self.assertIn("ERR-0001", self.report(rc).read_text(encoding="utf-8"))
+
+    def assert_no_release(self, rc):
+        self.assertEqual(release.release_tags(self.root), [])
+        self.assertFalse((self.root / "docs" / "releases" / "v0.1.md").exists())
+        self.assertIn("НА ПРОВЕРКЕ", self.report(rc).read_text(encoding="utf-8"))
+        self.assertEqual(os.listdir(self.base / "rel"), [])
+
+    def test_deployed_snapshot_holds_the_generated_map_data(self):
+        rc = self.checked_rc()
+        release.cmd_approve(self.root, rc, "#600")
+        arcs = self.base / "rel" / "v0.1" / "src" / "mods" / "core" / "map" / "geo" / "arcs.bin"
+        self.assertEqual(arcs.read_bytes(), b"arcs-data")
+
+    def test_missing_or_stale_map_data_blocks_the_release(self):
+        rc = self.checked_rc()
+        arcs = self.root / "mods" / "core" / "map" / "geo" / "arcs.bin"
+        arcs.write_bytes(b"stale")
+        with self.assertRaisesRegex(release.ReleaseError, "does not match the manifest"):
+            release.cmd_approve(self.root, rc, "#600")
+        self.assert_no_release(rc)
+        arcs.unlink()
+        with self.assertRaisesRegex(release.ReleaseError, "ensure_geo"):
+            release.cmd_approve(self.root, rc, "#600")
+        self.assert_no_release(rc)
+
+    def test_smoke_start_runs_headless_and_its_failure_means_no_tag(self):
+        rc = self.checked_rc()
+        os.environ["SMOKE_EXIT"] = "7"
+        self.addCleanup(os.environ.pop, "SMOKE_EXIT", None)
+        with self.assertRaisesRegex(release.ReleaseError, "smoke start: exit 7"):
+            release.cmd_approve(self.root, rc, "#600")
+        self.assert_no_release(rc)
+        self.assertIn("--headless", (self.base / "smoke.log").read_text(encoding="utf-8"))
+        self.assertIn("--quit", (self.base / "smoke.log").read_text(encoding="utf-8"))
+        os.environ["SMOKE_EXIT"] = "0"
+        os.environ["SMOKE_TEXT"] = "SCRIPT ERROR: Parse Error"
+        self.addCleanup(os.environ.pop, "SMOKE_TEXT", None)
+        with self.assertRaisesRegex(release.ReleaseError, "smoke start"):
+            release.cmd_approve(self.root, rc, "#600")
+        self.assert_no_release(rc)
+        os.environ.pop("SMOKE_TEXT")
+        self.assertEqual(release.cmd_approve(self.root, rc, "#600"), "v0.1")
 
     def test_missing_godot_is_a_failed_deploy_not_a_tag(self):
         rc = self.checked_rc()
@@ -428,7 +477,8 @@ class TestLabChecks(Repo):
             return ok, "done"
         return run_matrix
 
-    GOOD = "print('  PASS GAP36 USA ok')\nprint('  PASS DET threads ok')\n"
+    GOOD = ("for g in '" + " ".join(release.REQUIRED_GATES) + "'.split(): print('  PASS %s USA ok' % g)\n"
+            "print('  PASS DET threads ok')\n")
 
     def test_good_series_pass_and_record_the_commit(self):
         rows = release.lab_checks(self.tree(self.GOOD), self.base / "w", self.SHA, self.runner(self.SHA))
@@ -447,10 +497,19 @@ class TestLabChecks(Repo):
         self.assertEqual([r[1] for r in rows], ["FAIL", "FAIL"])
 
     def test_gate_fail_and_missing_det_are_told_apart(self):
-        rows = release.lab_checks(self.tree("print('  FAIL GAP36 USA 40')\nprint('  PASS DET threads ok')\n"), self.base / "w", self.SHA, self.runner(self.SHA))
+        rows = release.lab_checks(self.tree(self.GOOD + "print('  FAIL GAP36 USA 40')\n"), self.base / "w", self.SHA, self.runner(self.SHA))
         self.assertEqual([r[1] for r in rows], ["FAIL", "PASS"])
-        rows = release.lab_checks(self.tree("print('  PASS GAP36 USA')\n"), self.base / "w2", self.SHA, self.runner(self.SHA))
+        rows = release.lab_checks(self.tree(self.GOOD.replace("print('  PASS DET threads ok')", "pass")), self.base / "w2", self.SHA, self.runner(self.SHA))
         self.assertEqual([r[1] for r in rows], ["PASS", "FAIL"])
+
+    def test_gates_that_did_not_run_fail_the_gate_row(self):
+        rows = release.lab_checks(self.tree("print('  PASS GAP36 USA ok')\nprint('  PASS DET threads ok')\n"), self.base / "w", self.SHA, self.runner(self.SHA))
+        self.assertEqual([r[1] for r in rows], ["FAIL", "PASS"])
+        self.assertIn("gates not run: LIVE0", rows[0][2])
+        rows = release.lab_checks(self.tree("print('nothing')\n"), self.base / "w2", self.SHA, self.runner(self.SHA))
+        self.assertEqual([r[1] for r in rows], ["FAIL", "FAIL"])
+        rows = release.lab_checks(self.tree(self.GOOD + "print('== d: 3 runs; FAIL RUNS (не ok: [1])')\n"), self.base / "w3", self.SHA, self.runner(self.SHA))
+        self.assertEqual(rows[0][1], "FAIL")
 
     def test_l2_manifest_is_generated_with_two_thread_counts(self):
         t = self.tree(self.GOOD)
