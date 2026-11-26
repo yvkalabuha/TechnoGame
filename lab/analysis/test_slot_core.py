@@ -73,6 +73,12 @@ class SlotCoreTest(unittest.TestCase):
     def failing(self, text):
         return sorted({line.split()[1] for line in text.splitlines() if line.strip().startswith("FAIL")})
 
+    def test_zero_runs_fail(self):
+        d = self.series("empty", seeds=0)
+        code, text = self.run_main(d)
+        self.assertEqual(code, 1, text)
+        self.assertIn("нет ни одного прогона", text)
+
     def test_all_gates_pass(self):
         code, text = self.run_main(self.series("ok"))
         self.assertEqual(code, 0, text)

@@ -180,8 +180,8 @@ def report(d, countries, out=print):
     for r, v in sorted(runs.items()):
         if v["threads"] == "1" and v["status"] == "ok":
             series[v["series"]].append(r)
-    ok = not bad
-    out(f"== {d}: {len(runs)} runs; {'PASS' if not bad else 'FAIL'} RUNS (не ok: {bad})")
+    ok = bool(runs) and not bad
+    out(f"== {d}: {len(runs)} runs; {'PASS' if ok else 'FAIL'} RUNS (не ok: {bad})" + ("; нет ни одного прогона" if not runs else ""))
     for s, rs in sorted(series.items()):
         out(f"-- {s} ({len(rs)} seeds)")
         any_first = {g: [min(first[r].get((a, g), INF) for a in actors) for r in rs] for g in GENS}
