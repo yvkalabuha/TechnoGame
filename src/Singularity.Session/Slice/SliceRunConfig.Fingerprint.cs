@@ -41,8 +41,16 @@ public sealed partial record SliceRunConfig
         ];
         // Slot constants are added only when overridden: a default run keeps its fingerprint.
         if (SlotParameters is { } sp)
-            fields = [.. fields, "slotparams", string.Join(',', sp.EraPrice.IsDefault ? [] : sp.EraPrice.Select(e => e.Year + ":" + e.Mult.Raw.ToString(CultureInfo.InvariantCulture))),
-                Raw(sp.SurplusBuildShare), sp.SurplusWindowMonths.ToString(CultureInfo.InvariantCulture), sp.SurplusBuildEveryMonths.ToString(CultureInfo.InvariantCulture), sp.SurplusBuildFromYear.ToString(CultureInfo.InvariantCulture)];
+        {
+            string I(int v) => v.ToString(CultureInfo.InvariantCulture);
+            string List(ImmutableArray<Kernel.Fx6> a) => a.IsDefault ? "-" : string.Join(',', a.Select(x => Raw(x)));
+            // Every field of SlotParams, in declaration order: a new field must be added here (the guard test walks the type).
+            fields = [.. fields, "slotparams", Raw(sp.TimeBase), Raw(sp.TimeGenSlope), Raw(sp.PriceScale), Raw(sp.SpeedCap), List(sp.FocusSpeed), List(sp.FocusMoney),
+                I(sp.QueueLength), I(sp.FocusRepeatMonths), Raw(sp.ReleasedHazardShare), I(sp.MaxDirections), Raw(sp.MainWeight), Raw(sp.UnderfundedBelow),
+                Raw(sp.ResearchSpeedCap), Raw(sp.UpkeepCeilingShare), Raw(sp.AiBuildUpkeepShare), Raw(sp.AiFocusRatio1), Raw(sp.AiFocusRatio2), Raw(sp.AiFocusMargin),
+                sp.EraPrice.IsDefault ? "-" : string.Join(',', sp.EraPrice.Select(e => I(e.Year) + ":" + Raw(e.Mult))),
+                Raw(sp.SurplusBuildShare), I(sp.SurplusWindowMonths), I(sp.SurplusBuildEveryMonths), I(sp.SurplusBuildFromYear)];
+        }
         fields = [.. fields, LicenceMarket.ToString(), string.Join(',', LicenceExternalActors.IsDefault ? [] : LicenceExternalActors), Alliances?.Identity ?? "-"];
         // The adviser decides the trajectory but exists only when on: nothing is added for an off run, so its fingerprint stays what it was.
         ImmutableArray<int> adviser = EffectiveAdviserActors;

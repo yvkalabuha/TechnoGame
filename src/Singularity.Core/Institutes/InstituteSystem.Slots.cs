@@ -324,8 +324,7 @@ public sealed partial class InstituteSystem
             int busy = allBusy ? _busy!.Current[a] + 1 : 0;
             if (_busy!.Current[a] != busy)
                 _busy.Next[a] = busy;
-            if (!player)
-                AverageSurplus(a, t);
+            AverageSurplus(a, t);   // for the player's actor too: the adviser may propose a surplus build (the build itself stays AI-only)
             if (player && anyFree && FreeNoticeDue(a, t, node[..slots]))
                 _notice!.Next[a] = checked((int)t) + 1;
             if (!player)

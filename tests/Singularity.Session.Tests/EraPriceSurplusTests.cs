@@ -75,6 +75,19 @@ public class EraPriceSurplusTests
         Assert.True(on.World.Calendar.DateOf(on.Tick).Year < 1990);
     }
 
+    // Projection of the state at the start of the month 529 (1989-10) on the columns of the build before TASK-0199 (the tree of TASK-0193 merged, no inst.surplus*),
+    // taken from that build itself (commit 8a455072, seed 3, default configuration): the world before 1990 is the one of main, not only equal to a run with the rule off.
+    private const string Before1990OnMain = "fc432d8cc288dd9976096e33e25c389d2dc680277441343ffb9c5a11b9bb2e96";
+
+    [Fact]
+    public void TheWorldBefore1990_EqualsTheBuildBeforeTheTask_OnTheOldColumns()
+    {
+        SliceSession s = Make(null);
+        for (long t = 0; t <= 529; t++)
+            s.StepThroughMonth(t);
+        HashAssert.Equal(Before1990OnMain, ColumnProjection.Hash(s, n => !n.StartsWith("inst.surplus", StringComparison.Ordinal)), "old columns at month 529");
+    }
+
     [Fact]
     public void TheSurplusRule_StartsAnInstituteEarlier_WhenTheAverageReturnIsAboveTheShare_AndNeverWithoutIt()
     {
