@@ -334,8 +334,17 @@ class CatalogueDatabaseTest(unittest.TestCase):
         self.assertIn("Факты:", text)
         self.assertLessEqual(kbdocs.approx_tokens(text), 300 + 80)  # plus the header lines and the "did not fit" line
         self.assertGreater(len(kb_db.pack("TASK-0209", 3000)), len(text))
-        over = json.loads(self._q("q", "docs", "over_limit", "--json"))
-        self.assertIn("docs/ui/UI_DESIGN_SYSTEM.md", {r["path"] for r in over})
+
+    def test_over_limit_query_lists_an_oversized_document(self):
+        # Own fixture: a made-up monthly log over its limit, so the test does not depend on real file sizes.
+        rel = "docs/decisions/log/2099-01.md"
+        row, _ = kb_db.parse_doc(rel, "# big\n\n" + "x" * (kbdocs.LIMITS["monthly"] + 1), {}, {})
+        self.assertTrue(row["over_limit"])
+        kb_db.psql(kb_db.db_name(), "insert into docs (path, over_limit) values ('%s', true)" % rel, schema=True)
+        self.addCleanup(kb_db.psql, kb_db.db_name(), "delete from docs where path = '%s'" % rel, schema=True)
+        with mock.patch.object(kb_db, "sync_docs", return_value=0):  # a sync would drop the made-up row
+            over = json.loads(self._q("q", "docs", "over_limit", "--json"))
+        self.assertIn(rel, {r["path"] for r in over})
 
     def _q(self, *args):
         out = io.StringIO()

@@ -58,7 +58,8 @@ RISKS = ROOT / "development" / "RISKS.md"
 LIVING = ["CLAUDE.md", "CURRENT_STATE.md", "development/PLAN.md", "development/ROADMAP.md",
           "docs/architecture/ARCHITECTURE.md", "docs/vision/PROJECT_VISION.md",
           "docs/ui/UI_DESIGN_SYSTEM.md", "docs/game-design/M_PLAY_LOOP.md"]
-LIVING_GLOBS = [".claude/rules/*.md", ".claude/agents/*.md", ".claude/skills/*/SKILL.md"]
+LIVING_GLOBS = [".claude/rules/*.md", ".claude/agents/*.md", ".claude/skills/*/SKILL.md",
+               "docs/ui/design-system/*.md"]  # parts of the split UI_DESIGN_SYSTEM (#607)
 PATH_ROOTS = ("src/", "tests/", "tools/", "docs/", "development/", "lab/", "mods/", ".claude/", ".github/")
 ADR_STATUS = re.compile(r"\b(PROPOSED|ACCEPTED|SUPERSEDED|DEPRECATED|REJECTED)\b")
 
