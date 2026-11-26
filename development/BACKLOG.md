@@ -216,7 +216,7 @@
 | [TASK-0198](../development/tasks/TASK-0198-error-catalogue.md) | DONE | Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584) | MS-M0 |
 | [TASK-0199](../development/tasks/TASK-0199-surplus-institutes-era-price.md) | IN_PROGRESS | Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) | MS-M0 |
 | [TASK-0200](../development/tasks/TASK-0200-platform-db-postgres.md) | DONE | Platform DB index in PostgreSQL: kb_db.py build/query from registry, decisions, debt, questions, errors, agent log (#590) | MS-M0 |
-| [TASK-0201](../development/tasks/TASK-0201-platform-redis.md) | REVIEW | Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed | MS-M0 |
+| [TASK-0201](../development/tasks/TASK-0201-platform-redis.md) | IN_PROGRESS | Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed | MS-M0 |
 | [TASK-0202](../development/tasks/TASK-0202-repeat-guard-hooks.md) | DONE | Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591) | MS-M0 |
 | [TASK-0203](../development/tasks/TASK-0203-skills-shots-recheck-error.md) | DONE | Skills /shots, /recheck, /error for the Orchestrator (#591) | MS-M0 |
 | [TASK-0204](../development/tasks/TASK-0204-review-rejection-memory.md) | DONE | Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) | MS-M0 |
