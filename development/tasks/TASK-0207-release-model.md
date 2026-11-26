@@ -36,7 +36,10 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано: tools/development/release.py (rc, check, approve, release, reject, rollback), tools/development/test_release.py (14 тестов на временном git-репозитории, зелёные). Тег rc/v создаётся локально, без push и без переписывания истории; клиент не запускается (кадры — печать команды shot_batch).
+Не сделано (вне зоны developer): run-client.sh и skill /release — заготовка скрипта: tools/development/release_run-client.sh.proposed (Orchestrator кладёт в корень как run-client.sh).
+Допущения: errors.py ещё нет (TASK-0198) — запись идёт в docs/releases/errors-pending.jsonl; клиентского export_presets.cfg нет — релиз запускается из снимка исходников тега (git archive).
+Проверка: nice -n 10 python3 -m unittest tools/development/test_release.py. check/approve с реальными verify, gh, Godot не запускались.
 
 ## Цель
 #594: релиз перед каждой партией владельца и не реже раза в неделю. План: docs/reviews/platform-metrics-release-2026-11-26.md §2.
