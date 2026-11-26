@@ -1089,7 +1089,8 @@ class GuardBashDenyDbTest(unittest.TestCase):
         for cmd in ["nice psql -c 1", "nice -n 10 psql", "nice -10 psql", "timeout 5 redis-cli ping",
                     "timeout -s KILL 5 psql", "env X=1 psql", "env -S 'psql -c 1'", "xargs psql", "xargs -0 -n1 psql",
                     "sudo -u postgres psql", "stdbuf -oL redis-cli ping", "ionice -c3 psql", "chrt 10 psql",
-                    "taskset 0x3 redis-cli", "time psql", "nice timeout 5 env X=1 psql"]:
+                    "taskset 0x3 redis-cli", "time psql", "nice timeout 5 env X=1 psql", "watch -d psql -c 1",
+                    "ionice -t psql", "watch -n 5 redis-cli ping"]:
             self.assertEqual(self.call(cmd), 2, cmd)
 
     def test_heredoc_body_is_not_a_command(self):
@@ -1098,7 +1099,9 @@ class GuardBashDenyDbTest(unittest.TestCase):
                     "cat <<-EOF\n\tpsql\n\tEOF\necho done",
                     "cat <<'EOF'\n$(psql -c 1)\nEOF"]:
             self.assertEqual(self.call(cmd), 0, cmd)
-        for cmd in ["cat <<EOF\n$(psql -c 1)\nEOF", "cat <<EOF\nx\nEOF\npsql -c 1", "cat <<'A' <<B\nx\nA\ny\nB\npsql"]:
+        for cmd in ["cat <<EOF\n$(psql -c 1)\nEOF", "cat <<EOF\nx\nEOF\npsql -c 1", "cat <<'A' <<B\nx\nA\ny\nB\npsql",
+                    "bash <<'EOF'\npsql -d kb\nEOF", "sh -s <<EOF\nredis-cli ping\nEOF",
+                    'echo "a <<EOF"\npsql -d kb', "x=$((1<<n))\npsql -d kb"]:
             self.assertEqual(self.call(cmd), 2, cmd)
 
     def test_kb_test_only_for_kbtest_databases(self):

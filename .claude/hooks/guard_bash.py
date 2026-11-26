@@ -35,7 +35,7 @@ HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)\s*(\\?)(['\"]?)([A-Za-z_][\w.-]*)\3")
 
 # Command wrappers that run their arguments as a command: options that take a separate value (short letters and long
 # names) and the number of positional arguments before the command (timeout DURATION, chrt PRIORITY, taskset MASK).
-# Unknown options count as flags. A "-N" number (nice -10) is a flag.
+# Unknown options count as flags (checked against --help of the installed tools). A "-N" number (nice -10) is a flag.
 WRAPPERS: dict[str, tuple[str, set[str], int]] = {
     "nice": ("n", {"--adjustment"}, 0),
     "timeout": ("sk", {"--signal", "--kill-after"}, 1),
@@ -45,7 +45,7 @@ WRAPPERS: dict[str, tuple[str, set[str], int]] = {
     "sudo": ("ughpCDrtUTR", {"--user", "--group", "--host", "--prompt", "--close-from", "--chdir", "--role", "--type",
                              "--other-user", "--command-timeout", "--chroot"}, 0),
     "stdbuf": ("ioe", {"--input", "--output", "--error"}, 0),
-    "ionice": ("cnt", {"--class", "--classdata"}, 0),
+    "ionice": ("cn", {"--class", "--classdata"}, 0),
     "chrt": ("TPD", {"--sched-runtime", "--sched-period", "--sched-deadline"}, 1),
     "taskset": ("", set(), 1),
     "exec": ("a", set(), 0),
@@ -54,7 +54,7 @@ WRAPPERS: dict[str, tuple[str, set[str], int]] = {
     "setsid": ("", set(), 0),
     "builtin": ("", set(), 0),
     "command": ("", set(), 0),
-    "watch": ("nd", {"--interval", "--differences"}, 0),
+    "watch": ("n", {"--interval"}, 0),
 }
 
 
@@ -103,25 +103,36 @@ def skip_wrapper(ws: list[str], i: int) -> tuple[int, str | None]:
     return i, nested
 
 
-def strip_heredocs(raw: str) -> tuple[str, str]:
-    """Cut here-document bodies out of a command line: (the lines the shell parses as commands, the text to scan
-    for $() and backticks: the commands plus bodies with an unquoted delimiter, which the shell expands)."""
+def strip_heredocs(raw: str) -> tuple[str, str, list[str]]:
+    """Cut here-document bodies out of a command line. Returns the lines the shell parses as commands, the text to
+    scan for $() and backticks (the commands plus bodies with an unquoted delimiter, which the shell expands) and the
+    bodies fed to a shell (bash <<EOF), which are command lines themselves. A body whose delimiter never comes (a
+    "<<" inside quotes or $((1<<n))) is put back as command lines: fail closed."""
     cmd_lines: list[str] = []
     expanded: list[str] = []
-    pending: list[tuple[str, bool, bool]] = []  # (delimiter, strip leading tabs, expanded)
+    shell_bodies: list[str] = []
+    pending: list[tuple[str, bool, bool, bool]] = []  # (delimiter, strip leading tabs, expanded, fed to a shell)
+    body: list[str] = []
     for line in raw.split("\n"):
         if pending:
-            delim, tabs, exp = pending[0]
+            delim, tabs, exp, to_shell = pending[0]
             if (line.lstrip("\t") if tabs else line) == delim:
                 pending.pop(0)
-            elif exp:
-                expanded.append(line)
+                if exp:
+                    expanded += body
+                if to_shell:
+                    shell_bodies.append("\n".join(body))
+                body = []
+            else:
+                body.append(line)
             continue
         cmd_lines.append(line)
+        to_shell = any(os.path.basename(w) in SHELLS for w in re.split(r"[\s;&|()]+", line))
         for m in HEREDOC.finditer(line):
-            pending.append((m.group(4), m.group(1) == "-", not (m.group(2) or m.group(3))))
+            pending.append((m.group(4), m.group(1) == "-", not (m.group(2) or m.group(3)), to_shell))
+    cmd_lines += body
     main = "\n".join(cmd_lines)
-    return main, "\n".join([main] + expanded)
+    return main, "\n".join([main] + expanded), shell_bodies
 
 
 PSQL_ARG = set("cdfvPhpUoLTFR")
@@ -176,10 +187,12 @@ def db_commands(raw: str, depth: int = 0, kb_env: bool = False) -> list[str]:
     closed). An unreadable line falls back to a plain word search (fail closed). A psql on a kbtest_* database passes
     when its leading assignments set SINGULARITY_KB_TEST or kb_env is true (the hook's own environment sets it)."""
     found: list[str] = []
-    main, scan = strip_heredocs(raw)
+    main, scan, shell_bodies = strip_heredocs(raw)
     if depth < 3:
         for m in SUBST.finditer(scan):
             found += db_commands(m.group(1) if m.group(1) is not None else m.group(2), depth + 1, kb_env)
+        for b in shell_bodies:
+            found += db_commands(b, depth + 1, kb_env)
     try:
         lex = shlex.shlex(re.sub(r"\\\n", " ", main).replace("\n", " ; "), posix=True, punctuation_chars=True)
         lex.whitespace_split = True
