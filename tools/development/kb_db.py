@@ -7,7 +7,7 @@ land_failures), which keep soft-deleted rows (deleted_at) between rebuilds.
 
   kb_db.py build [--quiet]            rebuild the index from files
   kb_db.py q TABLE [filter ...] [--json]  short filter query, one line per row
-  kb_db.py sql "SELECT ..."           read-only SQL (or SQL on stdin)
+  kb_db.py sql "SELECT ..."           SQL, read-only by default (or SQL on stdin)
   kb_db.py status                     database, row counts, freshness
   kb_db.py forget TABLE KEY_PREFIX    soft-delete a journal row
 
@@ -22,7 +22,8 @@ Examples:
   kb_db.py q items status=REVIEW agent=developer
   kb_db.py q agents 'silent>2h'     (quote it: the shell reads > as a redirect; silent=2h also works)
 
-Connection: local socket, peer authentication of the current user, database
+"sql" only sets default_transaction_read_only: this is a guard against slips, not a
+sandbox (SQL can lift it); backslash commands are refused. Connection: local socket, peer authentication of the current user, database
 singularity_kb (env SINGULARITY_KB_DB, created on first use). No passwords, no
 driver: the psql client is used. Without PostgreSQL "build --quiet" does nothing.
 """
@@ -44,6 +45,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 SOCKET_DIR = os.environ.get("SINGULARITY_KB_SOCKET", "/var/run/postgresql")
 DEFAULT_DB = "singularity_kb"
+PSQL_TIMEOUT = 60
+GIT_TIMEOUT = 10
+# Bump when a table or column changes: it forces a rebuild of an index made by older code.
+SCHEMA = 1
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # --------------------------------------------------------------------------
@@ -176,6 +181,8 @@ def parse_debt(text: str) -> list[dict]:
             continue
         if len(c) == 5:  # older rows without the "Где" column
             c = [c[0], c[1], "", c[2], c[3], c[4]]
+        elif len(c) == 3:  # multi-line review rows: id, text, status
+            c = [c[0], c[1], "", "", "", c[2]]
         c = (c + [""] * 6)[:6]
         st = c[5]
         closed = valid_date(st) if debt_status(st) == "closed" else None
@@ -279,6 +286,19 @@ def parse_journal(lines: list[str], kind: str) -> list[dict]:
 # --------------------------------------------------------------------------
 
 
+def git_common_parent() -> Path | None:
+    """Parent of the git common dir: the main checkout, also from inside a worktree."""
+    try:
+        r = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=ROOT, text=True,
+                           capture_output=True, timeout=GIT_TIMEOUT)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    common = Path(r.stdout.strip())
+    return (common if common.is_absolute() else ROOT / common).resolve().parent
+
+
 def state_dir() -> Path:
     """.claude/.state of this tree, else of the main checkout (worktrees have none)."""
     env = os.environ.get("SINGULARITY_STATE")
@@ -287,12 +307,8 @@ def state_dir() -> Path:
     local = ROOT / ".claude" / ".state"
     if local.is_dir():
         return local
-    r = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=ROOT, text=True, capture_output=True)
-    if r.returncode == 0 and r.stdout.strip():
-        common = Path(r.stdout.strip())
-        common = common if common.is_absolute() else ROOT / common
-        return common.parent / ".claude" / ".state"
-    return local
+    common = git_common_parent()
+    return common / ".claude" / ".state" if common else local
 
 
 def source_files() -> list[Path]:
@@ -307,7 +323,7 @@ def source_files() -> list[Path]:
 
 
 def fingerprint() -> str:
-    h = hashlib.sha1(str(ROOT).encode())
+    h = hashlib.sha1(f"{SCHEMA}\0{ROOT}".encode())
     for f in source_files():
         st = f.stat()
         h.update(f"{f}\0{st.st_mtime_ns}\0{st.st_size}\n".encode())
@@ -369,8 +385,12 @@ def db_name() -> str:
 
 
 def psql(db: str, sql: str, *flags: str) -> str:
-    cmd = ["psql", "-X", "-q", "-h", SOCKET_DIR, "-d", db, "-v", "ON_ERROR_STOP=1", *flags]
-    r = subprocess.run(cmd, input=sql, text=True, capture_output=True)
+    # -w: never prompt for a password; the timeout keeps a hung server from hanging callers
+    cmd = ["psql", "-X", "-q", "-w", "-h", SOCKET_DIR, "-d", db, "-v", "ON_ERROR_STOP=1", *flags]
+    try:
+        r = subprocess.run(cmd, input=sql, text=True, capture_output=True, timeout=PSQL_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise PgError(f"psql timed out after {PSQL_TIMEOUT} s")
     if r.returncode != 0:
         raise PgError(r.stderr.strip() or f"psql exit {r.returncode}")
     return r.stdout
@@ -456,6 +476,8 @@ def build_script(data: dict[str, list[dict]], fp: str) -> str:
 
 
 def build(quiet: bool = False) -> int:
+    if quiet and git_common_parent() != ROOT.resolve():
+        return 0  # a worktree must not overwrite the index of the main checkout
     if not available():
         if not quiet:
             print("kb_db: PostgreSQL is not available (psql or socket)", file=sys.stderr)
@@ -610,6 +632,9 @@ def cmd_q(args) -> int:
 
 def cmd_sql(args) -> int:
     query = " ".join(args.query) if args.query else sys.stdin.read()
+    if any(l.lstrip().startswith("\\") for l in query.splitlines()):
+        print("kb_db: psql backslash commands are not allowed", file=sys.stderr)
+        return 2
     try:
         if not available():
             print("kb_db: PostgreSQL is not available", file=sys.stderr)

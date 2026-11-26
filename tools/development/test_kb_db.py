@@ -45,6 +45,16 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(rows["DEBT-0001"]["closed"])
         self.assertEqual(rows["DEBT-0004"]["area"], "")
 
+    def test_debt_three_cell_multiline_row(self):
+        text = ("| ID | Долг | Где | Почему | План | Статус |\n|---|---|---|---|---|---|\n"
+                "| DEBT-0040 | TASK-0068 review (reviewer, low).\n- first item\n- second | Open |\n"
+                "| DEBT-0041 | next | Закрыт 2026-11-20 |\n")
+        rows = {r["id"]: r for r in kb_db.parse_debt(text)}
+        self.assertEqual(rows["DEBT-0040"]["status"], "open")
+        self.assertEqual(rows["DEBT-0040"]["area"], "")
+        self.assertIn("second", rows["DEBT-0040"]["text"])
+        self.assertEqual(rows["DEBT-0041"]["closed"], "2026-11-20")
+
     def test_orch_rows(self):
         text = "| № | Дата | Решение | Основание | Где |\n|---|---|---|---|---|\n| O-007 | 2026-11-19 | t | b | a |\n"
         self.assertEqual(kb_db.parse_orch(text)[0]["num"], 7)
@@ -84,6 +94,25 @@ class ParserTests(unittest.TestCase):
         a = kb_db.parse_journal([line], "hook")[0]
         self.assertEqual(a["key"], kb_db.parse_journal([line], "hook")[0]["key"])
         self.assertEqual((a["who"], a["msg"]), ("guard", "no"))
+
+
+class SafetyTests(unittest.TestCase):
+    def test_quiet_build_skips_outside_main_worktree(self):
+        old = kb_db.git_common_parent
+        kb_db.git_common_parent = lambda: Path("/nonexistent/main")
+        try:
+            self.assertEqual(kb_db.build(quiet=True), 0)  # returns before touching PostgreSQL
+        finally:
+            kb_db.git_common_parent = old
+
+    def test_schema_is_in_fingerprint(self):
+        a = kb_db.fingerprint()
+        old = kb_db.SCHEMA
+        kb_db.SCHEMA = old + 1
+        try:
+            self.assertNotEqual(a, kb_db.fingerprint())
+        finally:
+            kb_db.SCHEMA = old
 
 
 class QueryBuilderTests(unittest.TestCase):
@@ -158,6 +187,12 @@ class DatabaseTests(unittest.TestCase):
         self.assertTrue(json.loads(self.run_q("q", "decisions", "num=590", "--json")))
         self.assertIn("zz1", self.run_q("q", "agents", "silent>2h"))
         self.assertIn("zz1", self.run_q("sql", "select agent_id from agent_runs"))
+
+    def test_02a_sql_refuses_backslash_commands(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rc = kb_db.main(["sql", "select 1;\n\\! echo hi"])
+        self.assertEqual(rc, 2)
 
     def test_02_sql_is_read_only(self):
         with self.assertRaises(kb_db.PgError):
