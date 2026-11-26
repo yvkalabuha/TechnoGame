@@ -55,3 +55,8 @@ created: 2026-11-26
 - Без сервиса (SINGULARITY_LLM_LIMITS=off или порт закрыт) все тесты и поведение как до задачи.
 - С подменой «codex out до T» второе ревью сразу идёт на следующего провайдера, в записи причина и T.
 - capacity.py печатает строку лимитов не дольше чем за 2 с при недоступном сервисе.
+
+## Результат части 1 (2026-11-26)
+- 44a6b729, 240a35f0: llm_limits.py/.yaml, capacity.py (строка limits, поле limits в --json), llm_worker review пропускает провайдера в состоянии out; тесты llm_worker 625 OK.
+- reviewer: CHANGES (44a6b729: bad payload medium, 2 low) → APPROVE (240a35f0). Второе ревью: agy-sonnet (claude-sonnet-5-5-medium) accept, 2 findings, record review-TASK-0211-240a35f0-agy-sonnet.json.
+- Влито 75c8f9f. Часть 2 (строка сессии, #606) — после TASK-0209.
