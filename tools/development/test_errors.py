@@ -63,7 +63,60 @@ class ErrorsTest(unittest.TestCase):
         seven, thirty = out.split("30 days")
         self.assertIn("7 days: 2 occurrence(s), repeats 2 (100%)", seven)
         self.assertIn("3 occurrence(s), repeats 2 (66%)", thirty)
-        self.assertIn("by executor: orchestrator 3", thirty)
+        self.assertIn("repeats by executor: orchestrator 2", thirty)
+
+    def test_leaderboard_ranks_repeats_not_first_occurrences(self):
+        self.run_cli("add", "--executor", "agent:a", "--kind", "code", "--area", "x", "--symptom", "one", today="2026-11-25")
+        self.run_cli("add", "--executor", "agent:b", "--kind", "ui", "--area", "x", "--symptom", "two", today="2026-11-25")
+        self.run_cli("add", "--executor", "agent:c", "--kind", "ui", "--area", "x", "--symptom", "three", today="2026-11-25")
+        self.run_cli("repeat", "ERR-0001", today="2026-11-26")
+        self.run_cli("repeat", "ERR-0001", today="2026-11-27")
+        _, out = self.run_cli("stats", today="2026-11-27")
+        self.assertIn("repeats by kind: code 2", out.split("30 days")[0])
+        self.assertNotIn("ui", out.split("30 days")[0].split("repeats by kind:")[1].splitlines()[0])
+
+    def test_russian_symptoms_are_distinct_keys(self):
+        for s in ("Агент запущен до коммита задачи", "Кадры сняты на старой версии"):
+            self.run_cli("add", "--executor", "orchestrator", "--kind", "process", "--area", "a", "--symptom", s)
+        self.assertEqual(len(errors.load(self.file)), 2)
+        self.run_cli("add", "--executor", "orchestrator", "--kind", "process", "--area", "a",
+                     "--symptom", "агент запущен ДО коммита задачи!", today="2026-11-27")
+        e = errors.load(self.file)
+        self.assertEqual((len(e), e[0]["repeats"]), (2, ["2026-11-27"]))
+
+    def test_malformed_root_is_an_error(self):
+        for body in ("- a\n- b\n", "errors: 5\n", "errors:\n  - just text\n", "just text\n"):
+            self.file.write_text(body, encoding="utf-8")
+            rc, out = self.run_cli("check")
+            self.assertEqual(rc, 1, body)
+            self.assertIn("ERROR", out)
+
+    def test_import_keeps_lines_appended_during_import(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        src = self.state / "land_failures.jsonl"
+        src.write_text(json.dumps({"t": t, "code": 1, "branch": "b1"}) + "\n", encoding="utf-8")
+        claimed = errors.claim_sources(self.state)
+        self.assertFalse(src.exists())  # claimed atomically: a new line now goes to a fresh file
+        src.write_text(json.dumps({"t": t, "code": 6, "branch": "b2"}) + "\n", encoding="utf-8")
+        drafts, _ = errors.state_drafts(claimed)
+        self.assertEqual(len(drafts), 1)
+        self.assertTrue(src.exists())
+        _, out = self.run_cli("import")
+        self.assertIn("1 event(s), 1 new draft(s)", out)
+
+    def test_from_review_record_json(self):
+        rec = self.tmp / "review-TASK-0009-abc-codex.json"
+        rec.write_text(json.dumps({"kind": "review", "task": "TASK-0009", "result": {
+            "verdict": "changes_requested", "summary": "s", "findings": [
+                {"severity": "high", "path": "a.py", "line": 5, "claim": "key drops letters", "evidence": ""},
+                {"severity": "low", "path": "b.py", "line": 1, "claim": "naming", "evidence": ""}]}}), encoding="utf-8")
+        self.run_cli("add", "--from-review", str(rec))
+        e = errors.load(self.file)
+        self.assertEqual([x["area"] for x in e], ["TASK-0009", "TASK-0009"])
+        self.assertIn("a.py:5 key drops letters", e[0]["symptom"])
+        rec.write_text(json.dumps({"kind": "review", "task": "TASK-0009", "result": {
+            "verdict": "accept", "summary": "s", "findings": []}}), encoding="utf-8")
+        self.assertIn("nothing added", self.run_cli("add", "--from-review", str(rec))[1])
 
     def test_import_drafts_ignores_guard_load_and_empties_sources(self):
         t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
@@ -77,7 +130,7 @@ class ErrorsTest(unittest.TestCase):
         e = errors.load(self.file)
         self.assertEqual({x["status"] for x in e}, {"open"})
         self.assertEqual(errors.validate(e), [])
-        self.assertEqual((self.state / "land_failures.jsonl").read_text(), "")
+        self.assertEqual(list(self.state.iterdir()), [])  # sources consumed and removed
         _, out = self.run_cli("import")
         self.assertIn("0 event(s)", out)
 
@@ -93,8 +146,11 @@ class ErrorsTest(unittest.TestCase):
 
     def test_digest_dry_run_scans_and_sends_nothing(self):
         self.run_cli("add", *BASE)
-        rc, out = self.run_cli("digest", "--dry-run", "--out", str(self.tmp / "d"))
-        self.assertIn("nothing sent" if rc == 0 else "digest refused", out)
+        calls = []
+        out = errors.run_digest(errors.load(self.file), dt.date(2026, 11, 26), self.tmp / "d", dry_run=True,
+                                make_provider=lambda: calls.append(1))
+        self.assertIn("nothing sent", out)
+        self.assertEqual(calls, [])  # the provider is never even built
         self.assertFalse((self.tmp / "d").exists())
 
     def test_digest_writes_report_with_injected_provider(self):
@@ -125,7 +181,7 @@ class ErrorsTest(unittest.TestCase):
         self.assertIn("stale client", out.read_text(encoding="utf-8"))
 
     def test_land_failure_log(self):
-        land.log_failure(self.tmp, 1, "agent-x")
+        land.log_failure(self.tmp, 1, "agent-x")  # branch comes from the parsed args (run(info))
         rec = json.loads((self.tmp / ".claude" / ".state" / "land_failures.jsonl").read_text())
         self.assertEqual((rec["code"], rec["branch"]), (1, "agent-x"))
 

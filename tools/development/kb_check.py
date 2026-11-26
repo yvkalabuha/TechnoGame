@@ -177,7 +177,10 @@ def cmd_check(args) -> int:
     if not args.file:
         check_facts(facts, warnings)
         import errors as catalogue  # development/errors.yaml schema (owner #584)
-        errors += [f"errors.yaml: {e}" for e in catalogue.validate(catalogue.load(catalogue.ERRORS))]
+        try:
+            errors += [f"errors.yaml: {e}" for e in catalogue.validate(catalogue.load(catalogue.ERRORS))]
+        except ValueError as ex:
+            errors.append(f"errors.yaml: {ex}")
     if args.brief:
         if errors or warnings:
             print(f"{len(errors)} error(s), {len(warnings)} warning(s) (python3 tools/development/kb_check.py check)")

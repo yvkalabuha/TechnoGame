@@ -88,9 +88,9 @@ def silent_agents(now: float, hours: float) -> list[dict]:
 
 
 def red_ci_event() -> dict | None:
-    """The latest CI run on main when it failed: {"date", "title"}; None when green, running or gh is unavailable."""
+    """The latest completed run of the CI workflow on main when it failed: {"date", "title"}; None otherwise."""
     try:
-        r = subprocess.run(["gh", "run", "list", "--branch", "main", "--limit", "1",
+        r = subprocess.run(["gh", "run", "list", "--branch", "main", "--workflow", "CI", "--status", "completed", "--limit", "1",
                             "--json", "conclusion,displayTitle,createdAt"],
                            cwd=ROOT, text=True, capture_output=True, timeout=20)
         runs = json.loads(r.stdout) if r.returncode == 0 else []

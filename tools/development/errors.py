@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -48,22 +49,33 @@ HEADER = ("# Platform error catalogue (owner #584). Edit with tools/development/
 
 
 def norm_key(kind: str, area: str, symptom: str) -> str:
-    words = re.sub(r"[^a-z0-9]+", " ", symptom.lower().replace("_", " ")).split()
+    words = re.sub(r"[\W_]+", " ", symptom.casefold()).split()  # Unicode-aware: Russian symptoms keep their letters
     return f"{kind}|{area.lower()}|{' '.join(words)[:60]}"
 
 
 def load(path: Path) -> list[dict]:
     if not path.exists():
         return []
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    items = data.get("errors") if isinstance(data, dict) else None
+    """Raises ValueError for a malformed file: a wrong root or entry type is an error, never an empty catalogue."""
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as ex:
+        raise ValueError(f"{path.name}: invalid YAML: {ex}") from None
+    if data is None:
+        return []
+    if not isinstance(data, dict) or not isinstance(data.get("errors"), list):
+        raise ValueError(f"{path.name}: the root must be a mapping with an 'errors' list")
     out = []
-    for e in items or []:
+    for n, e in enumerate(data["errors"], 1):
+        if not isinstance(e, dict):
+            raise ValueError(f"{path.name}: entry #{n} is not a mapping")
         e = dict(e)
-        for k in ("date",):
-            if k in e:
-                e[k] = str(e[k])
-        e["repeats"] = [str(d) for d in (e.get("repeats") or [])]
+        if "date" in e:
+            e["date"] = str(e["date"])
+        reps = e.get("repeats") or []
+        if not isinstance(reps, list):
+            raise ValueError(f"{path.name}: entry #{n}: repeats must be a list")
+        e["repeats"] = [str(d) for d in reps]
         out.append(e)
     return out
 
@@ -137,16 +149,16 @@ def occurrences(e: dict) -> list[str]:
 def window_stats(entries: list[dict], today: dt.date, days: int) -> dict:
     lo = (today - dt.timedelta(days=days)).isoformat()
     total = repeats = 0
-    by_kind: dict[str, int] = {}
+    by_kind: dict[str, int] = {}  # the leaderboards rank repeats, not first occurrences
     by_exec: dict[str, int] = {}
     for e in entries:
         n = 0
         for i, d in enumerate(occurrences(e)):
             if lo < d <= today.isoformat():
-                n += 1
+                total += 1
                 if i:
-                    repeats += 1
-        total += n
+                    n += 1
+        repeats += n
         if n:
             by_kind[e["kind"]] = by_kind.get(e["kind"], 0) + n
             by_exec[e["executor"]] = by_exec.get(e["executor"], 0) + n
@@ -163,16 +175,32 @@ def parse_prevention(s: str) -> dict:
     return {"kind": kind.strip(), "ref": ref.strip()}
 
 
-def review_draft(path: Path) -> dict | None:
-    """Fields of a draft from a reviewer file, or None when the verdict is not CHANGES."""
-    lines = path.read_text(encoding="utf-8").splitlines()
+def review_drafts(path: Path) -> list[dict]:
+    """Drafts from a reviewer file with verdict CHANGES; [] otherwise.
+    Two shapes: a llm_worker review record (JSON, one draft per finding) or a markdown review."""
+    text = path.read_text(encoding="utf-8")
+    if text.lstrip().startswith("{"):
+        try:
+            rec = json.loads(text)
+        except ValueError:
+            return []
+        res = rec.get("result") or rec
+        if res.get("verdict") != "changes_requested":
+            return []
+        area = str(rec.get("task") or path.stem)
+        found = res.get("findings") or []
+        return [{"kind": "code", "area": area, "found_by": "reviewer",
+                 "symptom": f"[{f.get('severity', '?')}] {f.get('path', '')}:{f.get('line', '')} {f.get('claim', '')}"[:200]}
+                for f in found] or [{"kind": "code", "area": area, "found_by": "reviewer",
+                                     "symptom": str(res.get("summary", "changes requested"))[:200]}]
+    lines = text.splitlines()
     for i, l in enumerate(lines):
         if re.search(r"(?i)(verdict|вердикт|status)\W+\**\s*changes", l):
             rest = [x.strip(" -*#") for x in lines[i + 1:] if x.strip(" -*#")]
             task = re.search(r"TASK-\d{4}", path.name + " " + " ".join(lines[:30]))
-            return {"kind": "code", "area": task.group(0) if task else path.stem,
-                    "symptom": (rest[0] if rest else l.strip())[:200], "found_by": "reviewer"}
-    return None
+            return [{"kind": "code", "area": task.group(0) if task else path.stem,
+                     "symptom": (rest[0] if rest else l.strip())[:200], "found_by": "reviewer"}]
+    return []
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -186,17 +214,31 @@ def read_jsonl(path: Path) -> list[dict]:
     return out
 
 
-def state_drafts(state: Path) -> tuple[list[dict], int]:
+def claim_sources(state: Path) -> dict[str, list[Path]]:
+    """Atomically move each source to <name>.importing.<pid>: lines appended while the import runs go to a fresh
+    file and are never lost. Leftovers of a crashed import are picked up too."""
+    out: dict[str, list[Path]] = {}
+    for name in SOURCES:
+        p = state / name
+        if p.exists():
+            os.replace(p, state / f"{name}.importing.{os.getpid()}")
+        out[name] = sorted(state.glob(name + ".importing.*"))
+    return out
+
+
+def state_drafts(claimed: dict[str, list[Path]]) -> tuple[list[dict], int]:
     """Drafts from hook refusals and land failures, and the number of ignored lines."""
     drafts, skipped = [], 0
-    for r in read_jsonl(state / "hook_refusals.jsonl"):
+    hooks = [r for p in claimed.get("hook_refusals.jsonl", []) for r in read_jsonl(p)]
+    lands = [r for p in claimed.get("land_failures.jsonl", []) for r in read_jsonl(p)]
+    for r in hooks:
         hook = str(r.get("hook", "hook"))
         if hook in IGNORED_HOOKS:
             skipped += 1
             continue
         drafts.append({"date": day(r.get("t")), "executor": f"tool:{hook}", "kind": "process", "area": "hooks",
                        "symptom": f"{hook} refused: {str(r.get('msg', ''))[:120]}", "found_by": "hook"})
-    for r in read_jsonl(state / "land_failures.jsonl"):
+    for r in lands:
         code = r.get("code")
         why = "second review missing or not passed" if code == 6 else "verify failed on the merged tree"
         drafts.append({"date": day(r.get("t")), "executor": "tool:land.py", "kind": "process" if code == 6 else "code",
@@ -287,7 +329,11 @@ def main(argv=None) -> int:
     sub.add_parser("check")
     args = ap.parse_args(argv)
     today = args.today or dt.date.today().isoformat()
-    entries = load(args.file)
+    try:
+        entries = load(args.file)
+    except ValueError as ex:
+        print(f"ERROR   {ex}")
+        return 1
 
     if args.cmd == "check":
         errs = validate(entries)
@@ -297,11 +343,15 @@ def main(argv=None) -> int:
         return 1 if errs else 0
     if args.cmd == "add":
         if args.from_review:
-            draft = review_draft(args.from_review)
-            if draft is None:
+            drafts = review_drafts(args.from_review)
+            if not drafts:
                 print("not a CHANGES verdict: nothing added")
                 return 0
-            f = {**draft, "executor": args.executor or "agent:developer"}
+            for dft in drafts:
+                e, new = add_entry(entries, today, **dft, executor=args.executor or "agent:developer")
+                print(f"{e['id']} {'added' if new else 'repeat recorded'}")
+            save(args.file, entries)
+            return 0
         else:
             f = {k: getattr(args, k) for k in ("executor", "kind", "area", "symptom", "cause", "found_by", "cost", "fix")}
             if not (f["executor"] and f["kind"] and f["area"] and f["symptom"]):
@@ -333,8 +383,8 @@ def main(argv=None) -> int:
             s = window_stats(entries, t, days)
             share = f"{100 * s['repeats'] // s['total']}%" if s["total"] else "-"
             print(f"{days} days: {s['total']} occurrence(s), repeats {s['repeats']} ({share})")
-            print(f"  by kind: {top(s['kind'])}")
-            print(f"  by executor: {top(s['executor'])}")
+            print(f"  repeats by kind: {top(s['kind'])}")
+            print(f"  repeats by executor: {top(s['executor'])}")
         return 0
     if args.cmd in ("repeat", "close"):
         e = next((x for x in entries if x["id"] == args.id), None)
@@ -362,7 +412,8 @@ def main(argv=None) -> int:
         print(f"{e['id']} {e['status']}")
         return 0
     if args.cmd == "import":
-        drafts, skipped = state_drafts(args.state)
+        claimed = claim_sources(args.state)
+        drafts, skipped = state_drafts(claimed)
         if args.ci:
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             import watch
@@ -376,10 +427,8 @@ def main(argv=None) -> int:
             new += is_new
         if drafts:
             save(args.file, entries)
-        for name in SOURCES:
-            p = args.state / name
-            if p.exists():
-                p.write_text("", encoding="utf-8")
+        for p in (q for ps in claimed.values() for q in ps):
+            p.unlink()  # after the save: a crash keeps the claimed files for the next import
         print(f"import: {len(drafts)} event(s), {new} new draft(s), {skipped} ignored")
         return 0
     if args.cmd == "digest":

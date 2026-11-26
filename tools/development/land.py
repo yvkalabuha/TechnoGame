@@ -159,16 +159,16 @@ def main() -> int:
     os.ftruncate(fd, 0)
     os.write(fd, str(os.getpid()).encode())  # information only
     try:
-        rc = run()
+        info: dict = {}
+        rc = run(info)
         if rc in (1, 6):
-            names = [a for a in sys.argv[1:] if not a.startswith("-")]
-            log_failure(main_worktree(), rc, names[0] if names else "?")
+            log_failure(main_worktree(), rc, info.get("branch", "?"))
         return rc
     finally:
         os.close(fd)  # releases the lock
 
 
-def run() -> int:
+def run(info: dict | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("branch")
     ap.add_argument("-m", "--message", required=True)
@@ -181,6 +181,8 @@ def run() -> int:
     ap.add_argument("--allow-status", action="store_true",
                     help="accept status changes made on the branch (new items only)")
     args = ap.parse_args()
+    if info is not None:
+        info["branch"] = args.branch
 
     root = main_worktree()
     head = git("rev-parse", "--abbrev-ref", "HEAD", cwd=root).stdout.strip()
