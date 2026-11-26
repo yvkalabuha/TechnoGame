@@ -21,6 +21,8 @@ from _common import block, project_dir, read_input
 
 OK_STATUS = {"APPROVED", "IN_PROGRESS", "REVIEW"}
 READ_ONLY = {"reviewer", "critic", "advocate", "claude-code-guide", "Explore", "web-fetch"}
+# Running agents of these types never hold a task: they review or research beside the agent that writes it.
+NOT_OWNERS = READ_ONLY | {"ui-art-director", "research-scientist", "Plan"}
 TASK_RE = re.compile(r"TASK-\d{4}")
 STALE_H = 3.0
 
@@ -113,7 +115,7 @@ def running_agents(root, tasks: set[str], now: float) -> list[str]:
     out = []
     for key, e in launched.items():
         age_h = (now - float(e.get("t") or 0.0)) / 3600.0
-        if key in stopped or age_h > STALE_H:
+        if key in stopped or age_h > STALE_H or e.get("agent_type") in NOT_OWNERS:
             continue
         theirs = set(target_tasks({"description": e.get("description"), "prompt": " ".join(e.get("tasks") or [])}))
         both = sorted(theirs & tasks)

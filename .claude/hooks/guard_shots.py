@@ -47,7 +47,8 @@ def analyse(raw: str, cwd: str) -> tuple[list[tuple[str | None, bool, bool]], st
     quotes are removed, "( ... )" keeps a cd inside it, a cd in a pipeline, in the background or after ||
     makes the directory unknown."""
     try:
-        lex = shlex.shlex(raw, posix=True, punctuation_chars=True)
+        # a newline separates commands like ";" (shlex would read it as blank space)
+        lex = shlex.shlex(re.sub(r"\\\n", " ", raw).replace("\n", " ; "), posix=True, punctuation_chars=True)
         lex.whitespace_split = True
         lex.commenters = ""
         tokens = list(lex)
@@ -127,7 +128,10 @@ def checkout_problem(where: str) -> str | None:
         return f"{where} lacks {MODEL_COMMIT} (new model): merge main into its branch"
     if rc != 0:
         return f"cannot check {where} for {MODEL_COMMIT} (not a git checkout or git error)"
-    rc, behind = git(where, "log", "--format=%h", "HEAD..main", "--", CLIENT_DIR)
+    rc, top = git(where, "rev-parse", "--show-toplevel")
+    if rc != 0 or not top:
+        return f"cannot find the checkout root of {where} (git error)"
+    rc, behind = git(top, "log", "--format=%h", "HEAD..main", "--", f":(top){CLIENT_DIR}")
     if rc != 0:
         return f"cannot compare {where} with main (git error)"
     if behind:
@@ -143,19 +147,22 @@ def main() -> None:
     m = LAUNCH.search(cmd)
     if not m and not launches and not problem:
         return
-    if m and m.group(1).startswith("Godot_v") and re.search(r"--headless\b", cmd):
-        return  # imports and builds without a window
-    if not m and launches and all(h for _, _, h in launches):
-        return  # a quoted Godot path run headless
+    # Every launcher counts; only a headless Godot run (import, build) is exempt, and only itself.
+    active = [(d, s) for d, s, h in launches if not h]
+    if m and not launches and not (all(x.startswith("Godot_v") for x in LAUNCH.findall(cmd))
+                                   and re.search(r"--headless\b", cmd)):
+        active.append((None, bool(SHOT_FLAGS.search(cmd))))  # launcher text not read as a command
+    if not active and not problem:
+        return
     if not permit_live():
         block("Blocked: the game client starts only with the owner's permission (no live permit). "
               "Finish code and tests, then report the frames you need; the Orchestrator asks the owner and runs one batch.")
-    shot = bool(SHOT_FLAGS.search(cmd)) or any(s for _, s, _ in launches) or bool(problem)
+    shot = any(s for _, s in active) or bool(problem) or bool(SHOT_FLAGS.search(cmd)) and not launches
     if shot and not re.search(r"(^|\s)--only(\s|=)", cmd) and not re.search(r"(^|[\s;&(])SHOTS_FULL=1\s", cmd):
         block("Blocked: a shot run must name its frames with --only a,b,c* (one batch, no full set for one fix).")
     if not shot:
         return
-    dirs = [d for d, s, _ in launches if s] or [d for d, _, _ in launches]
+    dirs = [d for d, s in active if s] or [d for d, _ in active]
     if problem or not dirs or None in dirs:
         block("Blocked (ERR-0001): cannot tell which checkout the shots run from ("
               + (problem or "the directory of the launch is unknown") + "). Run the launcher from the worktree "

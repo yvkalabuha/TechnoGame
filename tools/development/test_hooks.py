@@ -586,6 +586,13 @@ class GuardDispatchTest(unittest.TestCase):
         self.assertEqual(self.call("do TASK-0004", description="TASK-0004"), 0)
         self.assertEqual(self.call("do TASK-0001", description="TASK-0001 [redispatch]"), 0)
 
+    def test_running_read_only_agent_does_not_hold_the_task(self):
+        now = time.time()
+        self.agents(*[{"t": now - 60, "event": "launched", "agent_type": t, "description": "TASK-0001 review",
+                       "tasks": ["TASK-0001"], "agent_id": f"r{i}"}
+                      for i, t in enumerate(["reviewer", "Explore", "ui-art-director", "research-scientist"])])
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001 fix"), 0)
+
     def test_stopped_stale_and_start_only_records_do_not_block(self):
         now = time.time()
         self.agents({"t": now - 60, "event": "start", "description": "TASK-0001", "tasks": ["TASK-0001"]},
@@ -670,6 +677,25 @@ class GuardShotsBranchTest(unittest.TestCase):
         name = "./run-globe" + "-spike.sh"
         self.assertEqual(self.call(f"(cd {self.wt['fresh']} && pwd); {name} --shots --only a", cwd=self.wt["old"]), 2)
         self.assertEqual(self.call(f"cd {self.wt['fresh']} && {name} --shots --only a", cwd=self.wt["old"]), 0)
+
+    def test_newline_separates_commands(self):
+        name = "./run-globe" + "-spike.sh"
+        cmd = f"cd {self.wt['fresh']} && pwd\ncd {self.wt['old']} && {name} --shots --only a"
+        self.assertEqual(self.call(cmd), 2)
+        cmd = f"cd {self.wt['old']} && pwd\ncd {self.wt['fresh']} && \\\n{name} --shots --only a"
+        self.assertEqual(self.call(cmd), 0)
+
+    def test_headless_import_does_not_exempt_a_later_shot_launch(self):
+        godot = "/opt/Godot_v4.7-stable_linux.x86_64"
+        name = "run-globe" + "-spike.sh"
+        self.assertEqual(self.call(f"{godot} --headless --import && {self.wt['old']}/{name} --shots --only a"), 2)
+        self.assertEqual(self.call(f"{godot} --headless --import && {self.wt['fresh']}/{name} --shots --only a"), 0)
+        self.assertEqual(self.call(f"{godot} --headless --import", cwd=self.wt["old"]), 0)
+
+    def test_history_is_read_from_the_checkout_root(self):
+        name = "./run-globe" + "-spike.sh"  # launched from inside the client folder of a stale checkout
+        sub = self.wt["stale"] / "src" / "Singularity.Client.Spike"
+        self.assertEqual(self.call(f"{name} --shots --only a", cwd=sub), 2)
 
     def test_unknown_directory_fails_closed(self):
         name = "./run-globe" + "-spike.sh"
