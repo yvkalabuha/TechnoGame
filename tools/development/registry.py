@@ -395,7 +395,17 @@ def cmd_index(_args) -> int:
     print(f"index written ({len(items)} items)")
     for e in errors:
         print("  warning:", e)
+    refresh_kb_db()
     return 0
+
+
+def refresh_kb_db() -> None:
+    """Rebuild the PostgreSQL index (kb_db.py, #590); silent when it is unavailable."""
+    try:
+        subprocess.run([sys.executable, str(Path(__file__).with_name("kb_db.py")), "build", "--quiet"],
+                       cwd=ROOT, timeout=60, capture_output=True)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 # --------------------------------------------------------------------------
