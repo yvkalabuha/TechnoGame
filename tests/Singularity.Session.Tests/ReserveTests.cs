@@ -55,9 +55,9 @@ public class ReserveTests
 
     // Recorded from main before TASK-0150 (e011cbb), the same run (seed 7, 36 months, default config): the hash over ALL columns and the state hash.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
-    private const string MainAllColumns = "bc6d5b11baebbfcb3b1271e15378cd28adfe1a03f4d4204d1ded83e26e1f15cd";
+    private const string MainAllColumns = "acf7fcc483d4c9211657b565ce356c8adf1d5491b330167544268f0d0304ea00";
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-    private const string MainStateHash = "c578b593c0d1bbba6af812683a35840656a912151cd80074fd96766d984dbfe1";
+    private const string MainStateHash = "0a4f9e453eae633a544d9833cbb062921c9a27f82494b443b9d215d74bfdce9e";
 
     [Fact]
     public void FlagOff_IsBitIdenticalToMainBeforeTheTask_AndFlagOnEqualsItOnTheOldColumns()

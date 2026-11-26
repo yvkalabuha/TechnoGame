@@ -88,13 +88,14 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15 (new column pol.flt.gFront, the G_front a fleet sale was priced at); the old columns are unchanged (the identity and projection tests pass with the column left out of the projection).
+    // Re-recorded in TASK-0193: 55 new nodes 160-214 (1990-2030) and 3 new processes change every trajectory; old columns and schema layout rules unchanged.
     private static readonly string[] AdmitGolden =
     [
-        "c68e2c2756df8c3312d66b27d7cc57b1b3d75cb0e89ff5f4e7277cb67a9437d5",
-        "bcce7d3527a8a1f31e63f61d4f4b17b8b78415f3671c5030ccbdcdbeeee36a80",
-        "d0ecd048d6e264acefd40d605c09e4a24a9e43d6389c04d30414b2caa0575e08",
-        "b16ef69bcccee9166771e71af772001cf21b637f347ef2e25706f25c26065afd",
-        "2a911892ebe508874ce9ac2d4c5cf4ade6da011a0e59318cd23bec5a96dda12b",
+        "38375bd7d0b88f90ec4316d6f02194bb5f11a7b064344499b2f475ecddea2ad6",
+        "b3bac879983f52b74761b0907822ffaa224b165e1f42c7efc65a35c57edda712",
+        "05f9f1633fb3de323525eb29888d9ea0629119c267785f959a4da525262d9da7",
+        "de9939ddf8a6037a0f02398e325fba758645ae8e0615ff829bac39ecfb3a9766",
+        "ae6a6d41c6b9177506268bbc03879c226b02de290dd03a6987cec6f9ea200805",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
@@ -108,11 +109,11 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0188 (#575): 57 new nodes 100-156 (computing, electronics, materials, rockets, space, nuclear) and 9 new processes change every trajectory; old columns and schema layout rules unchanged.
     private static readonly string[] YProdGolden = [
-        "c79505d72eb10f41fbed33785979c82d7475ab0f5712d52b9212d1fffcbad401",
-        "8cd92e2402facdfd797f1ca63da78174bd6029ddba67206f5971e0e6941eb161",
-        "bf359eba934c04b3d9e5af86930414d820fd6e0ac1ce487cafeede53eb88ce8f",
-        "330c072334b97c147c9a9daa02cce57c916a86f9eddd67a5a4e42587db331bed",
-        "18164783a49dbe1c3394685fc6250dd1438ac4e11c58569fd900f7686ec86422",
+        "1f80dcf09c3ecac873b9d3e9dc1e3bc74fc8f167e110cbe4e98268d4f1710f6a",
+        "d71060a91fc82457bbeb023aeb2ab061354ec0fbca5be052acf0ab8360e22cc8",
+        "c81a155e4dc496e03b4018f710306d007a7e8472b102347e0560f37395e7f426",
+        "1348425efd72919a619e8b4551844b41f4e03c68ed85446671087783aa18faab",
+        "437f06dbafa423768b82e7f5dec8705d109f14130ad71e0a2d9ead1902b49afb",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
