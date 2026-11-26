@@ -4,6 +4,7 @@
   llm_limits.py                 one line per consumer (claude, codex, agy-sonnet, gemini-ui, deepseek)
   llm_limits.py --json          the same as JSON
   llm_limits.py check CONSUMER  prints the state; exit 0 = go on (ok/low/short/unknown), 3 = out
+  llm_limits.py --session       the session start line (#606); prints nothing when no consumer is known
 
 States: out (headroom <= 0, or DeepSeek balance <= 0), low (headroom <= 10 %, or balance under usd_low),
 short (forecast: runs out before the reset), ok, unknown (no service, stale or missing data).
@@ -26,6 +27,7 @@ ENV = "SINGULARITY_LLM_LIMITS"
 DEFAULT_URL = "http://127.0.0.1:8790/api/v1/status"
 TIMEOUT_S = 1.5
 TTL_S = 60
+FAIL_TTL_S = 60  # a failed fetch is remembered too: a hanging service costs one timeout a minute (DEBT-0126)
 CACHE_FILE = Path.home() / ".cache" / "singularity" / "llm-limits.json"
 MAP_FILE = Path(__file__).with_name("llm_limits.yaml")
 LOW_PCT = 10.0
@@ -73,8 +75,9 @@ def _fetch(source):
         return None
 
 
-def status(now=None, source=None, cache_file=CACHE_FILE, ttl=TTL_S):
-    """Status payload or None. The cache (ttl seconds) spares the service; a file: source is never cached."""
+def status(now=None, source=None, cache_file=CACHE_FILE, ttl=TTL_S, fail_ttl=FAIL_TTL_S):
+    """Status payload or None. The cache (ttl seconds) spares the service, and a failed fetch is remembered for
+    fail_ttl seconds so that a hanging service is not asked again by every caller; a file: source is never cached."""
     source = source or os.environ.get(ENV) or DEFAULT_URL
     if source == "off":
         return None
@@ -83,14 +86,19 @@ def status(now=None, source=None, cache_file=CACHE_FILE, ttl=TTL_S):
     now_ts = (now or datetime.now(timezone.utc)).timestamp()
     try:
         cached = json.loads(Path(cache_file).read_text(encoding="utf-8"))
-        if cached["source"] == source and 0 <= now_ts - cached["fetched_at"] < ttl and _valid(cached["payload"]):
+        age = now_ts - cached["fetched_at"]
+        if cached["source"] == source and cached.get("failed") is True and 0 <= age < fail_ttl:
+            return None
+        if cached["source"] == source and 0 <= age < ttl and _valid(cached["payload"]):
             return cached["payload"]
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
         pass
     payload = _fetch(source)
     if _valid(payload):
         _store(cache_file, {"source": source, "fetched_at": now_ts, "payload": payload})
-    return payload
+        return payload
+    _store(cache_file, {"source": source, "fetched_at": now_ts, "failed": True, "payload": None})
+    return None
 
 
 def _store(path, data):
@@ -215,6 +223,18 @@ def line(states):
     return "limits: " + ", ".join(parts)
 
 
+def session_line(states):
+    """#606: "Лимиты: ..." with the consumers that are not ok and their reset (UTC), or None when none is known."""
+    if all(s["state"] == UNKNOWN for s in states.values()):
+        return None
+    bad = []
+    for c, s in states.items():
+        if s["state"] in (OUT, LOW, SHORT):
+            at = _parse_time(s["resets_at"]) if s["resets_at"] else None
+            bad.append(f"{c} {s['state']}" + (f" до {at.astimezone(timezone.utc):%m-%d %H:%M}Z" if at else ""))
+    return "Лимиты: " + (", ".join(bad) if bad else "всё в норме")
+
+
 def main(argv):
     if argv[:1] == ["check"]:
         if len(argv) != 2 or argv[1] not in load_map():
@@ -224,7 +244,11 @@ def main(argv):
         print(f"{s['consumer']}: {s['state']} ({s['reason']}){' until ' + s['resets_at'] if s['resets_at'] else ''}")
         return 3 if s["state"] == OUT else 0
     st = summary()
-    if "--json" in argv:
+    if "--session" in argv:
+        text = session_line(st)
+        if text:
+            print(text)
+    elif "--json" in argv:
         print(json.dumps(st))
     else:
         for c, s in st.items():

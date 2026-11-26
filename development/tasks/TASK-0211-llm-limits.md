@@ -61,3 +61,8 @@ tags: [task, external-llm, platform, active]
 - 44a6b729, 240a35f0: llm_limits.py/.yaml, capacity.py (строка limits, поле limits в --json), llm_worker review пропускает провайдера в состоянии out; тесты llm_worker 625 OK.
 - reviewer: CHANGES (44a6b729: bad payload medium, 2 low) → APPROVE (240a35f0). Второе ревью: agy-sonnet (claude-sonnet-5-5-medium) accept, 2 findings, record review-TASK-0211-240a35f0-agy-sonnet.json.
 - Влито 75c8f9f. Часть 2 (строка сессии, #606) — после TASK-0209.
+
+## Результат части 2 (2026-11-26)
+- .claude/hooks/session_context.py: одна строка «Лимиты: …» (#606) из `llm_limits.py --session` (подпроцесс, таймаут 1,8 с, без sys.path); только потребители out/low/short с обновлением в UTC, иначе «всё в норме»; без строки, если все unknown.
+- DEBT-0126: llm_limits.status запоминает неудачный запрос на 60 с (FAIL_TTL_S); строка журнала review.py упрощена.
+- Тесты: test_llm_limits (SessionLineTest, test_failed_fetch_is_remembered_for_a_minute), test_hooks SessionContextTest (2 новых); без изменений падают (проверено).

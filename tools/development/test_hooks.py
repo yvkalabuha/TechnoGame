@@ -331,6 +331,42 @@ class SessionContextTest(unittest.TestCase):
                              capture_output=True, env=env).stdout
         self.assertIn("autopilot: stop since 2026-11-26 10:00", out)
 
+    def limits_out(self, source):
+        """session_context in a temporary project with llm_limits; the source is pinned (never the live service)."""
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "CURRENT_STATE.md").write_text("## Сводка\n- x\n", encoding="utf-8")
+        (tmp / "tools" / "development").mkdir(parents=True)
+        for name in ("llm_limits.py", "llm_limits.yaml"):
+            shutil.copy(ROOT / "tools/development" / name, tmp / "tools/development" / name)
+        if isinstance(source, dict):
+            (tmp / "status.json").write_text(json.dumps(source), encoding="utf-8")
+            source = "file:" + str(tmp / "status.json")
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp), HOME=str(tmp), SINGULARITY_LLM_LIMITS=source)
+        return subprocess.run([sys.executable, str(HOOKS / "session_context.py")], input="{}", text=True,
+                              capture_output=True, env=env, timeout=60).stdout
+
+    @staticmethod
+    def status(**heads):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        win = lambda name, head, enough=True: {"window": name, "ok": True, "resets_at": "2099-01-02T03:04:00Z",
+                                               "sampled_at": now, "forecast": {"headroom": head, "enough_until_reset": enough}}
+        provs = {"claude": [win("5h", heads.get("claude", 80)), win("7d", 50, heads.get("claude_enough", True))],
+                 "codex": [win("5h", heads.get("codex", 80)), win("7d", 50)]}
+        return {"providers": [{"provider": p, "ok": True, "stale": False, "windows": w} for p, w in provs.items()]}
+
+    def test_limits_line_lists_only_consumers_that_are_not_ok(self):
+        out = self.limits_out(self.status(codex=0, claude_enough=False))
+        line = [l for l in out.splitlines() if "Лимиты" in l]
+        self.assertEqual(line, ["- Лимиты: claude short до 01-02 03:04Z, codex out до 01-02 03:04Z"])
+
+    def test_limits_line_all_fine_and_none_without_data(self):
+        self.assertIn("- Лимиты: всё в норме", self.limits_out(self.status()))
+        out = self.limits_out("off")
+        self.assertNotIn("Лимиты", out)
+        self.assertIn("Project state", out)
+
 
 class AutopilotTest(unittest.TestCase):
     def setUp(self):

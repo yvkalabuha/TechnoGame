@@ -518,7 +518,8 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
     reset = svc_reset or reset
     for fb in fallbacks:
         if fb["reason"].endswith("_limit_service"):
-            log(f"{fb['from']} out per llmlimits{' until ' + (fb.get('reset_at') or fb.get('codex_reset_at')) if fb.get('reset_at') or fb.get('codex_reset_at') else ''}: skipped")
+            at = fb.get("reset_at") or fb.get("codex_reset_at")
+            log(f"{fb['from']} out per llmlimits{' until ' + at if at else ''}: skipped")
     if reset:
         log(f"codex limited until {reset.isoformat(timespec='minutes')}: using {chain[0]}")
     rejected = rejected_findings(runs_dir, task_id, log)
