@@ -99,7 +99,29 @@ internal static class ViewBuilder
             standing += node[k] >= 0 ? 1 : 0;
             free += node[k] == 0 ? 1 : 0;
         }
-        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.Mpi(a), w.AirPowerRatio(a), inst.SlotParameters.SpeedCap, w.Config.PlayerActor == a ? inst.FreeNoticeMonth(a) : -1);
+        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.Mpi(a), w.AirPowerRatio(a), inst.SlotParameters.SpeedCap, w.Config.PlayerActor == a ? inst.FreeNoticeMonth(a) : -1, Goal(w, a, month));
+    }
+
+    // The air power goal (#565) from the columns of the last refresh; with intelligence the player's rival is an estimate (a range widened like the node estimate), never the exact value.
+    private static GoalView Goal(SliceWorld w, int a, long month)
+    {
+        w.GoalSince(a, out long s1, out long s2, out long s3);
+        Fx6 ratio = w.AirPowerRatio(a);
+        int rival = w.BestRival(a);
+        bool estimated = w.Intel is { } intel && w.Config.PlayerActor == a && rival >= 0;
+        bool known = true;
+        Fx6 low = ratio, high = ratio, conf = Fx6.One;
+        if (estimated)
+        {
+            IntelEstimate e = w.Intel!.Estimate(a, rival);
+            known = e.Visible;
+            conf = e.Confidence;
+            Fx6 spread = IntelMath.Max(w.Intel.Parameters.RangeMin, Fx6.One - e.Confidence);
+            low = known ? ratio / (Fx6.One + spread) : Fx6.Zero;
+            high = known ? (spread >= Fx6.One ? Fx6.FromInt(100) : ratio / (Fx6.One - spread)) : Fx6.Zero;
+        }
+        return new GoalView(ratio, GoalMath.Standing(s1, s2, s3), GoalMath.Held(GoalMath.Standing(s1, s2, s3) switch { GoalStage.Dominance => s3, GoalStage.Superiority => s2, _ => s1 }, month),
+            w.GoalPrevious(a), w.GoalChange(a), GoalMath.Achieved(s1, s2, s3, month), rival, estimated, known, low, high, conf);
     }
 
     // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.

@@ -193,6 +193,9 @@ internal sealed class SliceWorld
             {
                 SlotOrders = new SlotOrders(Table, layout, new SlotParams(), new SlotOrderProbe(this));
                 _mpi = Table.AddLong("inst.mpi");
+                _goalSince = new[] { Table.AddLong("goal.since1"), Table.AddLong("goal.since2"), Table.AddLong("goal.since3") };
+                _goalPrev = Table.AddLong("goal.prev");
+                _goalChange = Table.AddLong("goal.change");
             }
         }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
@@ -406,6 +409,69 @@ internal sealed class SliceWorld
     public bool SlotsOn { get; }
 
     private readonly LongColumn? _mpi;
+
+    // The air power goal (#565): per actor, since which month (+1, 0 = not there) the ratio holds each line, the step before the last change and the month of that change (+1, 0 = none).
+    private readonly LongColumn[]? _goalSince;
+    private readonly LongColumn? _goalPrev, _goalChange;
+
+    /// <summary>The since-values (month + 1, 0 = not at the step) of the actor for parity, superiority and dominance; zeros without the slot model.</summary>
+    public void GoalSince(int actor, out long s1, out long s2, out long s3)
+    {
+        s1 = s2 = s3 = 0;
+        if (_goalSince is null)
+            return;
+        s1 = _goalSince[0].Current[actor];
+        s2 = _goalSince[1].Current[actor];
+        s3 = _goalSince[2].Current[actor];
+    }
+
+    /// <summary>The step the actor stood at before its last change of step.</summary>
+    public GoalStage GoalPrevious(int actor) => _goalPrev is null ? GoalStage.None : (GoalStage)_goalPrev.Current[actor];
+
+    /// <summary>The month of the last change of step (−1 none).</summary>
+    public long GoalChange(int actor) => _goalChange is null ? -1 : _goalChange.Current[actor] - 1;
+
+    /// <summary>
+    /// After the air power refresh: moves the goal columns of every actor by the ratio to the best rival (see <see cref="GoalMath"/>), once per monthly step between ticks.
+    /// <paramref name="month"/> is the month the next step computes.
+    /// </summary>
+    internal void RefreshGoal(long month)
+    {
+        if (_goalSince is null || _goalPrev is null || _goalChange is null)
+            return;
+        int n = Table.RowCount;
+        var since = new long[3][] { new long[n], new long[n], new long[n] };
+        var prev = new long[n];
+        var change = new long[n];
+        for (int a = 0; a < n; a++)
+        {
+            GoalSince(a, out long o1, out long o2, out long o3);
+            GoalStage old = GoalMath.Standing(o1, o2, o3);
+            GoalStage now = GoalMath.StageOf(AirPowerRatio(a), Mpi(a) > Fx6.Zero);
+            since[0][a] = GoalMath.Advance(o1, 1, now, month);
+            since[1][a] = GoalMath.Advance(o2, 2, now, month);
+            since[2][a] = GoalMath.Advance(o3, 3, now, month);
+            bool moved = now != old;
+            prev[a] = moved ? (long)old : _goalPrev.Current[a];
+            change[a] = moved ? month + 1 : _goalChange.Current[a];
+        }
+        for (int k = 0; k < 3; k++)
+            _goalSince[k].Load(since[k]);
+        _goalPrev.Load(prev);
+        _goalChange.Load(change);
+    }
+
+    /// <summary>The best of the others by air power (lowest row on a tie); −1 when nobody else has any.</summary>
+    public int BestRival(int actor)
+    {
+        int best = -1;
+        for (int b = 0; b < Table.RowCount; b++)
+        {
+            if (b != actor && Mpi(b) > Fx6.Zero && (best < 0 || Mpi(b) > Mpi(best)))
+                best = b;
+        }
+        return best;
+    }
 
     /// <summary>The player's lists and focus of the slot model; null without it.</summary>
     public SlotOrders? SlotOrders { get; }

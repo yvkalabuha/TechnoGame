@@ -51,9 +51,10 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
     // Re-recorded in TASK-0188 (#575): 57 new nodes 100-156 (9 new processes) change every trajectory on the current data; explanation in the task file.
     // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10) + the AI reads the air power index from a column (review fixes).
+    // Re-recorded in TASK-0194 (#565): new columns goal.since1-3, goal.prev, goal.change (the air power goal, slot model on); the old columns are unchanged (the goal is only read out of them, nothing reads the new columns back), so only the new columns change the hash.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "1bd32e65f96ebe61720907c8a728cd0decfac30b5013ce16d50a2700f0885dba", [2] = "8e589a181785492f8b2660d86c8ab8b37ac2655a7743926d67d8e95d0ee3f862", [3] = "7977c7489bb034812e954839d306f6ea289c12053aaec2b29f3f527d63131d75", [4] = "21e235b68644ef91742c2c6a5262e401b60c560f9d404de01112c0329d1d1e33", [5] = "de1ac23d5980c3999cf1853b67acee473aa9de137f55b9a3d6d4d085ab4cdfe2", [7] = "e1468dadd40b3c702cd5fc4d3a675043ddf5dfb31e457b27b93dddf78fcc7477",
+        [1] = "1883dc7dd5ddfe369d5fa798f53b224bba203b9e6ea3ca7fa205750176583810", [2] = "619598d9f1c5261ada9382b863c51c39ac296e2e245f22a7492b020a8fad38ab", [3] = "98c7a6d649aeb3970e396a984f0e756d1b8ebe179e915d9de8a9cb5b79f1abd6", [4] = "2948225481eb06d3228eb37040898d55316821bd5ef430b0972fd7364f208cf6", [5] = "30e0ae70b92395de492c08f8847e4fcca333f7463ec49f95ba39ccfe5e2d9f8d", [7] = "a908d97b37f23177a3a0196a50c3c1a637dc17b7d88097f2e8646b71e3955ab3",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

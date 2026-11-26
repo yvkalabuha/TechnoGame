@@ -451,3 +451,16 @@ fx.more,"{0} more","ещё {0}"
 inset.why.node,"What blocks «{0}»:","Что мешает узлу «{0}»:"
 inset.why.node.free,"Nothing blocks it: all requirements are known, it can be opened.","Ничего не мешает: все требования известны, узел можно открыть."
 tree.effects.none,effects: no data,эффекты: нет данных
+goal.label,Air power,Воздушная мощь
+goal.stage.0,below parity,ниже паритета
+goal.stage.1,parity,паритет
+goal.stage.2,superiority,превосходство
+goal.stage.3,dominance,господство
+goal.reached,step reached,ступень достигнута
+goal.lost,step lost,ступень потеряна
+goal.estimate,estimate,оценка
+goal.end.0,"Goal missed: no step held for 5 years. The game goes on; this is not a defeat screen.","Цель не достигнута: ни одна ступень не удержана 5 лет. Партия не прерывается."
+goal.end.1,"Parity with the best rival held for 5 years.","Паритет с лучшим соперником удержан 5 лет."
+goal.end.2,"Superiority over the best rival held for 5 years.","Превосходство над лучшим соперником удержано 5 лет."
+goal.end.3,"Dominance over the best rival held for 5 years.","Господство над лучшим соперником удержано 5 лет."
+tip.goal,"Air power: your fleet value divided by the best rival. Parity from 1.0, superiority from 1.5, dominance from 2.0; each step must be held for 5 years. With intelligence a rival is an estimate, so the number is a range.","Воздушная мощь: стоимость вашего парка, делённая на парк лучшего соперника. Паритет — от 1,0, превосходство — от 1,5, господство — от 2,0; ступень надо удержать 5 лет. С разведкой соперник виден как оценка, поэтому число — диапазон."

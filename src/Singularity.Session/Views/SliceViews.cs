@@ -75,7 +75,15 @@ public sealed record PathView(ImmutableArray<PathNodeView> Nodes, Fx6 MonthsMin,
 /// The slot science model of an actor (SCIENCE_SLOTS §12), null without it: institutes standing and free, the coverage <c>u</c> of the asked money, the money returned to the budget
 /// (O-089b), the air power index MPI (= <c>FleetValue</c>, every month) and its ratio to the best rival (#565: parity 1, superiority 1.5, dominance 2), and the speed cap.
 /// </summary>
-public sealed record SlotScienceView(int InstituteCount, int FreeInstituteCount, Fx6 Coverage, Fx6 ReturnedToBudget, Fx6 Mpi, Fx6 MpiRatio, Fx6 SpeedCap, long FreeNoticeMonth = -1);
+public sealed record SlotScienceView(int InstituteCount, int FreeInstituteCount, Fx6 Coverage, Fx6 ReturnedToBudget, Fx6 Mpi, Fx6 MpiRatio, Fx6 SpeedCap, long FreeNoticeMonth = -1, GoalView? Goal = null);
+
+/// <summary>
+/// The air power goal of an actor (#565): the ratio to the best rival, the step it stands at, months held at that step, the last change of step (event: <see cref="ChangeMonth"/>, −1 none),
+/// and the highest step held for 60 months (<see cref="Achieved"/>, the result of the game). With intelligence the player sees a rival as an estimate: <see cref="Estimated"/> is true,
+/// <see cref="RatioLow"/>…<see cref="RatioHigh"/> is the range of the ratio and <see cref="RivalKnown"/> is false when the intelligence sees too little to give one.
+/// </summary>
+public sealed record GoalView(Fx6 Ratio, GoalStage Stage, int HeldMonths, GoalStage Previous, long ChangeMonth, GoalStage Achieved, int Rival,
+    bool Estimated, bool RivalKnown, Fx6 RatioLow, Fx6 RatioHigh, Fx6 Confidence);
 
 /// <summary>
 /// An institute of an actor (empty array without institutes): <see cref="Id"/> is the data ID, <see cref="Levels"/> the level 0..4 per discipline of the scenario (0 = hidden in the card, #489),

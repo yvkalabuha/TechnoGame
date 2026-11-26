@@ -35,6 +35,7 @@ public sealed partial class SignalField : PanelContainer
     readonly SimHost _host;
     readonly Label _date = Ui.Lbl("—", 18, null, FontKind.Mono);
     readonly Label _perf = Ui.Lbl("", 14, Ui.Ink3, FontKind.Mono);
+    readonly Label _goal = Ui.Lbl("", 15, null, FontKind.Mono);   // air power goal (#565): mark, number and step in words
     readonly TimeControl _speed;
     readonly Place[] _places;
     readonly Place _fail;
@@ -94,6 +95,9 @@ public sealed partial class SignalField : PanelContainer
 
         _spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         row.AddChild(_spacer);
+        _goal.MouseFilter = MouseFilterEnum.Stop; _goal.VerticalAlignment = VerticalAlignment.Center; _goal.Visible = false;
+        row.AddChild(_goal);
+        row.AddChild(Ui.VRule());
         row.AddChild(_perf);
         // The sound button left the bar (#352): sound lives in Settings. The journal of signals took its place.
         var jr = Ui.Btn("", () => JournalPressed?.Invoke());
@@ -180,6 +184,20 @@ public sealed partial class SignalField : PanelContainer
         if (cond != was && p.Real) SignalChanged?.Invoke(p.Key, cond);
     }
 
+    void PaintGoal(Singularity.Session.GoalView g, long month)
+    {
+        _goal.Visible = g != null;
+        if (g == null) return;
+        int stage = (int)g.Stage;
+        string sep = Loc.N(1.5, 1).Contains(',') ? "," : ".";
+        string num = GoalLogic.RatioText(g.Ratio.ToDouble(), g.Estimated, g.RivalKnown, g.RatioLow.ToDouble(), g.RatioHigh.ToDouble(), sep);
+        string note = GoalLogic.ChangeKey((int)g.Previous, stage, g.ChangeMonth, month) is { } k ? " · " + Loc.T(k) : "";
+        _goal.Text = $"{GoalLogic.StageMark(stage)} {Loc.T("goal.label")} {num} · {Loc.T(GoalLogic.StageKey(stage))}{(g.Estimated ? " (" + Loc.T("goal.estimate") + ")" : "")}{note}";
+        var (y, m) = GoalLogic.Split(g.HeldMonths);
+        double next = GoalLogic.NextLine(stage);
+        _goal.TooltipText = Loc.T("tip.goal") + $"\n{y} / 5 · {m} m" + (next > 0 ? $"\n→ {GoalLogic.NextLine(stage).ToString("0.0", CultureInfo.InvariantCulture)}" : "");
+    }
+
     void Refresh() { _seq = -1; foreach (var p in _places) Paint(p); Paint(_fail); }
 
     public override void _Process(double delta)
@@ -207,6 +225,7 @@ public sealed partial class SignalField : PanelContainer
         Set(_places[0], _alloyKnown && _alloyDeficit > 0);
         Set(_places[1], refusals > 0, (int)Math.Min(refusals, 99));
         Set(_places[2], _rejects > 0 && s.LastRejected, (int)Math.Min(_rejects, 99));
+        PaintGoal(a.Slots?.Goal, s.View.Month);
     }
 }
 

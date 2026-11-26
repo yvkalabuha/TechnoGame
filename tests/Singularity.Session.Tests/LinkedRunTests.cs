@@ -42,7 +42,8 @@ public class LinkedRunTests
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
     // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10) + the AI reads the air power index from a column (review fixes) + no capacity bonus of project-built institutes in the research money (review 2; moves the runs that pass the opening of DARPA, month ~160).
-    private const string Golden60 = "7d9f262586ca9c921a65b7d968054948ce845d09ccf2f78e566862e4261b1b49";
+    // Re-recorded in TASK-0194 (#565): new columns goal.since1-3, goal.prev, goal.change (the air power goal, slot model on); the old columns are unchanged (the goal is only read out of them, nothing reads the new columns back), so only the new columns change the hash.
+    private const string Golden60 = "cd0d0b6e6072607db3bb66f9e74f5bf081109d4fd3c500b7c0a25318d13cb643";
 
     private sealed class Run
     {
