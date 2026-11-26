@@ -12,6 +12,8 @@ import json
 import re
 import socket
 import subprocess
+import sys
+import threading
 import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -60,6 +62,37 @@ def check_url(url):
     return u.hostname, port, str(ips[0])
 
 
+def _run_capped(cmd, timeout_s, cap):
+    """Run cmd; stdout is read in chunks and the process is killed past `cap` bytes: curl's own --max-filesize
+    does nothing when the size is not announced. Returns a CompletedProcess."""
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    timed_out = threading.Event()
+    timer = threading.Timer(timeout_s, lambda: (timed_out.set(), proc.kill()))
+    timer.start()
+    chunks, size = [], 0
+    try:
+        while True:
+            chunk = proc.stdout.read(65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > cap:
+                proc.kill()
+                raise FetchError(f"response larger than {cap} bytes")
+        err = proc.stderr.read(4096)
+        rc = proc.wait()
+    finally:
+        timer.cancel()
+        proc.kill()
+        proc.stdout.close()
+        proc.stderr.close()
+        proc.wait()
+    if timed_out.is_set():
+        raise subprocess.TimeoutExpired(cmd, timeout_s)
+    return subprocess.CompletedProcess(cmd, rc, stdout=b"".join(chunks), stderr=err)
+
+
 def curl_fetch(url, timeout_s=FETCH_TIMEOUT_S, max_hops=MAX_REDIRECTS):
     """Body bytes via curl. No cookies, no config file, no proxy. Redirects are followed here, one hop at a time:
     every hop is checked and its address pinned with --resolve, so the checked address is the one curl uses."""
@@ -70,7 +103,7 @@ def curl_fetch(url, timeout_s=FETCH_TIMEOUT_S, max_hops=MAX_REDIRECTS):
                "--proto", "=http,https", "--max-filesize", str(MAX_PAGE_BYTES), "--max-time", str(timeout_s),
                "-A", "singularity-research/1", "-w", "\n%{http_code}\n%{redirect_url}\n%{remote_ip}", "--", url]
         try:
-            p = subprocess.run(cmd, capture_output=True, timeout=timeout_s + 5)
+            p = _run_capped(cmd, timeout_s + 5, MAX_PAGE_BYTES + 1024)
         except (OSError, subprocess.TimeoutExpired) as e:
             raise FetchError(f"curl failed: {type(e).__name__}") from None
         if p.returncode != 0:
@@ -131,13 +164,18 @@ def _norm(s):
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
+def has_token(needle, text):
+    """needle occurs in text and is not glued to other letters or digits ('955' is not in '1955')."""
+    return re.search(r"(?<!\w)" + re.escape(needle) + r"(?!\w)", text) is not None
+
+
 def quote_in_text(quote, text, value=""):
     """True when the quote occurs in the page text (case, spaces and typographic marks ignored), has 6 to 30
     words and at least 30 characters, and contains the stated value when there is one."""
     q = _norm(quote)
     if len(q) < MIN_QUOTE_CHARS or not MIN_QUOTE_WORDS <= len(q.split()) <= MAX_QUOTE_WORDS:
         return False
-    if _norm(value) and _norm(value) not in q:
+    if _norm(value) and not has_token(_norm(value), q):
         return False
     return q in _norm(text)
 
@@ -209,12 +247,19 @@ def judge(provider, item, pages):
                 "note": "schema_invalid: " + ("; ".join(errors[:3]) or "source out of range")}
     res = {k: data[k] for k in ("verdict", "source", "quote", "value", "note")}
     res["usage"] = comp.usage
-    if res["verdict"] in ("confirmed", "contradicted"):
+    said = res["verdict"]
+    if said in ("confirmed", "contradicted"):
+        reason = None
         if not quote_in_text(res["quote"], pages[res["source"]][1], res["value"]):
-            res.update(verdict="not_found", note=f"quote_not_in_page (model said {data['verdict']}): {res['note']}")
-            res["quote_verified"] = False
-        else:
-            res["quote_verified"] = True
+            reason = "quote_not_in_page"
+        elif "claim" not in item and not res["value"].strip():
+            reason = "no_value_for_question"
+        elif said == "contradicted" and "year" in item and has_token(_norm(str(item["year"])), _norm(res["value"])):
+            reason = "contradiction_gives_the_submitted_year"
+        res["quote_verified"] = reason != "quote_not_in_page"
+        if reason:
+            # Nothing the model claimed survives into the artifacts: the rejected quote, value and source are dropped.
+            res.update(verdict="not_found", source=None, quote="", value="", note=f"{reason} (model said {said})")
     res["source_url"] = pages[res["source"]][0] if res["verdict"] != "not_found" else None
     return res
 
@@ -229,6 +274,17 @@ def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_
     if not dry_run:
         make_provider = make_provider or (lambda: review.paid_provider(profile_name, key))
         provider = make_provider()
+    def save(error=None):
+        record["created"] = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        record["complete"] = error is None
+        if error:
+            record["error"] = error
+        digest = hashlib.sha256(json.dumps(record["items"], sort_keys=True).encode()).hexdigest()[:8]
+        path_, sha = review.write_run(runs_dir, f"{stem}-{digest}.json", record, unique=True)
+        path_.with_suffix(".md").write_text(markdown(record), encoding="utf-8")
+        record["sha256"] = sha
+        return path_
+
     for it in data["items"]:
         out = {"id": it["id"], "text": it.get("claim") or it.get("question"), "pages": []}
         pages = []
@@ -240,17 +296,19 @@ def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_
         if dry_run or not pages:
             out.update(verdict="not_found", note="dry_run" if dry_run else "no_page_available")
         else:
-            out.update(judge(provider, it, pages))
+            try:
+                out.update(judge(provider, it, pages))
+            except Exception as e:
+                # Paid answers already received must not be lost: keep them in a partial record, then fail.
+                if record["items"]:
+                    saved = save(f"{type(e).__name__}: {e}")
+                    print(f"partial results saved: {saved}", file=sys.stderr)
+                raise
         record["items"].append(out)
-    record["created"] = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    md = markdown(record)
     if dry_run:
-        return None, record, md
-    digest = hashlib.sha256(json.dumps(record["items"], sort_keys=True).encode()).hexdigest()[:8]
-    p, sha = review.write_run(runs_dir, f"{stem}-{digest}.json", record, unique=True)
-    p.with_suffix(".md").write_text(md, encoding="utf-8")
-    record["sha256"] = sha
-    return p, record, md
+        record["created"] = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return None, record, markdown(record)
+    return save(), record, markdown(record)
 
 
 def _cell(s):

@@ -1,6 +1,7 @@
 """research (#577): fake provider, fake pages, stubbed gitleaks. No network, no real gitleaks."""
 
 import json
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -63,12 +64,46 @@ class Verdicts(Base):
         self.assertIn("| hip | confirmed | 1955 |", md)
         self.assertEqual(len(prov.calls), 1)  # q1 has no page: no model call
 
-    def test_fabricated_quote_becomes_not_found(self):
-        _, (_, rec, _) = self.run_it([answer(quote="invented in 1962 at Battelle")])
+    def test_fabricated_quote_becomes_not_found_and_is_dropped(self):
+        _, (path, rec, md) = self.run_it([answer(quote="invented in 1962 at the Battelle lab", value="1962")])
         it = rec["items"][0]
         self.assertEqual(it["verdict"], "not_found")
         self.assertFalse(it["quote_verified"])
         self.assertIn("quote_not_in_page", it["note"])
+        blob = path.read_text(encoding="utf-8") + md
+        self.assertNotIn("1962", blob)
+        self.assertEqual((it["quote"], it["value"], it["source"]), ("", "", None))
+
+    def test_contradiction_with_the_submitted_year_is_rejected(self):
+        # the quote and the value both say 1955, the claim says 1955: that is no contradiction
+        _, (_, rec, _) = self.run_it([answer("contradicted")])
+        self.assertEqual(rec["items"][0]["verdict"], "not_found")
+        self.assertIn("contradiction_gives_the_submitted_year", rec["items"][0]["note"])
+
+    def test_year_must_match_whole_token(self):
+        text = "Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute."
+        self.assertFalse(research.quote_in_text("pressing was invented in 1955 at the Battelle", text, "955"))
+
+    def test_question_needs_a_grounded_value(self):
+        self.inp.write_text("items:\n  - id: q\n    question: When?\n    field: year\n    urls: [https://example.org/hip]\n",
+                            encoding="utf-8")
+        _, (_, rec, _) = self.run_it([answer(value="")])
+        self.assertEqual(rec["items"][0]["verdict"], "not_found")
+        _, (_, rec, _) = self.run_it([answer(value="955")])
+        self.assertEqual(rec["items"][0]["verdict"], "not_found")
+        _, (_, rec, _) = self.run_it([answer(value="1955")])
+        self.assertEqual((rec["items"][0]["verdict"], rec["items"][0]["value"]), ("confirmed", "1955"))
+
+    def test_later_failure_keeps_earlier_paid_results(self):
+        self.inp.write_text(YAML.replace("https://example.org/cc", "https://example.org/hip"), encoding="utf-8")
+        runs = self.tmp / "runs"
+        with self.assertRaises(RuntimeError):
+            research.run_research(self.inp, runs_dir=runs, make_provider=lambda: FakeProvider([answer(), RuntimeError("outage")]),
+                                  fetch=self.fetch, cache_dir=self.tmp / "cache")
+        rec = json.loads(next(runs.glob("research-*.json")).read_text(encoding="utf-8"))
+        self.assertEqual([i["id"] for i in rec["items"]], ["hip"])
+        self.assertFalse(rec["complete"])
+        self.assertIn("outage", rec["error"])
 
     def test_long_quote_refused(self):
         words = " ".join(["Hot"] * 31)
@@ -87,6 +122,7 @@ class Verdicts(Base):
         self.assertTrue(research.quote_in_text('a well-known "first" design from the company was made', text))
 
     def test_contradicted_keeps_corrected_value(self):
+        self.inp.write_text(YAML.replace("year: 1955", "year: 1962").replace("in 1955.", "in 1962."), encoding="utf-8")
         _, (_, rec, _) = self.run_it([answer("contradicted", "invented in 1955 at the Battelle", "1955")])
         self.assertEqual(rec["items"][0]["verdict"], "contradicted")
 
@@ -153,7 +189,7 @@ class Safety(Base):
 
     def test_curl_command_limits(self):
         with mock.patch.object(research, "check_url", self.pinned), \
-                mock.patch.object(research.subprocess, "run", return_value=self.curl_out()) as run:
+                mock.patch.object(research, "_run_capped", return_value=self.curl_out()) as run:
             self.assertEqual(research.curl_fetch("https://example.org/"), b"body")
         cmd = run.call_args.args[0]
         for flag in ("-q", "--max-filesize", "--proto", "=http,https", "--max-time", "--noproxy", "example.org:443:93.184.216.34"):
@@ -165,7 +201,7 @@ class Safety(Base):
     def test_curl_refuses_unchecked_or_missing_remote_address(self):
         for remote in (b"10.0.0.5", b"", b"garbage"):
             with mock.patch.object(research, "check_url", self.pinned), \
-                    mock.patch.object(research.subprocess, "run", return_value=self.curl_out(remote=remote)):
+                    mock.patch.object(research, "_run_capped", return_value=self.curl_out(remote=remote)):
                 with self.assertRaises(research.FetchError, msg=remote):
                     research.curl_fetch("https://example.org/")
 
@@ -179,23 +215,30 @@ class Safety(Base):
             return self.pinned(url)
 
         hop = self.curl_out(code=b"302", redirect=b"https://internal.example/x")
-        with mock.patch.object(research, "check_url", check), mock.patch.object(research.subprocess, "run", return_value=hop):
+        with mock.patch.object(research, "check_url", check), mock.patch.object(research, "_run_capped", return_value=hop):
             with self.assertRaises(research.FetchError):
                 research.curl_fetch("https://example.org/")
         self.assertEqual(seen, ["https://example.org/", "https://internal.example/x"])
 
     def test_redirect_followed_and_limited(self):
         runs = [self.curl_out(code=b"301", redirect=b"https://example.org/b"), self.curl_out(body=b"final")]
-        with mock.patch.object(research, "check_url", self.pinned), mock.patch.object(research.subprocess, "run", side_effect=runs):
+        with mock.patch.object(research, "check_url", self.pinned), mock.patch.object(research, "_run_capped", side_effect=runs):
             self.assertEqual(research.curl_fetch("https://example.org/a"), b"final")
         loop = self.curl_out(code=b"302", redirect=b"https://example.org/a")
-        with mock.patch.object(research, "check_url", self.pinned), mock.patch.object(research.subprocess, "run", return_value=loop):
+        with mock.patch.object(research, "check_url", self.pinned), mock.patch.object(research, "_run_capped", return_value=loop):
             with self.assertRaises(research.FetchError):
                 research.curl_fetch("https://example.org/a")
 
+    def test_output_cap_kills_unannounced_huge_body(self):
+        cmd = [sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'x' * 5_000_000)"]
+        with self.assertRaises(research.FetchError):
+            research._run_capped(cmd, 20, 100_000)
+        done = research._run_capped([sys.executable, "-c", "print('ok')"], 20, 100_000)
+        self.assertEqual((done.returncode, done.stdout), (0, b"ok\n"))
+
     def test_http_error_status(self):
         with mock.patch.object(research, "check_url", self.pinned), \
-                mock.patch.object(research.subprocess, "run", return_value=self.curl_out(code=b"404")):
+                mock.patch.object(research, "_run_capped", return_value=self.curl_out(code=b"404")):
             with self.assertRaises(research.FetchError):
                 research.curl_fetch("https://example.org/")
 

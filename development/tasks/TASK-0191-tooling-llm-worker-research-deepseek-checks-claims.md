@@ -39,6 +39,6 @@ created: 2026-11-25
 ## Результат
 Сделано: команда `python3 -m tools.llm_worker research --input FILE.yaml [--profile deepseek-flash] [--dry-run]`. Вход: `items` с `id`, `claim` или `question`, `urls` (до 4). Скачивание curl (только http/https, публичные адреса, лимит 3 МБ, без куки, кэш `~/.cache/singularity/research`), текст из HTML, gitleaks на тексте страницы, один вызов deepseek-flash на пункт через ledger, схема `schemas/research.schema.json`. Цитата ≤ 30 слов ищется в тексте указанной страницы; не найдена — вердикт not_found. Запись и таблица Markdown — в `runs/` (текст страниц не сохраняется).
 
-Живой прогон (`examples/research-tree-575.yaml`, flash): мартенситная сталь — подтверждено «late 1950s» (Wikipedia); HIP — «1950s» в Battelle, год 1955 страница не даёт (contradicted по точности); углерод-углеродный композит и TBC — not_found на Wikipedia (годов нет); первичные источники (NTRS, патенты) нужны для узлов 31 и 33.
+Живой прогон (`examples/research-tree-575.yaml`, flash): мартенситная сталь — подтверждено «late 1950s» (Wikipedia); HIP — страница даёт только «1950s» (Battelle), год 1955 не подтверждён; вердикт contradicted лишь по расхождению точности, не по факту; углерод-углеродный композит и TBC — not_found на Wikipedia (годов нет); первичные источники (NTRS, патенты) нужны для узлов 31 и 33.
 
 Файлы: tools/llm_worker/research.py, schemas/research.schema.json, __main__.py, tests/test_research.py, examples/research-tree-575.yaml. Проверка: 16 новых тестов проходят; полный unittest llm_worker см. отчёт.
