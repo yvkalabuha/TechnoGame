@@ -407,13 +407,24 @@ public sealed partial class InstituteSystem : ITickSystem
             return;
         }
         // The project is seen (and pays) from the next month, so that month is its start: the stamp is start + 1.
-        if (!player && AiWouldStart(h, t))
+        if (!player && AiWouldStart(h, t, out bool bySurplus))
+        {
             _abuild[h.Slot].Next[h.Actor] = checked((int)t) + 2;
+            if (bySurplus)
+                _surplusBuilt!.Next[h.Actor] = checked((int)t) + 1;
+        }
     }
 
     // The AI rule (§7): the project of a historical candidate starts so that the institute opens about its historical year.
-    private bool AiWouldStart(InstituteHandle h, long t) =>
-        CanBuild(h, t) == BuildCheck.Ok && (t + 1 >= _l.FirstMonthOf(_l.RefYear(h)) - BuildMonths(h) || (_slots is not null && AiGeneralBuild(h, t)));
+    private bool AiWouldStart(InstituteHandle h, long t, out bool bySurplus)
+    {
+        bySurplus = false;
+        if (CanBuild(h, t) != BuildCheck.Ok)
+            return false;
+        if (t + 1 >= _l.FirstMonthOf(_l.RefYear(h)) - BuildMonths(h) || (_slots is not null && AiGeneralBuild(h, t)))
+            return true;
+        return bySurplus = _slots is not null && AiSurplusBuild(h, t);
+    }
 
     /// <summary>
     /// What the AI would do for the actor in the month, as a proposal for the player (the adviser, #479): the goal for each free standing slot (0 = none) in
@@ -433,7 +444,7 @@ public sealed partial class InstituteSystem : ITickSystem
             PickForFree(actor, month, pick);
             for (int k = 0; k < slots; k++)
             {
-                startsProject[k] = !Standing(new InstituteHandle(actor, k)) && AiWouldStart(new InstituteHandle(actor, k), month);
+                startsProject[k] = !Standing(new InstituteHandle(actor, k)) && AiWouldStart(new InstituteHandle(actor, k), month, out _);
                 goals[k] = work[k] == 0 && pick[k] > 0 ? pick[k] : 0;
             }
             return;
@@ -442,7 +453,7 @@ public sealed partial class InstituteSystem : ITickSystem
         {
             var h = new InstituteHandle(actor, k);
             work[k] = Standing(h) ? GoalNode(h) : -1;
-            startsProject[k] = !Standing(h) && AiWouldStart(h, month);
+            startsProject[k] = !Standing(h) && AiWouldStart(h, month, out _);
         }
         PickForFreeSlots(actor, month, slots, work);
         for (int k = 0; k < slots; k++)

@@ -188,10 +188,10 @@ internal sealed class SliceWorld
             InstituteLayout layout = layout0!;
             orders = new InstituteOrders(Table, layout);
             InstituteOrders = orders;
-            Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this), slots: SlotsOn ? new SlotParams() : null);
+            Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this), slots: SlotsOn ? Config.SlotParameters ?? new SlotParams() : null);
             if (SlotsOn)
             {
-                SlotOrders = new SlotOrders(Table, layout, new SlotParams(), new SlotOrderProbe(this));
+                SlotOrders = new SlotOrders(Table, layout, Config.SlotParameters ?? new SlotParams(), new SlotOrderProbe(this));
                 _mpi = Table.AddLong("inst.mpi");
             }
         }
@@ -308,7 +308,7 @@ internal sealed class SliceWorld
                 // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
                     trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve && !SlotsOn,
-                    priorities: Config.Institutes ? new InstituteParams() : null, slots: SlotsOn ? new SlotParams() : null, slotCount: SlotsOn ? layout!.MaxSlots : 0);
+                    priorities: Config.Institutes ? new InstituteParams() : null, slots: SlotsOn ? Config.SlotParameters ?? new SlotParams() : null, slotCount: SlotsOn ? layout!.MaxSlots : 0);
         }
     }
 

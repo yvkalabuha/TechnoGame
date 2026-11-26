@@ -16,7 +16,7 @@ public sealed partial class InstituteSystem
     private IntColumn[] _act = [], _aif = [], _aifn = [];
     private LongColumn[][] _xf = [];
     private IntColumn[][] _dx = [];
-    private IntColumn? _busy, _notice;
+    private IntColumn? _busy, _notice, _surplus, _surplusBuilt;
 
     private void AddSlotColumns(Table table)
     {
@@ -24,6 +24,8 @@ public sealed partial class InstituteSystem
         _dx = new IntColumn[_l.MaxSlots][];
         _busy = table.AddInt("inst.busy");
         _notice = table.AddInt("inst.notice");
+        _surplus = table.AddInt("inst.surplus");
+        _surplusBuilt = table.AddInt("inst.surplus_built");
         _act = new IntColumn[_l.MaxSlots];
         _aif = new IntColumn[_l.MaxSlots];
         _aifn = new IntColumn[_l.MaxSlots];
@@ -322,6 +324,8 @@ public sealed partial class InstituteSystem
             int busy = allBusy ? _busy!.Current[a] + 1 : 0;
             if (_busy!.Current[a] != busy)
                 _busy.Next[a] = busy;
+            if (!player)
+                AverageSurplus(a, t);
             if (player && anyFree && FreeNoticeDue(a, t, node[..slots]))
                 _notice!.Next[a] = checked((int)t) + 1;
             if (!player)
@@ -348,6 +352,40 @@ public sealed partial class InstituteSystem
 
     /// <summary>Months in a row all built institutes of the actor had a node (the AI's building rule reads it).</summary>
     public int BusyMonths(int actor) => _busy!.Current[actor];
+
+    private bool SurplusActive(long t) => _l.YearOf(t) >= _slots!.SurplusBuildFromYear;
+
+    // Exponential average of the returned share of the research money (time constant = the window); stays zero before the rule's first year, so earlier worlds are untouched.
+    private void AverageSurplus(int a, long t)
+    {
+        if (!SurplusActive(t))
+            return;
+        Fx6 avg = Fx6.FromRaw(_surplus!.Current[a]);
+        Fx6 next = avg + (_inputs.SurplusShare(a, t) - avg) / Fx6.FromInt(_slots!.SurplusWindowMonths);
+        if (next.Raw != _surplus.Current[a])
+            _surplus.Next[a] = checked((int)next.Raw);
+    }
+
+    /// <summary>Averaged returned share of the research money of the actor (the surplus rule reads it).</summary>
+    public Fx6 SurplusAverage(int actor) => Fx6.FromRaw(_surplus!.Current[actor]);
+
+    // AI surplus rule (#589): the research money comes back unspent (average above the share), the slot may be built within the upkeep ceiling (CanBuild), once per period.
+    private bool AiSurplusBuild(InstituteHandle h, long t)
+    {
+        int a = h.Actor;
+        if (!SurplusActive(t) || SurplusAverage(a) <= _slots!.SurplusBuildShare || CanBuild(h, t) != BuildCheck.Ok)
+            return false;
+        int last = _surplusBuilt!.Current[a];
+        if (last != 0 && t - (last - 1) < _slots.SurplusBuildEveryMonths)
+            return false;
+        for (int k = 0; k < _l.SlotCount(a); k++)
+        {
+            var o = new InstituteHandle(a, k);
+            if (Building(o) || (k < h.Slot && !Standing(o) && CanBuild(o, t) == BuildCheck.Ok))
+                return false;
+        }
+        return true;
+    }
 
     // AI general building rule (SCIENCE_SLOTS §8): all institutes busy for a year, more nodes on the path than slots, the upkeep after the project at most 15 % of the
     // research money, nothing else under way, and the first buildable candidate by slot order.

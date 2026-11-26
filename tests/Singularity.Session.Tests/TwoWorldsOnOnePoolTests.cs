@@ -52,9 +52,10 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0188 (#575): 57 new nodes 100-156 (9 new processes) change every trajectory on the current data; explanation in the task file.
     // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10) + the AI reads the air power index from a column (review fixes).
     // Re-recorded once in TASK-0193: 55 new nodes 160-214 (1990-2030) and 3 new processes move every trajectory; explanation in the task file.
+    // Re-recorded once in TASK-0199 (#589): schema columns inst.surplus and inst.surplus_built (slot model, all zero before 1990, so the old columns are unchanged: EraPriceSurplusTests.TheWorldBefore1990...); the era price and the AI surplus rule act only from 1990.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "6e94d15e258e9e9e8fa574f37f93ca801f8f9304927139213e963b2de7a1571e", [2] = "98c4c0ae1536ef8d43c420c0fa20731c97d122f098c8fa6e98a0b8746aa44cc3", [3] = "60d3c6b2d2e4eb95c255e159cc97e054392cd7873bdf568c53954849994fa360", [4] = "dd8cad36a94e7f1c4cdc16a3ae4c001db8e2132a7ea96cb845cfc83b307a3186", [5] = "11327bb8ccc85442fae54d8acf06900e88afce4e700d7cd1b0ef4a68d2850827", [7] = "98ca9e4ff817f2583620b2b00ad0671d32260d98824f7d7e5d2d9d637be9e1c0",
+        [1] = "0900524c09a46e57e4a90921e0ed4e5864dcc08cfa870328ab13df474daf9fb9", [2] = "ae1bc3b2bf9f89cd30fb17be789d7f094179780cc3aa424d188190aa3eb33c51", [3] = "6e90f1cf42bf6cf06a69b935407712b775e32c8ae8db3466948227c39132bf4b", [4] = "4bc4187a26976a6dc6ab5d9b1c29ac574ed632a5545774ed66b95add7ebc6087", [5] = "bcc0036736750cf147675d2cf69353ac582df5bfaa0bafb1883096bb628ae55f", [7] = "b26c9a32b6529d7c6a5308359c51305248309a86748d3d28e412e85c000c7825",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

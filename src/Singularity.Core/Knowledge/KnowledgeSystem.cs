@@ -92,6 +92,7 @@ public sealed partial class KnowledgeSystem : ITickSystem
             throw new ArgumentException("The slot model needs the full knowledge mode, the institute parameters and no programmes (they are the focus now, O-088).", nameof(slots));
         slots?.Validate();
         _slots = slots;
+        _era = slots?.EraFactors();
         _slotCount = slotCount;
         // The start value must lie below every month of the horizon (tau of the start section starts at the horizon, spec §6.1 v0.24 r2); −1 is the mark «unknown».
         if (trackKnownSince && startKnownSince > KnownSinceMarks.StartKnown)
@@ -700,7 +701,20 @@ public sealed partial class KnowledgeSystem : ITickSystem
 
     // The ahead-of-time multiplier is a pure function of (node, month): a few integer operations, no table to refresh, nothing stored.
     private Fx6 CEffOf(int a, int r, Fx6 kmix, long month) =>
-        _slots is null ? CEffBase(a, r, kmix, month) : CEffBase(a, r, kmix, month) * _slots.PriceScale;
+        _slots is null ? CEffBase(a, r, kmix, month) : CEffBase(a, r, kmix, month) * _slots.PriceScale * EraFactor(_g.AnchorYear[r], month);
+
+    /// <summary>Calendar origin of the run in months from 1945-01 (tests read the era price against it).</summary>
+    public int CalendarOriginMonthsForTest => _p.CalendarOriginMonths;
+
+    // Era price (#589): the table of the curve is read at min(node year, calendar year of the month); no curve, a node without a year or a year before 1990 = ×1.
+    private Fx6 EraFactor(int anchorYear, long month)
+    {
+        if (_era is null || anchorYear <= 0)
+            return Fx6.One;
+        int calendar = 1945 + (int)((_p.CalendarOriginMonths + month) / 12);
+        int year = Math.Max(Singularity.Core.Institutes.SlotParams.EraFirstYear, Math.Min(Math.Min(anchorYear, calendar), Singularity.Core.Institutes.SlotParams.EraLastYear));
+        return _era[year - Singularity.Core.Institutes.SlotParams.EraFirstYear];
+    }
 
     private Fx6 CEffBase(int a, int r, Fx6 kmix, long month) =>
         KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r), _inputs.StealShare(a, r, month));

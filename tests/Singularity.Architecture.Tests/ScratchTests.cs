@@ -28,6 +28,8 @@ public class ScratchTests
         "KnowledgeSystem._start",
         // Slot model: T_n of every node, computed once from the graph and the parameters in AddSlotColumns (TASK-0187).
         "KnowledgeSystem._tn",
+        // Era price factor per calendar year (#589): built once in the constructor from the slot parameters, only read afterwards.
+        "KnowledgeSystem._era",
         // The per-tick channel to IndustrySystem: filled in compute, drained and cleared by IndustrySystem (whose own list of mailboxes is [Scratch]).
         "ProductsSystem._mailbox",
         "PolicySystem._mailbox",

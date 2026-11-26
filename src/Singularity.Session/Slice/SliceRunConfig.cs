@@ -249,6 +249,9 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool ScienceSlots { get; init; } = true;
 
+    /// <summary>Slot model constants of the run (the era price curve and the AI surplus rule, #589); null = the defaults of <see cref="Singularity.Core.Institutes.SlotParams"/>. Internal (tests and the Lab): the public surface of the session is pinned.</summary>
+    internal Singularity.Core.Institutes.SlotParams? SlotParameters { get; init; }
+
     /// <summary>
     /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft
     /// channel in <c>c_eff</c>, estimates with confidence. Needs the <c>intelligence</c> object in the data. Off = the table, the hash and every golden are those of

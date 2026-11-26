@@ -63,8 +63,71 @@ public sealed record SlotParams
     /// <summary>AI focus needs this share of the research money left after the rates.</summary>
     public Fx6 AiFocusMargin { get; init; } = F(100_000);
 
+    /// <summary>One point of the era price curve: from this calendar year the node price is multiplied by <see cref="Mult"/> (linear between points, flat after the last).</summary>
+    public readonly record struct EraPoint(int Year, Fx6 Mult);
+
+    /// <summary>
+    /// Era price curve D (#589, era-node-price.md §5): ×2 per ten years from 1990, ×16 by 2030. The factor of a node is read at <c>min(node year, calendar year)</c>, so
+    /// a world before 1990 has factor 1 everywhere. Empty = no era price.
+    /// </summary>
+    public ImmutableArray<EraPoint> EraPrice { get; init; } =
+        [new(1990, Fx6.One), new(2000, Fx6.FromInt(2)), new(2010, Fx6.FromInt(4)), new(2020, Fx6.FromInt(8)), new(2030, Fx6.FromInt(16))];
+
+    /// <summary>The AI builds an institute on a surplus when the returned share of the research money, averaged over <see cref="SurplusWindowMonths"/>, is above this (#589: 20 %).</summary>
+    public Fx6 SurplusBuildShare { get; init; } = F(200_000);
+
+    /// <summary>Time constant of the averaging of the returned share, in months (an exponential window: one column, no history).</summary>
+    public int SurplusWindowMonths { get; init; } = 12;
+
+    /// <summary>The surplus rule fires at most once in this many months for an actor (N of #589; placeholder until the Lab measurement).</summary>
+    public int SurplusBuildEveryMonths { get; init; } = 24;
+
+    /// <summary>The surplus rule and its average run from this calendar year; before it the world is the one of the shares before #589. <see cref="int.MaxValue"/> = off.</summary>
+    public int SurplusBuildFromYear { get; init; } = 1990;
+
+    /// <summary>The era factor for each calendar year 1945..2100 (index = year − 1945); null without a curve. Integer interpolation, no floating point.</summary>
+    public Fx6[]? EraFactors()
+    {
+        if (EraPrice.IsDefaultOrEmpty)
+            return null;
+        var table = new Fx6[EraLastYear - EraFirstYear + 1];
+        for (int y = EraFirstYear; y <= EraLastYear; y++)
+        {
+            EraPoint first = EraPrice[0], last = EraPrice[^1];
+            Fx6 m;
+            if (y <= first.Year)
+                m = Fx6.One;
+            else if (y >= last.Year)
+                m = last.Mult;
+            else
+            {
+                int i = 1;
+                while (EraPrice[i].Year < y)
+                    i++;
+                EraPoint lo = EraPrice[i - 1], hi = EraPrice[i];
+                m = Fx6.FromRaw(lo.Mult.Raw + (hi.Mult.Raw - lo.Mult.Raw) * (y - lo.Year) / (hi.Year - lo.Year));
+            }
+            table[y - EraFirstYear] = m;
+        }
+        return table;
+    }
+
+    public const int EraFirstYear = 1945, EraLastYear = 2100;
+
     public void Validate()
     {
+        if (!EraPrice.IsDefaultOrEmpty)
+        {
+            if (EraPrice[0].Mult != Fx6.One)
+                throw new ArgumentException("The era price curve starts at ×1.");
+            for (int i = 1; i < EraPrice.Length; i++)
+            {
+                if (EraPrice[i].Year <= EraPrice[i - 1].Year || EraPrice[i].Mult < EraPrice[i - 1].Mult)
+                    throw new ArgumentException("The era price curve needs rising years and a multiplier that does not fall.");
+            }
+        }
+        if (SurplusBuildShare < Fx6.Zero || SurplusWindowMonths < 1 || SurplusBuildEveryMonths < 1)
+            throw new ArgumentException("Surplus build share >= 0, window and period >= 1 month.");
         if (TimeBase <= Fx6.Zero || TimeGenSlope < Fx6.Zero || PriceScale <= Fx6.Zero)
             throw new ArgumentException("Slot time base, slope and price scale must be positive.");
         if (SpeedCap < Fx6.One)

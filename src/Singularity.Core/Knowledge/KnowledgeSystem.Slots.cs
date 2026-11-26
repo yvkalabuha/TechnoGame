@@ -12,6 +12,7 @@ namespace Singularity.Core.Knowledge;
 public sealed partial class KnowledgeSystem
 {
     private readonly SlotParams? _slots;
+    private readonly Fx6[]? _era;   // era price factor per calendar year, built once from the slot parameters
     private readonly int _slotCount;
     private Fx6[] _tn = [];
     private LongColumn[] _sprog = [];

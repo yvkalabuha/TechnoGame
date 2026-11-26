@@ -39,6 +39,10 @@ public sealed partial record SliceRunConfig
             .. Institutes && ScienceSlots ? (string[])["slots"] : [],
             .. Intelligence ? (string[])["intelligence"] : [],
         ];
+        // Slot constants are added only when overridden: a default run keeps its fingerprint.
+        if (SlotParameters is { } sp)
+            fields = [.. fields, "slotparams", string.Join(',', sp.EraPrice.IsDefault ? [] : sp.EraPrice.Select(e => e.Year + ":" + e.Mult.Raw.ToString(CultureInfo.InvariantCulture))),
+                Raw(sp.SurplusBuildShare), sp.SurplusWindowMonths.ToString(CultureInfo.InvariantCulture), sp.SurplusBuildEveryMonths.ToString(CultureInfo.InvariantCulture), sp.SurplusBuildFromYear.ToString(CultureInfo.InvariantCulture)];
         fields = [.. fields, LicenceMarket.ToString(), string.Join(',', LicenceExternalActors.IsDefault ? [] : LicenceExternalActors), Alliances?.Identity ?? "-"];
         // The adviser decides the trajectory but exists only when on: nothing is added for an off run, so its fingerprint stays what it was.
         ImmutableArray<int> adviser = EffectiveAdviserActors;
