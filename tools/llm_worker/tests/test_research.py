@@ -78,7 +78,45 @@ class Verdicts(Base):
         # the quote and the value both say 1955, the claim says 1955: that is no contradiction
         _, (_, rec, _) = self.run_it([answer("contradicted")])
         self.assertEqual(rec["items"][0]["verdict"], "not_found")
-        self.assertIn("contradiction_gives_the_submitted_year", rec["items"][0]["note"])
+        self.assertIn("contradiction_gives_the_submitted_value", rec["items"][0]["note"])
+
+    def test_confirmation_must_quote_the_submitted_year(self):
+        _, (_, rec, _) = self.run_it([answer(quote="It densifies castings", value="")])
+        self.assertEqual(rec["items"][0]["verdict"], "not_found")  # quote exists but lacks 1955
+        _, (_, rec, _) = self.run_it([answer("contradicted", quote="invented in 1955 at the Battelle Memorial Institute", value="1955")])
+        self.assertIn("contradiction_gives", rec["items"][0]["note"])
+
+    def test_not_found_publishes_no_evidence_and_review_flag(self):
+        _, (path, rec, md) = self.run_it([answer("not_found", quote="invented in 1955 at the Battelle", value="1955")])
+        it = rec["items"][0]
+        self.assertEqual((it["quote"], it["value"], it["source"], it["source_url"]), ("", "", None, None))
+        self.assertTrue(rec["review_required"] and it["review_required"])
+        self.assertIn("| проверить |", md)
+        self.assertTrue(md.splitlines()[2].endswith("| да |"))
+
+    def test_short_quote_allowed_on_short_page_with_value(self):
+        text = "Maraging steel appeared in 1959."
+        self.assertTrue(research.quote_in_text("appeared in 1959", text, "1959"))
+        self.assertFalse(research.quote_in_text("appeared in 1959", text, ""))
+        self.assertFalse(research.quote_in_text("appeared in 1959", text + " " + "x" * 2000, "1959"))
+        self.assertFalse(research.quote_in_text("in 1959", text, "1959"))  # 2 words
+
+    def test_page_failure_keeps_earlier_results(self):
+        self.inp.write_text(YAML.replace("https://example.org/cc", "https://example.org/hip"), encoding="utf-8")
+        runs = self.tmp / "runs"
+        calls = []
+
+        def boom(text):
+            calls.append(1)
+            if len(calls) > 1:
+                raise gitleaks.GitleaksUnavailable("gone")  # becomes a ReviewError in load_page
+
+        self.scan.side_effect = boom
+        with self.assertRaises(research.ReviewError):
+            research.run_research(self.inp, runs_dir=runs, make_provider=lambda: FakeProvider([answer()]),
+                                  fetch=self.fetch, cache_dir=self.tmp / "cache")
+        rec = json.loads(next(runs.glob("research-*.json")).read_text(encoding="utf-8"))
+        self.assertEqual(([i["id"] for i in rec["items"]], rec["complete"]), (["hip"], False))
 
     def test_year_must_match_whole_token(self):
         text = "Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute."

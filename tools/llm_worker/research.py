@@ -29,6 +29,8 @@ MAX_URLS = 4
 MAX_QUOTE_WORDS = 30
 MIN_QUOTE_WORDS = 6
 MIN_QUOTE_CHARS = 30
+SHORT_QUOTE_WORDS = 3
+SHORT_PAGE_CHARS = 2000
 MAX_REDIRECTS = 5
 FETCH_TIMEOUT_S = 30
 VERDICTS = ("confirmed", "contradicted", "not_found")
@@ -171,11 +173,14 @@ def has_token(needle, text):
 
 def quote_in_text(quote, text, value=""):
     """True when the quote occurs in the page text (case, spaces and typographic marks ignored), has 6 to 30
-    words and at least 30 characters, and contains the stated value when there is one."""
-    q = _norm(quote)
-    if len(q) < MIN_QUOTE_CHARS or not MIN_QUOTE_WORDS <= len(q.split()) <= MAX_QUOTE_WORDS:
+    words and at least 30 characters, and contains the stated value when there is one. On a short page
+    (under 2000 characters) a quote of 3 to 5 words is enough when it contains the value."""
+    q, v = _norm(quote), _norm(value)
+    words = len(q.split())
+    short_ok = bool(v) and len(text) < SHORT_PAGE_CHARS and SHORT_QUOTE_WORDS <= words < MIN_QUOTE_WORDS
+    if not short_ok and (len(q) < MIN_QUOTE_CHARS or not MIN_QUOTE_WORDS <= words <= MAX_QUOTE_WORDS):
         return False
-    if _norm(value) and not has_token(_norm(value), q):
+    if v and not has_token(v, q):
         return False
     return q in _norm(text)
 
@@ -244,7 +249,7 @@ def judge(provider, item, pages):
     errors = ["not a JSON object"] if not isinstance(data, dict) else jsonschema_lite.validate(data, schema)
     if errors or data["source"] >= len(pages):
         return {"verdict": "not_found", "source": None, "quote": "", "value": "", "usage": comp.usage,
-                "note": "schema_invalid: " + ("; ".join(errors[:3]) or "source out of range")}
+                "source_url": None, "note": "schema_invalid: " + ("; ".join(errors[:3]) or "source out of range")}
     res = {k: data[k] for k in ("verdict", "source", "quote", "value", "note")}
     res["usage"] = comp.usage
     said = res["verdict"]
@@ -254,13 +259,25 @@ def judge(provider, item, pages):
             reason = "quote_not_in_page"
         elif "claim" not in item and not res["value"].strip():
             reason = "no_value_for_question"
-        elif said == "contradicted" and "year" in item and has_token(_norm(str(item["year"])), _norm(res["value"])):
-            reason = "contradiction_gives_the_submitted_year"
+        else:
+            # The quote must agree with the verdict about the submitted value: a string check cannot prove meaning,
+            # but a contradiction that quotes the submitted value, or a confirmation that does not, is refused.
+            sub = _norm(str(item.get("year", item.get("value", ""))))
+            if sub and "claim" in item:
+                in_quote = has_token(sub, _norm(res["quote"])) or has_token(sub, _norm(res["value"]))
+                if said == "contradicted" and in_quote:
+                    reason = "contradiction_gives_the_submitted_value"
+                elif said == "confirmed" and not has_token(sub, _norm(res["quote"])):
+                    reason = "confirmation_lacks_the_submitted_value"
         res["quote_verified"] = reason != "quote_not_in_page"
         if reason:
-            # Nothing the model claimed survives into the artifacts: the rejected quote, value and source are dropped.
-            res.update(verdict="not_found", source=None, quote="", value="", note=f"{reason} (model said {said})")
+            res["note"] = f"{reason} (model said {said})"
+            res["verdict"] = "not_found"
+    if res["verdict"] == "not_found":
+        # A not_found publishes no evidence: the rejected quote, value and source are dropped.
+        res.update(source=None, quote="", value="")
     res["source_url"] = pages[res["source"]][0] if res["verdict"] != "not_found" else None
+    res["review_required"] = True
     return res
 
 
@@ -270,7 +287,9 @@ def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_
     data = load_input(path)
     stem = "research-" + Path(path).stem
     key = "research:" + Path(path).stem
-    record = {"kind": "research", "input": str(path), "provider": profile_name, "items": []}
+    # Verdicts are asserted by the model; only the existence of the quote on the page is checked by the tool.
+    record = {"kind": "research", "input": str(path), "provider": profile_name, "review_required": True,
+              "verification": "quote existence only; verdicts are model-asserted", "items": []}
     if not dry_run:
         make_provider = make_provider or (lambda: review.paid_provider(profile_name, key))
         provider = make_provider()
@@ -288,22 +307,22 @@ def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_
     for it in data["items"]:
         out = {"id": it["id"], "text": it.get("claim") or it.get("question"), "pages": []}
         pages = []
-        for url in it["urls"][:MAX_URLS]:
-            text, info = load_page(url, fetch, cache_dir)
-            out["pages"].append(info)
-            if text:
-                pages.append((url, text))
-        if dry_run or not pages:
-            out.update(verdict="not_found", note="dry_run" if dry_run else "no_page_available")
-        else:
-            try:
+        try:
+            for url in it["urls"][:MAX_URLS]:
+                text, info = load_page(url, fetch, cache_dir)
+                out["pages"].append(info)
+                if text:
+                    pages.append((url, text))
+            if dry_run or not pages:
+                out.update(verdict="not_found", note="dry_run" if dry_run else "no_page_available")
+            else:
                 out.update(judge(provider, it, pages))
-            except Exception as e:
-                # Paid answers already received must not be lost: keep them in a partial record, then fail.
-                if record["items"]:
-                    saved = save(f"{type(e).__name__}: {e}")
-                    print(f"partial results saved: {saved}", file=sys.stderr)
-                raise
+        except Exception as e:
+            # Paid answers already received must not be lost (a page failure counts too): keep them, then fail.
+            if record["items"] and not dry_run:
+                saved = save(f"{type(e).__name__}: {e}")
+                print(f"partial results saved: {saved}", file=sys.stderr)
+            raise
         record["items"].append(out)
     if dry_run:
         record["created"] = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -316,8 +335,8 @@ def _cell(s):
 
 
 def markdown(record):
-    rows = ["| id | verdict | value | quote | source | note |", "|---|---|---|---|---|---|"]
+    rows = ["| id | verdict | value | quote | source | note | проверить |", "|---|---|---|---|---|---|---|"]
     for it in record["items"]:
         rows.append(f"| {_cell(it['id'])} | {it['verdict']} | {_cell(it.get('value'))} | {_cell(it.get('quote'))} "
-                    f"| {_cell(it.get('source_url'))} | {_cell(it.get('note'))} |")
+                    f"| {_cell(it.get('source_url'))} | {_cell(it.get('note'))} | да |")
     return "\n".join(rows) + "\n"
