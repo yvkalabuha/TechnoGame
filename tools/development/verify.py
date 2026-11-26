@@ -42,6 +42,7 @@ def steps(full: bool, with_map: bool) -> list[tuple[str, list[str]]]:
         ("registry", [py, "tools/development/registry.py", "check"]),
         ("hooks", [py, "tools/development/test_hooks.py"]),
         ("errors", [py, "tools/development/test_errors.py"]),
+        ("kb_db", [py, "-m", "unittest", "tools/development/test_kb_db.py"]),  # database tests skip without PostgreSQL
         ("build", [dn, "build", "Singularity.sln", "-c", "Release", "-v", "q", "-nologo"]),
         ("test", [dn, "test", "Singularity.sln", "-c", "Release", "--no-build", "-v", "q", "-nologo"]),
         ("selftest", [dn, "src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll", "selftest"]),
