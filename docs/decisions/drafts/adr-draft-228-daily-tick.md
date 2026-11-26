@@ -9,6 +9,7 @@ related: [ADR-0003, ADR-0005, ADR-0006, ADR-0014, ADR-0016, ADR-0017, ADR-0019, 
 approved_by:
 approved_at:
 approval_ref:            # условие кода — DECISIONS_LOG #503; параллельная работа — #504; сам ADR ещё не утверждён
+tags: [decision, core, performance, draft]
 ---
 
 # ADR-NNNN — Дневной тик (#228): выполнимые условия ADR-0019, распад и рост на `Rate`, параллельная работа с пакетом рычагов

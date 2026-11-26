@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#374, ADR-0008 rev 3"
 created: 2026-11-18
+tags: [task, simulation-lab, determinism, done]
 ---
 
 # TASK-0093 — Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374)

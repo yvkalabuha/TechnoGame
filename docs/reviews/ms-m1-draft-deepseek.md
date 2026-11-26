@@ -1,3 +1,6 @@
+---
+tags: [review, platform, external-llm, done]
+---
 # Gate MS-M1 draft — DeepSeek third voice (2026-11-18)
 
 Record: tools/llm_worker/runs/gate-MS-M1-draft-ffc2c241-third.json

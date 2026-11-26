@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "TASK-0180 FL7 diagnosis"
 review_ref: "reviewer: APPROVE after comment fixes (Core 1212, Session 651); codex accept e3b86996, leftovers DEBT-0110; merge f45c3d4"
 created: 2026-11-25
+tags: [task, military, economy, done]
 ---
 
 # TASK-0182 — Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10)

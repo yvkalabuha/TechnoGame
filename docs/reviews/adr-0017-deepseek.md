@@ -1,3 +1,6 @@
+---
+tags: [review, determinism, core, external-llm, done]
+---
 # ADR-0017 — DeepSeek third voice
 
 Record: `tools/llm_worker/runs/gate-ADR-0017-statehash-schedule-and-table-copy-in-daily-mode-3340b5f1-third.json` (sha256 8211f4ec…). changes_requested: 1 high, 3 medium, 3 low.

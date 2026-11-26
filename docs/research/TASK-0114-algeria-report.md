@@ -1,3 +1,6 @@
+---
+tags: [research, map, history, done]
+---
 # TASK-0114 — Алжир 1945: департаменты и Территории Юга (шаг 1, research-scientist)
 
 Не RR-документ, frontmatter нет. Доступ ко всем URL: 2026-11-19. Файлы `tools/`, `mods/` не менялись.

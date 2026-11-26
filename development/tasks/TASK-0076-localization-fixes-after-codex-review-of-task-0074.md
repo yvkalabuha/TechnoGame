@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "light: Codex review of TASK-0074"
 created: 2026-11-18
+tags: [task, ui, platform, done]
 ---
 
 

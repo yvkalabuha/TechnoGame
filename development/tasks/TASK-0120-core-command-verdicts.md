@@ -14,6 +14,7 @@ approved_by:             # owner | orchestrator (orchestrator — только l
 approved_at:
 approval_ref:
 created: 2026-11-19
+tags: [task, core, draft]
 ---
 
 # TASK-0120 — Core emits a per-command verdict; commands keyed by handle

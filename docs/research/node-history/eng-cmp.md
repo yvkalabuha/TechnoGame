@@ -1,3 +1,6 @@
+---
+tags: [research, science, history, done]
+---
 # История узлов ENG и CMP (TASK-0157, шаг 2)
 
 Автор: research-scientist, 2026-11-24 (проход проверки источников). Узлов: 37. Статус: [Предл.].

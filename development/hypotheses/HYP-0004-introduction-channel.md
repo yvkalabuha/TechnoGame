@@ -8,6 +8,7 @@ approved_by:
 approved_at:
 approval_ref:
 created: 2026-11-15
+tags: [hypothesis, economy, science, draft]
 ---
 
 # HYP-0004 — Канал внедрения: новый процесс выбирается из низкого выхода без серийного выпуска

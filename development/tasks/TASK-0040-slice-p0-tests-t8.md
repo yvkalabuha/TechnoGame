@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "Спека среза v0.23 §11, строка T8"
 created: 2026-11-13
+tags: [task, testing, determinism, done]
 ---
 
 # TASK-0040 — T8: тесты P0 среза

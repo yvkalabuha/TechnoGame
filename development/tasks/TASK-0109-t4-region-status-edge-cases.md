@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0022 follow-up (3), #410 (light)"
 created: 2026-11-18
+tags: [task, map, history, done]
 ---
 
 # TASK-0109 — T4: region status edge cases for 1945 (ADR-0022 p.2.6)

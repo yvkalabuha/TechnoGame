@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 review_ref: "reviewer: CHANGES closed by O-079 (K rounding fixed, K into data via TASK-0156)"
 created: 2026-11-24
+tags: [task, data, economy, done]
 ---
 
 # TASK-0155 — Data: constant 1990 US dollar display series and conversion from Core money unit

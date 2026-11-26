@@ -1,3 +1,6 @@
+---
+tags: [review, military, history, done]
+---
 # Gate RR-0017 / RR-0019 — advocate (2026-11-18)
 
 Both drafts are a sound base; both still assume the monthly tick (pre ADR-0019) and lack the province / owner–controller link (ADR-0020, #349–#351).

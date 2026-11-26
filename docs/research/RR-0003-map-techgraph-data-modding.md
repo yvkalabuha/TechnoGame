@@ -4,6 +4,7 @@ title: Карта, граф технологий, данные, моддинг
 status: FINAL
 date: 2026-11-02
 author: research agent (Phase B)
+tags: [research, map, science, data, accepted]
 ---
 
 # RR-0003 — Глобальная карта, граф технологий, форматы данных и моддинг

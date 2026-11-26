@@ -1,3 +1,6 @@
+---
+tags: [experiment, simulation-lab, science, done]
+---
 # EXP-0002: результат основного эксперимента HYP-0002 (срез «реактивная авиация»)
 
 > simulation-engineer, 2026-11-17. Манифест `lab/manifests/EXP-0002.json`, заморожен решением владельца #258: `manifest_hash` при заморозке `c3c2d471cfb3bdaff6cb2128cf6a550c8cd50c885f6732f08de99aa8c15f9f14`. После прогона в `meta.deviations` добавлены #264 и #265; хеш файла с ними — `2239cd51…`, запись `meta.freeze` не менялась. Спека `slice-jet-aviation.md` v0.34 r1 (§7 — правило решения). Прогоны: `lab/results/exp0002/` (не коммитятся).

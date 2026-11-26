@@ -5,6 +5,7 @@ status: DRAFT            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-18
 author: research-scientist
 related: [ADR-0011, MS-M1]
+tags: [research, history, politics, draft]
 ---
 
 # RR-0020 — Scripted ownership events 1945-1975: dates and sources

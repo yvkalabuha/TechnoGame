@@ -1,3 +1,6 @@
+---
+tags: [research, science, done]
+---
 # Расширение дерева знаний: 57 узлов 1942–2021 (#575, TASK-0188, шаг 1)
 
 Автор: research-scientist, 2026-11-25. Статус: [Предл.] — предложение для шага 2 (developer). mods/ не менялся. Основание: решение владельца #575; направления — `docs/research/notes/directions-nodes-institutes.md`; research_speed и слова военной ценности — `docs/game-design/SCIENCE_SLOTS.md` §3.2, §6.

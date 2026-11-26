@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: TASK-0173 (docs/simulation/institutes-p7-measurement.md)
 review_ref: "reviewer: APPROVE (2e32d8d, 5f98ae6); codex 3 returns (#432), rest DEBT-0107"
 created: 2026-11-25
+tags: [task, science, economy, done]
 ---
 
 # TASK-0175 — Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares)

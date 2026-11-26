@@ -15,6 +15,7 @@ approved_at: 2026-11-22
 approval_ref: "#431, #435, #436, #437 (mechanic approved by owner; code is light inside it)"
 review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-23
+tags: [task, military, core, done]
 ---
 
 # TASK-0129 — Старение парка без замены в Core (#431, #435–#437)

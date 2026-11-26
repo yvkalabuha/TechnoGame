@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "owner decisions #457, #458 (chat 2026-11-24); light task inside approved decisions, approved by Orchestrator"
 review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-24
+tags: [task, core, science, done]
 ---
 
 # TASK-0147 — Цена опережения (#458) и данные G5/G6 ред. 3.1 на ветке поезда 2

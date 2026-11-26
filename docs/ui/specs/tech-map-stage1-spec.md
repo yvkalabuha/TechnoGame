@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, draft]
+---
 # Спецификация карты технологий, этап 1 (TASK-0192)
 
 Автор: Claude ui-art-director. Основа: наброски Gemini раунд 1 и 2, ревью docs/ui/reviews/task-0192-sketch-review.md, бриф docs/ui/specs/tech-map-stage1-brief.md, SCIENCE_SLOTS §12. Это итоговая раскладка для developer. Размеры в du (1 du = 1 px при 1920x1080, 100 %); [Предл.] там, где число выбрано мной и не измерено на живом кадре.

@@ -1,3 +1,6 @@
+---
+tags: [review, science, institutions, done]
+---
 # Gate: research-institutes-priorities.md — critic
 
 STATUS: needs-decision

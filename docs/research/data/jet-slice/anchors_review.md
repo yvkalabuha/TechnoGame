@@ -1,3 +1,6 @@
+---
+tags: [review, science, data, done]
+---
 # Пересмотр калибровочных якорей C1 и C2 среза «реактивная авиация» (решение #86)
 
 > Автор: research-scientist. Дата: 2026-11-03. Входы: `docs/simulation/slice-jet-aviation.md` v0.10 §8.1–§8.2; `LAYER_CONTRACT.md` §4.1–4.2, §8.2; `docs/simulation/smoke-t4s.md` §3.2–3.3; `docs/simulation/culture-rule-selection.md` §2.1, §2.4; RR-0006 §2; RR-0007 §4; `docs/research/data/component-evolution/historical_cases.md`; `nodes.csv`.

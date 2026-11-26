@@ -15,6 +15,7 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #591"
 review_ref: "reviewer: APPROVE 35d1169b; second review agy-sonnet accept (codex limit), 4 findings → DEBT-0123"
 created: 2026-11-26
+tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0204 — Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591)

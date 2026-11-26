@@ -1,3 +1,6 @@
+---
+tags: [review, economy, external-llm, done]
+---
 # Gate: правило бюджетов среза — третий голос DeepSeek (2026-11-19)
 
 Артефакт: `docs/game-design/economy/slice-budget-convergence.md` (редакция 1, коммит 369df2c). Запись: `tools/llm_worker/runs/gate-slice-budget-convergence-369df2c4-third.json`. Сводка Orchestrator.

@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Gemini visual opinion: TASK-0137
 
 Model gemini-4-hydrogen, frames: b_europe_day.png, b_europe_day_grey.png, b_terminator.png.

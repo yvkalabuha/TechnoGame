@@ -1,3 +1,6 @@
+---
+tags: [review, military, history, done]
+---
 # Gate RR-0016 (revised) — critic (2026-11-18)
 
 War is built on economy, logistics and technology, no tactical game. 4 high: tick-budget unit error; taint boundary unresolved; the "wars replace war_related" contract is unreachable; no war-start model. 6 medium, 3 low.

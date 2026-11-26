@@ -1,3 +1,6 @@
+---
+tags: [note, data, science, active]
+---
 # Данные среза «реактивная авиация» (TASK-0011)
 
 > Автор: research-scientist, 2026-11-03. Вход: `docs/simulation/slice-jet-aviation.md` v0.3 §1, §8.1; `LAYER_CONTRACT.md` v2.2; RR-0005, RR-0008 §12; решения #23, #40, #41, #50; ADR-0009. Формат мода и валидатор — отдельная задача developer (после ADR-0010).

@@ -1,3 +1,6 @@
+---
+tags: [task, determinism, testing, done]
+---
 # Тег среза M0: коммит, где эталоны EXP-0002 ещё совпадают (TASK-0164, T-M1-02)
 
 > simulation-engineer, 2026-11-25. Основание: ADR-0027 п. 5 (R4), ADR-0019 п. 20, MS-M1 K6, `exp0002-result.md` §1. Тег не ставился: ставит Orchestrator.

@@ -1,3 +1,6 @@
+---
+tags: [plan, science, gameplay, draft]
+---
 # Поворот #561/#562: сводка и предложение плана
 
 Orchestrator, 2026-11-25. Источники: `docs/game-design/notes/pivot-561-game-design.md` (game-designer), `docs/simulation/notes/pivot-561-model-impact.md` (simulation-engineer), `docs/ui/specs/pivot-561-tech-map.md` (ui-art-director), отчёт critic (в этом файле, §4).

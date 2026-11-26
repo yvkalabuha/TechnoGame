@@ -2,6 +2,7 @@
 title: "Platform: model limits from llmlimits (#605, #606)"
 status: ACCEPTED
 date: 2026-11-26
+tags: [design, external-llm, platform, active]
 ---
 
 # Лимиты моделей в платформе (llmlimits)

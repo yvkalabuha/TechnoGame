@@ -1,3 +1,6 @@
+---
+tags: [design, science, economy, draft]
+---
 # LAYER CONTRACT v3 — ЧЕРНОВИК: компоненты как изделия (второй срез «перемоторизация»)
 
 Статус: **DRAFT r2, gate+research, не утверждено** · 2026-11-03 · владелец: systems-architect.

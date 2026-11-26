@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 review_ref: "reviewer: APPROVE (a0ece5a re-review); codex: waived after 3 returns (#432); landed 9d7d3a3; DEBT-0099"
 created: 2026-11-24
+tags: [task, core, economy, done]
 ---
 
 # TASK-0150 — Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme

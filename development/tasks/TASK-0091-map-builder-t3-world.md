@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0011 rev 3, ADR-0020 ACCEPTED (#354), #350; light step of approved map builder"
 created: 2026-11-18
+tags: [task, map, history, done]
 ---
 
 # TASK-0091 — Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml

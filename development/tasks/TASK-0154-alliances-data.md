@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 review_ref: "reviewer: APPROVE (data matches note and history for 5 slice countries); follow-up TASK-0170"
 created: 2026-11-24
+tags: [task, data, politics, done]
 ---
 
 # TASK-0154 — Data: alliances and blocs by year 1945-2030 for the licence buyer circle

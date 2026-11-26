@@ -15,6 +15,7 @@ approved_at: 2026-11-26
 approval_ref: "red CI on main (run 45873694378), orchestration.md §2"
 review_ref: "reviewer: APPROVE 41a2ad55; second review: agy-sonnet (claude-sonnet-5-5-medium) accept, 2 findings, record review-TASK-0210-41a2ad55-agy-sonnet.json"
 created: 2026-11-26
+tags: [task, platform, testing, done]
 ---
 
 # TASK-0210 — CI fix: land.py imports redis_kv without putting tools/development first on sys.path (llm_worker test_rejections collision)

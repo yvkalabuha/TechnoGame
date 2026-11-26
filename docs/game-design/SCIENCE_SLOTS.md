@@ -1,3 +1,6 @@
+---
+tags: [design, science, gameplay, draft]
+---
 # Модель науки «по слотам»: ручной выбор узла, очередь, фокус, ускорение исследований (rev 2)
 
 > game-designer, 2026-11-25, **rev 2** после gate (`docs/reviews/science-slots-gate-summary.md`), решения Orchestrator O-088, O-089 (`docs/decisions/ORCH_DECISIONS.md`) и владельца #572. Задача: TASK-0186. Основание: решения владельца #561–#572 (`docs/decisions/DECISIONS_LOG.md`); записки `docs/game-design/notes/pivot-561-game-design.md`, `docs/simulation/notes/pivot-561-model-impact.md`, `docs/ui/specs/pivot-561-tech-map.md` (§1.3). Пометки: **[Факт]** — решение владельца/Orchestrator или файл со ссылкой; **[Предп.]** — не проверено; **[Предл.]** — не утверждено. Код не менялся.

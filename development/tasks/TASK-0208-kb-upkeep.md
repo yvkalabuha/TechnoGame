@@ -15,6 +15,7 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #597"
 review_ref: "reviewer: APPROVE db9ebd83; agy-sonnet second review accept (2 medium, 2 low -> DEBT-0125)"
 created: 2026-11-26
+tags: [task, knowledge-base, platform, done]
 ---
 
 # TASK-0208 — Knowledge base upkeep: fact drift is an error, decision-to-facts check at landing, freshness, /fact, facts in kb_db and mandatory facts block for code/data agents, agent DB access read-only (#597)

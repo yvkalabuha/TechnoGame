@@ -1,3 +1,6 @@
+---
+tags: [review, economy, done]
+---
 # Gate review: docs/game-design/notes/production-mastery.md — critic
 
 > 2026-11-24, owner decision #439. Report copied verbatim from the agent.

@@ -1,3 +1,6 @@
+---
+tags: [review, ui, external-llm, done]
+---
 # ADR-0018 localization — gate reviews (2026-11-17, commit 60c832e)
 
 Transcribed by the Orchestrator. DeepSeek record: `tools/llm_worker/runs/gate-ADR-0018-localization-keys-locale-files-in-mods-en-and-ru-60c832e1-third.json` (changes_requested: 2 high, 8 medium, 4 low).

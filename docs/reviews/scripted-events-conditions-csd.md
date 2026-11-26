@@ -1,3 +1,6 @@
+---
+tags: [review, history, gameplay, done]
+---
 # Scripted event preconditions — civilization-systems-designer input (2026-11-18)
 
 Artifact: `docs/game-design/scripted-events-conditions.md`. Answers to the [CSD] points. The vocabulary is enough for M1 and extends to M2 and branches without a format change.

@@ -8,6 +8,7 @@ approved_by: owner
 approved_at: 2026-11-18
 approval_ref: "DECISIONS_LOG #380, #381"
 created: 2026-11-18
+tags: [hypothesis, science, gameplay, active]
 ---
 
 # HYP-0005 — Open race: the 1945-1975 leadership outcome is neither predetermined nor random

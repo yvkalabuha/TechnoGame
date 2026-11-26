@@ -1,3 +1,6 @@
+---
+tags: [design, economy, gameplay, draft]
+---
 # PROCESS_DEVELOPMENT — рычаг «доводка процессов» (инженерное усилие на производстве)
 
 **Версия:** 0.3 · 2026-11-03 · автор: game-designer · статус: черновик после gate 2026-11-03 (critic + advocate); статус в реестре и утверждение — Orchestrator и владелец.

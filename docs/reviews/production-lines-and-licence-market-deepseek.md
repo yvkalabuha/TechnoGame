@@ -1,3 +1,6 @@
+---
+tags: [review, economy, external-llm, done]
+---
 # Gate: production-lines-and-licence-market.md — DeepSeek third voice
 
 ```

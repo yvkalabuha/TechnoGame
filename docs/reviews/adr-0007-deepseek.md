@@ -1,3 +1,6 @@
+---
+tags: [review, core, determinism, external-llm, done]
+---
 # Gate ADR-0007-collections rev 2 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-ADR-0007-collections-04709881-third.json

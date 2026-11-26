@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#528, #533-#536"
 review_ref: "reviewer: APPROVE (f459d31, 4 rounds); codex: 3 returns, waived by #432, leftovers DEBT-0108; merge 6402e5f"
 created: 2026-11-25
+tags: [task, map, data, done]
 ---
 
 # TASK-0168 — Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536)

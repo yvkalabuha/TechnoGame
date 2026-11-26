@@ -1,3 +1,6 @@
+---
+tags: [analysis, performance, core, done]
+---
 # Профиль тика M0 на синтетическом мире (решение #283)
 
 > Связано: ADR-0016 (ACCEPTED), EXP-0007 (П6 «Профиль»), TASK-0065 (`src/Singularity.Lab/Bench/SynthWorld.cs`), правила `.claude/rules/csharp-core.md`.

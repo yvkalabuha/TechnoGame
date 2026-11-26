@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #48, #49
 created: 2026-11-03
+tags: [task, simulation-lab, testing, done]
 ---
 
 # TASK-0012 — Эталон для сверки среза: три формулы и ручная траектория (Python stdlib)

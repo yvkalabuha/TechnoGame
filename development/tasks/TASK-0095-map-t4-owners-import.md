@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0011 rev 3 T4; #313, #337, #338; light"
 created: 2026-11-18
+tags: [task, map, history, data, done]
 ---
 
 # TASK-0095 — Map T4: import world owners/controllers 1945 into owners.yaml and polities.yaml

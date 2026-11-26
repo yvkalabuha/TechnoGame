@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0020 ACCEPTED (#354), Research R2"
 created: 2026-11-18
+tags: [task, core, determinism, done]
 ---
 
 # TASK-0090 — ADR-0020 R2: multi-table Kernel API sketch and hash-bytes check

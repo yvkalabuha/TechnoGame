@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-04
 approval_ref: "спека v0.18–v0.22 §3.5 A43, §11 T6d; контракт v2.4 r7–r8; DECISIONS_LOG #152, #154; DEBT-0019"
 created: 2026-11-04
+tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0033 — T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P

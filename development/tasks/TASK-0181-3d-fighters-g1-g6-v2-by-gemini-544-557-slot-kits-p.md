@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#557"
 review_ref: "ui-art-director: PASS round 2 + Gemini pass; reviewer: code acceptable, determinism and slot test run by orchestrator (3 equal sha256, test PASS); codex accept 851522b3, leftovers DEBT-0109; merge 446daee"
 created: 2026-11-25
+tags: [task, visual, external-llm, done]
 ---
 
 # TASK-0181 — 3D fighters G1-G6 v2 by Gemini (#544, #557): slot kits, paper-style sheet, art director acceptance

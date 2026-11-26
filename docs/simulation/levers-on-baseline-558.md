@@ -1,3 +1,6 @@
+---
+tags: [experiment, institutions, economy, done]
+---
 # Рычаги на принятом темпе (#558): правило целей институтов ИИ и настройка рынка лицензий
 
 > simulation-engineer, 2026-11-25. Предрегистрация записана и закоммичена до прогонов (коммит предрегистрации — первый коммит этой записки). Основание: решение владельца #558 (темп среза после TASK-0180 принят как опора: G2 вовремя, G3/G4 позже на 6–8 лет), #552 (κ = 1,5), #553 (рынок у всех), #554 (§8-d). Предыдущие замеры: `docs/simulation/ai-institute-goals.md` (TASK-0178), `docs/simulation/licence-market-calibration.md` (TASK-0179), `docs/simulation/institutes-recalibration.md` (TASK-0176, метод и песочница). Код: ветка этой задачи = `main` c9bbc89 (TASK-0180 + TASK-0182, схема v15) + слияния веток TASK-0178 и TASK-0179 (обе несут WIP TASK-0171: флаги рычагов включены по умолчанию в `SliceRunConfig`; Lab-серии с `LEVERS = LEGACY` их выключают).

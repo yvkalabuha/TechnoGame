@@ -1,3 +1,6 @@
+---
+tags: [note, science, economy, done]
+---
 # RR-0008 и контракт слоёв: два спора и вопрос 8 (формат графа)
 
 Автор: systems-architect, 2026-11-14. Входы: `docs/research/RR-0008-technology-space-architecture.md` («Разногласия» п. 1–2, «Вопросы» п. 8), `docs/architecture/LAYER_CONTRACT.md` (заголовок — v2.4 r9; спор сформулирован по r8, тексты §4.3, §9.2, §10 в r9 не менялись), `PHASE_F_WAVE1_CLOSURE.md` §1 строка 0008, DECISIONS_LOG #25, #32, #53, #60, ADR-0002, ADR-0004, ADR-0010, ADR-0013, код `src/Singularity.Core/Knowledge/*`, `mods/core/nodes.yaml`, `mods/schemas/node.schema.json`.

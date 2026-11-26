@@ -5,6 +5,7 @@ status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-14            # правка 2026-11-14 по решениям владельца #209–#212, #217 (вопросы 1–5 закрыты)
 author: economy-analyst
 related: [RR-0006, RR-0010, RR-0008, RR-0012, RR-0013, RR-0011, HYP-0002, ADR-0009, ADR-0002]
+tags: [research, economy, politics, accepted]
 ---
 
 # RR-0014 — Ресурсы, торговля, экспортный контроль

@@ -1,3 +1,6 @@
+---
+tags: [analysis, gameplay, science, draft]
+---
 # Анализ CONCEPT EXPANSION v0.1 и план исследований (PHASE F)
 
 **Дата:** 2026-11-02

@@ -19,6 +19,7 @@ analysis_seconds:        # время анализа (ADR-0008, порог Parqu
 baseline: EXP-0007       # справочные числа до TASK-0103; исход EXP-0007 — inconclusive
 outcome:                 # supports | refutes | inconclusive
 created: 2026-11-18
+tags: [experiment, performance, determinism, active]
 ---
 
 > **Отложен решением владельца #419 (2026-11-19).** M0 закрыт цифрами EXP-0007 как справкой; решающий замер тика — K4 на реальном мире M1. Серия не запускается, харнесс заморожен. Текст ниже сохранён как заготовка для замера M1.

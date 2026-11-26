@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: knowledge tree screen with node picture (TASK-0141 live run)
 
 Redesign the attached in-game screen "Дерево знаний" of a 1945–2100 science strategy game. Style: paper map, cream paper, ink engraving (owner decisions: tree on paper; engraving in ink).

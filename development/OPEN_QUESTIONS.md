@@ -1,3 +1,6 @@
+---
+tags: [journal, platform, active]
+---
 # OPEN QUESTIONS
 
 ## Очередь вопросов владельцу (задаются по запросу владельца, AskUserQuestion)

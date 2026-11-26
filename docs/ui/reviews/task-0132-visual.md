@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # TASK-0132 · визуальная ревизия (ui-art-director, 2026-11-25)
 Основание: задача TASK-0132, `UI_DESIGN_SYSTEM.md` §12, `.claude/rules/ui.md`, раунды TASK-0126 и TASK-0136. Кадры: `shots-out/TASK-0132/` tree_key_enter, tree_key_tip, tree_legend, tree_nolegend (цвет) и tree_key_tip_grey, tree_nolegend_grey, 1920x1080, 100 %. s125/s150/EN не смотрел. Gemini: `tools/llm_worker/runs/visual-TASK-0132-953e0ec2-gemini.md`.
 

@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0017 ACCEPTED (#317); light task inside approved ADR"
 created: 2026-11-18
+tags: [task, core, determinism, done]
 ---
 
 # TASK-0078 — ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW

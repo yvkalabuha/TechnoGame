@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Клиент v0.5b — спецификация интерфейса
 
 Автор: ui-art-director, 2026-11-18. Основа: DECISIONS_LOG #302, #303, #318, #320; `UI_DESIGN_SYSTEM.md` §17; ревью `reviews/task-0077-visual.md`; ADR-0013. Макет: `prototypes/client-v05b.html`. Код не правился.

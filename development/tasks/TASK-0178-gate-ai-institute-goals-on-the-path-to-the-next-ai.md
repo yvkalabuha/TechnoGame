@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#552"
 review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115; PATH rule in core (#559)"
 created: 2026-11-25
+tags: [task, simulation-lab, gameplay, done]
 ---
 
 # TASK-0178 — Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552)

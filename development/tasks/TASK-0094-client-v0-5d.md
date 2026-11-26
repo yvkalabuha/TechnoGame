@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "DEBT-0047, v0.5b/v0.5c visual reviews (item-9 tails)"
 created: 2026-11-18
+tags: [task, ui, visual, done]
 ---
 
 # TASK-0094 — Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint

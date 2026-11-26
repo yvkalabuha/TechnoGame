@@ -1,3 +1,6 @@
+---
+tags: [review, institutions, platform, done]
+---
 # Gate черновика INSTITUTIONS_PERSONALITIES (#459, #460), 2026-11-24
 
 Критик, защитник, DeepSeek (third). Полные ответы — в сессии Orchestrator.

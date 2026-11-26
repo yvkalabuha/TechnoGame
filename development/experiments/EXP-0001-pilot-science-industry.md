@@ -16,6 +16,7 @@ golden_hash: 1ca9661c5a3ca1cd9579322f07e1744c71b55586a5b5ff14ee69b4325c279312   
 baseline:                # контрольная версия (commit или EXP-NNNN)
 outcome: refutes          # supports | refutes | inconclusive
 created: 2026-11-02
+tags: [experiment, science, economy, done]
 ---
 
 # EXP-0001 — Пилот: траектории государств с разным сочетанием науки, инженерии и производства

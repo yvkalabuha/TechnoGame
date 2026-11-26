@@ -1,3 +1,6 @@
+---
+tags: [review, performance, testing, done]
+---
 # ADR-0023 — advocate review (2026-11-18)
 
 Verdict: structure holds (no frequency gate, foreign-load gate, split P8). One strong alternative to adopt, two moderate.

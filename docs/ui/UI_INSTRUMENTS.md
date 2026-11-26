@@ -1,3 +1,6 @@
+---
+tags: [design, ui, visual, draft]
+---
 # UI_INSTRUMENTS — приборы на столе и приборы в интерфейсе (TASK-0101)
 
 Автор: ui-art-director, 2026-11-18. Основание: запрос владельца, решение #404 «делать оба слоя». Рамки: клиент v0.5b–v0.5d (палитра C, бумага T1–T6, рейка областей, #352, #360). Прототип: `docs/ui/prototypes/instruments/instruments.html`.

@@ -1,3 +1,6 @@
+---
+tags: [analysis, economy, simulation-lab, done]
+---
 # C2: почему tier-4 процессы известны, но не идут в серию — диагноз и предложение (TASK-0057)
 
 > Исполнитель: simulation-engineer, 2026-11-15. Основание: #237 (разбор сейчас), #236 (C4 вне M0). Спека: `slice-jet-aviation.md` v0.29 §8.2. Core, Session и данные не менялись. Прогоны и скрипты: `lab/results/c2/` (не коммитятся, §9).

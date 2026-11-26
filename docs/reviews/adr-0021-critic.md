@@ -1,3 +1,6 @@
+---
+tags: [review, core, determinism, done]
+---
 # Gate ADR-0021 — critic (2026-11-18)
 
 3 high (key and schedule stability; p_roll precision with a weak test; the #342 boundary rests on an atom-name list), 5 medium. No one-writer violations.

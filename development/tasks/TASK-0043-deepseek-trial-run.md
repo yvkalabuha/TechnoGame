@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #182; ADR-0015, план задач, п. 4 (пробный прогон)"
 created: 2026-11-13
+tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0043 — Пробный прогон DeepSeek на 4 шагах R0–R1

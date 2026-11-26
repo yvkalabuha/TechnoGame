@@ -1,3 +1,6 @@
+---
+tags: [design, institutions, economy, draft]
+---
 # Рост потолка кадров `Hcap(t)` (решение владельца #438)
 
 > simulation-engineer, 2026-11-24. Записка к реализации, не эксперимент. Код не менялся.

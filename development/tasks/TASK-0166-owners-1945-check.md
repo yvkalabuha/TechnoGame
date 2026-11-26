@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "owner answer 2026-11-25 (M1 parallel); docs/architecture/notes/m1-task-plan.md"
 created: 2026-11-25
+tags: [task, history, map, active]
 ---
 
 # TASK-0166 — M1: verify 1945 owners of 379 regions against sources (T-M1-10)

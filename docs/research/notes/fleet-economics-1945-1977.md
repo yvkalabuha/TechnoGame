@@ -1,3 +1,6 @@
+---
+tags: [research, economy, history, active]
+---
 # Экономика парка 1945–1977: содержание, вторичный рынок, хранение
 
 Дата: 2026-11-04. Автор: research-scientist. Контекст: `docs/simulation/slice-jet-aviation.md` §3.5 A32; `docs/game-design/FLEET_RETIREMENT.md` v0.2 §10.

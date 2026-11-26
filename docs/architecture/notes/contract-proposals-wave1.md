@@ -1,3 +1,6 @@
+---
+tags: [note, science, economy, draft]
+---
 # Предложения по контракту слоёв из ревью PHASE F, волны 1–2
 
 Автор: systems-architect. Редакции: 2026-11-14 (волна 1, A1–C6); 2026-11-14, ревизия 2 (сбор предложений из FINAL RR-0006…0014 после gate critic + advocate и третьего голоса DeepSeek: группы T, E, новые A4–A6, B6–B8, C7–C18, раздел «K-hierarchy (from RR-0011 G01)», вопросы владельцу). Контракт: `docs/architecture/LAYER_CONTRACT.md` v2.4 r10 (с 2026-11-14 — r11: T1, перечень T2). Решения: `DECISIONS_LOG.md` до #230.

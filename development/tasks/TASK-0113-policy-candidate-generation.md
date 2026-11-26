@@ -15,6 +15,7 @@ approved_at: 2026-11-19
 approval_ref: "DEBT-0053, DEBT-0055 (light)"
 review_ref: "reviewer: APPROVE (original); Codex findings fixed inside TASK-0115 (SliceObserver.Newer, one Candidate ordering, LiveParent), reviewer APPROVE 7d8d0b01; landed c00fbb3"
 created: 2026-11-19
+tags: [task, core, determinism, done]
 ---
 
 # TASK-0113 — Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055)

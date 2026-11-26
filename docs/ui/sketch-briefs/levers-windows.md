@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: levers-windows
 
 Four in-game windows of a 1945–2100 science and technology strategy game. Reference layouts and text are in docs/ui/specs/levers-windows.md. Output: four 16:9 mockup images, 1920x1080 composition, one per window. Russian UI text.

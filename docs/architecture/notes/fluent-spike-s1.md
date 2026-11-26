@@ -1,3 +1,6 @@
+---
+tags: [experiment, platform, ui, done]
+---
 # Спайк S1 (ADR-0018): Linguini.Bundle 0.11.0 на .NET 10
 
 Код: `tools/spikes/fluent-s1/` (одноразовый, вне `Singularity.sln`). Запуск: `dotnet run --project tools/spikes/fluent-s1`. Среда: .NET 10.0.14, Linux Mint 21.3, 2026-11-17. Итог: **20 PASS, 0 FAIL** по проверкам ниже, но два допущения ADR §3.3 опровергнуты (раздел «Расхождения с ADR»).
