@@ -1,0 +1,110 @@
+# O-105: claims for python3 -m tools.llm_worker research. URLs are placeholders (guesses); the worker should search; verify results.
+items:
+  - id: R1990-P111
+    claim: "массовый параллелизм ASCI Red (1996) [node s9.eng.massively_parallel_hpc, new requires: s9.eng.beowulf_commodity_cluster]"
+    urls:
+      - https://en.wikipedia.org/wiki/massively_parallel_hpc
+  - id: R1990-P122
+    claim: "EUV серийно на узлах 7 нм (2019) после FinFET [node s9.prc.euv_lithography, new requires: s9.prc.finfet_manufacturing]"
+    urls:
+      - https://en.wikipedia.org/wiki/euv_lithography
+  - id: R1990-P132
+    claim: "EBM/SLM-порошковые процессы; ЭЛП-лопатки TiAl (Avio) [node s5.prc.additive_manufacturing_metal, new requires: s9.prn.computational_materials_design, s5.cmp.titanium_aluminide_blade]"
+    urls:
+      - https://en.wikipedia.org/wiki/additive_manufacturing_metal
+  - id: R1990-P139
+    claim: "опыт EELV/Falcon: тяга, управление ступенью [node s7.eng.reusable_booster_landing, new requires: s10.eng.heavy_expendable_launcher]"
+    urls:
+      - https://en.wikipedia.org/wiki/reusable_booster_landing
+  - id: R1990-P156
+    claim: "радиационно-гидродинамические расчёты NIF [node s11.prn.laser_inertial_confinement, new requires: s9.eng.petaflop_supercomputer]"
+    urls:
+      - https://en.wikipedia.org/wiki/laser_inertial_confinement
+  - id: R1990-P160
+    claim: "ручная выкладка препрега предшествует автоматической (ATL/AFP, 1980-е) [node s5.prc.automated_fibre_placement, new requires: s8.prc.composite_layup_cure]"
+    urls:
+      - https://en.wikipedia.org/wiki/automated_fibre_placement
+  - id: R1990-P161
+    claim: "портальные ЧПУ-роботы с контролем усилия; [Предп.] слабая связь, замена: vlsi_design_methodology (1979, ЧПУ-управление) [node s5.prc.friction_stir_welding, new requires: s5.prc.automated_fibre_placement]"
+    urls:
+      - https://en.wikipedia.org/wiki/friction_stir_welding
+  - id: R1990-P162
+    claim: "рабочие станции/ПК как узлы сети CERN [node s9.eng.world_wide_web, new requires: s9.prn.vlsi_design_methodology]"
+    urls:
+      - https://en.wikipedia.org/wiki/world_wide_web
+  - id: R1990-P163
+    claim: "цифровой процессор АРГС/автопилота AIM-120 [node s7.eng.amraam_bvr_missile, new requires: s8.prn.programmable_signal_processing, s9.prn.vlsi_design_methodology]"
+    urls:
+      - https://en.wikipedia.org/wiki/amraam_bvr_missile
+  - id: R1990-P164
+    claim: "массовые рабочие станции для инженерных RANS [node s9.prn.rans_cfd_industrial, new requires: s9.prn.vlsi_design_methodology]"
+    urls:
+      - https://en.wikipedia.org/wiki/rans_cfd_industrial
+  - id: R1990-P167
+    claim: "цифровая обработка приёма АФАР; [Предп.] фактическая АФАР 1988–1995 (J/FPS-3 1995, OPS-24 1988) [node s8.eng.aesa_fighter_radar_fielded, new requires: s8.eng.digital_beamforming]"
+    urls:
+      - https://en.wikipedia.org/wiki/aesa_fighter_radar_fielded
+  - id: R1990-P168
+    claim: "широкополосные АЦП/цифровая память приёмников [node s8.prn.digital_rf_memory_jamming, new requires: s8.eng.digital_beamforming]"
+    urls:
+      - https://en.wikipedia.org/wiki/digital_rf_memory_jamming
+  - id: R1990-P170
+    claim: "радиолокатор SIR-A (1981), SIR-B (1984), SIR-C (1994) на шаттле — предшественники; [Предп.] даты из памяти, на проверку [node s10.eng.sar_earth_observation_satellite, new requires: s10.eng.space_shuttle_orbiter]"
+    urls:
+      - https://en.wikipedia.org/wiki/sar_earth_observation_satellite
+  - id: R1990-P172
+    claim: "опыт ТЗП шаттла; разрыв остаётся 16 — допустимо (ЗАМЕЧАНИЕ) [node s5.cmp.ultra_high_temperature_ceramic, new requires: s10.eng.space_shuttle_orbiter]"
+    urls:
+      - https://en.wikipedia.org/wiki/ultra_high_temperature_ceramic
+  - id: R1990-P174
+    claim: "цифровые многоканальные приёмники пассивной локации [node s8.prn.passive_coherent_location, new requires: s8.eng.digital_beamforming]"
+    urls:
+      - https://en.wikipedia.org/wiki/passive_coherent_location
+  - id: R1990-P175
+    claim: "орбитальное обслуживание «Хаббла» (1993) — отработка ВКД [node s10.eng.international_space_station, new requires: s10.eng.space_telescope]"
+    urls:
+      - https://en.wikipedia.org/wiki/international_space_station
+  - id: R1990-P177
+    claim: "крупная прецизионная оптика и ПЗС на орбите (Kodak/Lockheed) [node s10.eng.commercial_high_res_imaging, new requires: s10.eng.space_telescope]"
+    urls:
+      - https://en.wikipedia.org/wiki/commercial_high_res_imaging
+  - id: R1990-P178
+    claim: "миниатюрная цифровая ГСН/наведение (PAC-3, THAAD); [Предп.] [node s7.eng.hit_to_kill_interceptor, new requires: s7.eng.amraam_bvr_missile]"
+    urls:
+      - https://en.wikipedia.org/wiki/hit_to_kill_interceptor
+  - id: R1990-P181
+    claim: "параллельные архитектуры -> двухъядерный POWER4 (2001) [node s9.cmp.multicore_processor, new requires: s9.eng.massively_parallel_hpc]"
+    urls:
+      - https://en.wikipedia.org/wiki/multicore_processor
+  - id: R1990-P183
+    claim: "JHMCS связан с датаканалом и авионикой [node s8.prn.helmet_mounted_cueing, new requires: s8.eng.tactical_data_link16]"
+    urls:
+      - https://en.wikipedia.org/wiki/helmet_mounted_cueing
+  - id: R1990-P187
+    claim: "пакеты Sniper/LITENING обслуживают JDAM и лазерные ГАБ [node s8.eng.electro_optical_targeting_pod, new requires: s7.eng.satellite_guided_bomb]"
+    urls:
+      - https://en.wikipedia.org/wiki/electro_optical_targeting_pod
+  - id: R1990-P190
+    claim: "F135 развит из F119 (F119-JSF, контракт 1996); слияние данных — ядро F-35 [node s8.eng.lo_multirole_fighter_f35, new requires: s8.eng.thrust_vectoring_supercruise_engine, s8.eng.aesa_sensor_fusion]"
+    urls:
+      - https://en.wikipedia.org/wiki/lo_multirole_fighter_f35
+  - id: R1990-P191
+    claim: "ИК-матрицы и слияние данных [node s8.prn.irst_infrared_search_track, new requires: s8.eng.aesa_sensor_fusion, s7.prn.imaging_ir_seeker_high_offboresight]"
+    urls:
+      - https://en.wikipedia.org/wiki/irst_infrared_search_track
+  - id: R1990-P195
+    claim: "расчёт стойкости к повреждению композитов; 787 — 2009 [node s5.cmp.composite_airliner_wing_box, new requires: s9.prn.computational_materials_design]"
+    urls:
+      - https://en.wikipedia.org/wiki/composite_airliner_wing_box
+  - id: R1990-P200
+    claim: "TiAl: разработка сплавов с 1970-х, серийно с ~2000, GEnx 2011 (Wikipedia, 2026-11-26) [node s5.cmp.titanium_aluminide_blade, new requires: s9.prn.computational_materials_design]"
+    urls:
+      - https://en.wikipedia.org/wiki/titanium_aluminide_blade
+  - id: R1990-P201
+    claim: "предел мощности -> 3D-транзистор (FinFET: Intel 22 нм, 2011) [node s9.prc.finfet_manufacturing, new requires: s9.cmp.multicore_processor]"
+    urls:
+      - https://en.wikipedia.org/wiki/finfet_manufacturing
+  - id: R1990-P206
+    claim: "воздушно-реактивные ВРД на высоких скоростях [node s7.eng.ramjet_bvr_missile, new requires: s7.eng.scramjet_flight_x43]"
+    urls:
+      - https://en.wikipedia.org/wiki/ramjet_bvr_missile

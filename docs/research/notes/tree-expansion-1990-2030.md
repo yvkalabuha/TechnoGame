@@ -1019,3 +1019,78 @@
       estimated: false
       verified: "DS confirmed; review цитата подтверждает (20 Apr 2023)"
 ```
+
+
+## Поздние предпосылки (O-105)
+
+Автор: research-scientist, 2026-11-26. [Предл.] mods/ не менялся. Дерево: ветка worktree-agent-aa98cff22496f48dc; причина: slot-model-pilot.md §7.9 (ветка worktree-agent-a79d45f53ac5af93d) — узел 161 открыт с ~1950 и занимает слот ИИ 74–180 мес.
+
+**Правило отбора.** Узел с якорем ≥ 1985, у которого «год открытия» = макс. якорь его requires, раньше якоря больше чем на 15 лет. [Факт] Скрипт (REPL) по nodes.yaml: 28 узлов; плюс 167 и 190 (названы в §7.9, разрыв 7 и 11 лет). Новые предпосылки берутся только из существующих id с годом 1975+ (кроме 161/160 — см. ниже), год предпосылки ≤ года узла. [Факт] Проверено скриптом: циклов нет, все id существуют, разрыв после правки ≤ 14 у всех, кроме 172 (16).
+
+**Не исправлено (разрыв 16–17, допустимо):** 79 ceramic_matrix_composite (16), 99 adaptive_third_stream_fan (16), 169 gps_operational_constellation (17: настоящее ограничение — запуски, в узлах нет честной предпосылки), 172 (16 после правки).
+
+**Предупреждение о цепочках.** [Факт, §7.9] Метрика «макс. якорь requires» не ловит цепочки: ИИ берёт промежуточный узел (например 85 solid_state_tr_module, якорь 1988, открыт 1976) раньше якоря, и следующий узел открывается тоже раньше. Для 167/190 правка даёт открытие 1990/1997, но если ИИ возьмёт 87 и 78 раньше якоря, сдвиг не сработает. Рекомендуется [Предл.] после посадки правок повторить пилот §7.9 и смотреть счётчик slot_w47_late_months.
+
+| # | узел | якорь | +предпосылка (год) | разрыв до → после, лет | обоснование |
+|---|---|---|---|---|---|
+| 111 | s9.eng.massively_parallel_hpc | 1996 | beowulf_commodity_cluster (1994) | 17 → 2 | массовый параллелизм ASCI Red (1996) |
+| 122 | s9.prc.euv_lithography | 2019 | finfet_manufacturing (2011) | 40 → 8 | EUV серийно на узлах 7 нм (2019) после FinFET |
+| 132 | s5.prc.additive_manufacturing_metal | 2016 | computational_materials_design (1997), titanium_aluminide_blade (2011) | 56 → 5 | EBM/SLM-порошковые процессы; ЭЛП-лопатки TiAl (Avio) |
+| 139 | s7.eng.reusable_booster_landing | 2015 | heavy_expendable_launcher (2002) | 19 → 13 | опыт EELV/Falcon: тяга, управление ступенью |
+| 156 | s11.prn.laser_inertial_confinement | 2021 | petaflop_supercomputer (2008) | 25 → 13 | радиационно-гидродинамические расчёты NIF |
+| 160 | s5.prc.automated_fibre_placement | 1990 | composite_layup_cure (1978) | 20 → 12 | ручная выкладка препрега предшествует автоматической (ATL/AFP, 1980-е) |
+| 161 | s5.prc.friction_stir_welding | 1991 | automated_fibre_placement (1990) | 46 → 1 | портальные ЧПУ-роботы с контролем усилия; [Предп.] слабая связь, замена: vlsi_design_methodology (1979, ЧПУ-управление) |
+| 162 | s9.eng.world_wide_web | 1991 | vlsi_design_methodology (1979) | 20 → 12 | рабочие станции/ПК как узлы сети CERN |
+| 163 | s7.eng.amraam_bvr_missile | 1991 | programmable_signal_processing (1979), vlsi_design_methodology (1979) | 20 → 12 | цифровой процессор АРГС/автопилота AIM-120 |
+| 164 | s9.prn.rans_cfd_industrial | 1992 | vlsi_design_methodology (1979) | 16 → 13 | массовые рабочие станции для инженерных RANS |
+| 167 | s8.eng.aesa_fighter_radar_fielded | 1995 | digital_beamforming (1990) | 7 → 5 | цифровая обработка приёма АФАР; [Предп.] фактическая АФАР 1988–1995 (J/FPS-3 1995, OPS-24 1988) |
+| 168 | s8.prn.digital_rf_memory_jamming | 1995 | digital_beamforming (1990) | 16 → 5 | широкополосные АЦП/цифровая память приёмников |
+| 170 | s10.eng.sar_earth_observation_satellite | 1995 | space_shuttle_orbiter (1981) | 19 → 14 | радиолокатор SIR-A (1981), SIR-B (1984), SIR-C (1994) на шаттле — предшественники; [Предп.] даты из памяти, на проверку |
+| 172 | s5.cmp.ultra_high_temperature_ceramic | 1997 | space_shuttle_orbiter (1981) | 38 → 16 | опыт ТЗП шаттла; разрыв остаётся 16 — допустимо (ЗАМЕЧАНИЕ) |
+| 174 | s8.prn.passive_coherent_location | 1998 | digital_beamforming (1990) | 19 → 8 | цифровые многоканальные приёмники пассивной локации |
+| 175 | s10.eng.international_space_station | 1998 | space_telescope (1990) | 17 → 8 | орбитальное обслуживание «Хаббла» (1993) — отработка ВКД |
+| 177 | s10.eng.commercial_high_res_imaging | 1999 | space_telescope (1990) | 28 → 9 | крупная прецизионная оптика и ПЗС на орбите (Kodak/Lockheed) |
+| 178 | s7.eng.hit_to_kill_interceptor | 1999 | amraam_bvr_missile (1991) | 28 → 8 | миниатюрная цифровая ГСН/наведение (PAC-3, THAAD); [Предп.] |
+| 181 | s9.cmp.multicore_processor | 2001 | massively_parallel_hpc (1996) | 22 → 5 | параллельные архитектуры -> двухъядерный POWER4 (2001) |
+| 183 | s8.prn.helmet_mounted_cueing | 2003 | tactical_data_link16 (1994) | 32 → 9 | JHMCS связан с датаканалом и авионикой |
+| 187 | s8.eng.electro_optical_targeting_pod | 2004 | satellite_guided_bomb (1999) | 36 → 5 | пакеты Sniper/LITENING обслуживают JDAM и лазерные ГАБ |
+| 190 | s8.eng.lo_multirole_fighter_f35 | 2006 | thrust_vectoring_supercruise_engine (1990), aesa_sensor_fusion (1997) | 11 → 9 | F135 развит из F119 (F119-JSF, контракт 1996); слияние данных — ядро F-35 |
+| 191 | s8.prn.irst_infrared_search_track | 2007 | aesa_sensor_fusion (1997), imaging_ir_seeker_high_offboresight (2003) | 36 → 4 | ИК-матрицы и слияние данных |
+| 195 | s5.cmp.composite_airliner_wing_box | 2009 | computational_materials_design (1997) | 18 → 12 | расчёт стойкости к повреждению композитов; 787 — 2009 |
+| 200 | s5.cmp.titanium_aluminide_blade | 2011 | computational_materials_design (1997) | 56 → 14 | TiAl: разработка сплавов с 1970-х, серийно с ~2000, GEnx 2011 (Wikipedia, 2026-11-26) |
+| 201 | s9.prc.finfet_manufacturing | 2011 | multicore_processor (2001) | 32 → 10 | предел мощности -> 3D-транзистор (FinFET: Intel 22 нм, 2011) |
+| 206 | s7.eng.ramjet_bvr_missile | 2016 | scramjet_flight_x43 (2004) | 22 → 12 | воздушно-реактивные ВРД на высоких скоростях |
+
+```yaml
+# O-105: добавить в requires (AND) — ничего не удалять; приоритеты [Предл.]
+requires_add:
+  s9.eng.massively_parallel_hpc: [s9.eng.beowulf_commodity_cluster]
+  s9.prc.euv_lithography: [s9.prc.finfet_manufacturing]
+  s5.prc.additive_manufacturing_metal: [s9.prn.computational_materials_design, s5.cmp.titanium_aluminide_blade]
+  s7.eng.reusable_booster_landing: [s10.eng.heavy_expendable_launcher]
+  s11.prn.laser_inertial_confinement: [s9.eng.petaflop_supercomputer]
+  s5.prc.automated_fibre_placement: [s8.prc.composite_layup_cure]
+  s5.prc.friction_stir_welding: [s5.prc.automated_fibre_placement]
+  s9.eng.world_wide_web: [s9.prn.vlsi_design_methodology]
+  s7.eng.amraam_bvr_missile: [s8.prn.programmable_signal_processing, s9.prn.vlsi_design_methodology]
+  s9.prn.rans_cfd_industrial: [s9.prn.vlsi_design_methodology]
+  s8.eng.aesa_fighter_radar_fielded: [s8.eng.digital_beamforming]
+  s8.prn.digital_rf_memory_jamming: [s8.eng.digital_beamforming]
+  s10.eng.sar_earth_observation_satellite: [s10.eng.space_shuttle_orbiter]
+  s5.cmp.ultra_high_temperature_ceramic: [s10.eng.space_shuttle_orbiter]
+  s8.prn.passive_coherent_location: [s8.eng.digital_beamforming]
+  s10.eng.international_space_station: [s10.eng.space_telescope]
+  s10.eng.commercial_high_res_imaging: [s10.eng.space_telescope]
+  s7.eng.hit_to_kill_interceptor: [s7.eng.amraam_bvr_missile]
+  s9.cmp.multicore_processor: [s9.eng.massively_parallel_hpc]
+  s8.prn.helmet_mounted_cueing: [s8.eng.tactical_data_link16]
+  s8.eng.electro_optical_targeting_pod: [s7.eng.satellite_guided_bomb]
+  s8.eng.lo_multirole_fighter_f35: [s8.eng.thrust_vectoring_supercruise_engine, s8.eng.aesa_sensor_fusion]
+  s8.prn.irst_infrared_search_track: [s8.eng.aesa_sensor_fusion, s7.prn.imaging_ir_seeker_high_offboresight]
+  s5.cmp.composite_airliner_wing_box: [s9.prn.computational_materials_design]
+  s5.cmp.titanium_aluminide_blade: [s9.prn.computational_materials_design]
+  s9.prc.finfet_manufacturing: [s9.cmp.multicore_processor]
+  s7.eng.ramjet_bvr_missile: [s7.eng.scramjet_flight_x43]
+```
+
+**Источники.** [Факт] Проверено WebFetch 2026-11-26 (Wikipedia, только факты): FSW — ТВИ (TWI), 1991, коммерциализация там же (https://en.wikipedia.org/wiki/Friction_stir_welding); F135 развит из F119, контракт JSF 1996, X-35 2000 (https://en.wikipedia.org/wiki/Pratt_%26_Whitney_F135); АФАР: J/FPS-3 1995, OPS-24 1988, Phalcon 1994 (https://en.wikipedia.org/wiki/Active_electronically_scanned_array); TiAl: GEnx 2011, серийно с ~2000 (https://en.wikipedia.org/wiki/Titanium_aluminide). [Предп.] Остальные обоснования не проверены; 30+ утверждений вынесены в `docs/research/notes/tree-expansion-late-prereqs-input.yaml` для `python3 -m tools.llm_worker research` (#577). SIR-A/B даты WebFetch не подтвердил (страница SRTM дала только SIR-C 1994).
