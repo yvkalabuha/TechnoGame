@@ -1,12 +1,12 @@
 ---
 id: TASK-0214
 title: "CI fix: capacity file-source test samples the real clock (MAX_AGE 3 h)"
-tags: [task, platform, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
+tags: [task, platform, testing, done]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: orchestrator
-category:                # core | lab | client | data | tooling | docs | design (lab -> agent simulation-engineer)
+category: tooling          # core | lab | client | data | tooling | docs | design (lab -> agent simulation-engineer)
 priority: high         # high | medium | low
 needs_owner: false       # true = ждёт решения владельца
 depends_on: []
