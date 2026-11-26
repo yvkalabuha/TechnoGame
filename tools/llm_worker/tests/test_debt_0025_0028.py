@@ -138,7 +138,8 @@ class ReviewRecordTest(unittest.TestCase):
     def test_confirm_cli(self):
         path, _, _ = self.run_review()
         with mock.patch("builtins.print"):
-            self.assertEqual(cli.main(["review-confirm", str(path), "--finding", "2", "--rejected"]), 0)
+            self.assertEqual(cli.main(["review-confirm", str(path), "--finding", "2", "--rejected",
+                                      "--journal", str(self.tmp / "journal.yaml")]), 0)
             self.assertEqual(cli.main(["review-confirm", str(path), "--finding", "9", "--confirmed"]), 5)
         self.assertEqual(json.loads(review.confirm_path(path).read_text())["confirmed"], {"2": False})
 
@@ -218,6 +219,14 @@ class MetricsFieldsTest(unittest.TestCase):
         self.put("review-TASK-0009-zzzzzzzz-codex.json", {"task": "TASK-0009", "result": {"verdict": 5, "findings": []}})
         self.put("review-TASK-0001-aaaaaaaa-codex.json", rec("TASK-0001", "accept", []))
         self.assertEqual(sorted(report._review_rounds(self.runs)), ["TASK-0001"])
+
+
+_JOURNAL = config.REPO_ROOT / "development" / "review-rejections.yaml"
+_JOURNAL_BEFORE = _JOURNAL.read_bytes() if _JOURNAL.exists() else None
+
+
+def tearDownModule():  # a test must never write the real rejection journal (#591)
+    assert (_JOURNAL.read_bytes() if _JOURNAL.exists() else None) == _JOURNAL_BEFORE, "real journal changed"
 
 
 if __name__ == "__main__":

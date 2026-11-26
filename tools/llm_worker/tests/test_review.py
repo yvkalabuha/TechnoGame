@@ -767,5 +767,13 @@ class CodexBwrapTest(unittest.TestCase):
             self.assertEqual(codex.tree_digest(wt), before)
 
 
+_JOURNAL = config.REPO_ROOT / "development" / "review-rejections.yaml"
+_JOURNAL_BEFORE = _JOURNAL.read_bytes() if _JOURNAL.exists() else None
+
+
+def tearDownModule():  # a test must never write the real rejection journal (#591)
+    assert (_JOURNAL.read_bytes() if _JOURNAL.exists() else None) == _JOURNAL_BEFORE, "real journal changed"
+
+
 if __name__ == "__main__":
     unittest.main()

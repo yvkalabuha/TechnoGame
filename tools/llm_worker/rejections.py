@@ -107,8 +107,9 @@ def _save(path: Path, entries: list[dict]) -> None:
 
 def _locked(path: Path, change) -> None:
     """Read-modify-write under an exclusive lock on a sidecar file (the journal itself is replaced atomically)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path.with_name(f".{path.name}.lock"), "w") as lock:
+    lock_dir = path.parents[1] / ".claude" / ".state"  # git-ignored: the lock never reaches a commit
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    with open(lock_dir / f"{path.name}.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         entries = load(path)
         entries = change(entries)
