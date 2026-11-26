@@ -14,7 +14,6 @@ errors:
   repeats:
   - '2026-11-26'
   status: open
-  key: process|shots|shots run on an old client version old science model screens
 - id: ERR-0002
   date: '2026-11-26'
   executor: orchestrator
@@ -28,7 +27,6 @@ errors:
   repeats:
   - '2026-11-26'
   status: open
-  key: process|agents|agent dispatched before the task file was committed the work
 - id: ERR-0003
   date: '2026-11-26'
   executor: tool:codex
@@ -41,7 +39,6 @@ errors:
   fix: Land docs and lab notes on main before the train; keep the review diff under 1 MB
   repeats: []
   status: open
-  key: tooling|review|codex review fails with input too large above 1 000 000 byte
 - id: ERR-0004
   date: '2026-11-26'
   executor: orchestrator
@@ -54,7 +51,6 @@ errors:
   fix: Ask again interactively when the owner is back (#587, memory questions-interactive)
   repeats: []
   status: open
-  key: comms|owner-questions|askuserquestion timed out after 2 hours questions then writt
 - id: ERR-0005
   date: '2026-11-26'
   executor: orchestrator
@@ -67,4 +63,3 @@ errors:
   fix: git merge-base --is-ancestor f12684f <branch>; shot_batch.py (TASK-0197)
   repeats: []
   status: open
-  key: process|shots|shot batch requested without checking that the branch contai

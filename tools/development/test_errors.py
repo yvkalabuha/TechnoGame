@@ -98,18 +98,91 @@ class ErrorsTest(unittest.TestCase):
             self.assertEqual(rc, 1, body)
             self.assertIn("ERROR", out)
 
-    def test_import_keeps_lines_appended_during_import(self):
+    def append(self, name, *recs, raw=""):
+        with (self.state / name).open("a", encoding="utf-8") as f:
+            for r in recs:
+                f.write(json.dumps(r) + "\n")
+            f.write(raw)
+
+    def test_import_never_rotates_sources_so_late_lines_are_kept(self):
         t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
         src = self.state / "land_failures.jsonl"
-        src.write_text(json.dumps({"t": t, "code": 1, "branch": "b1"}) + "\n", encoding="utf-8")
-        claimed = errors.claim_sources(self.state)
-        self.assertFalse(src.exists())  # claimed atomically: a new line now goes to a fresh file
-        src.write_text(json.dumps({"t": t, "code": 6, "branch": "b2"}) + "\n", encoding="utf-8")
-        drafts, _ = errors.state_drafts(claimed)
-        self.assertEqual(len(drafts), 1)
-        self.assertTrue(src.exists())
-        _, out = self.run_cli("import")
+        self.append("land_failures.jsonl", {"t": t, "code": 1, "branch": "b1"})
+        inode = src.stat().st_ino
+        # A hook that opened the file earlier writes while the import runs: the import saves, then the line lands.
+        real = errors.save
+
+        def save_then_append(*a, **k):
+            real(*a, **k)
+            self.append("land_failures.jsonl", {"t": t, "code": 6, "branch": "b2"}, raw='{"t": 1, "code"')  # + half line
+
+        errors.save = save_then_append
+        try:
+            _, out = self.run_cli("import")
+        finally:
+            errors.save = real
         self.assertIn("1 event(s), 1 new draft(s)", out)
+        self.assertEqual(src.stat().st_ino, inode)  # same file: nothing was renamed or truncated
+        _, out = self.run_cli("import")
+        self.assertIn("1 event(s)", out)  # the late line is read; the half line waits
+        _, out = self.run_cli("import")
+        self.assertIn("0 event(s)", out)
+
+    def test_interrupted_import_does_not_double_count(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        self.append("land_failures.jsonl", {"t": t, "code": 1, "branch": "b1"})
+        real = errors.write_import_state
+        calls = []
+
+        def die_on_cursor_update(*a, **k):
+            calls.append(1)
+            if len(calls) == 2:  # journal written, catalogue saved, now the cursors
+                raise KeyboardInterrupt
+            return real(*a, **k)
+
+        errors.write_import_state = die_on_cursor_update
+        try:
+            with self.assertRaises(KeyboardInterrupt):
+                self.run_cli("import")
+        finally:
+            errors.write_import_state = real
+        self.run_cli("import")
+        e = errors.load(self.file)
+        self.assertEqual((len(e), e[0]["repeats"]), (1, []))  # one event, one occurrence
+
+    def test_import_interrupted_before_save_is_redone(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        self.append("land_failures.jsonl", {"t": t, "code": 1, "branch": "b1"})
+        real = errors.save
+        errors.save = lambda *a, **k: (_ for _ in ()).throw(KeyboardInterrupt)
+        try:
+            with self.assertRaises(KeyboardInterrupt):
+                self.run_cli("import")
+        finally:
+            errors.save = real
+        self.assertIn("1 event(s), 1 new draft(s)", self.run_cli("import")[1])
+
+    def test_schema_rejects_values_that_crash_commands(self):
+        good = {"id": "ERR-0001", "date": "2026-11-26", "executor": "orchestrator", "kind": "code", "area": "a",
+                "symptom": "s", "cause": "c", "found_by": "self", "cost": "low", "fix": "", "repeats": [], "status": "open"}
+        for patch in ({"symptom": ["x"]}, {"date": "2026-13-45"}, {"repeats": ["2026-02-30"]}, {"id": 5},
+                      {"kind": ["code"]}, {"prevention": {"kind": "hook", "ref": 3}}, {"area": None}):
+            self.assertTrue(errors.validate([{**good, **patch}]), patch)
+        self.assertEqual(errors.validate([good]), [])
+        errors.save(self.file, [{**good, "symptom": ["x"]}])
+        for cmd in ("list", "stats"):
+            rc, out = self.run_cli(cmd)
+            self.assertEqual(rc, 1, cmd)
+            self.assertIn("ERR-0001", out)
+
+    def test_stored_key_is_dropped(self):
+        self.run_cli("add", *BASE)
+        self.assertNotIn("key:", self.file.read_text(encoding="utf-8"))
+        text = self.file.read_text(encoding="utf-8").replace("status: open", "status: open\n  key: old|key")
+        self.file.write_text(text, encoding="utf-8")
+        self.assertNotIn("key", errors.load(self.file)[0])
+        self.run_cli("repeat", "ERR-0001")
+        self.assertNotIn("key:", self.file.read_text(encoding="utf-8"))
 
     def test_from_review_record_json(self):
         rec = self.tmp / "review-TASK-0009-abc-codex.json"
@@ -137,9 +210,8 @@ class ErrorsTest(unittest.TestCase):
         e = errors.load(self.file)
         self.assertEqual({x["status"] for x in e}, {"open"})
         self.assertEqual(errors.validate(e), [])
-        self.assertEqual([p.name for p in self.state.iterdir()], ["errors_import.lock"])  # sources consumed and removed
         _, out = self.run_cli("import")
-        self.assertIn("0 event(s)", out)
+        self.assertIn("0 event(s)", out)  # the cursor is past the lines; the source file itself stays
 
     def test_from_review_only_for_changes(self):
         ok = self.tmp / "TASK-0007-review.md"
@@ -225,10 +297,10 @@ class ErrorsTest(unittest.TestCase):
         real = watch.subprocess.run
         watch.subprocess.run = lambda *a, **k: subprocess.CompletedProcess(a, 0, json.dumps(runs), "")
         try:
-            (self.state / "ci_seen_runs.txt").write_text("7 3")
+            (self.state / errors.IMPORT_STATE).write_text(json.dumps({"ci_seen": [7, 3]}))
             _, out = self.run_cli("import", "--ci")
             self.assertIn("1 event(s), 1 new draft(s)", out)  # run 6 finished late with an older id than 7: not skipped
-            self.assertEqual((self.state / "ci_seen_runs.txt").read_text(), "3 6 7")
+            self.assertEqual(json.loads((self.state / errors.IMPORT_STATE).read_text())["ci_seen"], [3, 6, 7])
             _, out = self.run_cli("import", "--ci")
             self.assertIn("0 event(s)", out)
         finally:

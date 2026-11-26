@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -34,7 +35,7 @@ STATE = ROOT / ".claude" / ".state"
 DIGEST_DIR = ROOT / "docs" / "reviews"
 SOURCES = ("hook_refusals.jsonl", "land_failures.jsonl")
 MUTATING = ("add", "repeat", "close", "import")
-CI_MARK = "ci_seen_runs.txt"  # ids of the last CI runs already imported (at most CI_SEEN_KEEP)
+IMPORT_STATE = "errors_import.json"  # byte offsets of the jsonl sources, seen CI run ids, import journal
 CI_SEEN_KEEP = 50
 IGNORED_HOOKS = {"guard_load"}  # a busy CPU is an expected back-off, not an error
 
@@ -47,7 +48,8 @@ EXECUTOR_RE = re.compile(r"(orchestrator|agent:[\w-]+|tool:[\w.-]+|model:[\w.-]+
 ID_RE = re.compile(r"ERR-\d{4}\Z")
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 FIELDS = ("id", "date", "executor", "kind", "area", "symptom", "cause", "found_by", "cost", "fix",
-          "prevention", "repeats", "status", "key")
+          "prevention", "repeats", "status")
+STR_FIELDS = ("id", "date", "executor", "kind", "area", "symptom", "cause", "found_by", "cost", "fix", "status")
 HEADER = ("# Platform error catalogue (owner #584). Edit with tools/development/errors.py; schema: errors.py check.\n"
           "# Auto drafts come from errors.py import (land.py, hook refusals, red CI, reviewer CHANGES).\n")
 
@@ -58,9 +60,9 @@ def norm_key(kind: str, area: str, symptom: str) -> str:
 
 
 def load(path: Path) -> list[dict]:
+    """Raises ValueError for a malformed file: a wrong root or entry type is an error, never an empty catalogue."""
     if not path.exists():
         return []
-    """Raises ValueError for a malformed file: a wrong root or entry type is an error, never an empty catalogue."""
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as ex:
@@ -74,12 +76,13 @@ def load(path: Path) -> list[dict]:
         if not isinstance(e, dict):
             raise ValueError(f"{path.name}: entry #{n} is not a mapping")
         e = dict(e)
-        if "date" in e:
-            e["date"] = str(e["date"])
+        e.pop("key", None)  # older files stored a dedupe key; it is computed from the fields now
+        if isinstance(e.get("date"), dt.date):  # YAML turns an unquoted date into a date object
+            e["date"] = e["date"].isoformat()
         reps = e.get("repeats") or []
         if not isinstance(reps, list):
             raise ValueError(f"{path.name}: entry #{n}: repeats must be a list")
-        e["repeats"] = [str(d) for d in reps]
+        e["repeats"] = [d.isoformat() if isinstance(d, dt.date) else d for d in reps]
         out.append(e)
     return out
 
@@ -101,34 +104,50 @@ def save(path: Path, entries: list[dict]) -> None:
         raise
 
 
+def valid_date(s) -> bool:
+    if not isinstance(s, str) or not DATE_RE.match(s):
+        return False
+    try:
+        dt.date.fromisoformat(s)
+    except ValueError:
+        return False
+    return True
+
+
 def validate(entries: list[dict]) -> list[str]:
+    """Every value that a command would trip over is an error: field types, enums, dates that parse."""
     errs, seen = [], set()
     for n, e in enumerate(entries, 1):
-        who = e.get("id", f"#{n}")
-        miss = [k for k in FIELDS if k not in e and k not in ("key", "prevention")]
+        who = e.get("id", f"#{n}") if isinstance(e.get("id", f"#{n}"), str) else f"#{n}"
+        miss = [k for k in FIELDS if k not in e and k != "prevention"]
         if miss:
             errs.append(f"{who}: missing fields {miss}")
             continue
-        if not ID_RE.match(str(e["id"])):
+        wrong = [k for k in STR_FIELDS if not isinstance(e[k], str)]
+        if wrong:
+            errs.append(f"{who}: {wrong} must be strings")
+            continue
+        if not ID_RE.match(e["id"]):
             errs.append(f"{who}: id must look like ERR-0001")
         if e["id"] in seen:
             errs.append(f"{who}: duplicate id")
         seen.add(e["id"])
-        if not DATE_RE.match(str(e["date"])):
-            errs.append(f"{who}: date must be YYYY-MM-DD")
-        if not EXECUTOR_RE.match(str(e["executor"])):
+        if not valid_date(e["date"]):
+            errs.append(f"{who}: date must be a real date YYYY-MM-DD")
+        if not EXECUTOR_RE.match(e["executor"]):
             errs.append(f"{who}: executor '{e['executor']}' is not orchestrator|agent:<type>|tool:<name>|model:<name>")
         for field, allowed in (("kind", KINDS), ("found_by", FOUND_BY), ("cost", COSTS), ("status", STATUSES)):
-            if e[field] not in allowed:
+            if e[field] not in allowed:  # strings only here, checked above
                 errs.append(f"{who}: {field} '{e[field]}' not in {list(allowed)}")
         for field in ("area", "symptom"):
-            if not str(e[field]).strip():
+            if not e[field].strip():
                 errs.append(f"{who}: {field} is empty")
-        if not isinstance(e["repeats"], list) or not all(DATE_RE.match(str(d)) for d in e["repeats"]):
-            errs.append(f"{who}: repeats must be a list of YYYY-MM-DD")
+        if not isinstance(e["repeats"], list) or not all(valid_date(d) for d in e["repeats"]):
+            errs.append(f"{who}: repeats must be a list of real dates YYYY-MM-DD")
         p = e.get("prevention")
         if p is not None:
-            if not isinstance(p, dict) or p.get("kind") not in PREVENTION_KINDS or not str(p.get("ref", "")).strip():
+            if (not isinstance(p, dict) or p.get("kind") not in PREVENTION_KINDS
+                    or not isinstance(p.get("ref"), str) or not p["ref"].strip()):
                 errs.append(f"{who}: prevention needs kind {list(PREVENTION_KINDS)} and a ref")
         if e["status"] == "prevented" and not p:
             errs.append(f"{who}: status prevented needs a prevention")
@@ -151,7 +170,7 @@ def add_entry(entries: list[dict], today: str, **f) -> tuple[dict, bool]:
     e = {"id": next_id(entries), "date": today, "executor": f["executor"], "kind": f["kind"], "area": f["area"],
          "symptom": f["symptom"].strip(), "cause": f.get("cause") or "unknown (draft)",
          "found_by": f.get("found_by") or "self", "cost": f.get("cost") or "low", "fix": f.get("fix") or "",
-         "repeats": [], "status": "open", "key": key}
+         "repeats": [], "status": "open"}
     entries.append(e)
     return e, True
 
@@ -228,23 +247,56 @@ def read_jsonl(path: Path) -> list[dict]:
     return out
 
 
-def claim_sources(state: Path) -> dict[str, list[Path]]:
-    """Atomically move each source to <name>.importing.<pid>: lines appended while the import runs go to a fresh
-    file and are never lost. Leftovers of a crashed import are picked up too."""
-    out: dict[str, list[Path]] = {}
-    for name in SOURCES:
-        p = state / name
-        if p.exists():
-            os.replace(p, state / f"{name}.importing.{os.getpid()}")
-        out[name] = sorted(state.glob(name + ".importing.*"))
-    return out
+def read_import_state(state: Path) -> dict:
+    try:
+        st = json.loads((state / IMPORT_STATE).read_text(encoding="utf-8"))
+        return {"offsets": dict(st.get("offsets") or {}), "ci_seen": [int(x) for x in st.get("ci_seen") or []],
+                "journal": st.get("journal")}
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {"offsets": {}, "ci_seen": [], "journal": None}
 
 
-def state_drafts(claimed: dict[str, list[Path]]) -> tuple[list[dict], int]:
+def write_import_state(state: Path, st: dict) -> None:
+    state.mkdir(parents=True, exist_ok=True)
+    tmp = state / f".{IMPORT_STATE}.{os.getpid()}.tmp"
+    try:
+        tmp.write_text(json.dumps(st, sort_keys=True), encoding="utf-8")
+        os.replace(tmp, state / IMPORT_STATE)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def file_sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else ""
+
+
+def read_new_lines(path: Path, offset: int) -> tuple[list[dict], int]:
+    """Complete lines after `offset` and the new offset. The sources are append-only and never renamed or
+    truncated, so a hook writing during the import cannot lose a line; a half-written last line waits for the next
+    import. A shorter file than the offset means someone truncated it: start again from 0."""
+    if not path.exists():
+        return [], offset
+    if path.stat().st_size < offset:
+        offset = 0
+    with path.open("rb") as f:
+        f.seek(offset)
+        data = f.read()
+    cut = data.rfind(b"\n") + 1
+    recs = []
+    for line in data[:cut].splitlines():
+        try:
+            recs.append(json.loads(line))
+        except ValueError:
+            continue
+    return recs, offset + cut
+
+
+def state_drafts(records: dict[str, list[dict]]) -> tuple[list[dict], int]:
     """Drafts from hook refusals and land failures, and the number of ignored lines."""
     drafts, skipped = [], 0
-    hooks = [r for p in claimed.get("hook_refusals.jsonl", []) for r in read_jsonl(p)]
-    lands = [r for p in claimed.get("land_failures.jsonl", []) for r in read_jsonl(p)]
+    hooks = records.get("hook_refusals.jsonl", [])
+    lands = records.get("land_failures.jsonl", [])
     for r in hooks:
         hook = str(r.get("hook", "hook"))
         if hook in IGNORED_HOOKS:
@@ -358,6 +410,11 @@ def execute(args) -> int:
     except ValueError as ex:
         print(f"ERROR   {ex}")
         return 1
+    if args.cmd != "check":
+        bad = validate(entries)
+        if bad:  # a value of the wrong type would crash the command: refuse with the list
+            print("\n".join(bad))
+            return 1
 
     if args.cmd == "check":
         errs = validate(entries)
@@ -441,16 +498,21 @@ def execute(args) -> int:
         print(f"{e['id']} {e['status']}")
         return 0
     if args.cmd == "import":
-        claimed = claim_sources(args.state)
-        drafts, skipped = state_drafts(claimed)
+        st = read_import_state(args.state)
+        j = st["journal"]
+        if j:  # an import was interrupted: if its catalogue save happened, take its cursors, else redo it
+            if file_sha(args.file) != j["sha"]:
+                st["offsets"], st["ci_seen"] = j["offsets"], j["ci_seen"]
+            st["journal"] = None
+            write_import_state(args.state, st)
+        records, new_off = {}, {}
+        for name in SOURCES:
+            records[name], new_off[name] = read_new_lines(args.state / name, int(st["offsets"].get(name, 0)))
+        drafts, skipped = state_drafts(records)
+        seen, fetched = set(st["ci_seen"]), []
         if args.ci:
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             import watch
-            mark = args.state / CI_MARK
-            try:
-                seen = {int(x) for x in mark.read_text().split()}
-            except (OSError, ValueError):
-                seen = set()
             events, fetched = watch.red_ci_events(seen)
             for ev in events:
                 drafts.append({"date": ev["date"], "executor": "tool:ci", "kind": "code", "area": "ci",
@@ -461,15 +523,17 @@ def execute(args) -> int:
             new += is_new
         bad = validate(entries)
         if bad:
-            print("\n".join(bad))  # the claimed files stay for the next import
+            print("\n".join(bad))  # the cursors do not move: the events are read again next time
             return 2
+        new_seen = sorted(seen | set(fetched))[-CI_SEEN_KEEP:]
         if drafts:
+            # Journal first: after a crash between the save and the cursor update the next import sees that the
+            # catalogue changed and only moves the cursors, so no event is counted twice.
+            st["journal"] = {"sha": file_sha(args.file), "offsets": new_off, "ci_seen": new_seen}
+            write_import_state(args.state, st)
             save(args.file, entries)
-        if args.ci and fetched:
-            keep = sorted(seen | set(fetched))[-CI_SEEN_KEEP:]
-            mark.write_text(" ".join(map(str, keep)), encoding="utf-8")
-        for p in (q for ps in claimed.values() for q in ps):
-            p.unlink()  # after the save: a crash keeps the claimed files for the next import
+        st.update(offsets=new_off, ci_seen=new_seen, journal=None)
+        write_import_state(args.state, st)
         print(f"import: {len(drafts)} event(s), {new} new draft(s), {skipped} ignored")
         return 0
     if args.cmd == "digest":
