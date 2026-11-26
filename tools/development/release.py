@@ -408,7 +408,10 @@ def pace_baseline_is_rc(root: Path, base: str | None, sha: str) -> bool:
     """First release: --pace-base self (or the RC itself) makes the RC its own baseline."""
     if not base:
         return False
-    return base == "self" or git(root, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}", check=False) == sha
+    is_rc = base == "self" or git(root, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}", check=False) == sha
+    if is_rc and release_tags(root):
+        raise ReleaseError(f"--pace-base {base} (the RC as its own baseline) is allowed only for the first release; compare with {release_tags(root)[-1]}")
+    return is_rc
 
 
 def pace_row(tree: Path, base: str | None, is_rc: bool = False) -> tuple[str, str, str]:
@@ -471,6 +474,7 @@ def cmd_check(root: Path, rc: str | None, pace_base: str | None, dispatch: bool)
     if not report.exists():
         raise ReleaseError(f"{report} missing")
     rows: list[tuple[str, str, str]] = []
+    pace_self = pace_baseline_is_rc(root, pace_base, sha)   # refused early after the first release
     work = Path(tempfile.mkdtemp(prefix="rc-check-"))
     tree = work / "tree"
     try:
@@ -478,7 +482,7 @@ def cmd_check(root: Path, rc: str | None, pace_base: str | None, dispatch: bool)
         code, text = run_cmd([sys.executable, "tools/development/verify.py", "--full"], tree, 3600)
         rows.append(("verify --full", "PASS" if code == 0 else "FAIL", tail_of(text)))
         rows.append(("CI three OS", *check_ci(root, rc, sha, dispatch)))
-        rows.append(pace_row(tree, pace_base or last_release_tag(root), pace_baseline_is_rc(root, pace_base, sha)))
+        rows.append(pace_row(tree, pace_base or last_release_tag(root), pace_self))
         if code == 0:
             rows += lab_checks(tree, work, sha)
         else:

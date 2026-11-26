@@ -491,6 +491,11 @@ class TestPure(Repo):
         self.assertTrue(release.pace_baseline_is_rc(self.root, rc, sha))
         self.assertTrue(release.pace_baseline_is_rc(self.root, sha[:10], sha))
         self.assertFalse(release.pace_baseline_is_rc(self.root, "HEAD~1", sha))
+        run(self.root, "tag", "-a", "v0.1", "HEAD~1", "-m", "r")   # after the first release the RC cannot be its own baseline
+        for base in ("self", rc, sha[:10]):
+            with self.assertRaisesRegex(release.ReleaseError, "only for the first release"):
+                release.pace_baseline_is_rc(self.root, base, sha)
+        self.assertFalse(release.pace_baseline_is_rc(self.root, "v0.1", sha))
         self.assertFalse(release.pace_baseline_is_rc(self.root, None, sha))
         empty = self.base / "no-pace-script"
         empty.mkdir()
