@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0195-era",
+  "description": "TASK-0195 (docs/simulation/era-node-price.md): era price of research nodes by anchor year from 1990 (#579). Slot model, all five actors AI, JetSlice FULL 1945-09..2030-12. The curve is chosen by the prototype build (lab/results/t0195/proto, env SING_ERA_CURVE); this manifest is the same for the base and every curve.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 20
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full",
+    "LEVERS": "ON"
+  },
+  "series": [
+    {
+      "name": "SLOTS",
+      "params": {}
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/era-node-price.md",
+    "task": "TASK-0195"
+  }
+}

@@ -33,6 +33,9 @@ internal sealed class SlotProbe
     private readonly byte[] _focus = new byte[InstituteSystem.MaxSlotsLimit];
     private readonly long[] _c;              // [actor][period][metric]
     private readonly long[] _returned, _science, _returned1, _science1, _returned2, _science2, _upkeepMax, _lastWorkable, _institutesMax;   // per actor (TASK-0187 review: the smoke gates of SCIENCE_SLOTS §10)
+    private readonly long[] _yScience, _yReturned, _ySlot, _yNew;   // [actor][calendar year - 1945]: research money, money returned, slot-months, slot-months on nodes anchored >= 1990 (TASK-0195)
+    private const int Years = 87;            // 1945..2031
+    private const int NewAnchorYear = 1990;
     private readonly long[] _nodeMonths;      // [actor][node number]: slot-months 1947–1990 on the node (TASK-0193: which nodes hold the slots in the gate window)
     private readonly int _numbers;
     private long _firstViolation = -1;
@@ -60,7 +63,13 @@ internal sealed class SlotProbe
         Array.Fill(_lastWorkable, -1);
         _numbers = _w.Graph.Number.Max() + 1;
         _nodeMonths = new long[ids.Length * _numbers];
+        _yScience = new long[ids.Length * Years];
+        _yReturned = new long[ids.Length * Years];
+        _ySlot = new long[ids.Length * Years];
+        _yNew = new long[ids.Length * Years];
     }
+
+    private static int YearIndex(long t) => (int)Math.Min(Years - 1, (8 + t) / 12);
 
     /// <summary>Anchor year from which a node counts as late in the 1947–1990 window: the 1990–2030 tree (TASK-0193).</summary>
     public const int LateAnchorYear = 1991;
@@ -90,6 +99,10 @@ internal sealed class SlotProbe
                     idle++;
                 else
                 {
+                    _ySlot[a * Years + YearIndex(t)]++;
+                    int nr = g.RowOf(node[k]);
+                    if (nr >= 0 && g.AnchorYear[nr] >= NewAnchorYear)
+                        _yNew[a * Years + YearIndex(t)]++;
                     if (t >= GateFirstMonth && t <= Period1LastMonth)
                         _nodeMonths[a * _numbers + node[k]]++;
                     if (focus[k] == 1)
@@ -113,6 +126,7 @@ internal sealed class SlotProbe
             // The research money the step of t reads, and the upkeep share of the institutes built by a project (the share the ceiling of #574 limits).
             long science = (_w.SharesOf(a).Research * _w.Policy.Budget(a)).Raw;
             _science[a] += science;
+            _yScience[a * Years + YearIndex(t)] += science;
             if (t >= GateFirstMonth && t <= Period1LastMonth)
                 _science1[a] += science;
             else if (t > Period1LastMonth)
@@ -154,6 +168,7 @@ internal sealed class SlotProbe
             if (_know.Coverage(a) < Singularity.Kernel.Fx6.One)
                 _c[At(a, t, MShort)]++;
             _returned[a] += _know.ReturnedToBudget(a).Raw;
+            _yReturned[a * Years + YearIndex(t)] += _know.ReturnedToBudget(a).Raw;
             if (t >= GateFirstMonth && t <= Period1LastMonth)
                 _returned1[a] += _know.ReturnedToBudget(a).Raw;
             else if (t > Period1LastMonth)
@@ -194,6 +209,17 @@ internal sealed class SlotProbe
             }
             yield return new($"slot_w47_{_ids[a]}_late_months", I(late));
             yield return new($"slot_w47_{_ids[a]}_late_nodes", string.Join(";", lateNodes));
+            // TASK-0195: per calendar year from 1985, "year:returned ppm of the research money:slot-months:slot-months on nodes anchored >= 1990".
+            var years = new List<string>();
+            for (int y = 1985 - 1945; y < Years; y++)
+            {
+                int i = a * Years + y;
+                if (_ySlot[i] == 0 && _yScience[i] == 0)
+                    continue;
+                long ppm = _yScience[i] > 0 ? (long)((Int128)_yReturned[i] * 1_000_000 / _yScience[i]) : 0;
+                years.Add($"{I(1945 + y)}:{I(ppm)}:{I(_ySlot[i])}:{I(_yNew[i])}");
+            }
+            yield return new($"slot_years_{_ids[a]}", string.Join(";", years));
         }
         for (int a = 0; a < _ids.Length; a++)
         {
