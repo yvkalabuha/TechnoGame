@@ -1,3 +1,6 @@
+---
+tags: [review, performance, testing, done]
+---
 # ADR-0023 — critic review (2026-11-18)
 
 HIGH

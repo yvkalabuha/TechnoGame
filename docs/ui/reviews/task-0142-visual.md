@@ -1,3 +1,6 @@
+---
+tags: [review, ui, map, done]
+---
 # Визуальное ревью TASK-0142 (остаток карты глобуса после TASK-0138)
 
 Дата 2026-11-24, ui-art-director. Кадры 1920x1080, 100 %: `shots-out/task-0142/map1945_{europe,africa,asia,limb}_1920x1080.png` и `_grey.png` (limb открыт один раз; он совпадает по виду с восточной Азией). Спека: `docs/ui/specs/task-0138-country-palette.md`. Раунд 2 TASK-0138: `task-0138-visual.md` G2–G8.

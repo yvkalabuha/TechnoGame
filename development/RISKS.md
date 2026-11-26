@@ -1,3 +1,6 @@
+---
+tags: [journal, platform, active]
+---
 # RISKS
 
 | ID | Риск | Уровень | Меры | Статус |

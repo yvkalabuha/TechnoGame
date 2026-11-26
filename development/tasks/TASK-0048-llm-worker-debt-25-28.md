@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-14
 approval_ref: "Владелец 2026-11-14: «долги закончи»; DEBT-0025, DEBT-0028"
 created: 2026-11-14
+tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0048 — llm_worker: DEBT-0025 (ledger repair) и DEBT-0028 (записи ревью)

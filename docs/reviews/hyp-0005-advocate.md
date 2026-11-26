@@ -1,3 +1,6 @@
+---
+tags: [review, simulation-lab, testing, done]
+---
 # Gate HYP-0005 — advocate (2026-11-18)
 
 The draft is solid on peeking, pairing and pre-fixing choices. Three alternatives clearly beat it: a simpler outcome rule (each metric tests one side), a continuous tie-break inside the rank sum, and a continuous lead-margin metric plus a positive control as the floor guard.

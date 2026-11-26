@@ -1,3 +1,6 @@
+---
+tags: [spec, visual, active]
+---
 # Brief v2: the G4 engine part must be a whole engine (owner 2026-11-25: "двигатель он сделал - сопло только")
 
 Scene "Gemini_G4_kit" (your kit from brief v1, BRIEF_v1.md). Problem: KIT_G4_engine holds only the two nozzles. In the game the engine slot (eng_g4: twin turbofans with afterburner) is the engine itself.

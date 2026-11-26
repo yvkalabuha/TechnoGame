@@ -9,6 +9,7 @@ related: [ADR-0023, ADR-0016, ADR-0014, EXP-0008, TASK-0106]
 approved_by:             # owner — обязательно для ACCEPTED
 approved_at:
 approval_ref:
+tags: [decision, performance, testing, draft]
 ---
 
 > **Отложен (#419, 2026-11-19).** Критерий пауз понадобится для замера на масштабе M1; до него ADR остаётся PROPOSED и на gate не выносится.

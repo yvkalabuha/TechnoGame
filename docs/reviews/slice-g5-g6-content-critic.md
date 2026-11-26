@@ -1,3 +1,6 @@
+---
+tags: [review, gameplay, done]
+---
 # Gate review: docs/research/slice-g5-g6-content.md — critic
 
 > 2026-11-23, TASK-0128. Report copied verbatim from the agent.

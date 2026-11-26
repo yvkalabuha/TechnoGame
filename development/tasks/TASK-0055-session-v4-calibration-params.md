@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-15
 approval_ref: "ADR-0014 п.5 (Session отдаёт то, что нужно Lab); TASK-0054 «Блокирует T12»; спека среза §8.2, §6.1"
 created: 2026-11-15
+tags: [task, core, simulation-lab, done]
 ---
 
 # TASK-0055 — Session v4: параметры калибровки и таблицы L_C/L_P

@@ -1,3 +1,6 @@
+---
+tags: [handoff, platform, core, done]
+---
 # TASK-0115 doc patch (for the Orchestrator: docs/architecture is outside the developer zone)
 
 ## docs/architecture/SLICE_COMPOSITION.md §7.5 «Журнал»

@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0017 «Вне ADR» F7a (light); smoke of TASK-0064"
 created: 2026-11-18
+tags: [task, performance, core, done]
 ---
 
 # TASK-0082 — F7a: reuse the view on probe-only days, cheaper daily snapshot

@@ -1,3 +1,6 @@
+---
+tags: [review, platform, knowledge-base, done]
+---
 # База знаний и доступ агентов к PostgreSQL/Redis — разбор 2026-11-26
 
 ## База знаний: что есть [Факт]

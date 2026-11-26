@@ -16,6 +16,7 @@ golden_hash: 4b8a4fd835901246fe3f275d0e9961c73e28e5e067deae51a16fbea340ccbf36   
 baseline:                # контрольная версия (commit или EXP-NNNN)
 outcome: inconclusive     # ADR-0016 §4: повтор снова троттлит (П5) и шум A 11,8 % > 10 %
 created: 2026-11-17
+tags: [experiment, performance, determinism, done]
 ---
 
 # EXP-0007 — tick benchmark M0 (ADR-0016)

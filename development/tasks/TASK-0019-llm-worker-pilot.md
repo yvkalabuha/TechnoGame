@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-03
 approval_ref: "DECISIONS_LOG #110"
 created: 2026-11-03
+tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0019 — Пилот внешней LLM (Qwen): tools/llm_worker

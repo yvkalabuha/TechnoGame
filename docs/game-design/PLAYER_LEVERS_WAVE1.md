@@ -1,3 +1,6 @@
+---
+tags: [design, gameplay, economy, draft]
+---
 # Рычаги игрока, волна 1, часть А: исследования, бюджет и резерв, темп, читаемость, порядок работ
 
 > game-designer, ревизия 2026-11-24 после gate-отзывов (`docs/reviews/player-levers-wave1-{critic,advocate,deepseek}.md`). Основание: отзыв владельца (`docs/game-design/playtests/2026-11-24-owner-m-play.md`), контур `M_PLAY_LOOP.md`. Решения владельца ниже — [Факт, `docs/decisions/DECISIONS_LOG.md`]; всё остальное — [Предл.], пока не утверждено. Часть Б (линии, рынок лицензий): `docs/game-design/economy/production-lines-and-licence-market.md`. **Резерв принадлежит части А** (раздел A2); часть Б ссылается сюда и не оценивает его второй раз.

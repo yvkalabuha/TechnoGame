@@ -15,6 +15,7 @@ approved_at: 2026-11-22
 approval_ref: "#434 (ADR-0025 rev 2 accepted)"
 review_ref: "reviewer: APPROVE c543717 + delta 0041317 (3 rounds); codex: 3 returns, waived by #432, open → DEBT-0074, DEBT-0078; landed 6fe565d"
 created: 2026-11-23
+tags: [task, core, performance, done]
 ---
 
 # TASK-0130 — Вид клиента с подпиской (ADR-0025)

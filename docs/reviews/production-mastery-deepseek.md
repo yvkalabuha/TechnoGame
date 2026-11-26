@@ -1,3 +1,6 @@
+---
+tags: [review, economy, external-llm, done]
+---
 # Gate review: docs/game-design/notes/production-mastery.md — DeepSeek third voice
 
 > 2026-11-24. Record: `tools/llm_worker/runs/gate-production-mastery-32f963ce-third.json`. Note: finding "horizon mismatch 1945–1975" is stale — the M-play horizon is 1945–2030 (#422, #423).

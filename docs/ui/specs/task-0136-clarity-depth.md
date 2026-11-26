@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # TASK-0136 · шаг 1 · Спецификация понятности и глубины (дерево знаний, меню)
 **Автор:** ui-art-director · **Дата:** 2026-11-24 · **Основание:** Gemini #441 (`reviews/gemini-{criteria-flash,design-flash,design-hydrogen}-2026-11-24-*.md`), `reviews/task-0126-visual.md`, §12 design system, VISUAL_DIRECTION v0.6 §3.
 Метод: каждую находку сверил с кадрами `shots-out/task-0126/*_1920x1080.png` (100 %). Gemini — второе мнение; решение мое. Пометки: [Факт] — виден на кадре, [Предп.] — не измерено.

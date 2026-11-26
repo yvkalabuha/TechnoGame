@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 review_ref: "reviewer: APPROVE (round 2, 86fb84d); ui-art-director: PASS round 2 (docs/ui/reviews/task-0149-visual.md); codex accept e3834d9 with 4 findings -> DEBT-0095; landed 1d94d91"
 created: 2026-11-24
+tags: [task, ui, gameplay, done]
 ---
 
 # TASK-0149 — Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s)

@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: credits
 
 Redesign the attached in-game screen. Credits screen ("Авторы") with licence attributions (PD, CC0, CC BY) for maps, sounds, music, AI images.

@@ -16,6 +16,7 @@ golden_hash:             # конечные хеши V5-CAN main seeds 61…65
 baseline: V5-CAN на той же сборке; эталон VINF; V0 — для V-0 и K5
 outcome:                 # supports | refutes | inconclusive
 created: 2026-11-04
+tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-NNNN — Распределение пула оснастки A39 под V5 (pool order)

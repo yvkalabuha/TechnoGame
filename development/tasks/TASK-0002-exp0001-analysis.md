@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-02
 approval_ref: DECISIONS_LOG #12–#15; EXP-0001 «Ревью»
 created: 2026-11-02
+tags: [task, simulation-lab, done]
 ---
 
 # TASK-0002 — Анализ EXP-0001: расчёт критериев HYP-0001 на Python stdlib

@@ -1,3 +1,6 @@
+---
+tags: [experiment, gameplay, simulation-lab, done]
+---
 # Правило роста культуры `culture_H`, раунд 2: C-A против C-B (решения #95, #96, #99–#104)
 
 > Автор: simulation-engineer. Входы: `culture-rule-selection.md` (§1, §6.1, §7.1, §7.5, §8, §9), `docs/research/notes/culture-effort-evidence.md` (§1–§4), `docs/game-design/PROCESS_DEVELOPMENT.md` v0.2 (§2, §5), `LAYER_CONTRACT.md` v2.3 §4.0–4.2, A5, `slice-jet-aviation.md` §1.3, §8.1, `mods/core/scenario_1945.yaml`, DECISIONS_LOG #79, #80, #85, #93, #95, #96, #99–#104.

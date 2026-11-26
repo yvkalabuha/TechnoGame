@@ -1,3 +1,6 @@
+---
+tags: [review, core, performance, done]
+---
 # Gate ADR-0019 / ADR-0020 — critic (2026-11-18)
 
 ## ADR-0019

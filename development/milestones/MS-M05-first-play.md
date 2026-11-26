@@ -5,6 +5,7 @@ status: ACTIVE           # PLANNED | ACTIVE | RELEASED
 approved_by: owner
 approved_at: 2026-11-19
 approval_ref: "DECISIONS_LOG #418"
+tags: [plan, gameplay, ui, active]
 ---
 
 # MS-M05 — M-play: первая играбельная сборка

@@ -6,6 +6,7 @@ date: 2026-11-17
 revision: "ревизия 2 (2026-11-18) по gate (critic, advocate, DeepSeek): суточный тик ADR-0019 r3, контролирующий актор ADR-0020 r3, стохастика через ADR-0021 (draft), единые eff/conf, национальный бюджет"
 author: civilization-systems-designer
 related: [RR-0008, RR-0011, RR-0012, RR-0013, RR-0014, RR-0019, RR-0021]
+tags: [research, politics, military, draft]
 ---
 
 # RR-0017 — Разведка, промышленный шпионаж, контрразведка и дезинформация

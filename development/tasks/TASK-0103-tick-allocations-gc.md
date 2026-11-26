@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "EXP-0007 P8 (light)"
 created: 2026-11-18
+tags: [task, performance, core, done]
 ---
 
 # TASK-0103 — Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8)

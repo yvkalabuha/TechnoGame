@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Визуальное ревью TASK-0117, четвёртый проход — 2026-11-19
 
 Автор: ui-art-director. Кадры: `shots-out/task-0117-r4/` (1920×1080) и `run-log.txt` (строки «tree summaries», «tree legend», «rail geometry»). Критерии: `UI_DESIGN_SYSTEM.md` §12, `.claude/rules/ui.md`, спец. `specs/task-0117-rail-and-legend.md` §5. Метки: [Факт] — виден на кадре или в run-log; [Предп.] — оценка без измерения.

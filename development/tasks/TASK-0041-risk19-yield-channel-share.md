@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #183"
 created: 2026-11-13
+tags: [task, economy, done]
 ---
 
 # TASK-0041 — RISK-0019: доля канала выхода на стенде T8

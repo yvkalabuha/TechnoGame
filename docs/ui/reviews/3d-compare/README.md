@@ -1,3 +1,6 @@
+---
+tags: [review, visual, ui, done]
+---
 # Сравнение 3D: Claude и Gemini, 2026-11-25
 
 Бриф: `docs/ui/specs/3d-compare-brief.md`. Оба исполнителя строили истребитель G4 в живом Blender 5.3 через Blender MCP. Рендер одинаковый: EEVEE, 1920×1080, одна камера, одно солнце, одно небо.

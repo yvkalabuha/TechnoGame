@@ -1,3 +1,6 @@
+---
+tags: [spec, testing, platform, active]
+---
 # Godot 4 + C# — automated game testing infrastructure (owner brief v1.0)
 
 Source: owner's specification of 2026-11-03 (sent in two parts), kept in substance.

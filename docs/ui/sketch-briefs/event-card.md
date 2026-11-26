@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: event card
 
 Redesign the attached in-game screen. A decision sheet ("event card") over the main game screen, opened from the Politics area. Russian UI text. Output: one 16:9 mockup image, 1920x1080 composition.

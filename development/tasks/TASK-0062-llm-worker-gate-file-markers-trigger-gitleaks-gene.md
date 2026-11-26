@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-17
 approval_ref: light task, gate of ADR-0016 blocked
 created: 2026-11-17
+tags: [task, platform, external-llm, done]
 ---
 
 

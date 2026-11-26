@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #176 (ADR-0015, план 1a)"
 created: 2026-11-13
+tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0035 — llm_worker: провайдер DeepSeek и учёт трат (ADR-0015 1a)

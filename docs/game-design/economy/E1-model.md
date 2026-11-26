@@ -6,6 +6,7 @@ date: 2026-11-05
 version: 0.4
 author: economy-analyst
 related: [economy-next-milestone, RR-0006, RR-0010, HYP-0002, RISK-0016, RISK-0018]
+tags: [design, economy, core, draft]
 ---
 
 # Модель E1 (formal spec v0.1)

@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-18
 approval_ref: "DECISIONS_LOG #305, #309"
 created: 2026-11-18
+tags: [task, audio, done]
 ---
 
 

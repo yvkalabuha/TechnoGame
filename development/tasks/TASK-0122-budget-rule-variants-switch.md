@@ -15,6 +15,7 @@ approved_at: 2026-11-19
 approval_ref: "#430, O-025"
 review_ref: "reviewer: APPROVE dba5f7a (in 2939b80), fixes 810e12a, d8a7617, 9109a9c by Orchestrator decision O-028; codex accept c5604833 (round 3, 3 medium deferred to TASK-0123 and TASK-0118); landed f570000"
 created: 2026-11-19
+tags: [task, economy, simulation-lab, done]
 ---
 
 # TASK-0122 — Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2)

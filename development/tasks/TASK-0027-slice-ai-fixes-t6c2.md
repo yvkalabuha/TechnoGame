@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-04
 approval_ref: "DECISIONS_LOG #137, #138, #140, #144; спека v0.15 §11 T6c2"
 created: 2026-11-04
+tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0027 — T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1

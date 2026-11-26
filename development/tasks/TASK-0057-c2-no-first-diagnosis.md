@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-15
 approval_ref: "#237; `knowledge-pacing-proposal.md` v2; отчёт T12 §4"
 created: 2026-11-15
+tags: [task, economy, done]
 ---
 
 # TASK-0057 — Разбор C2: известно, но не в серии

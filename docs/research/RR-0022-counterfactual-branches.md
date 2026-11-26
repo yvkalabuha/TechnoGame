@@ -5,6 +5,7 @@ status: DRAFT            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-18
 author: counterfactual-analyst
 related: [RR-0013, RR-0014, RR-0012, RR-0008]
+tags: [research, history, science, draft]
 ---
 
 # RR-0022 — Counterfactual technology branches 1945-2100 (#299)

@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#576"
 review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115"
 created: 2026-11-25
+tags: [task, core, science, done]
 ---
 
 # TASK-0187 — Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576)

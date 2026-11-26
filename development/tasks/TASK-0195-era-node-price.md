@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #579"
 created: 2026-11-26
+tags: [task, economy, science, active]
 ---
 
 # TASK-0195 — Era price of research nodes: node cost grows with era so leaders spend science money after 1990 (#579)

@@ -1,3 +1,6 @@
+---
+tags: [review, science, done]
+---
 # Gate SCIENCE_SLOTS.md (TASK-0186), 2026-11-25
 
 Critic (agent ad7281524498a3cb0), advocate (aa7653e5956c3109d), DeepSeek third voice (tools/llm_worker/runs/gate-SCIENCE_SLOTS-39f7249d-third.json). Full texts in the session transcript; key findings:

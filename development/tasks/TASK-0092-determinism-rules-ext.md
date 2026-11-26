@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0002 determinism; ADR-0007 rev 3 recommendations (light, stricter tests only)"
 created: 2026-11-18
+tags: [task, determinism, testing, done]
 ---
 
 # TASK-0092 — DeterminismRules: string hashing, culture comparisons, threading APIs, Parallel.For allowlist, Lab ToyFunnel check

@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-14
 approval_ref: "Владелец 2026-11-14: «долги закончи»"
 created: 2026-11-14
+tags: [task, core, done]
 ---
 
 # TASK-0049 — Долги Core/Kernel: DEBT-0004, 0006, 0011, 0012, 0013, 0017, 0021

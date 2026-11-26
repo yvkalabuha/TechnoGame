@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: main-menu
 
 Redesign the attached in-game screen. Main menu (title screen) of a 1945–2100 science strategy game "Singularity".

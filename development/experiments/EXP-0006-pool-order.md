@@ -16,6 +16,7 @@ golden_hash: "CAN main конечные хеши s61…s65: 16caff8d…, 69e27ad
 baseline: V5-CAN на той же сборке; эталон VINF; V0 — для V-0 и K5
 outcome: refutes          # годных правил нет (П3: Q_stress GBR < 0,25 у всех); остаётся CAN
 created: 2026-11-04
+tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-0006 — Порядок распределения пула оснастки под V5: CAN, REV, PROP, SEV (малый пул)

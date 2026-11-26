@@ -1,3 +1,6 @@
+---
+tags: [review, science, institutions, done]
+---
 # Gate: research-institutes-priorities.md — advocate
 
 STATUS: done

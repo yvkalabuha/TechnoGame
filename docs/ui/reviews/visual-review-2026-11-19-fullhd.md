@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Визуальное ревью на реальных кадрах 1920×1080 — 2026-11-19
 
 Автор: ui-art-director. Кадры: `.claude/worktrees/agent-aac630a6a6559befc/shots-out/` (`*_1920x1080*.png`, `full_*`, `caliper_*`, `flask_*`). Критерии: `UI_DESIGN_SYSTEM.md` §12 (C1–C8, A1–A12), §4.3; `.claude/rules/ui.md`.

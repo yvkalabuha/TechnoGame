@@ -53,5 +53,35 @@ facets:
       done: {description: "Работа закончена; документ — история (задача, ревью, handoff)", examples: [development/handoff/2026-11-02-1.md]}
       superseded: {description: "Заменён другим документом (указать supersedes у нового)", examples: [docs/audio/AUDIO_DIRECTION.md]}
       deferred: {description: "Отложено или отклонено", examples: [docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md]}
-# Documents whose header cannot change (ACCEPTED ADRs are immutable): path -> tags.
-overrides: {}
+# Documents whose header cannot change: ACCEPTED ADRs (immutable) and files pinned by sha256 in an llm_worker
+# contract (tools/llm_worker/contracts/*.json context_files). path -> tags.
+overrides:
+  docs/simulation/risk19-yield-channel.md: [analysis, simulation-lab, economy, done]
+  docs/decisions/ADR-0001-stack.md: [decision, platform, core, accepted]
+  docs/decisions/ADR-0002-determinism-levels.md: [decision, determinism, core, accepted]
+  docs/decisions/ADR-0003-numeric-policy.md: [decision, core, determinism, accepted]
+  docs/decisions/ADR-0004-rng.md: [decision, determinism, core, accepted]
+  docs/decisions/ADR-0005-data-model.md: [decision, core, determinism, accepted]
+  docs/decisions/ADR-0006-tick-model.md: [decision, core, determinism, accepted]
+  docs/decisions/ADR-0007-collections.md: [decision, determinism, testing, accepted]
+  docs/decisions/ADR-0008-simulation-lab.md: [decision, simulation-lab, data, accepted]
+  docs/decisions/ADR-0009-data-licenses.md: [decision, data, audio, accepted]
+  docs/decisions/ADR-0010-data-format-modding.md: [decision, data, core, accepted]
+  docs/decisions/ADR-0011-map-representation.md: [decision, map, core, accepted]
+  docs/decisions/ADR-0012-deterministic-math-functions.md: [decision, determinism, core, accepted]
+  docs/decisions/ADR-0013-save-format-v0.md: [decision, core, data, accepted]
+  docs/decisions/ADR-0014-session-test-api.md: [decision, core, testing, accepted]
+  docs/decisions/ADR-0015-external-executors-providers.md: [decision, platform, external-llm, accepted]
+  docs/decisions/ADR-0016-tick-budget.md: [decision, performance, core, accepted]
+  docs/decisions/ADR-0017-statehash-schedule-and-table-copy-in-daily-mode.md: [decision, determinism, core, accepted]
+  docs/decisions/ADR-0018-localization-keys-locale-files-in-mods-en-and-ru.md: [decision, ui, data, accepted]
+  docs/decisions/ADR-0019-daily-slices-228.md: [decision, core, determinism, accepted]
+  docs/decisions/ADR-0020-province-budget.md: [decision, core, map, accepted]
+  docs/decisions/ADR-0021-stochastic-events.md: [decision, core, gameplay, accepted]
+  docs/decisions/ADR-0022-region-limit-amendment.md: [decision, map, core, accepted]
+  docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md: [decision, performance, testing, accepted]
+  docs/decisions/ADR-0025-view-snapshot-buffer-ring.md: [decision, core, ui, accepted]
+  docs/decisions/ADR-0026-ai-generated-images.md: [decision, visual, data, accepted]
+  docs/decisions/ADR-0027-daily-tick-228.md: [decision, core, performance, accepted]
+  docs/decisions/ADR-0028-m1-tick-budget.md: [decision, performance, core, accepted]
+  docs/decisions/ADR-0029-entity-tables.md: [decision, core, data, accepted]

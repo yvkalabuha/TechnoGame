@@ -1,3 +1,6 @@
+---
+tags: [review, platform, simulation-lab, done]
+---
 # PHASE E — итоговый отчёт: пробный цикл и ревизия фреймворка
 
 **Дата:** 2026-11-02

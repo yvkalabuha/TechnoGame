@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "DEBT-0045, light follow-up of TASK-0078 review"
 created: 2026-11-18
+tags: [task, determinism, core, done]
 ---
 
 # TASK-0080 — ADR-0017 review follow-ups (DEBT-0045 low items)

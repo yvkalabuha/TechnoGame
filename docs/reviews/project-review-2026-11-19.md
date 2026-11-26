@@ -1,3 +1,6 @@
+---
+tags: [review, gameplay, core, done]
+---
 # Обзор проекта 2026-11-19: архитектура, разработка, продукт
 
 > Автор: Orchestrator. Источники: независимый разбор архитектуры (critic, `docs/reviews/architecture-review-2026-11-19-critic.md`), разбор продукта (game-designer, `docs/game-design/notes/product-review-2026-11-19.md`), журнал сессии 2026-11-18/19, история git и CI. План по итогам — `development/PLAN.md`. Правила, которые уже действуют, — `.claude/rules/orchestration.md`.

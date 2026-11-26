@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: tech map stage 2 (owner decision #582)
 
 Reference: attached frame = current knowledge map (1920x1080), science strategy game 1945-2100. Owner rejected the blueprint style.

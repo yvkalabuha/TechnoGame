@@ -1,3 +1,6 @@
+---
+tags: [review, core, performance, done]
+---
 # Gate: M1 ADR drafts — critic
 
 STATUS: done

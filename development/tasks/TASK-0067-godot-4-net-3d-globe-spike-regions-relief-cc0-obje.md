@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-17
 approval_ref: "DECISIONS_LOG #284, #285 (owner asked for the spike)"
 created: 2026-11-17
+tags: [task, visual, map, done]
 ---
 
 

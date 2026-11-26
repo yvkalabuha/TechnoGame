@@ -1,3 +1,6 @@
+---
+tags: [note, history, military, draft]
+---
 # Якорные годы G5/G6 (jet_fighter_g5, jet_fighter_g6)
 
 > game-designer, 2026-11-24. Вход: `docs/research/node-history/prc-app.md` (заметка вверху), `docs/research/slice-g5-g6-content.md`, `mods/core/nodes.yaml` (узлы 76, 77), решение #465, `docs/simulation/g5-g6-probe.md`. `mods/` не менялся.

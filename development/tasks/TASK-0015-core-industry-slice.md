@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #48, #53
 created: 2026-11-03
+tags: [task, core, economy, done]
 ---
 
 # TASK-0015 — Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce

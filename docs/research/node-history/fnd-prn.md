@@ -1,3 +1,6 @@
+---
+tags: [research, science, history, done]
+---
 # История узлов FND и PRN (TASK-0157, шаг 2, проверено)
 
 Автор: research-scientist, 2026-11-24. Узлов: 32.

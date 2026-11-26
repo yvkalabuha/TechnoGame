@@ -4,6 +4,7 @@ author: research-scientist
 date: 2026-11-24
 verified: 2026-11-24 (раунд сверки строк M/L)
 related: [RR-0020, ADR-0011, MS-M1]
+tags: [research, history, map, done]
 ---
 
 # Широкий список событий владения для M1 (решение #328)

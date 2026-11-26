@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "DEBT-0043 CI part, light"
 created: 2026-11-18
+tags: [task, map, platform, done]
 ---
 
 # TASK-0084 — Map tooling CI and boundary checks (DEBT-0043)

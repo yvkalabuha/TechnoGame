@@ -1,3 +1,6 @@
+---
+tags: [analysis, economy, simulation-lab, done]
+---
 # T6b: нулевой выпуск SUN, FRA, SWE — диагностика и предложение к спеке v0.13
 
 Автор: simulation-engineer, 2026-11-03. Основа: main `3fcb133` (TASK-0023 в REVIEW), спека `slice-jet-aviation.md` v0.12, контракт v2.4 r3. Статус документа — **предложение**; спека и контракт не правились.

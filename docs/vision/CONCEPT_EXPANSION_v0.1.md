@@ -1,3 +1,6 @@
+---
+tags: [vision, gameplay, science, draft]
+---
 # PROJECT SINGULARITY
 # GAME CONCEPT EXPANSION
 ## Political, Economic, Technological & Military Systems

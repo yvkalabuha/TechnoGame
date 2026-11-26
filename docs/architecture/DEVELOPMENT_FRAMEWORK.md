@@ -1,3 +1,6 @@
+---
+tags: [guide, platform, accepted]
+---
 # DEVELOPMENT FRAMEWORK — проект процесса разработки
 
 **ID:** DF-001

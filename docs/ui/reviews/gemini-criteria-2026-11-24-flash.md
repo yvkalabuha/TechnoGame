@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Gemini visual opinion: TASK-0126
 
 Model gemini-flash-latest, frames: tree_caption_turbine_1920x1080.png, tree_legend_1920x1080.png, main_menu_1920x1080.png.

@@ -1,3 +1,6 @@
+---
+tags: [design, core, determinism, draft]
+---
 # Kernel под несколько таблиц: набросок API и оценка правки (ADR-0020 R2)
 
 > Автор: systems-architect, 2026-11-18. Задача: TASK-0090. Основа: ADR-0020 rev 3 (§1 п. 1–8, «Проверка» п. 1–3), `docs/reviews/adr-0019-0020-reviewer.md` (раздел ADR-0020), код `src/Singularity.Kernel/*` и `src/Singularity.Session/Slice/SliceWorld.cs` на 9c7f4f7.

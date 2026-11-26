@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #48, #49
 created: 2026-11-03
+tags: [task, data, history, done]
 ---
 
 # TASK-0011 — Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор

@@ -15,6 +15,7 @@ approved_at: 2026-11-19
 approval_ref: "#423 (Core change for later generations allowed); O-038"
 review_ref: "reviewer: APPROVE 19f67df + deltas 208d2d6, e22608d (3 rounds); simulation-engineer Lab part; codex: 3 returns, waived by #432, open → DEBT-0079; landed 951ce9d"
 created: 2026-11-23
+tags: [task, core, science, done]
 ---
 
 # TASK-0131 — Правки Core под данные G5/G6 (поезд 2, шаг T-G)

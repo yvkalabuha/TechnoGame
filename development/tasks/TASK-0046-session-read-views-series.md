@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "ADR-0014 п. 5–6 (read views — вместе с T10); спека среза v0.24 §11 T10"
 created: 2026-11-13
+tags: [task, core, simulation-lab, done]
 ---
 
 # TASK-0046 — Session: read views среза и переключатели серий

@@ -1,3 +1,6 @@
+---
+tags: [review, core, determinism, done]
+---
 # Gate: M1 ADR drafts — advocate
 
 STATUS: done

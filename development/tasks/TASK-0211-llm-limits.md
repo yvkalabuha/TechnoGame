@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #605, #606"
 created: 2026-11-26
+tags: [task, external-llm, platform, active]
 ---
 
 # TASK-0211 — Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606)

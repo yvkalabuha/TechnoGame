@@ -1,3 +1,6 @@
+---
+tags: [guide, ui, platform, active]
+---
 # UI Art Director & Lead UI Designer — role brief (owner, v0.1)
 
 Source: the owner's proposal of 2026-11-03 (DECISIONS_LOG #35), kept verbatim in substance. Agent file: `.claude/agents/ui-art-director.md`.

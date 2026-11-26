@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # TASK-0196: разбор эскиза A «океан» по §12 (Claude ui-art-director)
 
 Автор: Claude ui-art-director. Эскизы: shots-out/sketches/TASK-0196/ (A ocean, B paper_fog, C constellation). Основание: решения владельца #582, #588. Спек: docs/ui/specs/tech-map-stage2-spec.md.

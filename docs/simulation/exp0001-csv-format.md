@@ -1,3 +1,6 @@
+---
+tags: [spec, simulation-lab, data, active]
+---
 # Формат входных CSV для анализа EXP-0001 (`lab/analysis/exp0001.py`)
 
 > Связано: EXP-0001, HYP-0001 rev 2 («Критерии успеха»), модель `toy-science-industry-model.md` §6, TASK-0002/0003.

@@ -1,3 +1,6 @@
+---
+tags: [review, core, platform, done]
+---
 # Независимый разбор архитектуры (critic, 2026-11-19)
 
 > Сохранено Orchestrator из отчёта агента critic (у него нет права записи). Сводка и решения — `docs/reviews/project-review-2026-11-19.md` §2.

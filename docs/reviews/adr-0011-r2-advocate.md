@@ -1,3 +1,6 @@
+---
+tags: [review, map, done]
+---
 # ADR-0011 rev 2 — advocate review (2026-11-18, commit bc1b007)
 
 Transcribed by the Orchestrator. No rejected alternative wins outright. Refinements:

@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Визуальное ревью TASK-0088 — клиент v0.5c
 
 Автор: ui-art-director, 2026-11-18. Снимки: `docs/ui/prototypes/client-v05c/` (хранится 25 кадров, остальные: кадр не хранится, генерируется: `./run-globe-spike.sh --shots`; см. KEY_SHOTS.md), `run-log.txt`. Метки: [Факт] — по снимку/логу; [Предп.] — оценка.
