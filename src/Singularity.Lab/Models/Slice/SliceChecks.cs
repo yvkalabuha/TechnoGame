@@ -28,7 +28,8 @@ public static class SliceChecks
     // build (levers off, shares model), which the slot model leaves unchanged (S11), so this equals Session MainSeed1Month149 of TASK-0188. Old value 3d466f77…f82f68.
     // Re-recorded in TASK-0193: 55 new nodes 160-214 (tree 1990–2030) change every trajectory; equals Session MainSeed1Month149 of TASK-0193
     // (b56cc312). Old value c79505d7…cbad401.
-    private const string Golden150 = "1f80dcf09c3ecac873b9d3e9dc1e3bc74fc8f167e110cbe4e98268d4f1710f6a";
+    // Re-recorded in TASK-0193: 55 nodes 1990–2030 and O-105 late prerequisites.
+    private const string Golden150 = "01deeebdab9c81a4d12f2775f3b6e099f92df0a859242881972afee9ef67a174";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
