@@ -635,6 +635,8 @@ def cmd_approve(root: Path, rc: str, owner_ref: str) -> str:
     latest = last_release_tag(root)
     if latest and subprocess.run(["git", "merge-base", "--is-ancestor", latest, sha], cwd=root).returncode != 0:
         raise ReleaseError(f"{rc} is not newer than {latest}: approving it would silently roll the release back (use rollback)")
+    if not permit_live():   # the smoke start of the deployed build launches the client: owner's permission first
+        raise ReleaseError("approve starts the client for a smoke test: grant a permit: python3 tools/development/client_permit.py grant 30 (owner allows)")
     tag = next_release_tag(root)
     base = last_release_tag(root)
     tasks = [(i, task_title(root, i)) for i in done_tasks(root, base, sha)]

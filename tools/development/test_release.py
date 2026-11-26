@@ -58,8 +58,15 @@ class Repo(unittest.TestCase):
                                'echo "$*" >> "$(dirname "$0")/smoke.log"\n[ -n "$SMOKE_TEXT" ] && echo "$SMOKE_TEXT"\nexit ${SMOKE_EXIT:-0}')
         self.godot_bad = script(self.base / "godot-bad", "echo boom; exit 1")
         os.environ["GODOT"] = str(self.godot_ok)
+        self.old_permit = release.client_permit.PERMIT   # a live client permit for approve (its smoke start)
+        release.client_permit.PERMIT = self.base / "permit"
+        self.grant()
+
+    def grant(self):
+        release.client_permit.PERMIT.write_text(str(release.time.time() + 600), encoding="utf-8")
 
     def tearDown(self):
+        release.client_permit.PERMIT = self.old_permit
         os.environ.pop("SINGULARITY_RELEASES", None)
         os.environ.pop("GODOT", None)
         self.tmp.cleanup()
@@ -202,6 +209,17 @@ class TestApprove(Repo):
         errs = self.catalogue()
         self.assertEqual(len(errs), 1)
         self.assertIn("ERR-0001", self.report(rc).read_text(encoding="utf-8"))
+
+    def test_approve_without_a_live_permit_refuses_before_building(self):
+        rc = self.checked_rc()
+        release.client_permit.PERMIT.unlink()
+        with self.assertRaisesRegex(release.ReleaseError, "client_permit.py grant 30"):
+            release.cmd_approve(self.root, rc, "#600")
+        self.assertFalse((self.base / "rel").exists() and os.listdir(self.base / "rel"))
+        self.assertFalse((self.base / "smoke.log").exists())   # the client was not started
+        self.assertEqual(release.release_tags(self.root), [])
+        self.grant()
+        self.assertEqual(release.cmd_approve(self.root, rc, "#600"), "v0.1")
 
     def assert_no_release(self, rc):
         self.assertEqual(release.release_tags(self.root), [])
@@ -374,9 +392,9 @@ class TestDeploySafety(Repo):
 class TestExecPermit(Repo):
     def test_permit_live_reads_the_guard_file(self):
         old = release.client_permit.PERMIT
-        release.client_permit.PERMIT = self.base / "permit"
+        release.client_permit.PERMIT = self.base / "permit-new"
         self.addCleanup(setattr, release.client_permit, "PERMIT", old)
-        self.assertFalse(release.permit_live())
+        self.assertFalse(release.permit_live())   # the new path holds no permit yet
         release.client_permit.PERMIT.write_text(str(release.time.time() - 5), encoding="utf-8")
         self.assertFalse(release.permit_live())
         release.client_permit.PERMIT.write_text("junk", encoding="utf-8")
