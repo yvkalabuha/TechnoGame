@@ -1,6 +1,7 @@
 # CURRENT STATE
 
 ## Сводка
+- **2026-11-26 (3):** платформа: влиты Redis (0201, фильтр команд по #601), поддержка базы знаний (0208, #604), структура базы знаний (0209: теги, журнал по месяцам, архивы, пределы размера, перенос в архив при посадке; #607–#611), лимиты моделей из llmlimits (0211, #605, #606, #612), исправления CI (0210, 0212). Осталось по платформе: ужать большие файлы до 2026-12-03 (#607), долги DEBT-0122…0125, 0127, 0128. Продукт на паузе (#595).
 - **2026-11-26 (2):** разработка продукта на паузе (#595); платформа — полоса A. Влиты: автопилот (0197), каталог ошибок (0198), PostgreSQL-индекс (0200), метрики (0206), релизы (0207), хуки от повторов (0202), память отклонений (0204), skills /shots /recheck /error (0203). Redis (0201) — на ревью. Дальше: 0208 (поддержка базы знаний), 0209 (структура, теги ≤50, пределы размера). Решения #579–#600, O-109…O-112. Факты обновлены. Игра ждёт: 0192/0194 (кадры), 0193+0199+0205 (пакет эталонов), 0196 (спек этапа 2). Советник Fable — проба с 26.11 15:35 до 03.12; code mode у developer — проба с 26.11.
 - **2026-11-26:** новая модель науки влита (поезд f12684f): один институт — одна тема, очередь 5, ускорение за деньги, 13 направлений с уровнями, опыт и новые направления, ИИ по пути к самолёту, воздушная мощь каждый месяц (#561–#578); все рычаги волны 1 по умолчанию (TASK-0171); 57 новых тем (TASK-0188). Замер: первые G2/G3/G4 ≈ 1954/1959/1969, простоя до 1990 нет. Влиты: Монголия, рельеф, 3D G1–G6 (Gemini), pace_check, Gemini через подписку (agy, #578 — Gemini ведущий арт-директор), проверка фактов через DeepSeek (#577), CI Windows/macOS раз в сутки. Идут: экран карты технологий этап 1 (TASK-0192, кадры r1 сняты, правки), дерево 1990–2030 (TASK-0193, 55 тем + поздние предпосылки). Долг: DEBT-0108…0115. Вопросы в очереди: A17 (Тибет/Тайвань/Гданьск), A19 (излишек денег науки после 1990), A20 (стиль карты по Gemini).
 - **2026-11-25 (5):** ядро волны рычагов 1 влито целиком: разведка (0160), советник (0153), институты (0151, 0174, 0175; P-7 PASS — 0173), K0 и таблицы Kernel (0162, 0165); Session API v26. Окна рычагов в клиенте (0156 части 1–2) ждут кадров. Включение механик по умолчанию (0171) остановлено: институты сдвигают калибровку 1945–1977 (A16). 3D делает Gemini (#544), набор частей G4 готов.
@@ -18,7 +19,7 @@
 - **Проекты механик (только документы, #459):** институты и личности ред. 2 (`docs/game-design/civilization/INSTITUTIONS_PERSONALITIES.md`, #461–#463), разведка ред. 3 (`docs/game-design/INTELLIGENCE.md`, O-051).
 - **Внешние исполнители:** Codex — второй ревьюер, при его лимите — Sonnet 5.5 через agy в песочнице (#456, TASK-0146); DeepSeek — третий голос каждого gate; эскизы Gemini через agy (TASK-0141, TASK-0143).
 - **Стек:** .NET 10.0.403 в `~/.dotnet`; Godot 4.7.2 mono в `~/.local/opt/godot`; Python 3 + PyYAML; ffmpeg; gitleaks 8.30.1.
-- **Последний handoff: `development/handoff/2026-11-26-2.md`
+- **Последний handoff: `development/handoff/2026-11-26-3.md`
 
 ## Активные задачи
 <!-- registry:active:start -->
@@ -31,7 +32,6 @@
 - TASK-0196 [IN_PROGRESS] Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) (ui-art-director)
 - TASK-0199 [IN_PROGRESS] Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) (developer)
 - TASK-0205 [IN_PROGRESS] Data: build candidate institutes 1960-2030 for USA, SUN, GBR, FRA, SWE with directions and levels (#589, O-110) (research-scientist)
-- TASK-0212 [IN_PROGRESS] CI fix: test_kb_structure LandRolloverTest sets git identity in its temporary repo (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0193 [REVIEW] Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 (research-scientist)
@@ -42,4 +42,4 @@
 - Кадры игры (A8, A15) отложены владельцем (#545) — блокируют приёмку TASK-0156, 0161, 0163, 0167.
 
 ## Точка продолжения
-Последний handoff: `development/handoff/2026-11-25-5.md`. Спросить A16 (и A9, A13, A14); по ответу — доделать TASK-0171 (worktree agent-a5360ae99120f7be5, не закоммичено) → кадры → партия владельца.
+Последний handoff: `development/handoff/2026-11-26-3.md`. Прочитать CI на `main`. Затем #607: ужать CLAUDE.md, CURRENT_STATE, PLAN (Orchestrator), разделить UI_DESIGN_SYSTEM (ui-art-director) и M_PLAY_LOOP (game-designer) до 2026-12-03; строку tags: добавить в шаблоны development/templates/. Затем по слову владельца снять паузу продукта.

@@ -15,7 +15,7 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #605, #606"
 review_ref: "reviewer: APPROVE 240a35f0 (part 1), 1910355c (part 2); second review: agy-sonnet (claude-sonnet-5-5-medium) accept, 2 findings, record review-TASK-0211-1910355c-agy-sonnet.json"
 created: 2026-11-26
-tags: [task, external-llm, platform, active]
+tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0211 — Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606)

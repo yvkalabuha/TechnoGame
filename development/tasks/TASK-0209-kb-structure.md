@@ -15,7 +15,7 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #598, #599"
 review_ref: "reviewer: APPROVE part1 123ed95c, part2 9ccfab99; agy-sonnet second review part1 accept (DEBT-0127); part2 waived by owner #611"
 created: 2026-11-26
-tags: [task, knowledge-base, platform, active]
+tags: [task, knowledge-base, platform, done]
 ---
 
 # TASK-0209 — Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599)

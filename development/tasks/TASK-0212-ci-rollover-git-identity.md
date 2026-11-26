@@ -1,7 +1,7 @@
 ---
 id: TASK-0212
 title: "CI fix: test_kb_structure LandRolloverTest sets git identity in its temporary repo"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,7 +13,9 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "red CI on main (run 45897427365), orchestration.md §2"
+review_ref: "reviewer: APPROVE 1dafb4b6; second review: agy-sonnet (claude-sonnet-5-5-medium) accept, 1 findings, record review-TASK-0212-1dafb4b6-agy-sonnet.json"
 created: 2026-11-26
+tags: [task, platform, testing, done]
 ---
 
 # TASK-0212 — CI fix: test_kb_structure LandRolloverTest sets git identity in its temporary repo
