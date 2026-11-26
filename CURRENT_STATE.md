@@ -31,7 +31,6 @@
 - TASK-0199 [IN_PROGRESS] Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) (developer)
 - TASK-0202 [IN_PROGRESS] Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591) (general-purpose)
 - TASK-0205 [IN_PROGRESS] Data: build candidate institutes 1960-2030 for USA, SUN, GBR, FRA, SWE with directions and levels (#589, O-110) (research-scientist)
-- TASK-0206 [IN_PROGRESS] Platform metrics in PostgreSQL: sessions, agents, LLM calls, landings, task flow, owner waits, errors; kb_db report (#593) (developer)
 - TASK-0207 [IN_PROGRESS] Release model: release.py rc|check|approve|release|rollback, RC report, /release skill, client build (#594) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
@@ -39,6 +38,8 @@
 - TASK-0203 [REVIEW] Skills /shots, /recheck, /error for the Orchestrator (#591) (orchestrator)
 - TASK-0201 [APPROVED] Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed (developer)
 - TASK-0204 [APPROVED] Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) (developer)
+- TASK-0208 [APPROVED] Knowledge base upkeep: fact drift is an error, decision-to-facts check at landing, freshness, /fact, facts in kb_db and mandatory facts block for code/data agents, agent DB access read-only (#597) (developer)
+- TASK-0209 [APPROVED] Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -26,29 +26,27 @@ facts:
     keywords: [срез, актор, держав, страны, стран, USA, SWE]
 
   - id: slice-horizon
-    statement: "Срез считает 86 лет: с 1945 до декабря 2030 (TASK-0121, #423). Новых знаний и поколений после G4 в данных ещё нет: контент G5–G6 — второй шаг продления."
-    source: "src/Singularity.Session/Slice/SliceWorld.cs; docs/architecture/notes/slice-horizon-2030.md"
+    statement: "Срез считает 86 лет: с 1945 до декабря 2030 (TASK-0121, #423). Узлы 1990–2030 (55 шт., TASK-0193) одобрены, но ждут пакета изменений, меняющих эталоны (пауза #595)."
+    source: "src/Singularity.Session/Slice/SliceWorld.cs; development/tasks/TASK-0193*"
     probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int Years = (\d+);', expect: "86"}
-    stale_patterns: ['срез обрывается в январе 1978', 'Years = 33']
-    keywords: [горизонт, 2030, 1977, 1978, партия, длина, лет]
-
+    stale_patterns: ['срез обрывается в январе 1978', 'Years = 33', 'поколений после G4 в данных ещё нет']
+    keywords: [горизонт, 2030, 1978, партия, длина, лет]
   - id: slice-content
-    statement: "В данных среза 61 узел знаний и поколения изделий G1–G4; новые знания кончаются к 1961–1970."
-    source: "mods/core/nodes.yaml; docs/simulation/m-play-horizon-2030.md"
-    keywords: [узл, поколени, G4, G5, знани, контент]
-
+    statement: "В main 156 узлов знаний (mods/core/nodes.yaml), поколения G1–G6; ещё 55 узлов 1990–2030 — на ветке TASK-0193."
+    source: "mods/core/nodes.yaml"
+    probe: {file: "mods/core/nodes.yaml", count: '^\s*- \{?id:', expect: 156}
+    stale_patterns: ['61 узел знаний', 'новые знания кончаются к 1961']
+    keywords: [узл, поколени, G4, G5, G6, знани, контент, дерево]
   - id: schema-version
-    statement: "SchemaVersion состояния среза — 12 (TASK-0115: 11; TASK-0121: 12)."
+    statement: "SchemaVersion состояния среза — 15."
     source: "src/Singularity.Session/Slice/SliceWorld.cs"
-    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "12"}
+    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "15"}
     keywords: [SchemaVersion, схем, golden, хеш]
-
   - id: api-version
-    statement: "Версия тестового API сессии (TestApiVersion) — 14 (TASK-0122)."
+    statement: "Версия тестового API сессии (TestApiVersion) в main — 28 (ветка карты TASK-0192/0194 — 29)."
     source: "src/Singularity.Session/SliceSession.cs"
-    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "14"}
+    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "28"}
     keywords: [TestApiVersion, API, surface]
-
   - id: map-regions
     statement: "Карта мира 1945: 3124 провинции, 379 регионов. Предел предупреждения — 400 регионов (ADR-0022)."
     source: "mods/core/map/regions.yaml"
@@ -57,11 +55,10 @@ facts:
     keywords: [регион, провинци, карта, 400, квот]
 
   - id: milestones
-    statement: "M0 закрыт (#419). Идёт M-play (MS-M05) — первая играбельная сборка, она раньше M1 (#418). M1 ждёт вердикта партии; #328, #364, #394 и провинции #195 отложены (#420)."
-    source: "DECISIONS_LOG #418–#420; development/PLAN.md"
+    statement: "M0 закрыт (#419). Идёт M-play (MS-M05) на новой модели науки (#561–#578). С 2026-11-26 разработка продукта на паузе до окончания изменений платформы (#595). M1 — после партии владельца."
+    source: "DECISIONS_LOG #418–#420, #561, #595; development/PLAN.md"
     stale_patterns: ['MS-M0, закрытие', 'Сейчас идёт \*\*MS-M0\*\*']
-    keywords: [M0, M1, M-play, этап, milestone, отложен]
-
+    keywords: [M0, M1, M-play, этап, milestone, отложен, пауза]
   - id: benchmark
     statement: "Замер тика M0: EXP-0007, исход INCONCLUSIVE, цифры — справка. Решающий замер — на мире M1. EXP-0008 и ADR-0024 отложены, харнесс заморожен (#419)."
     source: "DECISIONS_LOG #405, #419"
@@ -75,10 +72,10 @@ facts:
     keywords: [экран, окно, 1280, 1920, масштаб, fullscreen, полный экран]
 
   - id: m-play-loop
-    statement: "Партия M-play: цель — догоняние (ранг выше стартового хотя бы на 1 или первое место), с 1945 до 2030 года, пять стран без пометок, поражение мягкое (#422). Промежуточной версии до 1977 нет (#425)."
-    source: "DECISIONS_LOG #422, #423, #425; docs/game-design/M_PLAY_LOOP.md"
-    keywords: [цель, победа, поражение, партия, догонян, ранг]
-
+    statement: "Цель партии — военное превосходство: «воздушная мощь» к лучшему сопернику, ступени паритет 1,0 / превосходство 1,5 / господство 2,0, засчитывается после 60 месяцев удержания (#565, O-109). Цель «догоняние» (#422) заменена; горизонт 1945–2030, пять стран."
+    source: "DECISIONS_LOG #565; docs/decisions/ORCH_DECISIONS.md O-109"
+    stale_patterns: ['цель — догоняние', 'ранг выше стартового']
+    keywords: [цель, победа, поражение, партия, догонян, ранг, воздушн, мощь, превосходство]
   - id: second-review
     statement: "Дифф ядра (Kernel, Core, Session, их тесты, golden, проектные файлы) и tools/** проходит второе ревью Codex до слияния (ADR-0015); land.py запускает его сам."
     source: "ADR-0015; tools/development/land.py"
@@ -103,3 +100,26 @@ facts:
     statement: "Парк без замены по возрасту не списывается: старые самолёты служат до прихода следующего поколения и стареют (#431, развивает #141)."
     source: "DECISIONS_LOG #141, #431"
     keywords: [парк, списан, самолёт, замен, retire, когорт]
+
+  - id: science-slots
+    statement: "Наука по слотам (#561–#576): один институт — одна тема, очередь активная + 5, ускорение за деньги, общий потолок ускорения ×2,5, 13 направлений с уровнями."
+    source: "src/Singularity.Core/Institutes/SlotParams.cs; docs/game-design/SCIENCE_SLOTS.md"
+    probe: {file: "src/Singularity.Core/Institutes/SlotParams.cs", regex: 'QueueLength \{ get; init; \} = (\d+);', expect: "5"}
+    stale_patterns: ['распределение ресурсов по направлениям']
+    keywords: [институт, слот, очередь, фокус, ускорение, направлени, наука]
+
+  - id: institutes-count
+    statement: "В mods/core/institutes.yaml 27 институтов-кандидатов (до 1961); 31 кандидат 1960–2016 — на ветке TASK-0205 (пауза #595)."
+    source: "mods/core/institutes.yaml"
+    probe: {file: "mods/core/institutes.yaml", count: '^\s*- \{id:', expect: 27}
+    keywords: [институт, кандидат, стройка, 1960, 1990]
+
+  - id: product-pause
+    statement: "С 2026-11-26 разработка продукта на паузе (#595): новых задач по игре нет до указания владельца; полоса A — платформа."
+    source: "DECISIONS_LOG #595; development/PLAN.md"
+    keywords: [пауза, продукт, платформа, новые задачи]
+
+  - id: tools-codex-rule
+    statement: "Служебные инструменты (tools/development, .claude/hooks, skills) вливаются после 3 кругов Codex с одобрением рецензента (#592); находки о разрушительных или необратимых действиях не снимаются. Ядро и игра — #432."
+    source: "DECISIONS_LOG #592, #432"
+    keywords: [Codex, второе ревью, круг, инструмент, влить]

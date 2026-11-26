@@ -221,8 +221,10 @@
 | [TASK-0203](../development/tasks/TASK-0203-skills-shots-recheck-error.md) | REVIEW | Skills /shots, /recheck, /error for the Orchestrator (#591) | MS-M0 |
 | [TASK-0204](../development/tasks/TASK-0204-review-rejection-memory.md) | APPROVED | Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) | MS-M0 |
 | [TASK-0205](../development/tasks/TASK-0205-institutes-1960-2030.md) | IN_PROGRESS | Data: build candidate institutes 1960-2030 for USA, SUN, GBR, FRA, SWE with directions and levels (#589, O-110) | MS-M0 |
-| [TASK-0206](../development/tasks/TASK-0206-platform-metrics.md) | IN_PROGRESS | Platform metrics in PostgreSQL: sessions, agents, LLM calls, landings, task flow, owner waits, errors; kb_db report (#593) | MS-M0 |
+| [TASK-0206](../development/tasks/TASK-0206-platform-metrics.md) | DONE | Platform metrics in PostgreSQL: sessions, agents, LLM calls, landings, task flow, owner waits, errors; kb_db report (#593) | MS-M0 |
 | [TASK-0207](../development/tasks/TASK-0207-release-model.md) | IN_PROGRESS | Release model: release.py rc|check|approve|release|rollback, RC report, /release skill, client build (#594) | MS-M0 |
+| [TASK-0208](../development/tasks/TASK-0208-kb-upkeep.md) | APPROVED | Knowledge base upkeep: fact drift is an error, decision-to-facts check at landing, freshness, /fact, facts in kb_db and mandatory facts block for code/data agents, agent DB access read-only (#597) | MS-M0 |
+| [TASK-0209](../development/tasks/TASK-0209-kb-structure.md) | APPROVED | Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599) | MS-M0 |
 
 ## Гипотезы
 
