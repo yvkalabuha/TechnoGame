@@ -5,6 +5,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -16,6 +17,14 @@ import kb_db  # noqa: E402
 
 
 class ParserTests(unittest.TestCase):
+    def test_split_row_ignores_pipes_in_backticks(self):
+        self.assertEqual(kb_db.split_row("| a | `x | y` z | d |"), ["a", "`x | y` z", "d"])
+
+    def test_every_debt_id_is_parsed(self):
+        text = (kb_db.ROOT / "development/TECH_DEBT.md").read_text(encoding="utf-8")
+        wanted = set(re.findall(r"^\| (DEBT-\d{4}) \|", text, re.M))
+        self.assertEqual({r["id"] for r in kb_db.parse_debt(text)}, wanted)
+
     def test_split_row_keeps_escaped_pipe(self):
         self.assertEqual(kb_db.split_row(r"| a | b \| c | d |"), ["a", "b | c", "d"])
 
@@ -68,6 +77,9 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(rows["Q70"]["kind"], "owner")
         self.assertEqual(rows["Q70"]["added"], "2026-11-20")
         self.assertFalse(rows["Q1"]["open"])
+        extra = kb_db.parse_questions("## Очередь вопросов (autopilot)\n| # | В | Б | С |\n|---|---|---|---|\n"
+                                      "| A1 | done, закрыт 2026-11-26 | b | c |\n| A2 | still open | b | c |\n")
+        self.assertEqual([r["open"] for r in extra], [False, True])
         self.assertEqual(rows["Q2"]["blocks"], "PHASE F")
         self.assertEqual(rows["A8"]["kind"], "autopilot")
 
@@ -113,6 +125,29 @@ class SafetyTests(unittest.TestCase):
             self.assertNotEqual(a, kb_db.fingerprint())
         finally:
             kb_db.SCHEMA = old
+
+
+class ReadonlyGuardTests(unittest.TestCase):
+    def test_reads_pass(self):
+        for q in ("select 1", "with x as (select 1) select * from x;", "select ';' as semi, 'a\\b'",
+                  "-- note\nselect 2", "explain select 1"):
+            self.assertIsNone(kb_db.check_readonly_sql(q), q)
+
+    def test_escapes_are_refused(self):
+        for q in ("select 1; commit; drop table items", "delete from items", "\\! echo x", "select 1\n\\g",
+                  "select 1; set default_transaction_read_only = off", "select set_config('a','b',true)",
+                  "select 'unterminated", "end; select 1"):
+            self.assertIsNotNone(kb_db.check_readonly_sql(q), q)
+
+    def test_schema_name(self):
+        old = (kb_db.git_common_parent, kb_db.ROOT)
+        try:
+            kb_db.git_common_parent = lambda: kb_db.ROOT.resolve()
+            self.assertEqual(kb_db.db_schema(), "main")
+            kb_db.git_common_parent = lambda: Path("/other")
+            self.assertRegex(kb_db.db_schema(), r"^wt_[0-9a-f]{8}$")
+        finally:
+            kb_db.git_common_parent, kb_db.ROOT = old
 
 
 class QueryBuilderTests(unittest.TestCase):
@@ -188,19 +223,28 @@ class DatabaseTests(unittest.TestCase):
         self.assertIn("zz1", self.run_q("q", "agents", "silent>2h"))
         self.assertIn("zz1", self.run_q("sql", "select agent_id from agent_runs"))
 
-    def test_02a_sql_refuses_backslash_commands(self):
-        err = io.StringIO()
-        with contextlib.redirect_stderr(err):
-            rc = kb_db.main(["sql", "select 1;\n\\! echo hi"])
-        self.assertEqual(rc, 2)
-
     def test_02_sql_is_read_only(self):
-        with self.assertRaises(kb_db.PgError):
-            kb_db.psql(self.db, "set default_transaction_read_only = on;\ndelete from items")
+        for q in ("select 1;\n\\! echo hi", "delete from items", "select 1; commit; delete from items"):
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(kb_db.main(["sql", q]), 2, q)
+        with self.assertRaises(kb_db.PgError):  # the transaction itself is read-only
+            kb_db.psql(self.db, "begin read only;\ndelete from items;", schema=True, readonly=True)
+        self.assertIn("TASK-0200", self.run_q("sql", "select id from items where id = 'TASK-0200'"))
+
+    def test_02b_all_debt_ids_are_indexed(self):
+        text = (kb_db.ROOT / "development/TECH_DEBT.md").read_text(encoding="utf-8")
+        wanted = len(set(re.findall(r"^\| (DEBT-\d{4}) \|", text, re.M)))
+        self.assertEqual(len(json.loads(self.run_q("q", "debt", "limit=1000", "--json"))), wanted)
+
+    def test_03a_json_stays_valid_when_q_rebuilds(self):
+        s = Path(self.state.name)
+        with (s / "agents.jsonl").open("a") as f:
+            f.write(json.dumps({"t": 1002, "event": "launched", "agent_id": "zz3", "agent_type": "critic"}) + "\n")
+        os.utime(s / "agents.jsonl", ns=(2 * 10**18, 2 * 10**18))
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-            rc = kb_db.main(["sql", "delete from items"])
-        self.assertEqual(rc, 1)
+            self.assertEqual(kb_db.main(["q", "agents", "agent_id=zz3", "--json"]), 0)
+        self.assertEqual(json.loads(out.getvalue())[0]["agent_id"], "zz3")
 
     def test_03_query_rebuilds_when_files_change(self):
         s = Path(self.state.name)
