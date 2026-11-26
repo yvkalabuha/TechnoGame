@@ -228,6 +228,7 @@
 | [TASK-0210](../development/tasks/TASK-0210-ci-land-syspath.md) | DONE | CI fix: land.py imports redis_kv without putting tools/development first on sys.path (llm_worker test_rejections collision) | MS-M0 |
 | [TASK-0211](../development/tasks/TASK-0211-llm-limits.md) | DONE | Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606) | MS-M0 |
 | [TASK-0212](../development/tasks/TASK-0212-ci-rollover-git-identity.md) | DONE | CI fix: test_kb_structure LandRolloverTest sets git identity in its temporary repo | MS-M0 |
+| [TASK-0213](../development/tasks/TASK-0213-ci-after-doc-split.md) | IN_PROGRESS | CI fix: kb_structure and localization tests after the UI_DESIGN_SYSTEM split (#607) | MS-M0 |
 
 ## Гипотезы
 
