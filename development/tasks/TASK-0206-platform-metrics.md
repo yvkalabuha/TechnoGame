@@ -36,7 +36,11 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+- tools/development/metrics.py: collect (идемпотентно, ключи по id сообщения/файла/ledger/коммита) и report (период, --compare A..B C..D). Таблицы sessions, llm_calls, landings, task_flow, owner_waits в схеме checkout; deleted_at; errors и agent_runs берутся из kb_db. В базу идут только числа, id, даты, короткие метки.
+- tools/development/land.py: каждая посадка дописывает строку в .claude/.state/landings.jsonl (задача, попытка, код, время шагов review и verify).
+- tools/development/test_metrics.py: 10 тестов (парсеры на фикстурах, журнал посадок, база с пропуском без PostgreSQL). Прогон вместе с test_kb_db: 39 OK.
+- Проверка на реальных данных: collect дал 1080 сессий, 176 вызовов LLM, report за 2026-11-19..27 строится.
+- Не проверено: компаратор --compare на реальных данных; landings и owner_waits пусты до первых посадок с новым land.py и до появления дат "Закрыт" в OPEN_QUESTIONS.
 
 ## Цель
 #593: метрики работы платформы для поиска узких мест и оценки изменений. План: docs/reviews/platform-metrics-release-2026-11-26.md §1.
