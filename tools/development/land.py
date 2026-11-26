@@ -128,6 +128,17 @@ def insert_trailer(message: str, line: str) -> str:
     return f"{message}\n\n{line}"
 
 
+def log_failure(root: Path, code: int, branch: str) -> None:
+    """Append one line for errors.py import (git-ignored state; main stays clean, a failure here is ignored)."""
+    try:
+        state = root / ".claude" / ".state"
+        state.mkdir(parents=True, exist_ok=True)
+        with (state / "land_failures.jsonl").open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.time(), "code": code, "branch": branch}) + "\n")
+    except OSError:
+        pass
+
+
 def main() -> int:
     """Hold an exclusive flock on LAND_LOCK for the whole landing. The kernel drops it when the process dies, so a
     dead landing never leaves a stale lock and nothing is ever deleted. Codex sketches hold it shared while they run
@@ -148,12 +159,16 @@ def main() -> int:
     os.ftruncate(fd, 0)
     os.write(fd, str(os.getpid()).encode())  # information only
     try:
-        return run()
+        info: dict = {}
+        rc = run(info)
+        if rc in (1, 6):
+            log_failure(main_worktree(), rc, info.get("branch", "?"))
+        return rc
     finally:
         os.close(fd)  # releases the lock
 
 
-def run() -> int:
+def run(info: dict | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("branch")
     ap.add_argument("-m", "--message", required=True)
@@ -166,6 +181,8 @@ def run() -> int:
     ap.add_argument("--allow-status", action="store_true",
                     help="accept status changes made on the branch (new items only)")
     args = ap.parse_args()
+    if info is not None:
+        info["branch"] = args.branch
 
     root = main_worktree()
     head = git("rev-parse", "--abbrev-ref", "HEAD", cwd=root).stdout.strip()

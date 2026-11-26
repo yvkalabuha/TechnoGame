@@ -137,6 +137,24 @@ def silent_agents(now: float, hours: float) -> list[dict]:
             if k not in stopped and (now - e.get("t", now)) / 3600.0 > hours]
 
 
+def red_ci_events(seen: set[int], limit: int = 20) -> tuple[list[dict], list[int]]:
+    """(failed runs, ids of all fetched runs) among the last `limit` completed CI runs on main whose id is not in
+    `seen`. A set, not a maximum: a run that finishes late with an older id is not skipped, and a failure
+    superseded by a later green run is still reported once. ([], []) when gh is unavailable."""
+    try:
+        r = subprocess.run(["gh", "run", "list", "--branch", "main", "--workflow", "CI", "--status", "completed",
+                            "--limit", str(limit), "--json", "conclusion,displayTitle,createdAt,databaseId"],
+                           cwd=ROOT, text=True, capture_output=True, timeout=20)
+        runs = json.loads(r.stdout) if r.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return [], []
+    fresh = [x for x in runs if int(x.get("databaseId", 0)) not in seen]
+    bad = [{"id": int(x["databaseId"]), "date": str(x.get("createdAt", ""))[:10],
+            "title": str(x.get("displayTitle", ""))[:100]}
+           for x in sorted(fresh, key=lambda x: int(x["databaseId"])) if x.get("conclusion") == "failure"]
+    return bad, [int(x["databaseId"]) for x in runs]
+
+
 def agent_events() -> list[dict]:
     if not AGENT_LOG.exists():
         return []

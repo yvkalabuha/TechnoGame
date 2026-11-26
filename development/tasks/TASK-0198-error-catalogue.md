@@ -36,7 +36,25 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано (ветка worktree-agent-afd08e65fbb5f23ca):
+- `tools/development/errors.py`: add / list / stats / repeat / close / import [--ci] / digest [--dry-run] / check, схема и дедупликация по ключу (kind|area|симптом); add --from-review для вердикта CHANGES.
+- `land.py`: при exit 1 и 6 одна строка в `.claude/.state/land_failures.jsonl` (не errors.yaml, чтобы не пачкать main при посадке); `watch.py`: отдельная функция `red_ci_event()`; `kb_check.py check` проверяет схему errors.yaml; `verify.py`: шаг errors; тесты `test_errors.py` (9).
+- digest использует схему gate, gitleaks-скан и ledger как gate; llm_worker не менялся.
+
+НЕ сделано (вне зоны developer, нужен Оркестратор):
+1. `.claude/hooks/_common.py`: в block() до print вызвать log_refusal(msg): дописать JSON {t, hook: Path(sys.argv[0]).stem, msg[:200]} в `$CLAUDE_PROJECT_DIR/.claude/.state/hook_refusals.jsonl`, молча игнорируя OSError и пропуская при env SINGULARITY_NO_REFUSAL_LOG; в test_hooks.run_hook добавить это env, иначе тесты пишут в реальный журнал. Импортёр (errors.py import) уже читает этот файл и игнорирует guard_load.
+2. `.claude/hooks/session_context.py`: в checks() добавить строку из `python3 tools/development/errors.py list --brief` (печатает "N open error(s)...").
+3. `development/errors.yaml` (вне зоны): засеять 5 записей командами ниже (список задачи называет пять случаев, не шесть). Даты ТЗ неточны: [Предп.] 2026-11-26 для TASK-0184/0185 и Codex.
+```
+python3 tools/development/errors.py --today 2026-11-25 add --executor orchestrator --kind process --area shots --symptom "Shots run on an old client version: frames were taken before the fix was built" --cause "Client launched from a stale build / wrong branch" --found-by owner --cost high --fix "Check branch and build before a shot batch"
+python3 tools/development/errors.py --today 2026-11-26 repeat ERR-NNNN
+python3 tools/development/errors.py --today 2026-11-26 add --executor orchestrator --kind process --area agents --symptom "Agent dispatched before the task file was committed: the worktree lacks the task (TASK-0184, TASK-0185)" --cause "Worktree is cut from the last commit, the task was only in the working tree" --found-by self --cost medium --fix "Commit the task before dispatching an agent"
+python3 tools/development/errors.py --today 2026-11-26 repeat ERR-NNNN
+python3 tools/development/errors.py --today 2026-11-26 add --executor tool:codex --kind tooling --area review --symptom "Codex review fails with input_too_large when the input exceeds 1,000,000 bytes" --cause "Review input is not capped for Codex" --found-by ci --cost medium --fix "Cap or trim the review input below 1 MB, fall back to another provider"
+python3 tools/development/errors.py --today 2026-11-26 add --executor tool:AskUserQuestion --kind comms --area owner-questions --symptom "AskUserQuestion times out after 2 hours without an answer; the questions then had to be repeated as a list in chat" --cause "Owner away; the dialog expires" --found-by owner --cost medium --fix "Keep the question queue in OPEN_QUESTIONS.md and repeat as a chat list on timeout"
+python3 tools/development/errors.py --today 2026-11-26 add --executor orchestrator --kind process --area shots --symptom "Shot set run without checking the branch the client was built from" --cause "No branch check in the shot launch step" --found-by self --cost medium --fix "Add a branch check to the shot batch procedure or guard_shots"
+```
+Проверка: test_errors.py зелёный; при отключённой дедупликации 2 теста падают. verify.py см. отчёт.
 
 ## Цель
 Решение #584 (вариант C): каталог ошибок платформы, чтобы не повторять уже сделанные ошибки.
