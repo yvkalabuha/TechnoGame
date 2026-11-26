@@ -9,6 +9,7 @@ import zlib
 from pathlib import Path
 from unittest import mock
 
+import helpers  # noqa: F401  (pins SINGULARITY_LLM_LIMITS=off for the CLI tests)
 from tools.llm_worker import config, gitleaks, sketch
 from tools.llm_worker.visual import RateGuard
 
