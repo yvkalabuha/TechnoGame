@@ -63,6 +63,9 @@ def checks(root) -> list[str]:
     er = run(root, "python3", "tools/development/errors.py", "list", "--brief")
     if er:
         out.append(f"- Error catalogue: {er}")
+    ap = run(root, "python3", "tools/development/autopilot.py", "status", "--brief")
+    if ap:
+        out.append(f"- {ap}")
     kb = run(root, "python3", "tools/development/kb_check.py", "check", "--brief", timeout=15.0)
     if kb:
         out.append(f"- Knowledge base: {kb}")
