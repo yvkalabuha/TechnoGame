@@ -10,6 +10,9 @@ priority: high
 needs_owner: false       # true = ждёт решения владельца
 depends_on: [TASK-0187]
 related: []
+shots:
+  - {branch: worktree-agent-a1cad8ee202670e8e, only: "tech_s1_*", flags: "--shots"}
+  - {branch: worktree-agent-a1cad8ee202670e8e, only: "map1945_*", flags: "--map-frames"}
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#561, #563, #576, #578"
