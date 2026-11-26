@@ -1,13 +1,20 @@
-"""Tests of release.py on temporary git repositories (no push, no client, no network)."""
+"""Tests of release.py on temporary git repositories (no push, no client, no network; the real errors.py is used)."""
+import contextlib
+import io
 import json
 import os
+import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+import yaml
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 import release  # noqa: E402
 
 
@@ -15,28 +22,39 @@ def run(root, *args):
     subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, text=True)
 
 
+def script(path: Path, body: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("#!/bin/sh\n" + body + "\n", encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
+
+
 class Repo(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name) / "repo"
+        self.base = Path(self.tmp.name)
+        self.root = self.base / "repo"
         self.root.mkdir()
         run(self.root, "init", "-q", "-b", "main")
-        run(self.root, "config", "user.email", "t@example.com")
-        run(self.root, "config", "user.name", "t")
-        run(self.root, "config", "commit.gpgsign", "false")
-        run(self.root, "config", "tag.gpgsign", "false")
+        for k, v in (("user.email", "t@example.com"), ("user.name", "t"), ("commit.gpgsign", "false"), ("tag.gpgsign", "false")):
+            run(self.root, "config", k, v)
         (self.root / "development" / "tasks").mkdir(parents=True)
         (self.root / "development" / "TECH_DEBT.md").write_text("# D\n", encoding="utf-8")
-        stub = (  # stands for errors.py: records its arguments
-            "import json, sys\nopen(__file__ + '.log', 'a').write(json.dumps(sys.argv[1:]) + '\\n')\nprint('ERR-0001 added')\n"
-            "sys.exit(int(__import__('os').environ.get('STUB_FAIL', '0')))\n")
+        (self.root / "development" / "errors.yaml").write_text("errors: []\n", encoding="utf-8")
         (self.root / "tools" / "development").mkdir(parents=True)
-        (self.root / "tools" / "development" / "errors.py").write_text(stub, encoding="utf-8")
+        shutil.copy(HERE / "errors.py", self.root / "tools" / "development" / "errors.py")   # the real catalogue tool
+        (self.root / "src" / "Singularity.Client.Spike").mkdir(parents=True)
+        (self.root / "src" / "Singularity.Client.Spike" / "project.godot").write_text("x", encoding="utf-8")
+        (self.root / "run-globe-spike.sh").write_text("#!/bin/sh\n", encoding="utf-8")
         self.commit("init")
-        os.environ["SINGULARITY_RELEASES"] = str(Path(self.tmp.name) / "rel")
+        os.environ["SINGULARITY_RELEASES"] = str(self.base / "rel")
+        self.godot_ok = script(self.base / "godot-ok", "exit 0")
+        self.godot_bad = script(self.base / "godot-bad", "echo boom; exit 1")
+        os.environ["GODOT"] = str(self.godot_ok)
 
     def tearDown(self):
         os.environ.pop("SINGULARITY_RELEASES", None)
+        os.environ.pop("GODOT", None)
         self.tmp.cleanup()
 
     def commit(self, msg, files=None):
@@ -51,15 +69,26 @@ class Repo(unittest.TestCase):
         self.commit(f"feat: task {n}", {f"development/tasks/TASK-{n:04d}-x.md": f'---\nid: TASK-{n:04d}\ntitle: "{title} (#1)"\n---\n'})
         self.commit(f"chore(registry): TASK-{n:04d} DONE")
 
-    def errors_logged(self):
-        log = self.root / "tools" / "development" / "errors.py.log"
-        return [json.loads(l) for l in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
-
     def merge_task(self, n):
         run(self.root, "checkout", "-q", "-b", f"b{n}")
         self.commit(f"feat: work {n}", {f"f{n}.txt": "x"})
         run(self.root, "checkout", "-q", "main")
         run(self.root, "merge", "-q", "--no-ff", f"b{n}", "-m", f"merge: TASK-{n:04d} work")
+
+    def catalogue(self):
+        return yaml.safe_load((self.root / "development" / "errors.yaml").read_text(encoding="utf-8"))["errors"]
+
+    def report(self, rc):
+        return self.root / "docs" / "releases" / f"{rc}.md"
+
+    def checked_rc(self, **override):
+        """An RC whose report holds every required row PASS on the RC commit (override: row name -> status)."""
+        self.task(len(list(self.root.glob("development/tasks/*.md"))) + 1, "Alpha")
+        rc = release.cmd_rc(self.root, day="2026-11-26")
+        rows = [(n, override.get(n, "PASS"), "ok") for n in release.REQUIRED_CHECKS]
+        sha = release.git(self.root, "rev-parse", f"{rc}^{{commit}}")
+        release.write_checks(self.report(rc), [r for r in rows if r[1] != "missing"] + [("Shot batch", "PENDING", "cmd")], sha)
+        return rc
 
 
 class TestPeriod(Repo):
@@ -101,8 +130,7 @@ class TestRc(Repo):
         self.assertEqual(tag, "rc-2026-11-26-1")
         self.assertEqual(release.git(self.root, "rev-parse", "HEAD"), before)
         self.assertEqual(release.git(self.root, "rev-parse", f"{tag}^{{commit}}"), before)
-        text = (self.root / "docs" / "releases" / f"{tag}.md").read_text(encoding="utf-8")
-        self.assertIn("TASK-0001: Alpha", text)
+        self.assertIn("TASK-0001: Alpha", self.report(tag).read_text(encoding="utf-8"))
         self.commit("more")
         self.assertEqual(release.cmd_rc(self.root, day="2026-11-26"), "rc-2026-11-26-2")
 
@@ -115,49 +143,148 @@ class TestRc(Repo):
         with self.assertRaises(release.ReleaseError):
             release.cmd_rc(self.root)
 
+    def test_period_metrics_skipped_with_note_when_tool_absent_and_used_when_present(self):
+        rc = release.cmd_rc(self.root, day="2026-11-26")
+        self.assertIn("TASK-0206 не влита", self.report(rc).read_text(encoding="utf-8"))
+        (self.root / "tools" / "development" / "metrics.py").write_text("print('agent_runs 42')\n", encoding="utf-8")
+        self.commit("metrics")
+        rc2 = release.cmd_rc(self.root, day="2026-11-26")
+        self.assertIn("agent_runs 42", self.report(rc2).read_text(encoding="utf-8"))
+        (self.root / "tools" / "development" / "metrics.py").write_text("import sys; sys.exit(3)\n", encoding="utf-8")
+        self.commit("metrics broken")
+        rc3 = release.cmd_rc(self.root, day="2026-11-26")
+        self.assertIn("не выполнен", self.report(rc3).read_text(encoding="utf-8"))
+
+    def test_main_prints_commit_reminder(self):
+        self.task(1, "Alpha")
+        old = release.ROOT
+        release.ROOT = self.root
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                self.assertEqual(release.main(["rc"]), 0)
+        finally:
+            release.ROOT = old
+        self.assertIn("commit docs/releases/rc-", buf.getvalue())
+        self.assertIn("development/errors.yaml", buf.getvalue())
+
 
 class TestApprove(Repo):
-    def rc_with_checks(self, status):
-        self.task(1, "Alpha")
-        rc = release.cmd_rc(self.root, day="2026-11-26")
-        release.write_checks(self.root / "docs" / "releases" / f"{rc}.md",
-                             [("verify --full", status, "ok"), ("Shot batch", "PENDING", "cmd")])
-        return rc
-
-    def test_approve_tags_same_commit_and_writes_notes(self):
-        rc = self.rc_with_checks("PASS")
-        tag = release.cmd_approve(self.root, rc, "#600", build=False)
+    def test_approve_builds_before_tag_then_tags_same_commit_and_writes_notes(self):
+        rc = self.checked_rc()
+        tag = release.cmd_approve(self.root, rc, "#600")
         self.assertEqual(tag, "v0.1")
-        self.assertEqual(release.git(self.root, "rev-parse", "v0.1^{commit}"), release.git(self.root, "rev-parse", f"{rc}^{{commit}}"))
+        sha = release.git(self.root, "rev-parse", f"{rc}^{{commit}}")
+        self.assertEqual(release.git(self.root, "rev-parse", "v0.1^{commit}"), sha)
+        built = self.base / "rel" / "v0.1"
+        self.assertEqual((built / "RELEASE").read_text(encoding="utf-8").strip(), f"v0.1 {sha}")
+        self.assertTrue((built / "src" / "run-globe-spike.sh").exists())
         notes = (self.root / "docs" / "releases" / "v0.1.md").read_text(encoding="utf-8")
-        self.assertIn("Alpha", notes)
-        self.assertIn("./run-client.sh --release v0.1", notes)
+        self.assertIn("release.py run v0.1", notes)
+        self.assertIn("ОДОБРЕН", self.report(rc).read_text(encoding="utf-8"))
 
-    def test_approve_refuses_failed_or_unchecked_rc_and_missing_owner_ref(self):
-        rc = self.rc_with_checks("FAIL")
+    def test_failed_build_leaves_no_tag_notes_status_or_directory(self):
+        rc = self.checked_rc()
+        os.environ["GODOT"] = str(self.godot_bad)
         with self.assertRaises(release.ReleaseError):
-            release.cmd_approve(self.root, rc, "#600", build=False)
-        rc2 = self.rc_with_checks("PASS")
+            release.cmd_approve(self.root, rc, "#600")
+        self.assertEqual(release.release_tags(self.root), [])
+        self.assertFalse((self.root / "docs" / "releases" / "v0.1.md").exists())
+        self.assertIn("НА ПРОВЕРКЕ", self.report(rc).read_text(encoding="utf-8"))
+        self.assertEqual(os.listdir(self.base / "rel"), [])   # no release directory, no staging leftovers
+        errs = self.catalogue()
+        self.assertEqual(len(errs), 1)
+        self.assertIn("ERR-0001", self.report(rc).read_text(encoding="utf-8"))
+
+    def test_missing_godot_is_a_failed_deploy_not_a_tag(self):
+        rc = self.checked_rc()
+        os.environ["GODOT"] = str(self.base / "no-such-godot")
         with self.assertRaises(release.ReleaseError):
-            release.cmd_approve(self.root, rc2, "", build=False)
+            release.cmd_approve(self.root, rc, "#600")
         self.assertEqual(release.release_tags(self.root), [])
 
+    def test_every_required_row_must_be_pass(self):
+        for name in release.REQUIRED_CHECKS:
+            for status in ("SKIP", "WARN", "FAIL", "PENDING", "missing"):
+                rc = self.checked_rc(**{name: status})
+                with self.assertRaises(release.ReleaseError, msg=f"{name} {status}"):
+                    release.cmd_approve(self.root, rc, "#600")
+        self.assertEqual(release.release_tags(self.root), [])
+
+    def test_pace_warn_blocks_approve(self):
+        rc = self.checked_rc(**{"Lab pace_check": "WARN"})
+        with self.assertRaisesRegex(release.ReleaseError, "pace_check: WARN"):
+            release.cmd_approve(self.root, rc, "#600")
+
+    def test_refuses_checks_made_on_another_commit(self):
+        rc = self.checked_rc()
+        release.write_checks(self.report(rc), [(n, "PASS", "ok") for n in release.REQUIRED_CHECKS], "0" * 40)
+        with self.assertRaisesRegex(release.ReleaseError, "checks were made on"):
+            release.cmd_approve(self.root, rc, "#600")
+
     def test_approve_only_once_and_not_after_reject(self):
-        rc = self.rc_with_checks("PASS")
-        release.cmd_approve(self.root, rc, "#600", build=False)
-        run(self.root, "commit", "-q", "-am", "x", "--allow-empty")
-        with self.assertRaises(release.ReleaseError):  # report status is now ОДОБРЕН
-            release.cmd_approve(self.root, rc, "#601", build=False)
-        rc2 = self.rc_with_checks("PASS")
+        rc = self.checked_rc()
+        release.cmd_approve(self.root, rc, "#600")
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_approve(self.root, rc, "#601")
+        rc2 = self.checked_rc()
         release.cmd_reject(self.root, rc2, "bad")
         with self.assertRaises(release.ReleaseError):
-            release.cmd_approve(self.root, rc2, "#602", build=False)
+            release.cmd_approve(self.root, rc2, "#602")
 
-    def test_approve_refuses_without_check_results(self):
-        self.task(1, "Alpha")
-        rc = release.cmd_rc(self.root, day="2026-11-26")
+    def test_needs_owner_ref_and_check_results(self):
+        rc = self.checked_rc()
         with self.assertRaises(release.ReleaseError):
-            release.cmd_approve(self.root, rc, "#600", build=False)
+            release.cmd_approve(self.root, rc, "")
+        self.task(50, "x")
+        bare = release.cmd_rc(self.root, day="2026-11-26")
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_approve(self.root, bare, "#600")
+
+
+class TestDeploySafety(Repo):
+    def test_release_dir_accepts_only_versions(self):
+        for bad in ("../x", "v1", "v0.1/../..", "/etc", "v0.1.2", ".", "", "v0.1\n../x"):
+            with self.assertRaises(release.ReleaseError, msg=bad):
+                release.release_dir(bad)
+        self.assertEqual(release.release_dir("v0.7").name, "v0.7")
+
+    def test_existing_directory_is_never_deleted(self):
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        keep = self.base / "rel" / "v0.1" / "mine.txt"
+        keep.parent.mkdir(parents=True)
+        keep.write_text("precious", encoding="utf-8")
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_release(self.root, "v0.1")
+        self.assertTrue(keep.exists())
+
+    def test_symlink_destination_is_refused_and_target_untouched(self):
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        outside = self.base / "outside"
+        outside.mkdir()
+        (outside / "mine.txt").write_text("precious", encoding="utf-8")
+        (self.base / "rel").mkdir()
+        os.symlink(outside, self.base / "rel" / "v0.1")
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_release(self.root, "v0.1")
+        self.assertTrue((outside / "mine.txt").exists())
+
+    def test_release_needs_an_existing_tag_and_builds_it(self):
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_release(self.root, "v0.9")
+        run(self.root, "tag", "-a", "v0.9", "-m", "r")
+        release.cmd_release(self.root, "v0.9")
+        self.assertTrue((self.base / "rel" / "v0.9" / "RELEASE").exists())
+
+    def test_run_prints_launcher_of_the_built_snapshot_and_validates(self):
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_run("v0.1", [])   # not built yet
+        release.cmd_release(self.root, "v0.1")
+        cmd = release.cmd_run("v0.1", ["--lang", "en"])
+        self.assertEqual(cmd, [str(Path(os.path.realpath(self.base / "rel")) / "v0.1" / "src" / "run-globe-spike.sh"), "--lang", "en"])
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_run("../v0.1", [])
 
 
 class TestRollbackAndErrors(Repo):
@@ -169,42 +296,102 @@ class TestRollbackAndErrors(Repo):
         self.commit("chore(registry): TASK-0002 DONE")
         run(self.root, "tag", "-a", "v0.2", "-m", "r")
         head = release.git(self.root, "rev-parse", "HEAD")
-        lines = release.cmd_rollback(self.root, "crash on start")
-        text = "\n".join(lines)
-        self.assertIn("--release v0.1", text)
+        text = "\n".join(release.cmd_rollback(self.root, "crash on start"))
+        self.assertIn("release.py run v0.1 --exec", text)
         self.assertIn("git revert -m 1", text)
         self.assertIn("TASK-0002", text)
         self.assertNotIn("TASK-0001 work", text)
         self.assertEqual(release.git(self.root, "rev-parse", "HEAD"), head)  # nothing executed
-        args = self.errors_logged()[0]
-        self.assertIn("v0.2: crash on start", args[args.index("--cause") + 1])
-        self.assertNotIn("v0.2", args[args.index("--symptom") + 1])
+        e = self.catalogue()[0]
+        self.assertIn("crash on start", e["symptom"])
+        self.assertEqual(e["cause"], "v0.2")
 
     def test_rollback_needs_two_releases(self):
         run(self.root, "tag", "-a", "v0.1", "-m", "r")
         with self.assertRaises(release.ReleaseError):
             release.cmd_rollback(self.root, None)
 
-    def test_reject_marks_report_and_records(self):
-        self.task(1, "Alpha")
-        rc = release.cmd_rc(self.root, day="2026-11-26")
-        release.cmd_reject(self.root, rc, "determinism hash drift")
-        self.assertIn("ОТКЛОНЁН", (self.root / "docs" / "releases" / f"{rc}.md").read_text(encoding="utf-8"))
-        args = self.errors_logged()[0]
-        self.assertIn(rc, args[args.index("--cause") + 1])
-        self.assertFalse((self.root / "docs" / "releases" / "errors-pending.jsonl").exists())
+    def test_reject_records_reason_in_symptom_rc_in_cause_and_defect_in_report(self):
+        rc = self.checked_rc()
+        out = release.cmd_reject(self.root, rc, "determinism hash drift")
+        self.assertIn("ERR-0001", out)
+        e = self.catalogue()[0]
+        self.assertIn("determinism hash drift", e["symptom"])
+        self.assertEqual(e["cause"], rc)
+        text = self.report(rc).read_text(encoding="utf-8")
+        self.assertIn("ОТКЛОНЁН", text)
+        self.assertIn("ERR-0001", text)
 
-    def test_failing_errors_tool_is_an_error(self):
-        os.environ["STUB_FAIL"] = "3"
-        self.addCleanup(os.environ.pop, "STUB_FAIL")
+    def test_two_reasons_two_entries_same_reason_is_a_repeat(self):
+        rc = self.checked_rc()
+        run(self.root, "checkout", "-q", "--", "development/errors.yaml")
+        self.assertIn("ERR-0001 added", release.record_error(self.root, "process", "release", "RC rejected: a", rc))
+        self.assertIn("ERR-0002 added", release.record_error(self.root, "process", "release", "RC rejected: b", rc))
+        self.assertIn("ERR-0001 repeat recorded", release.record_error(self.root, "process", "release", "RC rejected: a", "rc-other"))
+        self.assertEqual(len(self.catalogue()), 2)
+
+    def test_failing_or_missing_errors_tool_is_an_error(self):
+        tool = self.root / "tools" / "development" / "errors.py"
+        tool.write_text("import sys; sys.exit(3)\n", encoding="utf-8")
         with self.assertRaises(release.ReleaseError):
             release.record_error(self.root, "process", "release", "s", "c")
-        (self.root / "tools" / "development" / "errors.py").unlink()
+        tool.unlink()
         with self.assertRaises(release.ReleaseError):
             release.record_error(self.root, "process", "release", "s", "c")
 
 
-class TestPure(unittest.TestCase):
+class TestLabChecks(Repo):
+    SHA = "a" * 40
+
+    def tree(self, slot_body):
+        t = self.base / "tree"
+        (t / "lab" / "manifests").mkdir(parents=True, exist_ok=True)
+        core = {"series": [{"name": "SLOTS"}, {"name": "SHARES"}], "threads": [1], "seeds": {"start": 1, "count": 10}}
+        (t / release.LAB_CORE).write_text(json.dumps(core), encoding="utf-8")
+        (t / release.LAB_PLAYER).write_text("{}", encoding="utf-8")
+        (t / "lab" / "analysis").mkdir(parents=True, exist_ok=True)
+        (t / "lab" / "analysis" / "slot_core.py").write_text(slot_body, encoding="utf-8")
+        return t
+
+    def runner(self, commit, dirty=False, ok=True):
+        def run_matrix(tree, manifest, out):
+            (out / "runs" / "r1").mkdir(parents=True)
+            (out / "runs" / "r1" / "run.json").write_text(json.dumps({"core_commit": commit, "dirty": dirty}), encoding="utf-8")
+            return ok, "done"
+        return run_matrix
+
+    GOOD = "print('  PASS GAP36 USA ok')\nprint('  PASS DET threads ok')\n"
+
+    def test_good_series_pass_and_record_the_commit(self):
+        rows = release.lab_checks(self.tree(self.GOOD), self.base / "w", self.SHA, self.runner(self.SHA))
+        self.assertEqual([r[1] for r in rows], ["PASS", "PASS"])
+        self.assertIn(self.SHA[:12], rows[0][2])
+
+    def test_results_of_another_commit_or_dirty_tree_are_refused(self):
+        rows = release.lab_checks(self.tree(self.GOOD), self.base / "w", self.SHA, self.runner("b" * 40))
+        self.assertEqual([r[1] for r in rows], ["FAIL", "FAIL"])
+        self.assertIn("is not the RC commit", rows[0][2])
+        rows = release.lab_checks(self.tree(self.GOOD), self.base / "w2", self.SHA, self.runner(self.SHA, dirty=True))
+        self.assertIn("dirty", rows[0][2])
+
+    def test_failed_matrix_run_fails_both_rows(self):
+        rows = release.lab_checks(self.tree(self.GOOD), self.base / "w", self.SHA, self.runner(self.SHA, ok=False))
+        self.assertEqual([r[1] for r in rows], ["FAIL", "FAIL"])
+
+    def test_gate_fail_and_missing_det_are_told_apart(self):
+        rows = release.lab_checks(self.tree("print('  FAIL GAP36 USA 40')\nprint('  PASS DET threads ok')\n"), self.base / "w", self.SHA, self.runner(self.SHA))
+        self.assertEqual([r[1] for r in rows], ["FAIL", "PASS"])
+        rows = release.lab_checks(self.tree("print('  PASS GAP36 USA')\n"), self.base / "w2", self.SHA, self.runner(self.SHA))
+        self.assertEqual([r[1] for r in rows], ["PASS", "FAIL"])
+
+    def test_l2_manifest_is_generated_with_two_thread_counts(self):
+        t = self.tree(self.GOOD)
+        release.lab_checks(t, self.base / "w", self.SHA, self.runner(self.SHA))
+        l2 = json.loads((t / release.LAB_L2).read_text(encoding="utf-8"))
+        self.assertEqual((l2["threads"], l2["seeds"]["count"], len(l2["series"])), ([1, 2], 2, 1))
+
+
+class TestPure(Repo):
     def job(self, os_name, status="completed", conclusion="success"):
         return {"name": f"dotnet ({os_name})", "status": status, "conclusion": conclusion}
 
@@ -213,19 +400,40 @@ class TestPure(unittest.TestCase):
         self.assertEqual(release.ci_os_verdict(ok)[0], "PASS")
         self.assertEqual(release.ci_os_verdict(ok[:2] + [self.job("macos-latest", conclusion="failure")])[0], "FAIL")
         self.assertEqual(release.ci_os_verdict(ok[:2])[0], "PENDING")
-        self.assertEqual(release.ci_os_verdict(ok[:2] + [self.job("macos-latest", "in_progress", None)])[0], "PENDING")
 
-    def test_checks_table_roundtrip(self):
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "rc.md"
-            p.write_text(release.render_rc("rc-x", "abc", None, [], []), encoding="utf-8")
-            release.write_checks(p, [("verify --full", "PASS", "a|b"), ("CI three OS", "FAIL", "x")])
-            release.write_checks(p, [("verify --full", "PASS", "again")])
-            self.assertEqual(release.parse_checks(p), {"verify --full": "PASS"})
+    def test_pace_exit_codes_map_to_pass_warn_fail_and_no_base_is_skip(self):
+        t = self.base / "ptree"
+        for code, want in ((0, "PASS"), (3, "WARN"), (1, "FAIL")):
+            (t / "lab" / "analysis").mkdir(parents=True, exist_ok=True)
+            (t / "lab" / "analysis" / "pace_check.py").write_text(f"import sys; print(sys.argv[1:]); sys.exit({code})\n", encoding="utf-8")
+            row = release.pace_row(t, "abc")
+            self.assertEqual(row[1], want)
+            self.assertIn("--strict", row[2])
+        self.assertEqual(release.pace_row(t, None)[1], "SKIP")
 
-    def test_shot_command_only_prints(self):
-        self.assertIn("shot_batch.py", release.shot_command("rc-x"))
-        self.assertNotIn("run-globe-spike", release.shot_command("rc-x"))
+    def test_checks_table_roundtrip_with_commit(self):
+        p = self.base / "rc.md"
+        p.write_text(release.render_rc("rc-x", "abc", None, [], []), encoding="utf-8")
+        release.write_checks(p, [("verify --full", "PASS", "a|b"), ("CI three OS", "FAIL", "x")], "f" * 40)
+        release.write_checks(p, [("verify --full", "PASS", "again")], "e" * 40)
+        self.assertEqual(release.parse_checks(p), {"verify --full": "PASS"})
+        self.assertEqual(release.checked_commit(p), "e" * 40)
+
+    def test_defects_block_accumulates(self):
+        p = self.base / "rc.md"
+        p.write_text(release.render_rc("rc-x", "abc", None, [], []), encoding="utf-8")
+        release.add_defects(p, ["- ERR-0001: a"])
+        release.add_defects(p, ["- ERR-0002: b"])
+        text = p.read_text(encoding="utf-8")
+        self.assertIn("ERR-0001", text)
+        self.assertIn("ERR-0002", text)
+        self.assertNotIn("- нет", text)
+
+    def test_shot_command_prints_rc_worktree_and_commit_only(self):
+        cmd = release.shot_command("rc-2026-11-26-1", "abcdef" * 7)
+        self.assertIn("git worktree add --detach ../shots-rc-2026-11-26-1 rc-2026-11-26-1", cmd)
+        self.assertIn("abcdefabcdef", cmd)
+        self.assertIn("client_permit.py grant", cmd)
 
 
 if __name__ == "__main__":
