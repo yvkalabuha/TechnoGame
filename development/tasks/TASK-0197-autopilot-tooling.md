@@ -1,7 +1,7 @@
 ---
 id: TASK-0197
 title: "Autopilot tooling: watch acts on silent and finished-unsubmitted agents, shared shot batch collector, autopilot stop flag (#583)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #583"
+review_ref: "reviewer: APPROVE 8d2b816a; codex: 6 rounds, waived per owner #592 (DEBT-0118)"
 created: 2026-11-26
 ---
 
