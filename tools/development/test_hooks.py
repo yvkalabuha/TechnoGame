@@ -172,5 +172,103 @@ class RegistryTest(unittest.TestCase):
         self.assertEqual(self.check(), 1)
 
 
+sys.path.insert(0, str(ROOT / "tools" / "development"))
+import shot_batch  # noqa: E402
+import watch  # noqa: E402
+
+
+class WatchActionsTest(unittest.TestCase):
+    NOW = 100 * 3600.0
+
+    def acts(self, events, status=None, unlanded=None):
+        return {a["agent_id"]: a["action"] for a in watch.agent_actions(
+            events, self.NOW, 2.0, 3.0, status or {}, unlanded or {})}
+
+    def started(self, key, hours, tasks=("TASK-0001",)):
+        return {"event": "launched", "agent_id": key, "t": self.NOW - hours * 3600, "tasks": list(tasks)}
+
+    def test_silent_thresholds(self):
+        ev = [self.started("a", 1), self.started("b", 2.5), self.started("c", 3.5)]
+        self.assertEqual(self.acts(ev), {"b": "ping", "c": "stop+redispatch"})
+
+    def test_stopped_agent_not_silent(self):
+        ev = [self.started("a", 5), {"event": "stop", "agent_id": "a", "t": self.NOW}]
+        self.assertEqual(self.acts(ev), {})
+
+    def test_stopped_in_progress_with_unlanded_branch_goes_to_review(self):
+        ev = [self.started("a", 1), {"event": "stop", "agent_id": "a", "t": self.NOW}]
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{}]}), {"a": "to-review"})
+        self.assertEqual(self.acts(ev, {"TASK-0001": "REVIEW"}, {"TASK-0001": [{}]}), {})
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {}), {})
+
+
+class AutopilotTest(unittest.TestCase):
+    def setUp(self):
+        self.state = Path(tempfile.mkdtemp()) / "sub" / "autopilot.json"
+        self.env = dict(os.environ, AUTOPILOT_STATE=str(self.state))
+
+    def run_tool(self, script, *args):
+        return subprocess.run([sys.executable, str(ROOT / "tools/development" / script), *args],
+                              capture_output=True, text=True, env=self.env)
+
+    def test_stop_zeroes_capacity_and_on_restores_default(self):
+        self.assertEqual(self.run_tool("autopilot.py", "status", "--brief").stdout, "")
+        self.run_tool("autopilot.py", "stop")
+        self.assertIn("stop", self.run_tool("autopilot.py", "status").stdout)
+        out = self.run_tool("capacity.py").stdout
+        self.assertIn("free agent slots 0 (autopilot stopped)", out)
+        self.assertEqual(json.loads(self.run_tool("capacity.py", "--json").stdout)["agent_slots_free"], 0)
+        self.run_tool("autopilot.py", "on")
+        self.assertNotIn("autopilot stopped", self.run_tool("capacity.py").stdout)
+
+
+class ShotBatchTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = Path(tempfile.mkdtemp())
+        self.old = (shot_batch.ROOT, shot_batch.MODEL_COMMIT)
+        shot_batch.ROOT = self.repo
+        self.addCleanup(lambda: (setattr(shot_batch, "ROOT", self.old[0]),
+                                 setattr(shot_batch, "MODEL_COMMIT", self.old[1])))
+        self.g("init", "-b", "main")
+        self.commit("base", "a.txt")
+        self.g("branch", "old")
+        self.commit("model", "b.txt")
+        shot_batch.MODEL_COMMIT = self.g("rev-parse", "HEAD")
+        self.g("branch", "fresh")
+
+    def g(self, *a):
+        env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                   GIT_COMMITTER_EMAIL="t@t")
+        return subprocess.run(["git", *a], cwd=self.repo, text=True, capture_output=True, env=env).stdout.strip()
+
+    def commit(self, msg, name):
+        p = self.repo / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(msg + os.urandom(4).hex())
+        self.g("add", "-A")
+        self.g("commit", "-m", msg)
+
+    def test_branch_checks(self):
+        self.assertIsNone(shot_batch.check_branch("fresh"))
+        self.assertIn("lacks", shot_batch.check_branch("old"))
+        self.assertIn("not found", shot_batch.check_branch("nope"))
+        self.commit("client change", shot_batch.CLIENT_DIR + "/c.cs")
+        self.assertIn("behind main", shot_batch.check_branch("fresh"))
+
+    def test_collect_selects_waiting_client_tasks_with_shots(self):
+        class It:
+            def __init__(s, i, **m):
+                s.id, s.meta = i, m
+        shots = {"branch": "fresh", "only": "x*"}
+        items = [It("TASK-1", status="REVIEW", category="client", shots=shots),
+                 It("TASK-2", status="DONE", category="client", shots=shots),
+                 It("TASK-3", status="REVIEW", category="core", shots=shots),
+                 It("TASK-4", status="REVIEW", category="client"),
+                 It("TASK-5", status="IN_PROGRESS", category="client", shots={"branch": "old", "only": "y"})]
+        rows = shot_batch.collect(items)
+        self.assertEqual([(r["id"], r["problem"] is None) for r in rows], [("TASK-1", True), ("TASK-5", False)])
+        self.assertIn("--shots --only x*", shot_batch.command(rows[0]))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

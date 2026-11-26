@@ -4,6 +4,8 @@
   python3 tools/development/watch.py            full board
   python3 tools/development/watch.py --brief    one line for the SessionStart hook
   python3 tools/development/watch.py --hours 6  another staleness threshold (default 3)
+  python3 tools/development/watch.py --actions  what to do with each agent (owner #583);
+                                                --ping-hours 2 and --stop-hours 3 set the thresholds
 
 What it reports:
   STALE     an open task (APPROVED, IN_PROGRESS, REVIEW, BLOCKED) whose file and whose
@@ -14,6 +16,13 @@ What it reports:
   DONE?     a DONE task that still has an unlanded branch;
   SILENT    an agent started (logged by the agent_log hook) with no stop record for
             more than the threshold.
+
+--actions prints one action per tracked agent (a launched agent has an agent_id in the log):
+  ping              no stop record for more than --ping-hours: ask it for a status (SendMessage);
+  stop+redispatch   no stop record for more than --stop-hours: TaskStop, then redispatch on its branch;
+  to-review         it stopped, its task is still IN_PROGRESS and its branch has commits not in main:
+                    start the reviewer at once.
+Agents that run within the thresholds, or whose work is accounted for, print nothing.
 
 Read-only. Sources: the registry, git, .claude/.state/agents.jsonl.
 """
@@ -87,10 +96,54 @@ def silent_agents(now: float, hours: float) -> list[dict]:
             if k not in stopped and (now - e.get("t", now)) / 3600.0 > hours]
 
 
+def agent_events() -> list[dict]:
+    if not AGENT_LOG.exists():
+        return []
+    out = []
+    for line in AGENT_LOG.read_text(encoding="utf-8").splitlines():
+        try:
+            out.append(json.loads(line))
+        except ValueError:
+            continue
+    return out
+
+
+def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
+                  status_of: dict[str, str], unlanded: dict[str, list]) -> list[dict]:
+    """Pure decision: one action per agent id (see the module docstring). Pass the task statuses and the
+    unlanded branches by task id."""
+    started: dict[str, dict] = {}
+    stopped: set[str] = set()
+    for e in events:
+        key = e.get("agent_id") or ""
+        if not key:
+            continue
+        if e.get("event") == "stop":
+            stopped.add(key)
+        else:
+            started.setdefault(key, e)
+    out = []
+    for key, e in started.items():
+        tasks = e.get("tasks") or []
+        h = (now - e.get("t", now)) / 3600.0
+        action = None
+        if key not in stopped:
+            action = "stop+redispatch" if h > stop_h else "ping" if h > ping_h else None
+        elif any(status_of.get(t) == "IN_PROGRESS" and unlanded.get(t) for t in tasks):
+            action = "to-review"
+        if action:
+            out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks,
+                        "agent_type": e.get("agent_type", "?")})
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--brief", action="store_true")
     ap.add_argument("--hours", type=float, default=3.0)
+    ap.add_argument("--actions", action="store_true")
+    ap.add_argument("--ping-hours", type=float, default=2.0)
+    ap.add_argument("--stop-hours", type=float, default=3.0)
     args = ap.parse_args()
     now = time.time()
 
@@ -101,6 +154,16 @@ def main() -> int:
     for b in br:
         for t in b["tasks"]:
             by_task.setdefault(t, []).append(b)
+
+    if args.actions:
+        status = {i.id: str(i.meta.get("status")) for i in items}
+        acts = agent_actions(agent_events(), now, args.ping_hours, args.stop_hours, status, by_task)
+        for a in acts:
+            print(f"{a['action']:<16} {a['agent_id']}  {a['agent_type']:<20} {fmt(a['hours'])}  "
+                  f"{','.join(a['tasks']) or '-'}")
+        if not acts:
+            print("no agent needs action")
+        return 0
 
     stale, done_unlanded, board = [], [], []
     for it in sorted(items, key=lambda i: i.id):
