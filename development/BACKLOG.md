@@ -206,8 +206,8 @@
 | [TASK-0188](../development/tasks/TASK-0188-research-data-expand-knowledge-tree-computing-mate.md) | IN_PROGRESS | Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) | MS-M0 |
 | [TASK-0189](../development/tasks/TASK-0189-data-node-and-institute-directions-into-mods-12-di.md) | DONE | Data: node and institute directions into mods (12 directions, O-091) | MS-M0 |
 | [TASK-0190](../development/tasks/TASK-0190-tooling-gemini-visual-review-through-agy-subscript.md) | DONE | Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key | MS-M0 |
-| [TASK-0191](../development/tasks/TASK-0191-tooling-llm-worker-research-deepseek-checks-claims.md) | APPROVED | Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) | MS-M0 |
-| [TASK-0192](../development/tasks/TASK-0192-tech-map-stage-1-node-choice-card-institute-strip-.md) | APPROVED | Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) | MS-M0 |
+| [TASK-0191](../development/tasks/TASK-0191-tooling-llm-worker-research-deepseek-checks-claims.md) | IN_PROGRESS | Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) | MS-M0 |
+| [TASK-0192](../development/tasks/TASK-0192-tech-map-stage-1-node-choice-card-institute-strip-.md) | IN_PROGRESS | Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) | MS-M0 |
 
 ## Гипотезы
 
