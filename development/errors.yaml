@@ -54,3 +54,16 @@ errors:
   repeats: []
   status: open
   key: comms|owner-questions|askuserquestion timed out after 2 hours questions then writt
+- id: ERR-0005
+  date: '2026-11-26'
+  executor: orchestrator
+  kind: process
+  area: shots
+  symptom: Shot batch requested without checking that the branch contains the new model and current client
+  cause: No branch check step before asking permission
+  found_by: self
+  cost: medium
+  fix: git merge-base --is-ancestor f12684f <branch>; shot_batch.py (TASK-0197)
+  repeats: []
+  status: open
+  key: process|shots|shot batch requested without checking that the branch contai

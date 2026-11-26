@@ -87,18 +87,21 @@ def silent_agents(now: float, hours: float) -> list[dict]:
             if k not in stopped and (now - e.get("t", now)) / 3600.0 > hours]
 
 
-def red_ci_event() -> dict | None:
-    """The latest completed run of the CI workflow on main when it failed: {"date", "title"}; None otherwise."""
+def red_ci_events(since_id: int = 0, limit: int = 20) -> tuple[list[dict], int]:
+    """(failed runs, newest run id) among the last `limit` completed CI runs on main with id > since_id.
+    A failure superseded by a later green run is still reported once. ([], 0) when gh is unavailable."""
     try:
-        r = subprocess.run(["gh", "run", "list", "--branch", "main", "--workflow", "CI", "--status", "completed", "--limit", "1",
-                            "--json", "conclusion,displayTitle,createdAt"],
+        r = subprocess.run(["gh", "run", "list", "--branch", "main", "--workflow", "CI", "--status", "completed",
+                            "--limit", str(limit), "--json", "conclusion,displayTitle,createdAt,databaseId"],
                            cwd=ROOT, text=True, capture_output=True, timeout=20)
         runs = json.loads(r.stdout) if r.returncode == 0 else []
     except (OSError, subprocess.SubprocessError, ValueError):
-        return None
-    if runs and runs[0].get("conclusion") == "failure":
-        return {"date": str(runs[0].get("createdAt", ""))[:10], "title": str(runs[0].get("displayTitle", ""))[:100]}
-    return None
+        return [], 0
+    fresh = [x for x in runs if int(x.get("databaseId", 0)) > since_id]
+    bad = [{"id": int(x["databaseId"]), "date": str(x.get("createdAt", ""))[:10],
+            "title": str(x.get("displayTitle", ""))[:100]}
+           for x in sorted(fresh, key=lambda x: int(x["databaseId"])) if x.get("conclusion") == "failure"]
+    return bad, max([int(x["databaseId"]) for x in runs], default=0)
 
 
 def main() -> int:

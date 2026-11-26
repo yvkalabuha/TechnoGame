@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fcntl
 import json
 import os
 import re
@@ -32,6 +33,8 @@ ERRORS = ROOT / "development" / "errors.yaml"
 STATE = ROOT / ".claude" / ".state"
 DIGEST_DIR = ROOT / "docs" / "reviews"
 SOURCES = ("hook_refusals.jsonl", "land_failures.jsonl")
+MUTATING = ("add", "repeat", "close", "import")
+CI_MARK = "ci_last_run.txt"  # newest CI run id already imported
 IGNORED_HOOKS = {"guard_load"}  # a busy CPU is an expected back-off, not an error
 
 KINDS = ("process", "code", "data", "ui", "comms", "tooling", "determinism")
@@ -50,7 +53,7 @@ HEADER = ("# Platform error catalogue (owner #584). Edit with tools/development/
 
 def norm_key(kind: str, area: str, symptom: str) -> str:
     words = re.sub(r"[\W_]+", " ", symptom.casefold()).split()  # Unicode-aware: Russian symptoms keep their letters
-    return f"{kind}|{area.lower()}|{' '.join(words)[:60]}"
+    return f"{kind}|{area.lower()}|{' '.join(words)}"  # the full text: a cut would merge distinct errors
 
 
 def load(path: Path) -> list[dict]:
@@ -127,12 +130,12 @@ def next_id(entries: list[dict]) -> str:
 
 
 def add_entry(entries: list[dict], today: str, **f) -> tuple[dict, bool]:
-    """(entry, is_new). The same key adds today to repeats of the existing entry instead of a new one."""
+    """(entry, is_new). The same key adds today to repeats of the existing entry instead of a new one.
+    Every event counts: repeats may hold the same date many times. The key is recomputed from the fields."""
     key = norm_key(f["kind"], f["area"], f["symptom"])
     for e in entries:
-        if (e.get("key") or norm_key(e["kind"], e["area"], e["symptom"])) == key:
-            if today != e["date"] and today not in e["repeats"]:
-                e["repeats"].append(today)
+        if norm_key(e["kind"], e["area"], e["symptom"]) == key:
+            e["repeats"].append(today)
             return e, False
     e = {"id": next_id(entries), "date": today, "executor": f["executor"], "kind": f["kind"], "area": f["area"],
          "symptom": f["symptom"].strip(), "cause": f.get("cause") or "unknown (draft)",
@@ -328,6 +331,16 @@ def main(argv=None) -> int:
     d.add_argument("--out", type=Path, default=DIGEST_DIR)
     sub.add_parser("check")
     args = ap.parse_args(argv)
+    if args.cmd in MUTATING:
+        # One writer at a time: concurrent add/import would lose each other's entries (read-modify-write of the file).
+        args.state.mkdir(parents=True, exist_ok=True)
+        with (args.state / "errors_import.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            return execute(args)
+    return execute(args)
+
+
+def execute(args) -> int:
     today = args.today or dt.date.today().isoformat()
     try:
         entries = load(args.file)
@@ -347,10 +360,16 @@ def main(argv=None) -> int:
             if not drafts:
                 print("not a CHANGES verdict: nothing added")
                 return 0
+            touched = []
             for dft in drafts:
                 e, new = add_entry(entries, today, **dft, executor=args.executor or "agent:developer")
-                print(f"{e['id']} {'added' if new else 'repeat recorded'}")
+                touched.append(f"{e['id']} {'added' if new else 'repeat recorded'}")
+            bad = validate(entries)
+            if bad:
+                print("\n".join(bad))
+                return 2
             save(args.file, entries)
+            print("\n".join(touched))
             return 0
         else:
             f = {k: getattr(args, k) for k in ("executor", "kind", "area", "symptom", "cause", "found_by", "cost", "fix")}
@@ -392,8 +411,7 @@ def main(argv=None) -> int:
             print(f"unknown {args.id}")
             return 2
         if args.cmd == "repeat":
-            if today != e["date"] and today not in e["repeats"]:
-                e["repeats"].append(today)
+            e["repeats"].append(today)
         elif args.wontfix:
             if not args.reason:
                 print("--wontfix needs --reason")
@@ -417,16 +435,27 @@ def main(argv=None) -> int:
         if args.ci:
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             import watch
-            ev = watch.red_ci_event()
-            if ev:
+            mark = args.state / CI_MARK
+            try:
+                since = int(mark.read_text().strip())
+            except (OSError, ValueError):
+                since = 0
+            events, newest = watch.red_ci_events(since)
+            for ev in events:
                 drafts.append({"date": ev["date"], "executor": "tool:ci", "kind": "code", "area": "ci",
                                "symptom": f"red CI on main: {ev['title']}", "found_by": "ci"})
         new = 0
         for dft in drafts:
             _e, is_new = add_entry(entries, dft.pop("date"), **dft)
             new += is_new
+        bad = validate(entries)
+        if bad:
+            print("\n".join(bad))  # the claimed files stay for the next import
+            return 2
         if drafts:
             save(args.file, entries)
+        if args.ci and newest:
+            mark.write_text(str(newest), encoding="utf-8")
         for p in (q for ps in claimed.values() for q in ps):
             p.unlink()  # after the save: a crash keeps the claimed files for the next import
         print(f"import: {len(drafts)} event(s), {new} new draft(s), {skipped} ignored")

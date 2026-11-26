@@ -8,15 +8,22 @@ import datetime as dt
 import io
 import json
 import sys
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import errors  # noqa: E402
+import watch  # noqa: E402
 import land  # noqa: E402
 
 BASE = ["--executor", "orchestrator", "--kind", "process", "--area", "shots", "--symptom", "Old version on frames"]
+
+
+def has_gitleaks() -> bool:
+    return bool(shutil.which("gitleaks") or (Path.home() / ".local" / "bin" / "gitleaks").exists())
 
 
 class ErrorsTest(unittest.TestCase):
@@ -130,7 +137,7 @@ class ErrorsTest(unittest.TestCase):
         e = errors.load(self.file)
         self.assertEqual({x["status"] for x in e}, {"open"})
         self.assertEqual(errors.validate(e), [])
-        self.assertEqual(list(self.state.iterdir()), [])  # sources consumed and removed
+        self.assertEqual([p.name for p in self.state.iterdir()], ["errors_import.lock"])  # sources consumed and removed
         _, out = self.run_cli("import")
         self.assertIn("0 event(s)", out)
 
@@ -144,6 +151,7 @@ class ErrorsTest(unittest.TestCase):
         e = errors.load(self.file)
         self.assertEqual((e[0]["area"], e[0]["found_by"], e[0]["symptom"]), ("TASK-0007", "reviewer", "tick path allocates"))
 
+    @unittest.skipUnless(has_gitleaks(), "gitleaks not installed")
     def test_digest_dry_run_scans_and_sends_nothing(self):
         self.run_cli("add", *BASE)
         calls = []
@@ -153,14 +161,10 @@ class ErrorsTest(unittest.TestCase):
         self.assertEqual(calls, [])  # the provider is never even built
         self.assertFalse((self.tmp / "d").exists())
 
+    @unittest.skipUnless(has_gitleaks(), "gitleaks not installed")
     def test_digest_writes_report_with_injected_provider(self):
         self.run_cli("add", *BASE)
         sys.path.insert(0, str(errors.ROOT))
-        from tools.llm_worker import gitleaks
-        try:
-            gitleaks.scan_text("x")
-        except gitleaks.GitleaksUnavailable:
-            self.skipTest("gitleaks not installed")
 
         class Comp:
             usage = {}
@@ -179,6 +183,57 @@ class ErrorsTest(unittest.TestCase):
         out = errors.run_digest(errors.load(self.file), dt.date(2026, 11, 26), self.tmp / "d", make_provider=Prov)
         self.assertEqual(out.name, "errors-digest-2026-48.md")
         self.assertIn("stale client", out.read_text(encoding="utf-8"))
+
+    def test_long_symptoms_with_same_prefix_stay_distinct(self):
+        pre = "x" * 70
+        for tail in ("alpha", "beta"):
+            self.run_cli("add", "--executor", "orchestrator", "--kind", "code", "--area", "a", "--symptom", pre + tail)
+        self.assertEqual(len(errors.load(self.file)), 2)
+
+    def test_same_day_repeats_are_counted(self):
+        self.run_cli("add", *BASE)
+        self.run_cli("repeat", "ERR-0001")
+        self.run_cli("repeat", "ERR-0001")
+        self.assertEqual(errors.load(self.file)[0]["repeats"], ["2026-11-26", "2026-11-26"])
+        self.assertIn("repeats 2", self.run_cli("stats")[1])
+
+    def test_two_processes_do_not_lose_entries(self):
+        script = str(Path(errors.__file__))
+        procs = []
+        for p in range(2):
+            for n in range(6):
+                procs.append(subprocess.Popen([sys.executable, script, "--file", str(self.file), "--state", str(self.state),
+                                               "add", "--executor", "orchestrator", "--kind", "code", "--area", "a",
+                                               "--symptom", f"proc {p} item {n}"], stdout=subprocess.DEVNULL))
+        for pr in procs:
+            self.assertEqual(pr.wait(), 0)
+        e = errors.load(self.file)
+        self.assertEqual((len(e), len({x["id"] for x in e})), (12, 12))
+
+    def test_from_review_entries_are_schema_valid(self):
+        bad = self.tmp / "TASK-0007-review.md"
+        bad.write_text("Verdict: CHANGES\n- x\n", encoding="utf-8")
+        self.assertEqual(self.run_cli("add", "--from-review", str(bad), "--executor", "bob")[0], 2)
+        self.assertFalse(self.file.exists())
+        self.run_cli("add", "--from-review", str(bad))
+        self.assertEqual(errors.validate(errors.load(self.file)), [])
+
+    def test_ci_import_reports_superseded_failure_once(self):
+        runs = [{"databaseId": 7, "conclusion": "success", "displayTitle": "green", "createdAt": "2026-11-26T10:00:00Z"},
+                {"databaseId": 6, "conclusion": "failure", "displayTitle": "broke", "createdAt": "2026-11-26T09:00:00Z"},
+                {"databaseId": 3, "conclusion": "failure", "displayTitle": "old", "createdAt": "2026-11-25T09:00:00Z"}]
+        real = watch.subprocess.run
+        watch.subprocess.run = lambda *a, **k: subprocess.CompletedProcess(a, 0, json.dumps(runs), "")
+        try:
+            (self.state / "ci_last_run.txt").write_text("5")
+            _, out = self.run_cli("import", "--ci")
+            self.assertIn("1 event(s), 1 new draft(s)", out)
+            self.assertEqual((self.state / "ci_last_run.txt").read_text(), "7")
+            _, out = self.run_cli("import", "--ci")
+            self.assertIn("0 event(s)", out)
+        finally:
+            watch.subprocess.run = real
+        self.assertIn("broke", errors.load(self.file)[0]["symptom"])
 
     def test_land_failure_log(self):
         land.log_failure(self.tmp, 1, "agent-x")  # branch comes from the parsed args (run(info))
