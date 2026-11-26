@@ -51,9 +51,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import registry  # noqa: E402
 
 FACTS = ROOT / "development" / "FACTS.yaml"
-DECISIONS = ROOT / "docs" / "decisions" / "DECISIONS_LOG.md"
 ORCH = ROOT / "docs" / "decisions" / "ORCH_DECISIONS.md"
-DEBT = ROOT / "development" / "TECH_DEBT.md"
 RISKS = ROOT / "development" / "RISKS.md"
 
 # Documents that describe the present state and must not carry outdated claims.

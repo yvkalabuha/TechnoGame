@@ -685,12 +685,15 @@ def sync_docs(quiet: bool = True) -> int:
             local[rel] = file_fp(ROOT / rel)
         except OSError:
             pass
-    changed = [p for p, fp in local.items() if have.get(p) != fp]
+    item_paths = {it.id: registry.rel(it.path) for it in registry.load_items([])}
+    _, overrides = kbdocs.load_vocab(ROOT)
+    # Rows also depend on the overrides of TAGS.yaml and on the registry paths of link targets: refill all on a change.
+    inputs = hashlib.sha1(json.dumps([sorted(item_paths.items()), sorted(overrides.items())]).encode()).hexdigest()
+    old_inputs = psql(db_name(), "select value from kb_meta where key = 'docs_inputs'", "-At", schema=True).strip()
+    changed = [p for p, fp in local.items() if have.get(p) != fp or old_inputs != inputs]
     gone = [p for p in have if p not in local]
     if not changed and not gone and got == DOCS_SCHEMA:
         return 0
-    item_paths = {it.id: registry.rel(it.path) for it in registry.load_items([])}
-    _, overrides = kbdocs.load_vocab(ROOT)
     rows, links = [], []
     for p in changed:
         try:
@@ -708,7 +711,7 @@ def sync_docs(quiet: bool = True) -> int:
               + "delete from docs where path in (select path from tmp_paths);\n"
               "delete from doc_links where from_path in (select path from tmp_paths);\n"
               + copy_block("docs", cols, rows) + copy_block("doc_links", lcols, links)
-              + f"insert into kb_meta values ('docs_schema', {lit(DOCS_SCHEMA)}) "
+              + f"insert into kb_meta values ('docs_schema', {lit(DOCS_SCHEMA)}), ('docs_inputs', {lit(inputs)}) "
               "on conflict (key) do update set value = excluded.value;\ncommit;\n")
     psql(db_name(), script)
     if not quiet:

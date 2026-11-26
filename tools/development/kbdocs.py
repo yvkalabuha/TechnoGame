@@ -27,7 +27,8 @@ FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n?", re.S)
 FENCE = "\x60" * 3
 
 # Tool-managed journals, the generated backlog and templates carry no tags.
-EXEMPT = {"development/BACKLOG.md", "docs/decisions/DECISIONS_LOG.md", "development/TECH_DEBT.md"}
+EXEMPT = {"development/BACKLOG.md", "docs/decisions/DECISIONS_LOG.md", "development/TECH_DEBT.md",
+          "development/handoff/auto-checkpoint.md"}  # rewritten by the PreCompact hook, never committed
 EXEMPT_PREFIX = ("development/templates/", "docs/decisions/log/", "development/archive/")
 
 # Size limits (#600), bytes. Warnings until LIMITS_ERROR_FROM, errors from that day.

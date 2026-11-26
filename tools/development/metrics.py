@@ -76,17 +76,21 @@ PATH_RE = re.compile(r"(?<![\w.-])(?:\.claude/worktrees/[\w.-]+/)?((?:docs|devel
 READ_TOOLS = {"Read": "file_path", "Grep": "path", "Glob": "path", "NotebookRead": "notebook_path"}
 
 
+MAIN = str(kb_db.git_common_parent() or ROOT)  # the main checkout; agent worktrees are inside it
+
+
 def repo_path(p: str) -> str | None:
     """Repository-relative form of a path from a tool input; None outside the project."""
     p = str(p or "").strip()
     if not p:
         return None
-    m = re.search(r"/gameDev/(?:\.claude/worktrees/[\w.-]+/)?(.+)$", p)
     if p.startswith("/"):
-        if not m:
+        if not p.startswith(MAIN.rstrip("/") + "/"):
             return None
-        p = m.group(1)
-    p = re.sub(r"^\.claude/worktrees/[\w.-]+/", "", p.lstrip("./") if p.startswith("./") else p)
+        p = p[len(MAIN.rstrip("/")) + 1:]
+    elif p.startswith("./"):
+        p = p[2:]
+    p = re.sub(r"^\.claude/worktrees/[\w.-]+/", "", p)
     return p.rstrip("/") or None
 
 

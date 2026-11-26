@@ -121,6 +121,8 @@ class JournalLayoutTest(unittest.TestCase):
         self.assertEqual(len(kb_check.decision_rows(kblog.text("decisions", ROOT))), starts)
         self.assertGreaterEqual(starts, 606)  # rows #1-#606 existed when the log was split (TASK-0209)
         self.assertEqual(kb_check.known_ids()["max_decision"], max(kb_check.decision_rows(kblog.text("decisions", ROOT))))
+        archived = kblog.raw_rows((ROOT / kblog.DEBT_ARCHIVE).read_text(encoding="utf-8"), kblog.DEBT_START)[1]
+        self.assertIn(archived[0][0], kb_check.known_ids()["debt"])  # a closed debt id is still a known id
 
 
 class TagsAndLimitsTest(unittest.TestCase):
@@ -225,6 +227,13 @@ class CatalogueDatabaseTest(unittest.TestCase):
         self.addCleanup(os.utime, target, ns=(st.st_atime_ns, st.st_mtime_ns))
         self.assertEqual(kb_db.sync_docs(), 1)
 
+    def test_override_change_refills_the_catalogue(self):
+        kb_db.sync_docs()
+        row = json.loads(self._q("q", "docs", "path=ADR-0001-stack", "--json"))[0]
+        self.assertEqual(row["tags"], kbdocs.load_vocab(ROOT)[1]["docs/decisions/ADR-0001-stack.md"])
+        kb_db.psql(kb_db.db_name(), "update kb_meta set value = 'old' where key = 'docs_inputs'", schema=True)
+        self.assertGreater(kb_db.sync_docs(), 500)  # TAGS.yaml overrides or registry paths changed: all rows again
+
     def test_chain_pack_and_over_limit(self):
         rows = kb_db.chain("TASK-0209")
         paths = [r["path"] for r in rows]
@@ -249,18 +258,18 @@ class FileReadsTest(unittest.TestCase):
 
     def test_tool_reads_and_paths(self):
         b = lambda name, **inp: {"type": "tool_use", "id": "t1", "name": name, "input": inp}
-        self.assertEqual(metrics.tool_reads(b("Read", file_path="/var/www/gameDev/.claude/worktrees/agent-x/docs/a.md")),
+        self.assertEqual(metrics.tool_reads(b("Read", file_path=metrics.MAIN + "/.claude/worktrees/agent-x/docs/a.md")),
                          [("Read", "docs/a.md")])
         self.assertEqual(metrics.tool_reads(b("Read", file_path="/etc/passwd")), [])
         got = metrics.tool_reads(b("REPL", code="await file(W+'/tools/development/kb_db.py').text(); sh('cat CLAUDE.md')"))
         self.assertEqual(got, [("REPL", "tools/development/kb_db.py"), ("REPL", "CLAUDE.md")])
-        self.assertEqual(metrics.tool_reads(b("Write", file_path="/var/www/gameDev/docs/a.md")), [])
+        self.assertEqual(metrics.tool_reads(b("Write", file_path=metrics.MAIN + "/docs/a.md")), [])
 
     def test_transcript_reads_and_costly_files(self):
         lines = [json.dumps({"type": "assistant", "timestamp": "2026-11-26T10:00:00Z", "message": {
             "id": "m1", "model": "claude", "usage": {"input_tokens": 1, "output_tokens": 2},
             "content": [{"type": "tool_use", "id": "t1", "name": "Read",
-                         "input": {"file_path": "/var/www/gameDev/CLAUDE.md"}}]}})]
+                         "input": {"file_path": metrics.MAIN + "/CLAUDE.md"}}]}})]
         r = metrics.parse_transcript(lines, "session:s", "session", "s")
         self.assertEqual([(x["tool"], x["path"]) for x in r["reads"]], [("Read", "CLAUDE.md")])
         self.assertNotIn("input", r["reads"][0])
