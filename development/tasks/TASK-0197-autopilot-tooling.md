@@ -36,7 +36,13 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано (кроме части в .claude/, вне зоны developer):
+- `watch.py --actions` (+ `--ping-hours 2`, `--stop-hours 3`): ping / stop+redispatch / to-review, только чтение; чистая функция `agent_actions`.
+- `shot_batch.py`: поле `shots: {branch, only}` в задаче; проверка f12684f и отставания по src/Singularity.Client.Spike; печатает команды, ничего не запускает.
+- `autopilot.py on|stop|status`; `capacity.py` при stop печатает `free agent slots 0 (autopilot stopped)`.
+- Тесты: `tools/development/test_hooks.py` (WatchActionsTest, AutopilotTest, ShotBatchTest).
+- Не сделано (вне зоны): вывод состояния в `.claude/hooks/session_context.py`, правка SKILL.md. См. отчёт, OPEN.
+- Проверка: test_hooks.py 20 тестов OK; verify.py см. отчёт.
 
 ## Цель
 Решение #583: автопилот сам следит за агентами, собирает одну пачку кадров и умеет останавливаться.

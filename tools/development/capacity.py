@@ -9,6 +9,8 @@ import os
 import subprocess
 import sys
 
+import autopilot
+
 HEAVY = {"test": ("dotnet test", "testhost"), "godot": ("Godot_v",), "land": ("tools/development/land.py",)}
 LOAD_START = 0.75   # start a new heavy agent only below this share of the cores (1-minute load)
 LOAD_BLOCK = 1.25   # a new test run is refused above this share
@@ -30,8 +32,9 @@ def state():
     p = procs()
     runs = sum(1 for l in subprocess.run(["ps", "-eo", "args"], capture_output=True, text=True).stdout.splitlines()
                if l.startswith(("dotnet test", "/usr/bin/dotnet test")) or " dotnet test " in f" {l} ")
-    free = max(0, int((cores * LOAD_START - load1) // 3))
-    return {"cores": cores, "load1": round(load1, 2), "heavy": p, "test_runs": runs, "agent_slots_free": free,
+    stopped = autopilot.is_stopped()
+    free = 0 if stopped else max(0, int((cores * LOAD_START - load1) // 3))
+    return {"cores": cores, "load1": round(load1, 2), "heavy": p, "test_runs": runs, "agent_slots_free": free, "autopilot_stopped": stopped,
             "block_tests": load1 > cores * LOAD_BLOCK or runs >= MAX_TEST_RUNS}
 
 
@@ -42,4 +45,5 @@ if __name__ == "__main__":
     else:
         print(f"cores {s['cores']}  load1 {s['load1']}  test runs {s['test_runs']}  godot {s['heavy']['godot']}  "
               f"landings {s['heavy']['land']}  free agent slots {s['agent_slots_free']}"
+              f"{' (autopilot stopped)' if s['autopilot_stopped'] else ''}"
               f"{'  TESTS BLOCKED' if s['block_tests'] else ''}")
