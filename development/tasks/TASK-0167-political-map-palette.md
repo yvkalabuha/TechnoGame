@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#527"
 created: 2026-11-25
+tags: [task, map, visual, active]
 ---
 
 # TASK-0167 — Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint

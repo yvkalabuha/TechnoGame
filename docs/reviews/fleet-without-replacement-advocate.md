@@ -1,3 +1,6 @@
+---
+tags: [review, military, gameplay, done]
+---
 # Gate: парк без замены — адвокат альтернатив (2026-11-19)
 
 Артефакт: `docs/game-design/notes/fleet-without-replacement.md`. Отчёт агента advocate, сохранён Orchestrator (у агента нет записи).

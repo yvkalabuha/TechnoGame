@@ -1,3 +1,6 @@
+---
+tags: [review, core, external-llm, done]
+---
 # Gate ADR-0005-data-model rev 2 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-ADR-0005-data-model-c619778e-third.json

@@ -15,6 +15,7 @@ approved_at: 2026-11-19
 approval_ref: "DEBT-0058 (light)"
 review_ref: "reviewer: APPROVE (spec and owners diff); Codex waived, DEBT-0064 (O-013); landed f09054f"
 created: 2026-11-19
+tags: [task, map, history, done]
 ---
 
 # TASK-0114 — Northern Algeria regions for the 1945 map (DEBT-0058)

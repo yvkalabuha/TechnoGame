@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #48
 created: 2026-11-03
+tags: [task, core, economy, done]
 ---
 
 # TASK-0018 — Core.Products для среза: КБ, варианты, line_E, дефекты, когорты, upkeep, FV, заглушка L_P (T5)

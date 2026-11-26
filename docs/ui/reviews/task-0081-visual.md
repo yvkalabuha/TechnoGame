@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Визуальное ревью TASK-0081 (клиент v0.5b)
 
 Автор: ui-art-director, 2026-11-18. Материал: `docs/ui/prototypes/client-v05b/*.png` (49 снимков, 1600×900; в репозитории остались 3, остальные не хранятся, генерируются: `./run-globe-spike.sh --shots`, см. KEY_SHOTS.md), `run-log.txt`, спека `docs/ui/CLIENT_V05B_SPEC.md`, макет `client-v05b.html`.

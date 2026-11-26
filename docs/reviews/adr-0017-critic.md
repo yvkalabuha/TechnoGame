@@ -1,3 +1,6 @@
+---
+tags: [review, determinism, core, done]
+---
 # ADR-0017 — critic review
 
 Gate review of ADR-0017 (commit 3340b5f), 2026-11-17. Agent: critic (read-only; text transcribed by the Orchestrator). No blockers.

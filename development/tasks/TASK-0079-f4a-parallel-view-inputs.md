@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#317 (next: ADR-0017 and F4); light, ADR-0017 «Вне ADR»"
 created: 2026-11-18
+tags: [task, performance, core, done]
 ---
 
 # TASK-0079 — F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor

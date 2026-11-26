@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "owner answer 2026-11-24 (hooks and tools fixes)"
 review_ref: "reviewer: APPROVE; codex accept ccd9843 with 3 findings -> DEBT-0098; landed d2d7590"
 created: 2026-11-24
+tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0159 — llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out

@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #176 (ADR-0015, план 1b)"
 created: 2026-11-13
+tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0036 — llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b)

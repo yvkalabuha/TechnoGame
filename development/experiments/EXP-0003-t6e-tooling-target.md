@@ -16,6 +16,7 @@ golden_hash: "V0 main конечные хеши s1…s5: 9a0aebc7…, 7a1dc477�
 baseline: V0 на той же сборке
 outcome: inconclusive     # по правилу годных нет (A39 = V0); K1/K2 по букве не определены у USA — см. «Вывод»
 created: 2026-11-04
+tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-0003 — Цель оснастки A39: варианты V0–V4 против эталона VINF (T6e)

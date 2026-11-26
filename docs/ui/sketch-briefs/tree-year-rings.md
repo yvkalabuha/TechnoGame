@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: knowledge tree, year = distance from centre (decision #473)
 
 Two 16:9 mockups, 1920x1080, Russian UI text, for the game screen "Дерево знаний" of a 1945–2100 science and technology strategy game. Reference only: the real screen is drawn by code, so do not rely on pixel details.

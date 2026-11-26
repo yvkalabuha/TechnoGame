@@ -1,3 +1,6 @@
+---
+tags: [review, institutions, done]
+---
 # Advocate — INSTITUTIONS_PERSONALITIES rev 3 (§14), 2026-11-25
 
 Сжатая запись отчёта адвоката (полный текст — в сессии Orchestrator 2026-11-25).

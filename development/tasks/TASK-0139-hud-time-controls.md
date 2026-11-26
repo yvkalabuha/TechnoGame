@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24"
 review_ref: "reviewer: APPROVE (ea1b142); ui-art-director: PASS with remainder (docs/ui/reviews/task-0139-visual.md), remainder fixed 7b58f1f; codex 3 returns, waived #432, DEBT-0084; landed 44847cf"
 created: 2026-11-24
+tags: [task, ui, done]
 ---
 
 # TASK-0139 — Кнопки времени в верхней полосе

@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#404, #409, UI_INSTRUMENTS §8 (light)"
 created: 2026-11-18
+tags: [task, ui, visual, done]
 ---
 
 # TASK-0108 — UI instruments: tokens, settings, contrast rules and GaugeControl (UI_INSTRUMENTS §8 steps 1-2)

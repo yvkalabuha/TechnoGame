@@ -1,3 +1,6 @@
+---
+tags: [design, economy, ui, draft]
+---
 # Деньги в окне бюджета: индекс бюджета в долларах 1990 (#476)
 
 > economy-analyst, 2026-11-24. Только документ: код, данные и спека не менялись. Всё помеченное [Предл.] не утверждено. Расчёт по строкам: Core (`PolicySystem`, `SliceWorld`, `KnowledgeInputsAdapter`, `PolicyProfile`), `mods/core/scenario_1945.yaml`, `product_classes.yaml`, `docs/game-design/economy/dollars-1990.md`.

@@ -15,6 +15,7 @@ approved_at: 2026-11-19
 approval_ref: "DEBT-0052, ADR-0005 p.3 (light)"
 review_ref: "reviewer: APPROVE 1c59e2a4; Codex changes_requested, 4 findings deferred to TASK-0120 (O-019); base projection hashes verified on c5e7e98; landed c00fbb3"
 created: 2026-11-19
+tags: [task, core, gameplay, done]
 ---
 
 # TASK-0115 — End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052)

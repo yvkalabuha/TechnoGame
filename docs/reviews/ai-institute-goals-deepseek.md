@@ -1,3 +1,6 @@
+---
+tags: [review, platform, external-llm, done]
+---
 # DeepSeek third voice: ai-institute-goals (TASK-0178)
 
 ```

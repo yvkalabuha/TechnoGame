@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#389"
 created: 2026-11-18
+tags: [task, simulation-lab, core, done]
 ---
 
 # TASK-0098 — Remaining double code from Core.Simulation to Lab (#389)

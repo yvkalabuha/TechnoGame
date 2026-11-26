@@ -15,6 +15,7 @@ approved_at: 2026-11-21
 approval_ref: "PLAN.md этап 3, шаг 3.2; project-review-2026-11-19 A4 (light)"
 review_ref: "reviewer: APPROVE 2760ca7 (rounds 1-7); codex accept 2760ca74, 3 findings to DEBT-0072; landed a86303b"
 created: 2026-11-21
+tags: [task, core, testing, done]
 ---
 
 # TASK-0124 — Kernel table snapshot and save-load-continue continuity test (A4)

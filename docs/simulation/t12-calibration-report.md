@@ -1,3 +1,6 @@
+---
+tags: [experiment, simulation-lab, determinism, done]
+---
 # T12: калибровка C1 → (C3+C4) → C2 — отчёт (TASK-0056)
 
 > Спека: `slice-jet-aviation.md` v0.28 §8.2 (§1–§6), v0.32 §8.2 (§7 — новая сборка). Исполнитель: simulation-engineer, 2026-11-15/16. Прогоны: `lab/results/t12/`, `lab/results/t12b/` (не коммитятся). Журналы точек — `meta.journal` манифестов `lab/manifests/EXP-0002-c1.json`, `EXP-0002-c3c4.json`, `EXP-0002-c2.json`, `EXP-0002-calib.json` (§8.2 п.5).

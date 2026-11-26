@@ -1,3 +1,6 @@
+---
+tags: [journal, performance, core, active]
+---
 # DEBT-0057: источник gen2 на пути снимка
 
 Автор: simulation-engineer, 2026-11-19. Код замера: `lab bench --mode alloc` (формат 3) + флаги диагностики `--full-first`, `--gc-trace` (этот коммит, только Lab). Сырые данные: `lab/results/DEBT-0057/` (не коммитится). Точка A (200 акторов, 2000 узлов, cross), seed 1, прогрев 2 мес.

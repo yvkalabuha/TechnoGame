@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # TASK-0117: геометрия рейла и легенды (ui-art-director, 2026-11-19)
 
 ## Краткий вывод

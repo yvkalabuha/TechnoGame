@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 review_ref: "reviewer: APPROVE (af1971604f9e650eb, Lab only); landed 2e65cce with --full verify OK"
 created: 2026-11-24
+tags: [task, simulation-lab, gameplay, done]
 ---
 
 # TASK-0148 — Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies)

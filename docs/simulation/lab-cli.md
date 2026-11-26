@@ -1,3 +1,6 @@
+---
+tags: [spec, simulation-lab, platform, active]
+---
 # Simulation Lab CLI (`src/Singularity.Lab`, TASK-0005)
 
 > Связано: ADR-0008 (PROPOSED), EXP-0001 «Ревью» п. 11 (JSON вместо TOML для пилота), `exp0001-csv-format.md`.

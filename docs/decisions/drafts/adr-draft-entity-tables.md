@@ -9,6 +9,7 @@ related: [ADR-0005, ADR-0013, ADR-0014, ADR-0017, ADR-0019, ADR-0020, ADR-0021, 
 approved_by:
 approved_at:
 approval_ref:
+tags: [decision, core, data, draft]
 ---
 
 # ADR-NNNN — Таблицы сущностей при переходе на ADR-0020: что уходит из таблицы акторов, дочерние таблицы с чанками по родителю

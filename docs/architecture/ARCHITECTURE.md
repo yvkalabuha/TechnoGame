@@ -1,3 +1,6 @@
+---
+tags: [spec, core, determinism, active]
+---
 # ARCHITECTURE
 
 > Объединяет TECHNICAL_DESIGN_DOCUMENT и ARCHITECTURE (DF-001 §5.5). Источник решений — ADR в `docs/decisions/`; этот документ — карта, а не копия. Статусы сверены с frontmatter файлов ADR 2026-11-21.

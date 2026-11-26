@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#352, #360; spec docs/ui/CLIENT_V05C_SPEC.md"
 created: 2026-11-18
+tags: [task, ui, visual, done]
 ---
 
 # TASK-0088 — Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures

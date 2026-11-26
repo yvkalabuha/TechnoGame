@@ -1,3 +1,6 @@
+---
+tags: [review, platform, external-llm, done]
+---
 # Gate: парк без замены — третий голос DeepSeek (2026-11-19)
 
 Артефакт: `docs/game-design/notes/fleet-without-replacement.md`. Отзыв дан на редакцию 1 (коммит `ebb05a7`); статусы ниже проверены по тексту редакции 2. Запись: `tools/llm_worker/runs/gate-fleet-without-replacement-ebb05a76-third.json`. Сводка Orchestrator.

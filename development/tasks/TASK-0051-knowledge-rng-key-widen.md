@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-14
 approval_ref: "DECISIONS_LOG #197; docs/architecture/notes/contract-proposals-wave1.md A2; rr-0008-contract-disputes.md"
 created: 2026-11-14
+tags: [task, determinism, science, done]
 ---
 
 # TASK-0051 — Ключ RNG знания actor·2^16 + node (#197)

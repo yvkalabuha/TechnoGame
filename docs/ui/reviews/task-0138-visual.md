@@ -1,3 +1,6 @@
+---
+tags: [review, ui, map, done]
+---
 # Визуальное ревью TASK-0138 (границы и палитра 1945 на глобусе)
 
 Дата 2026-11-24, ui-art-director. Кадры: `shots-out/task-0138/map1945_{europe,asia,africa}_1920x1080[_grey].png`, `map1945_limb_1920x1080.png` (1920x1080, 100 %). Спека: `docs/ui/specs/task-0138-country-palette.md`. Мнение Gemini (#450): `tools/llm_worker/runs/visual-TASK-0138-5015a8d7-gemini.md` (оценка fail). Вердикт остаётся за арт-директором.

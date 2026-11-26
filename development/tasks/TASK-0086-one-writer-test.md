@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0006 rule one writer per column; prerequisite named by ADR-0019/0021 gates; light"
 created: 2026-11-18
+tags: [task, testing, core, done]
 ---
 
 # TASK-0086 — Architecture test: one writer per column (CoW open tracing in test mode)

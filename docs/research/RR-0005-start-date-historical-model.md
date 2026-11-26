@@ -5,6 +5,7 @@ status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-02
 author: research-scientist
 related: [RR-0003, RR-0011, RR-0012, RR-0013, RR-0014]
+tags: [research, history, core, accepted]
 ---
 
 # RR-0005 — Стартовая дата и историческая модель

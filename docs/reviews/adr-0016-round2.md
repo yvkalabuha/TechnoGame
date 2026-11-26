@@ -1,3 +1,6 @@
+---
+tags: [review, performance, external-llm, done]
+---
 # ADR-0016 rev 3 — gate round 2
 
 2026-11-17, commit bb6973a. Agents: critic and advocate (read-only; text transcribed by the Orchestrator). DeepSeek: the run was refused by the local secret scan, a false positive from our own fence marker (TASK-0062); it will be rerun after the fix.

@@ -1,3 +1,6 @@
+---
+tags: [experiment, science, institutions, done]
+---
 # Цели институтов ИИ: путь к следующему поколению изделия при κ = 1,5 (TASK-0178, #552)
 
 > simulation-engineer, 2026-11-25. Gate-записка: правило, формула, правдоподобие, отличие от игрока, замер. Основание: решения владельца #552 (κ = 1,5 оставить, цели ИИ умнее), #554 (допуск §8-d), `development/tasks/TASK-0178-…md`, `docs/game-design/civilization/research-institutes-priorities.md` rev 4a §3, §5, §7, `docs/simulation/institutes-recalibration.md` (TASK-0176: метод, §8-d, песочница). Код замера — ветка TASK-0178 = `main` eaa9914 + ветка TASK-0176 (`2037a25`) + песочница `lab/results/sandbox` (не коммитится; её правка — `lab/patches/TASK-0178-ai-goal-path.sandbox.diff`). Сырые данные — `lab/results/t0178-*` (не коммитятся). Правило бюджета не трогал (Q70 открыт).

@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#575"
 review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115; data reviewed via research notes"
 created: 2026-11-25
+tags: [task, science, done]
 ---
 
 # TASK-0188 — Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575)

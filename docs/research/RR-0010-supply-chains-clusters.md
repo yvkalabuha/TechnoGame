@@ -5,6 +5,7 @@ status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-04            # rev. 2026-11-14 (решения #73, #170–#173, #193–#195; граница с RR-0014; подготовка к gate)
 author: economy-analyst
 related: [RR-0006, RR-0007, RR-0008, RR-0009, RR-0011, RR-0014, HYP-0002, HYP-0003, ADR-0002, ADR-0003, ADR-0004, ADR-0006, ADR-0011]
+tags: [research, economy, accepted]
 ---
 
 # RR-0010 — Цепочки поставок и промышленные кластеры: анализ пробелов и варианты модели

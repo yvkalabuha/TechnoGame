@@ -1,3 +1,6 @@
+---
+tags: [research, science, gameplay, done]
+---
 # Контент G5/G6 для среза «реактивная авиация» (TASK-0128, поезд 2, шаг T-C), ред. 3.1
 
 > research-scientist, 2026-11-23. Проект данных [Предл.] для повторного gate, не решение. **Ред. 3.1 (2026-11-24)** — по gate ред. 3 (`docs/reviews/slice-g5-g6-content-rev3-gate.md`, «Принято» п. 1–8); правки помечены «ред. 3.1». `mods/` и `src/` не менялись. Ред. 3 (2026-11-24) — по решению владельца #457: промежуточные шаги исследования (раздел 8); 11 строк таблицы раздела 1 изменили `requires`. Ред. 2 — по трём рецензиям (`docs/reviews/slice-g5-g6-content-{critic,advocate,deepseek}.md`) и O-038 (`docs/decisions/ORCH_DECISIONS.md`).

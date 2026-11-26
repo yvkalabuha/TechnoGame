@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Gemini visual opinion: TASK-0136
 
 Model gemini-4-hydrogen, frames: alert_tint5_1920x1080.png, area_finance_1920x1080.png, area_production_1920x1080.png, area_science_1920x1080.png, b_europe_day_hud.png, credits_1920x1080.png, main_menu_1920x1080.png, tree_caption_turbine_1920x1080.png.

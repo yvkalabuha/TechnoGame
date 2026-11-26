@@ -1,3 +1,6 @@
+---
+tags: [review, platform, external-llm, done]
+---
 # DeepSeek third voice — INSTITUTIONS_PERSONALITIES rev 3 (§14), 2026-11-25
 
 ```

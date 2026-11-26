@@ -1,3 +1,6 @@
+---
+tags: [review, performance, external-llm, done]
+---
 # ADR-0016 tick budget — DeepSeek third voice
 
 Record: `tools/llm_worker/runs/gate-ADR-0016-tick-budget-50685b67-third.json` (sha256 9784bb7e…). STATUS changes_requested: 2 high, 14 medium, 3 low.

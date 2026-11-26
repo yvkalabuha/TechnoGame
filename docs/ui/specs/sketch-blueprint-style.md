@@ -1,3 +1,6 @@
+---
+tags: [spec, ui, visual, active]
+---
 # Sketch brief: knowledge map in "blueprint" style (owner wants to see Gemini proposals 1, 2, 3, 5)
 
 Reference: the attached frame is the current tech map screen (1920x1080) of a 1945-2100 science strategy game.

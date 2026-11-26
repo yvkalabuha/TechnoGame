@@ -1,3 +1,6 @@
+---
+tags: [review, testing, simulation-lab, done]
+---
 # T8: сверка покрытия P0 среза (TASK-0040)
 
 Источник: `docs/simulation/slice-jet-aviation.md` v0.23 §6.4, §9, §11 (T8), §3.5 (A30, A39, A40); контракт слоёв §8; RR-0006 §4.14.

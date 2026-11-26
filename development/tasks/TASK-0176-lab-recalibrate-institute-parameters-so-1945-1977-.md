@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#549"
 review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115; Lab keys landed with the train"
 created: 2026-11-25
+tags: [task, simulation-lab, science, done]
 ---
 
 # TASK-0176 — Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549)

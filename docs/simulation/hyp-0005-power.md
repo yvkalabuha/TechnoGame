@@ -1,3 +1,6 @@
+---
+tags: [hypothesis, simulation-lab, gameplay, active]
+---
 # HYP-0005 rev 3 — пересчёт мощности после #356–#359
 
 Скрипт: `lab/analysis/hyp0005_power.py` (stdlib, детерминирован, seed ячейки = 50000 + i). Прогон: `python3 lab/analysis/hyp0005_power.py 4000` → `lab/results/hyp0005_power/power.csv` (не коммитится; все наборы `main,flip0.3,neff1.3,neff4.5,oc`, ≈ 40 мин из-за bootstrap P2). 4000 повторов на ячейку: MC-ошибка ≤ 0,8 п.п.

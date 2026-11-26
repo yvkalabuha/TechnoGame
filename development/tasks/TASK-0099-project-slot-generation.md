@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#388, ADR-0005"
 created: 2026-11-18
+tags: [task, core, economy, done]
 ---
 
 # TASK-0099 — Project slots reuse with generation (#388)

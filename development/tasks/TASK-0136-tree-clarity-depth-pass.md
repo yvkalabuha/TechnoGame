@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («делай»); #417, #426"
 review_ref: "reviewer: APPROVE 370c093; ui-art-director: PASS round 2 0808ceb; codex: waived #432 after 3rd return (370c0936), remainder DEBT-0085; landed 360836a"
 created: 2026-11-24
+tags: [task, ui, visual, done]
 ---
 
 # TASK-0136 — Проход понятности и глубины по дереву знаний и меню

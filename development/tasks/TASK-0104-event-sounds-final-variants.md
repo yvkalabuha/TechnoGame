@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#407"
 created: 2026-11-18
+tags: [task, audio, done]
 ---
 
 # TASK-0104 — Event sounds: final variants (#407), gain fixes, listening-pack pruning

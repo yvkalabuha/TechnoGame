@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: "#553"
 review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115; market M2 in core (#560)"
 created: 2026-11-25
+tags: [task, simulation-lab, economy, done]
 ---
 
 # TASK-0179 — Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553)

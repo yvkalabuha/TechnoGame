@@ -1,3 +1,6 @@
+---
+tags: [experiment, ui, visual, done]
+---
 # Отчёт спайка: 3D-глобус на Godot 4 .NET (TASK-0067)
 
 **Дата:** 2026-11-17 · **Код:** `src/Singularity.Client.Spike/` (одноразовый, не в `Singularity.sln`, к симуляции не подключён) · **Направление:** `docs/ui/GLOBE_DIRECTION.md` v0.1, поверхность A «Глобус-лист».

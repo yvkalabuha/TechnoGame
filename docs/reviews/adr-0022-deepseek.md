@@ -1,3 +1,6 @@
+---
+tags: [review, platform, external-llm, done]
+---
 # ADR-0022 — DeepSeek third voice (gate 2026-11-18)
 
 Record: tools/llm_worker/runs/gate-ADR-0022-region-limit-amendment-9d77411d-third.json

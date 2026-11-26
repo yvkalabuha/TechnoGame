@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: "DECISIONS_LOG #123, #125, #128; спека v0.13 §11 T6c; контракт v2.4 r4"
 created: 2026-11-03
+tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0025 — T6c: ИИ изделия — Requirement, пресеты, запуск, снятие (A40), поправка контракта r4

@@ -14,6 +14,7 @@ approved_by: owner
 approved_at: 2026-11-04
 approval_ref: "DECISIONS_LOG #162; спека v0.21 §11 «V5 + A40 order»"
 created: 2026-11-04
+tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0031 — V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска

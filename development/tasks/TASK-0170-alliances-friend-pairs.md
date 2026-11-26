@@ -15,6 +15,7 @@ approved_at: 2026-11-25
 approval_ref: O-079
 review_ref: "reviewer: APPROVE; second review agy-sonnet accept 2 low; merge a0e035b"
 created: 2026-11-25
+tags: [task, politics, data, done]
 ---
 
 # TASK-0170 — Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts

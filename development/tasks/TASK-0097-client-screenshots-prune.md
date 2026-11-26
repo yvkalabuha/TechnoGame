@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#391"
 created: 2026-11-18
+tags: [task, platform, ui, done]
 ---
 
 # TASK-0097 — Client screenshots: about 25 key frames in git (#391)

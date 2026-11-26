@@ -1,3 +1,6 @@
+---
+tags: [review, ui, visual, done]
+---
 # Визуальное ревью клиента v0.5a (TASK-0077)
 
 Ревьюер: ui-art-director. Основа: снимки `docs/ui/prototypes/client-v05a/` (хранится 2 кадра, остальные: кадр не хранится, генерируется: `./run-globe-spike.sh --shots`; см. KEY_SHOTS.md), `UI_DESIGN_SYSTEM.md` §17, Результат задачи. Код не правился. [Факт] — видно на снимке; [Предл.] — предложение.

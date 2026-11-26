@@ -1,3 +1,6 @@
+---
+tags: [design, audio, draft]
+---
 # AUDIO_DIRECTION v0.1 — звук и музыка PROJECT SINGULARITY
 
 Статус: [Предл.] первый документ; решения владельца: #296 (звук и музыка), #288 (реестр авторов), ADR-0009 (лицензии). Роль sound-director временно ведёт ui-art-director. Связанные документы: `docs/ui/UI_ART_DIRECTION.md`, `docs/ui/GLOBE_DIRECTION.md`.

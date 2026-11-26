@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-14
 approval_ref: "спека среза docs/simulation/slice-jet-aviation.md, таблица задач, строка T11 (план M0, ROADMAP шаг 5); #220"
 created: 2026-11-14
+tags: [task, simulation-lab, done]
 ---
 
 # TASK-0053 — T11: анализ exp0002.py

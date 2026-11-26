@@ -5,6 +5,7 @@ status: DRAFT            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-18
 author: economy-analyst
 related: [RR-0006, RR-0014, MS-M1]
+tags: [research, history, economy, draft]
 ---
 
 # RR-0023 — Start data 1945 by region: estimates with uncertainty ranges

@@ -1,3 +1,6 @@
+---
+tags: [hypothesis, science, simulation-lab, done]
+---
 # Эскиз «канала внедрения» нового процесса (HYP-0004, #238 В3) — пре-регистрация и результат
 
 > Исполнитель: simulation-engineer, 2026-11-15. Основание: решение владельца #238 (В3, gate+research), диагноз `c2-diagnosis.md` (TASK-0057), контракт `LAYER_CONTRACT.md` r11 §4.1–§4.1b (C-B; #99, #111, #115, #117, #128). Источники по истории внедрения — `docs/research/notes/process-introduction-sources.md`. Карточка гипотезы `development/hypotheses/HYP-0004-introduction-channel.md` — вне зоны simulation-engineer, её текст передан Orchestrator.

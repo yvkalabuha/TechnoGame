@@ -14,6 +14,7 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: "DECISIONS_LOG #119"
 created: 2026-11-03
+tags: [task, core, economy, done]
 ---
 
 # TASK-0020 — Industry и Kernel под контракт v2.4: правило культуры C-B, наладка производства

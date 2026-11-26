@@ -1,3 +1,6 @@
+---
+tags: [review, science, external-llm, done]
+---
 # Gate: research-institutes-priorities.md — DeepSeek third voice
 
 ```

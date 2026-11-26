@@ -15,6 +15,7 @@ approved_at: 2026-11-24
 approval_ref: "#426, #442"
 review_ref: "reviewer: APPROVE (branch ad14f255); codex: 3 returns, waived per #432, findings in DEBT-0082; landed 501fbf2"
 created: 2026-11-24
+tags: [task, visual, map, done]
 ---
 
 # TASK-0137 — Объём и атмосфера глобуса: прототип трёх вариантов

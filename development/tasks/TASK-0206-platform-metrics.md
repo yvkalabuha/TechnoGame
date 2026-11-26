@@ -15,6 +15,7 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #593"
 review_ref: "reviewer: APPROVE ea8b6821; codex: 3 rounds, waived per owner #592 (DEBT-0120)"
 created: 2026-11-26
+tags: [task, platform, knowledge-base, done]
 ---
 
 # TASK-0206 — Platform metrics in PostgreSQL: sessions, agents, LLM calls, landings, task flow, owner waits, errors; kb_db report (#593)

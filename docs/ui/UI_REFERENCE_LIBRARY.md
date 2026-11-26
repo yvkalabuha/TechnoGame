@@ -1,3 +1,6 @@
+---
+tags: [research, ui, visual, active]
+---
 # UI REFERENCE LIBRARY — библиотека референсов
 
 **Статус:** v0.2 — к предложению `UI_ART_DIRECTION.md` v0.2 (добавлен §4) · **Автор:** ui-art-director · **Дата доступа ко всем ссылкам:** 2026-11-03
