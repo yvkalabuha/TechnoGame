@@ -48,8 +48,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import kbdocs  # noqa: E402
-import kblog  # noqa: E402
 import registry  # noqa: E402
 
 FACTS = ROOT / "development" / "FACTS.yaml"
@@ -89,6 +87,65 @@ FACTS_OK = re.compile(r"facts-ok:\s*((?:#\d+[\s,]*)+)", re.I)
 # Logs that change every day: a fact citing them is not re-checked on every new row.
 NOT_SOURCES = {"docs/decisions/DECISIONS_LOG.md", "docs/decisions/ORCH_DECISIONS.md"}
 STALE_DAYS = 30
+
+
+# ---------------------------------------------------------------- journal layout (#599, kblog.py)
+# The decisions log and the debt table live in several files; this is their one reader (kblog.py re-exports it,
+# kb_db, metrics and kb_guard use it). It stays here so that kb_check works when copied with registry.py alone.
+
+JOURNAL_DECISIONS = "docs/decisions/DECISIONS_LOG.md"
+JOURNAL_LOG_DIR = "docs/decisions/log"
+JOURNAL_DEBT = "development/TECH_DEBT.md"
+JOURNAL_DEBT_ARCHIVE = "development/archive/TECH_DEBT-closed.md"
+LOG_FILE = re.compile(r"^docs/decisions/log/(archive-\d{4}-\d{4}|\d{4}-\d{2})\.md$")
+
+
+def _git_out(root: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=30, errors="replace")
+
+
+def decision_paths(root: Path = ROOT, rev: str | None = None) -> list[str]:
+    """Files of the decisions log in read order: archives, months, then DECISIONS_LOG.md; rev: a git revision."""
+    if rev:
+        r = _git_out(root, "ls-tree", "-r", "--name-only", rev, "--", "docs/decisions")
+        names = set(r.stdout.split()) if r.returncode == 0 else set()
+    else:
+        names = {p.relative_to(root).as_posix() for p in (root / JOURNAL_LOG_DIR).glob("*.md")}
+        if (root / JOURNAL_DECISIONS).exists():
+            names.add(JOURNAL_DECISIONS)
+    logs = sorted(p for p in names if LOG_FILE.match(p))
+    arch = [p for p in logs if "/archive-" in p]
+    return arch + [p for p in logs if p not in arch] + ([JOURNAL_DECISIONS] if JOURNAL_DECISIONS in names else [])
+
+
+def debt_paths(root: Path = ROOT, rev: str | None = None) -> list[str]:
+    if rev:
+        r = _git_out(root, "ls-tree", "-r", "--name-only", rev, "--", JOURNAL_DEBT, JOURNAL_DEBT_ARCHIVE)
+        names = set(r.stdout.split()) if r.returncode == 0 else set()
+    else:
+        names = {p for p in (JOURNAL_DEBT_ARCHIVE, JOURNAL_DEBT) if (root / p).exists()}
+    return [p for p in (JOURNAL_DEBT_ARCHIVE, JOURNAL_DEBT) if p in names]
+
+
+def journal_sources(kind: str, root: Path = ROOT, rev: str | None = None) -> list[tuple[str, str]]:
+    """(path, text) of every file of the journal ('decisions' or 'debt') in read order."""
+    out = []
+    for p in (decision_paths(root, rev) if kind == "decisions" else debt_paths(root, rev)):
+        if rev:
+            r = _git_out(root, "show", f"{rev}:{p}")
+            out.append((p, r.stdout if r.returncode == 0 else ""))
+        else:
+            out.append((p, (root / p).read_text(encoding="utf-8")))
+    return out
+
+
+def journal_text(kind: str, root: Path = ROOT, rev: str | None = None) -> str:
+    """All files of the journal joined, so a parser of one file reads the whole journal."""
+    return "\n".join(t for _, t in journal_sources(kind, root, rev))
+
+
+def is_decisions_file(rel_: str) -> bool:
+    return rel_ == JOURNAL_DECISIONS or bool(LOG_FILE.match(rel_))
 
 
 def decision_rows(text: str) -> dict[int, str]:
@@ -184,11 +241,11 @@ def last_change(paths: list[str], root: Path = ROOT) -> dt.date | None:
 
 def known_ids() -> dict[str, set[str] | int]:
     items = {i.id for i in registry.load_items([])}
-    dec = [int(m) for m in re.findall(r"^\| (\d+) \|", kblog.text("decisions", ROOT), re.M)]
+    dec = [int(m) for m in re.findall(r"^\| (\d+) \|", journal_text("decisions", ROOT), re.M)]
     def table(path: Path, pat: str) -> set[str]:
         return set(re.findall(pat, path.read_text(encoding="utf-8"), re.M)) if path.exists() else set()
     return {"items": items, "max_decision": max(dec) if dec else 0,
-            "debt": set(re.findall(r"^\| (DEBT-\d{4}) ", kblog.text("debt", ROOT), re.M)), "risk": table(RISKS, r"^\| (RISK-\d{4}) "),
+            "debt": set(re.findall(r"^\| (DEBT-\d{4}) ", journal_text("debt", ROOT), re.M)), "risk": table(RISKS, r"^\| (RISK-\d{4}) "),
             "orch": table(ORCH, r"^\| (O-\d{3}) ")}
 
 
@@ -283,7 +340,7 @@ def check_facts(facts: list[dict], errors: list[str], warnings: list[str], decis
     """Drift and superseded sources are errors (#597); a source changed after `reviewed:` is a warning.
     drift_is_error=False (pre-commit without FACTS.yaml staged) reports drift as a warning: CI and landing judge it."""
     if decisions is None:
-        decisions = decision_rows(kblog.text("decisions", ROOT))
+        decisions = decision_rows(journal_text("decisions", ROOT))
     for f in facts:
         why = probe_drift(f)
         if why:
@@ -334,6 +391,7 @@ def link_target_ok(target: str, ids: dict, root: Path = ROOT, doc: str = "") -> 
 def check_doc_header(rel_: str, text: str, ids: dict, vocab: dict, overrides: dict,
                      errors: list[str], missing: list[str]) -> None:
     """Tags and header links of one document in the tag scope (kbdocs.in_scope)."""
+    import kbdocs
     meta, _ = kbdocs.split_front(text)
     tags = kbdocs.doc_tags(rel_, meta, overrides)
     if tags is None:
@@ -349,6 +407,8 @@ def check_structure(only: list[str] | None, ids: dict, errors: list[str], warnin
                     today: dt.date, single: bool = False) -> None:
     """#599, #600: tags, header links, journal duplicates and size limits. only=None checks everything
     (check), else the given repository paths (--file, --staged)."""
+    import kbdocs  # here, not at the top: landing needs only kb_check.py and registry.py
+    import kblog
     vocab, overrides = kbdocs.load_vocab(ROOT)
     if only is None or kbdocs.TAGS_FILE in only:
         errors += kbdocs.vocab_problems(ROOT)
@@ -364,7 +424,7 @@ def check_structure(only: list[str] | None, ids: dict, errors: list[str], warnin
         warnings.append(f"{missing[0]}: no tags: in the header (3-6 tags from {kbdocs.TAGS_FILE}, #599)")
     elif missing:
         warnings.append(f"{len(missing)} of {len(scope)} documents have no tags (#599), e.g. {', '.join(missing[:3])}")
-    if only is None or any(kblog.is_decisions_file(p) or p in (kblog.DEBT, kblog.DEBT_ARCHIVE) for p in only):
+    if only is None or any(is_decisions_file(p) or p in (JOURNAL_DEBT, JOURNAL_DEBT_ARCHIVE) for p in only):
         for kind in ("decisions", "debt"):
             for key, files in sorted(kblog.duplicates(kind, ROOT).items()):
                 errors.append(f"{kind} {'#' if kind == 'decisions' else ''}{key} is in {', '.join(files)}: keep one row "
@@ -432,7 +492,7 @@ def cmd_related(args) -> int:
         print(f"FACT {f['id']}: {f['statement']}  [{f.get('source', '')}]")
         shown += 1
     rows = list({n: (n, d, b) for n, d, b in re.findall(r"^\| (\d+) \| (\S+) \| (.*?) \| [^|]*\|\s*$",
-                                                       kblog.text("decisions", ROOT), re.M)}.values())
+                                                       journal_text("decisions", ROOT), re.M)}.values())
     scored = []
     for num, date, body in rows:
         low = body.lower()
@@ -470,7 +530,7 @@ def cmd_stale(args) -> int:
 
 def cmd_decision_facts(args) -> int:
     """Facts related to the given decision rows (kb_guard after a write of the decisions log)."""
-    rows = decision_rows(kblog.text("decisions", ROOT))
+    rows = decision_rows(journal_text("decisions", ROOT))
     facts = load_facts()
     for n in args.nums:
         rel_ = related_facts(rows.get(n, ""), facts, DECISION_MIN_HITS)
@@ -511,8 +571,8 @@ def landing_problems(repo: Path, base: str, head: str, message: str = "") -> lis
         if why:
             out.append(f"fact '{f.get('id')}' drifts on the branch head: {why}. Update development/FACTS.yaml "
                        "or the code before landing")
-    old = decision_rows(kblog.text("decisions", repo, base))  # all files of the log, old or new layout
-    added = {n: b for n, b in decision_rows(kblog.text("decisions", repo, head)).items() if n not in old}
+    old = decision_rows(journal_text("decisions", repo, base))  # all files of the log, old or new layout
+    added = {n: b for n, b in decision_rows(journal_text("decisions", repo, head)).items() if n not in old}
     if not added:
         return out
     before = facts_at(repo, base)

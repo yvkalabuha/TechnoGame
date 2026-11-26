@@ -19,22 +19,21 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+import kb_check  # a sibling: on sys.path when run as a script or imported by the tools here
 
-DECISIONS = "docs/decisions/DECISIONS_LOG.md"
-LOG_DIR = "docs/decisions/log"
+ROOT = kb_check.ROOT
+DECISIONS = kb_check.JOURNAL_DECISIONS
+LOG_DIR = kb_check.JOURNAL_LOG_DIR
 ARCHIVE_UPTO = 400
 DECISIONS_ARCHIVE = f"{LOG_DIR}/archive-0001-{ARCHIVE_UPTO:04d}.md"
-DEBT = "development/TECH_DEBT.md"
-DEBT_ARCHIVE = "development/archive/TECH_DEBT-closed.md"
+DEBT = kb_check.JOURNAL_DEBT
+DEBT_ARCHIVE = kb_check.JOURNAL_DEBT_ARCHIVE
 KEEP = 12  # rows left in DECISIONS_LOG.md after a rollover (the PreCompact checkpoint shows the last 12)
 
-LOG_FILE = re.compile(r"^docs/decisions/log/(archive-\d{4}-\d{4}|\d{4}-\d{2})\.md$")
-MONTH_FILE = re.compile(r"^docs/decisions/log/\d{4}-\d{2}\.md$")
+LOG_FILE = kb_check.LOG_FILE
 DECISION_START = re.compile(r"^\| (\d+) \|")
 DEBT_START = re.compile(r"^\| (DEBT-\d{4}) \|")
 INDEX_START = "<!-- kblog:index:start -->"
@@ -44,61 +43,10 @@ DEBT_HEAD = "| ID | Долг | Где | Почему допущен | План |
 Q = "\x60"  # backtick
 
 
-# ---------------------------------------------------------------- reading
+# ---------------------------------------------------------------- reading (kb_check owns the reader)
 
-
-def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=30, errors="replace")
-
-
-def _order(names) -> list[str]:
-    """Decision files in read order: archives, months, then the main file."""
-    logs = sorted(p for p in names if LOG_FILE.match(p))
-    arch = [p for p in logs if "/archive-" in p]
-    return arch + [p for p in logs if p not in arch] + ([DECISIONS] if DECISIONS in names else [])
-
-
-def decision_paths(root: Path = ROOT, rev: str | None = None) -> list[str]:
-    if rev:
-        r = _git(root, "ls-tree", "-r", "--name-only", rev, "--", "docs/decisions")
-        names = set(r.stdout.split()) if r.returncode == 0 else set()
-    else:
-        names = {p.relative_to(root).as_posix() for p in (root / LOG_DIR).glob("*.md")}
-        if (root / DECISIONS).exists():
-            names.add(DECISIONS)
-    return _order(names)
-
-
-def debt_paths(root: Path = ROOT, rev: str | None = None) -> list[str]:
-    if rev:
-        r = _git(root, "ls-tree", "-r", "--name-only", rev, "--", DEBT, DEBT_ARCHIVE)
-        names = set(r.stdout.split()) if r.returncode == 0 else set()
-    else:
-        names = {p for p in (DEBT_ARCHIVE, DEBT) if (root / p).exists()}
-    return [p for p in (DEBT_ARCHIVE, DEBT) if p in names]
-
-
-def _read(root: Path, rev: str | None, path: str) -> str:
-    if rev:
-        r = _git(root, "show", f"{rev}:{path}")
-        return r.stdout if r.returncode == 0 else ""
-    p = root / path
-    return p.read_text(encoding="utf-8") if p.exists() else ""
-
-
-def sources(kind: str, root: Path = ROOT, rev: str | None = None) -> list[tuple[str, str]]:
-    """(path, text) of every file of the journal ('decisions' or 'debt') in read order; rev reads a git revision."""
-    paths = decision_paths(root, rev) if kind == "decisions" else debt_paths(root, rev)
-    return [(p, _read(root, rev, p)) for p in paths]
-
-
-def text(kind: str, root: Path = ROOT, rev: str | None = None) -> str:
-    """All files of the journal joined, so a parser of one file reads the whole journal."""
-    return "\n".join(t for _, t in sources(kind, root, rev))
-
-
-def is_decisions_file(rel: str) -> bool:
-    return rel == DECISIONS or bool(LOG_FILE.match(rel))
+from kb_check import (debt_paths, decision_paths, is_decisions_file, journal_sources as sources,  # noqa: E402,F401
+                      journal_text as text)
 
 
 def duplicates(kind: str, root: Path = ROOT) -> dict[str, list[str]]:
