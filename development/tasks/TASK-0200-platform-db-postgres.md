@@ -37,6 +37,8 @@ created: 2026-11-26
 
 ## Результат
 <!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано: `tools/development/kb_db.py` (build|q|sql|status), драйвер — команда psql (без новых зависимостей), база `singularity_kb` на сокете, peer-аутентификация. Таблицы: items, item_links, decisions (superseded_by по тексту «отменяет #N»), orch_decisions, debt, questions, errors (из development/errors.yaml, если есть), agent_runs, журналы hook_refusals и land_failures (не пересобираются, мягкое удаление deleted_at). Полнотекстовый поиск russian + simple, индексы по status/agent/type/priority/area/date. `q` пересобирает сам по отпечатку (имя, mtime, размер файлов). `registry.py index` вызывает build тихо. Тесты: `tools/development/test_kb_db.py` (парсеры и компилятор запросов без базы, 6 тестов на временной базе пропускаются без PostgreSQL), шаг kb_db в verify.py.
+Проверка: полная пересборка 1,7 с (267 задач, 586 решений, 117 долгов); 18 тестов зелёные, с недоступным сокетом — 12 прошли, 6 пропущены. Не проверено: errors и agent_runs на реальных данных (errors.yaml и agents.jsonl нет в этой ветке/копии); автозаполнение журналов отказов хуков и посадок — нет источника (хуки и errors.py не трогались).
 
 ## Цель
 Решение #590: быстрые выборки по записям платформы без чтения больших файлов. Источник правды — файлы в git; база — производный индекс.

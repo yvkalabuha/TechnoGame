@@ -393,6 +393,11 @@ def cmd_index(_args) -> int:
         if ACTIVE_START in text:
             CURRENT_STATE.write_text(replace_active_block(text, items), encoding="utf-8")
     print(f"index written ({len(items)} items)")
+    try:  # the PostgreSQL index is derived and optional: absence is not an error
+        import kb_db
+        kb_db.build_quiet()
+    except Exception:
+        pass
     for e in errors:
         print("  warning:", e)
     return 0
