@@ -3,8 +3,10 @@
 
   python3 tools/development/shot_batch.py
 
-A task joins the batch when its status is REVIEW or IN_PROGRESS, its category is client and its frontmatter has
+A client task in REVIEW or IN_PROGRESS must carry
   shots: {branch: <branch name>, only: "frame_a,frame_b*"}
+or a list of such maps; an entry may add flags: "--map-frames" (default "--shots"). A task without the field is
+listed as SKIP "missing shots field", never dropped silently.
 For each such task the script checks that the branch
   - contains f12684f (the new model: slot science core, golden train 2026-11-26);
   - is not behind main in the client sources (no commit of main touching src/Singularity.Client.Spike is missing).
@@ -59,27 +61,33 @@ def check_branch(branch: str) -> str | None:
     if behind:
         return f"behind main in client sources ({len(behind.splitlines())} commit(s)): merge main"
     if not worktree_of(branch):
-        return f"no worktree: git worktree add ../shots-{branch.replace('/', '-')} {branch}"
+        return f"no worktree: git worktree add ../shots-{branch.replace('/', '-')} {shlex.quote(branch)}"
     return None
 
 
 def collect(items) -> list[dict]:
     rows = []
     for it in sorted(items, key=lambda i: i.id):
-        shots = it.meta.get("shots")
-        if (it.meta.get("status") not in WAITING or it.meta.get("category") != "client"
-                or not isinstance(shots, dict)):
+        if it.meta.get("status") not in WAITING or it.meta.get("category") != "client":
             continue
-        branch, only = str(shots.get("branch") or ""), str(shots.get("only") or "")
-        problem = None if branch and only else "shots needs both branch and only"
-        problem = problem or check_branch(branch)
-        rows.append({"id": it.id, "branch": branch, "only": only, "problem": problem})
+        shots = it.meta.get("shots")
+        entries = shots if isinstance(shots, list) else [shots] if isinstance(shots, dict) else []
+        if not entries:
+            rows.append({"id": it.id, "branch": "", "only": "", "flags": "", "problem": "missing shots field"})
+        for s in entries:
+            s = s if isinstance(s, dict) else {}
+            branch, only = str(s.get("branch") or ""), str(s.get("only") or "")
+            flags = str(s.get("flags") or "--shots")
+            problem = None if branch and only else "shots needs both branch and only"
+            problem = problem or check_branch(branch)
+            rows.append({"id": it.id, "branch": branch, "only": only, "flags": flags, "problem": problem})
     return rows
 
 
 def command(row: dict) -> str:
     wt = worktree_of(row["branch"])
-    return f"(cd {shlex.quote(wt)} && {LAUNCHER} --shots --only {shlex.quote(row['only'])})"
+    flags = " ".join(shlex.quote(f) for f in shlex.split(row["flags"]))
+    return f"(cd {shlex.quote(wt)} && {LAUNCHER} {flags} --only {shlex.quote(row['only'])})"
 
 
 def main() -> int:

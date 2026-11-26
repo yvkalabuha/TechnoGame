@@ -201,12 +201,17 @@ class WatchActionsTest(unittest.TestCase):
     def test_replacement_agent_after_stop_suppresses_to_review(self):
         ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
               self.started("b", 1)]
-        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{}]}), {})
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{"name": "worktree-agent-a"}]}), {})
+
+    def test_foreign_branch_does_not_trigger_to_review(self):
+        ev = [self.started("a", 1), {"event": "stop", "agent_id": "a", "t": self.NOW}]
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"},
+                                   {"TASK-0001": [{"name": "worktree-agent-zzz"}]}), {})
 
     def test_stopped_in_progress_with_unlanded_branch_goes_to_review(self):
         ev = [self.started("a", 1), {"event": "stop", "agent_id": "a", "t": self.NOW}]
-        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{}]}), {"a": "to-review"})
-        self.assertEqual(self.acts(ev, {"TASK-0001": "REVIEW"}, {"TASK-0001": [{}]}), {})
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{"name": "worktree-agent-a"}]}), {"a": "to-review"})
+        self.assertEqual(self.acts(ev, {"TASK-0001": "REVIEW"}, {"TASK-0001": [{"name": "worktree-agent-a"}]}), {})
         self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {}), {})
 
 
@@ -262,6 +267,15 @@ class AutopilotTest(unittest.TestCase):
     def run_tool(self, script, *args):
         return subprocess.run([sys.executable, str(ROOT / "tools/development" / script), *args],
                               capture_output=True, text=True, env=self.env)
+
+    def test_corrupt_state_reads_as_stopped_and_write_is_atomic(self):
+        self.state.parent.mkdir(parents=True)
+        self.state.write_text("{not json")
+        self.assertIn("autopilot stopped", self.run_tool("capacity.py").stdout)
+        self.assertIn("unreadable", self.run_tool("autopilot.py", "status").stdout)
+        self.run_tool("autopilot.py", "on")
+        self.assertEqual(json.loads(self.state.read_text())["state"], "on")
+        self.assertEqual([p.name for p in self.state.parent.iterdir()], ["autopilot.json"])
 
     def test_stop_zeroes_capacity_and_on_restores_default(self):
         self.assertEqual(self.run_tool("autopilot.py", "status", "--brief").stdout, "")
@@ -329,8 +343,25 @@ class ShotBatchTest(unittest.TestCase):
                  It("TASK-4", status="REVIEW", category="client"),
                  It("TASK-5", status="IN_PROGRESS", category="client", shots={"branch": "old", "only": "y"})]
         rows = shot_batch.collect(items)
-        self.assertEqual([(r["id"], r["problem"] is None) for r in rows], [("TASK-1", True), ("TASK-5", False)])
+        self.assertEqual([(r["id"], r["problem"] is None) for r in rows], [("TASK-1", True), ("TASK-4", False), ("TASK-5", False)])
         self.assertIn("--shots --only 'x*'", shot_batch.command(rows[0]))
+
+    def test_missing_field_listed_and_list_form_with_flags(self):
+        class It:
+            def __init__(s, i, **m):
+                s.id, s.meta = i, m
+        items = [It("TASK-1", status="REVIEW", category="client"),
+                 It("TASK-2", status="REVIEW", category="client", shots=[
+                     {"branch": "fresh", "only": "tech_s1_*"},
+                     {"branch": "fresh", "only": "map1945_*", "flags": "--map-frames"}])]
+        rows = shot_batch.collect(items)
+        self.assertEqual([(r["id"], r["problem"]) for r in rows],
+                         [("TASK-1", "missing shots field"), ("TASK-2", None), ("TASK-2", None)])
+        self.assertIn("--map-frames --only 'map1945_*'", shot_batch.command(rows[2]))
+
+    def test_recovery_command_quotes_branch(self):
+        self.g("branch", "a&b")
+        self.assertIn("'a&b'", shot_batch.check_branch("a&b"))
 
 
 if __name__ == "__main__":

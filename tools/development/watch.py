@@ -20,7 +20,8 @@ What it reports:
 --actions prints one action per tracked agent (a launched agent has an agent_id in the log):
   ping              no stop record for more than --ping-hours: ask it for a status (SendMessage);
   stop+redispatch   no stop record for more than --stop-hours: TaskStop, then redispatch on its branch;
-  to-review         it stopped, its task is still IN_PROGRESS and its branch has commits not in main:
+  to-review         it stopped, its task is still IN_PROGRESS and its own branch (worktree-agent-<agent_id>)
+                    has commits not in main:
                     start the reviewer at once.
 Agents that run within the thresholds, or whose work is accounted for, print nothing.
 
@@ -139,7 +140,9 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
         action = None
         if key not in stopped:
             action = "stop+redispatch" if h > stop_h else "ping" if h > ping_h else None
-        elif any(status_of.get(t) == "IN_PROGRESS" and unlanded.get(t) for t in tasks) and not any(
+        elif any(status_of.get(t) == "IN_PROGRESS"
+                 and any(b.get("name") == f"worktree-agent-{key}" for b in unlanded.get(t, []))
+                 for t in tasks) and not any(
                 o is not e and o.get("t", 0.0) > stopped[key] and set(agent_task(o)[0]) & set(tasks)
                 for o in started.values()):  # a newer agent on the same task is the replacement
             action = "to-review"

@@ -22,11 +22,17 @@ def state_path() -> Path:
 
 
 def read() -> dict:
-    try:
-        d = json.loads(state_path().read_text(encoding="utf-8"))
-        return d if isinstance(d, dict) else {}
-    except (OSError, ValueError):
+    """{} when never switched; an unreadable or corrupt file reads as stopped (fail safe)."""
+    p = state_path()
+    if not p.exists():
         return {}
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(d, dict) and d.get("state") in ("on", "stop"):
+            return d
+    except (OSError, ValueError):
+        pass
+    return {"state": "stop", "since": "?", "corrupt": True}
 
 
 def is_stopped() -> bool:
@@ -36,15 +42,18 @@ def is_stopped() -> bool:
 def write(state: str) -> None:
     p = state_path()
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps({"state": state, "since": time.strftime("%Y-%m-%d %H:%M", time.localtime())}),
-                 encoding="utf-8")
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps({"state": state, "since": time.strftime("%Y-%m-%d %H:%M", time.localtime())}),
+                   encoding="utf-8")
+    os.replace(tmp, p)  # atomic: a reader never sees a half-written file
 
 
 def describe() -> str:
     d = read()
     if not d:
         return "autopilot: on (never switched)"
-    return f"autopilot: {d.get('state', '?')} since {d.get('since', '?')}"
+    note = " (state file unreadable: treated as stopped)" if d.get("corrupt") else ""
+    return f"autopilot: {d.get('state', '?')} since {d.get('since', '?')}{note}"
 
 
 def main() -> int:
