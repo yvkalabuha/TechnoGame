@@ -56,7 +56,26 @@ public sealed record ActorView(
     ImmutableArray<ResearchView> Research = default,
     int UnknownNodes = 0,
     LicenceMarketView? Market = null,
-    ImmutableArray<InstituteView> Institutes = default);
+    ImmutableArray<InstituteView> Institutes = default,
+    SlotScienceView? Slots = null);
+
+/// <summary>One institute against a node (§3.1, <c>FitInstitutes</c>): the overlap level, the speed and the months it would take, what it works on now (0 = free).</summary>
+public readonly record struct InstituteFitView(int Slot, string InstituteId, bool Standing, Fx6 Overlap, Fx6 Speed, Fx6 Months, int WorkingNode, bool NoOverlap);
+
+/// <summary>A focus level of a node (<c>FocusQuote</c>): months left, money per month and the price of the rest of the node at that level.</summary>
+public readonly record struct FocusQuoteView(int Level, Fx6 Months, Fx6 FlowPerMonth, Fx6 Price);
+
+/// <summary>A node of a path to a goal: months at the speed of the best institute, the price of what is left, and whether it can start now.</summary>
+public readonly record struct PathNodeView(int Node, Fx6 Months, Fx6 Price, bool InFrontier);
+
+/// <summary>The unknown nodes on the way to a goal and the time of the whole way with the standing institutes working in parallel (a range, §4.3); nothing is started by reading it.</summary>
+public sealed record PathView(ImmutableArray<PathNodeView> Nodes, Fx6 MonthsMin, Fx6 MonthsMax, int LongestChainEnd);
+
+/// <summary>
+/// The slot science model of an actor (SCIENCE_SLOTS §12), null without it: institutes standing and free, the coverage <c>u</c> of the asked money, the money returned to the budget
+/// (O-089b), the air power index MPI (= <c>FleetValue</c>, every month) and its ratio to the best rival (#565: parity 1, superiority 1.5, dominance 2), and the speed cap.
+/// </summary>
+public sealed record SlotScienceView(int InstituteCount, int FreeInstituteCount, Fx6 Coverage, Fx6 ReturnedToBudget, Fx6 Mpi, Fx6 MpiRatio, Fx6 SpeedCap, long FreeNoticeMonth = -1);
 
 /// <summary>
 /// An institute of an actor (empty array without institutes): <see cref="Id"/> is the data ID, <see cref="Levels"/> the level 0..4 per discipline of the scenario (0 = hidden in the card, #489),
@@ -64,7 +83,8 @@ public sealed record ActorView(
 /// and <see cref="BuildMonths"/> its length, <see cref="ProposedGoal"/> / <see cref="ProposesBuild"/> what the AI would do (the adviser: filled for the actor of the player, whose slots the AI does not touch), <see cref="BuildRate"/> the share of the research money it takes per month while it runs (for a candidate not yet started: the price if started now; 0 for a standing institute), <see cref="RefYear"/> the historical year.
 /// </summary>
 public sealed record InstituteView(int Slot, string Id, bool Standing, int Goal, ImmutableArray<int> Levels, long BuildStart, int BuildMonths, Fx6 BuildRate, int RefYear, int TotalLevels,
-    int ProposedGoal = 0, bool ProposesBuild = false);
+    int ProposedGoal = 0, bool ProposesBuild = false,
+    int Active = 0, ImmutableArray<int> Queue = default, int FocusLevel = 0, Fx6 ActiveProgress = default, Fx6 MonthsLeft = default, ImmutableArray<int> DirLevels = default);
 
 /// <summary>A research in progress (TASK-0119): a frontier node with accumulated progress. <see cref="Have"/> against <see cref="Need"/> is the scale of the why_not link;
 /// <see cref="Threshold"/> is a hazard node at its threshold, where its discovery is a draw, not certain.</summary>

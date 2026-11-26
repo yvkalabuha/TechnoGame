@@ -20,7 +20,7 @@ public sealed class ObservablesWalk
     public ObservablesWalk(int cell)
     {
         // The walk looks for closes with reasons by month 200: tuned on the 61-node data (the G5/G6 data moves them past the walk) with the ahead-of-time cost off (TASK-0147: with the default cost the events of the scan fall on other months).
-        SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = 5, ProfileCell = cell, Threads = 2, LicKnows = true });
+        SliceSession s = SliceTestData.CreateLegacyNeutral(SliceRunConfig.Legacy with { Seed = 5, ProfileCell = cell, Threads = 2, LicKnows = true });
         SliceWorld w = s.World;
         for (long t = 0; t < Months; t++)
         {
@@ -185,7 +185,7 @@ public class ObservablesTests
         // shows the Requirement the step saw. Later yearly months are paired inside one view (Decisions of month t and Requirement of t).
         foreach (int cell in Enumerable.Range(0, 27))
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 5, ProfileCell = cell });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 5, ProfileCell = cell });
             SliceView initial = s.View;
             Assert.Equal(-1, initial.Month);
             s.StepThroughMonth(0);
@@ -224,7 +224,7 @@ public class ObservablesTests
     [Fact]
     public void Step_IsNullBeforeTheFirstStep_InAnEmptyTick_AndInACommandTick_AndSetInAMonthlyTick()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
         Assert.Null(s.View.Step);
         Assert.Null(s.View.Inputs);
         s.StepThroughMonth(0);
@@ -244,8 +244,8 @@ public class ObservablesTests
     [Fact]
     public void Step_AndRequirement_InCalibrationMode_StepIsThereAndRequirementIsNot()
     {
-        SliceSession calib = SliceTestData.Create(new SliceRunConfig { Seed = 3, ViewMode = SliceViewMode.Calibration });
-        SliceSession full = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        SliceSession calib = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ViewMode = SliceViewMode.Calibration });
+        SliceSession full = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
         for (long t = 0; t < 25; t++)
         {
             calib.StepThroughMonth(t);
@@ -261,7 +261,7 @@ public class ObservablesTests
     [Fact]
     public void WithoutTheProductAi_ThereIsNoRequirement_ButTheMoneyStepIsThere()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false });
         s.StepThroughMonth(0);
         Assert.All(s.View.Inputs!.Actors, a => Assert.Null(a.Requirement));
         Assert.All(s.View.Step!.Actors, a => Assert.NotNull(a.Money));
@@ -273,7 +273,7 @@ public class ObservablesTests
     {
         foreach (LayerControl layer in new[] { LayerControl.Full, LayerControl.Lk0, LayerControl.Lc0 })
         {
-            var cfg = new SliceRunConfig { Seed = 3, Layer = layer };
+            var cfg = SliceRunConfig.Legacy with { Seed = 3, Layer = layer };
             SliceSession s = layer == LayerControl.Lk0 ? SliceTestData.CreateLegacy(cfg) : SliceTestData.Create(cfg);   // L_K0 covers G1-G4 only
             s.StepThroughMonth(2);
             Assert.All(s.View.Actors, a => Assert.All(a.Nodes, n => Assert.Null(n.KnownSince)));
@@ -286,7 +286,7 @@ public class ObservablesTests
     {
         string Run(int threads, int chunk)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 9, LicKnows = true, Threads = threads, ChunkSize = chunk });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 9, LicKnows = true, Threads = threads, ChunkSize = chunk });
             var sb = new System.Text.StringBuilder();
             for (long t = 0; t < 30; t++)
             {

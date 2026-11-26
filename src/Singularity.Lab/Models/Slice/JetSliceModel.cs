@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 26;
+    public const int SurfaceVersion = 28;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -242,9 +242,22 @@ public sealed class JetSliceModel : ISessionModel
             : p.Levers is { Eta: true } ? [.. SliceTables.Full, LeverSpec.EtaTable] : SliceTables.Full;
         if (p.Institutes is { Probe: true })
             MetricTables = [.. MetricTables, InstituteSpec.GoalTable, InstituteSpec.BuildTable];
+        if (p.MarketProbe)
+            MetricTables = [.. MetricTables, MarketProbe.Table];
     }
 
     public IReadOnlyList<MetricTableSpec> MetricTables { get; }
+
+    // The index of a probe table by name: the probes append their tables in a fixed order, so a position counted from the end is wrong as soon as two are on.
+    private int TableIndex(MetricTableSpec table)
+    {
+        for (int i = 0; i < MetricTables.Count; i++)
+        {
+            if (MetricTables[i].Name == table.Name)
+                return i;
+        }
+        throw new InvalidOperationException($"The metric table {table.Name} is not in this run.");
+    }
 
     public SessionRunResult Run(IMetricSink sink)
     {
@@ -263,9 +276,10 @@ public sealed class JetSliceModel : ISessionModel
         // TASK-0173: the scripted institute player and the P-7/P-8 probes; null without INST_* keys, so those runs are unchanged.
         bool probe = _p.Institutes is { Probe: true };
         InstituteScript? inst = _p.Institutes is { } ispec
-            ? new InstituteScript(s, ispec, sink, probe ? MetricTables.Count - 2 : -1, probe ? MetricTables.Count - 1 : -1)
+            ? new InstituteScript(s, ispec, sink, probe ? TableIndex(InstituteSpec.GoalTable) : -1, probe ? TableIndex(InstituteSpec.BuildTable) : -1)
             : null;
         inst?.Issue(0);
+        MarketProbe? market = _p.MarketProbe ? new MarketProbe(s, sink, TableIndex(MarketProbe.Table)) : null;
         observer.Start(s.View);
         int logSeen = 0;
         for (long t = 0; t < months; t++)
@@ -277,6 +291,7 @@ public sealed class JetSliceModel : ISessionModel
             inst?.BeforeStep(t);
             s.Step(1);
             observer.Month(snapshot, s.View, t);
+            market?.Observe(snapshot, s.View, t);
             if (levers is not null)
             {
                 levers.Observe(t);

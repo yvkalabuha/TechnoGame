@@ -27,7 +27,7 @@ public class AlloyStatesFromSessionTests
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5, 6, 7, 8 })
         {
             var s = SliceSession.Create(data, new SliceRunConfig { Seed = seed });
-            for (long t = 0; t < 200; t++)
+            for (long t = 0; t < 320; t++)   // 200 before #575 (57 new nodes slow the jet chain)
             {
                 s.StepThroughMonth(t);
                 foreach (var a in s.View.Actors)

@@ -69,14 +69,14 @@ public sealed class SimHost : IDisposable
     public SliceLayoutView Layout { get; private set; }
     public bool Ready => _snap != null;
 
-    readonly int _seed; readonly GameData _preloaded;
+    readonly int _seed; readonly GameData _preloaded; readonly string _playerActorId;
     /// <summary>Hash of the initial state (tick 0): two starts with the same seed and scenario must give the same value.</summary>
     public int Seed => _seed;
     public string StartHash { get; private set; } = "";
 
     /// <param name="seed">World seed (default 7, as the spikes before the menu).</param>
     /// <param name="data">Mods already loaded by the menu; null = load here.</param>
-    public SimHost(int seed = 7, GameData data = null) { _seed = seed; _preloaded = data; _thread = new Thread(Run) { IsBackground = true, Name = "sim" }; }
+    public SimHost(int seed = 7, GameData data = null, string playerActorId = null) { _seed = seed; _preloaded = data; _playerActorId = playerActorId; _thread = new Thread(Run) { IsBackground = true, Name = "sim" }; }
     public void Start() => _thread.Start();
 
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
@@ -131,7 +131,10 @@ public sealed class SimHost : IDisposable
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
             Data = _preloaded ?? ModLoader.Load(Path.Combine(root, "mods", "core"));
             _status = "status.session";
-            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed });
+            // The player's actor: the institutes and the product lines of it are only proposed by the AI (the adviser), its licences move by commands.
+            int player = _playerActorId == null ? -1 : Data.Scenario(SliceRunConfig.DefaultScenario).ActorIndex(_playerActorId);
+            SliceRunConfig config = SliceRunConfig.ForClient((ulong)_seed, player);
+            _session = SliceSession.Create(Data, config);
             Layout = _session.Layout;
             StartHash = _session.LastHash;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
@@ -179,6 +182,7 @@ public sealed class SimHost : IDisposable
         for (long i = 0; i < ticks && !_stop; i++)
         {
             _session.Step(1);
+            FillFreeInstitutes();
             if (_pending > 0)
             {
                 // A tick applies every accepted command: the last result becomes «applied» only if it is still the pending one
@@ -190,6 +194,18 @@ public sealed class SimHost : IDisposable
         }
         _lastTickMs = ticks > 0 ? sw.Elapsed.TotalMilliseconds / ticks : 0;
         Publish();
+    }
+
+    long _filledMonth = -2;
+
+    // The client has no research screen of its own yet (TASK-0192): once a month the free institutes of the player's country take what the adviser proposes (O-099).
+    void FillFreeInstitutes()
+    {
+        if (PlayerActor < 0 || _session.View.Month == _filledMonth)
+            return;
+        _filledMonth = _session.View.Month;
+        foreach (AssignNode start in _session.AdviserStarts(PlayerActor))
+            _session.Submit(SourceClass.Player, 0, ++_localN, start);
     }
 
     void Publish()

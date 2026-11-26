@@ -28,9 +28,18 @@ public sealed partial class NodeTable
     public required ImmutableArray<Fx6> LabourP { get; init; }
     public required ImmutableArray<Hazard> Hazard { get; init; }
 
-    /// <summary>Directions of row r (numbers of <see cref="Directions.Ids"/>, the main one first): <c>DirectionStart[r]..DirectionStart[r+1]</c>. Not part of the data hash yet.</summary>
+    /// <summary>Directions of row r (numbers of <see cref="Directions.Ids"/>, the main one first): <c>DirectionStart[r]..DirectionStart[r+1]</c>. Part of the data hash.</summary>
     public required ImmutableArray<int> DirectionStart { get; init; }
     public required ImmutableArray<int> Direction { get; init; }
+
+    /// <summary>Military value word of the node (SCIENCE_SLOTS §3.2); <see cref="MilValue.None"/> when the mod gives none. Part of the data hash; shown on the card, not read by the simulation.</summary>
+    public required ImmutableArray<MilValue> MilValue { get; init; }
+
+    /// <summary>research_speed effects of row r: <c>SpeedStart[r]..SpeedStart[r+1]</c>, bit mask of directions and bonus (<see cref="ResearchSpeedEffects"/>). Read by the slot model (R of the research rate); part of the data hash.</summary>
+    public required ImmutableArray<int> SpeedStart { get; init; }
+    public required ImmutableArray<int> SpeedMask { get; init; }
+    public required ImmutableArray<Fx6> SpeedBonus { get; init; }
+
     public required RequirementLists Requires { get; init; }
 
     /// <summary>informs edges of row r: <c>InformsStart[r]..InformsStart[r+1]</c>, targets ascending.</summary>
@@ -119,6 +128,19 @@ public sealed partial class NodeTable
             directionStart.Add(directions.Count);
         }
 
+        var speedStart = new List<int> { 0 };
+        var speedMask = new List<int>();
+        var speedBonus = new List<Fx6>();
+        foreach (RawNode node in raw)
+        {
+            foreach ((int mask, Fx6 bonus) in node.Speed)
+            {
+                speedMask.Add(mask);
+                speedBonus.Add(bonus);
+            }
+            speedStart.Add(speedMask.Count);
+        }
+
         var table = new NodeTable
         {
             Id = [.. raw.Select(r => r.Id)],
@@ -135,6 +157,10 @@ public sealed partial class NodeTable
             Hazard = [.. raw.Select(r => r.Hazard)],
             DirectionStart = directionStart.ToImmutableArray(),
             Direction = directions.ToImmutableArray(),
+            MilValue = [.. raw.Select(r => r.MilValue)],
+            SpeedStart = speedStart.ToImmutableArray(),
+            SpeedMask = speedMask.ToImmutableArray(),
+            SpeedBonus = speedBonus.ToImmutableArray(),
             Requires = RequirementLists.Build(requires),
             InformsStart = [.. informsStart],
             InformsTo = [.. informsTo],

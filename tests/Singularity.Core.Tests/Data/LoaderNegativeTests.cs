@@ -85,7 +85,7 @@ public class LoaderNegativeTests : IDisposable
 
     [Fact]
     public void InformsAcrossDisciplines() =>
-        AssertFails("nodes.yaml", "{to: s8.eng.turbojet_g1, weight: 0.6}", "{to: s8.eng.straight_wing_jet_airframe, weight: 0.6}", "same discipline");
+        AssertFails("nodes.yaml", "{to: s8.eng.turbojet_g1, weight: 0.6}", "{to: s8.eng.straight_wing_jet_airframe, weight: 0.6}", "of its own discipline");
 
     [Fact]
     public void RequiresLaterGeneration() =>

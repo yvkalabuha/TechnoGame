@@ -76,6 +76,7 @@ internal sealed class SliceObserver
     private int _req;
     // supply_month (§4.17, TASK-0123): world reads the views do not carry; null in the calibration build
     private readonly SupplyProbe? _supply;
+    private readonly SlotProbe? _slots;   // TASK-0187: liveness counters of the slot science model (model_info), null without it
     // counters for run.json (format §4.9, §4.7)
     private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney, _licResumes;
     // Design capacity (contract-proposals T3, TASK-0054): AI compose/derive commands, those that gave no new design, and the slots used.
@@ -163,6 +164,8 @@ internal sealed class SliceObserver
         _lapsedLicence = new LicenceRow?[_nA];
         if (!calibration && Has(SliceTables.SupplyMonth.Name))
             _supply = new SupplyProbe(s, _nA);
+        if (s.World.SlotsOn)
+            _slots = new SlotProbe(s, _ids);
     }
 
     private bool Has(string table) => _table.ContainsKey(table);
@@ -296,6 +299,7 @@ internal sealed class SliceObserver
     public void BeforeStep(long t)
     {
         _supply?.BeforeStep(t);
+        _slots?.BeforeStep(t);
         if (_calib)
             return;   // ViewMode.Calibration: why_not is never called (spec §8.2 п. 2)
         var cache = new Dictionary<(int, WhyNotTarget), IReadOnlyList<Link>>();
@@ -367,6 +371,7 @@ internal sealed class SliceObserver
     {
         if (v.Month != t || v.Inputs is not MonthInputsView inputs || v.Step is not MonthStepView step || inputs.Month != t || step.Month != t)
             throw new SliceFormatException($"Month {t}: the view after the monthly tick has month {v.Month} and inputs/step {v.Inputs?.Month}/{v.Step?.Month}.");
+        _slots?.AfterStep(t);
         var rec = new ActorMonth[_nA];
         for (int a = 0; a < _nA; a++)
             rec[a] = ActorMonthOf(snap.Actors[a], v.Actors[a], inputs.Actors[a], step.Actors[a], t);
@@ -1204,7 +1209,9 @@ internal sealed class SliceObserver
         full &= !wasFree;
     }
 
-    public IEnumerable<KeyValuePair<string, string>> Counters() =>
+    public IEnumerable<KeyValuePair<string, string>> Counters() => _slots is null ? BaseCounters() : [.. BaseCounters(), .. _slots.Counters()];
+
+    private IEnumerable<KeyValuePair<string, string>> BaseCounters() =>
     [
         new("design_commands", I(_cap.Commands)),
         new("design_commands_without_design", I(_cap.Unrealized)),

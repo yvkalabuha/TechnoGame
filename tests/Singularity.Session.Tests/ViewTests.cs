@@ -23,8 +23,10 @@ public sealed class ViewWalk
         // Seed 1, and the A40 stress arm without effort money for the cancel (TASK-0058: with I-OC the main run gives no project up).
         SliceRunConfig[] configs =
         [
+            SliceRunConfig.Legacy with { Seed = 1, Threads = 2, LicKnows = true },
+            SliceRunConfig.Legacy with { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
+            // The build's defaults (the five levers of wave 1 on): the views match Core there too.
             new() { Seed = 1, Threads = 2, LicKnows = true },
-            new() { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
         ];
         foreach (SliceRunConfig config in configs)
         {
@@ -72,6 +74,9 @@ public sealed class ViewWalk
     private sealed record Before(Fx6[] Budget, BudgetShares[] Shares, DesignStage[][] Stage, int[][] Idle, Fx6[][] Hidden, Fx6[] Deficit, Fx6[] AlloySupply,
         GiveUpClass?[][] GiveUp, int[][] ArgP, Fx6[][] YMin)
     {
+        /// <summary>Research money the institutes returned in the step before (the slot model's addition to the procurement item of this step).</summary>
+        public Fx6[] Surplus { get; } = new Fx6[Budget.Length];
+
         public static Before Take(SliceWorld w, long t)
         {
             int n = w.Scenario.ActorCount, dn = w.ProductsLayout.Designs;
@@ -79,6 +84,7 @@ public sealed class ViewWalk
             for (int a = 0; a < n; a++)
             {
                 b.Budget[a] = w.Policy.Budget(a);
+                b.Surplus[a] = w.SurplusToBudget(a);
                 b.Shares[a] = w.SharesOf(a);
                 b.Deficit[a] = w.Policy.AlloyDeficit(a, t);
                 b.AlloySupply[a] = w.Industry.Alloy(a, t).Supply;
@@ -109,7 +115,8 @@ public sealed class ViewWalk
         Check("actor", av.KD.Length == w.Graph.DisciplineNames.Length && Enumerable.Range(0, av.KD.Length).All(d => av.KD[d] == w.Knowledge.KD(a, d)), $"month {t} actor {a}: KD");
         Check("actor", av.FieldedGen == w.Products.FieldedGen(a, next), $"month {t} actor {a}: fielded gen");
         Check("actor", av.Key == w.Products.KeyOf(a, next), $"month {t} actor {a}: key");
-        bool yearStart = t % 12 == 0;
+        // The slot model carries the fleet value (the air power index MPI, #565) every month; the shares model at the start of a year.
+        bool yearStart = t % 12 == 0 || w.SlotsOn;
         Check("actor", av.FleetValue.HasValue == yearStart, $"month {t} actor {a}: fleet value presence");
         if (yearStart)
             Check("actor", av.FleetValue == w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next), $"month {t} actor {a}: fleet value");
@@ -248,8 +255,8 @@ public sealed class ViewWalk
         See("tooling unmet", tl.UnmetByCluster.Any(u => u > Fx6.Zero));
         See("tooling training budget", tl.TrainingBudget > Fx6.Zero);
         See("deal month", w.Policy.LicenceStart(a) == t);
-        // The view carries share_P·budget of the step plus the licence flow of the deals; strict equality, no disjunction.
-        Check("inputs", iv.ProcurementBudget == iv.Shares.Procurement * iv.Budget + w.Policy.LicenceFlow(a), $"month {t} actor {a}: procurement budget = base + licence flow");
+        // The view carries share_P·budget of the step plus the research money the institutes returned (slot model) plus the licence flow of the deals; strict equality, no disjunction.
+        Check("inputs", iv.ProcurementBudget == iv.Shares.Procurement * iv.Budget + before.Surplus[a] + w.Policy.LicenceFlow(a), $"month {t} actor {a}: procurement budget = base + licence flow");
         See("licence month", w.Policy.LicenceStart(a) == t);
 
         if (afterDeal)
@@ -522,7 +529,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-        HashAssert.Equal("3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68", a.LastHash);
+        // Re-recorded once in the golden batch of TASK-0187 (merged state): slot model on by default + 57 new nodes (#575) + directions and research_speed effects in the hashes + FRA starts with 2 institutes (CEA, 1945-10) + the AI reads the air power index from a column (review fixes) + no capacity bonus of project-built institutes in the research money (review 2; moves the runs that pass the opening of DARPA, month ~160).
+        HashAssert.Equal("63dde65f3345bcc7bb2c82624dbef26a58ddd85c239ad638ac114a75c029cd93", a.LastHash);
     }
 
     [Fact]

@@ -1489,3 +1489,893 @@ define:
       source: "G56-R-18"
       estimated: false
     directions: [prop, aero, ctrl]
+  - id: s9.fnd.stored_program_architecture
+    number: 100
+    type: FND
+    gen: 1
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec]
+    requires: []
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 1945
+      source: "R575-01"
+      estimated: false
+  - id: s9.eng.electronic_computer_g1
+    number: 101
+    type: ENG
+    gen: 1
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, ord, aero]
+    requires: []
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [ord, aero], bonus: 0.02}
+    anchor:
+      year: 1946
+      source: "R575-02"
+      estimated: false
+  - id: s9.eng.stored_program_computer
+    number: 102
+    type: ENG
+    gen: 1
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec]
+    requires: [s9.fnd.stored_program_architecture, s9.eng.electronic_computer_g1]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [prop, nuc], bonus: 0.02}
+    anchor:
+      year: 1949
+      source: "R575-03"
+      estimated: false
+  - id: s6.prc.numerical_control_machining
+    number: 103
+    type: PRC
+    gen: 2
+    discipline: mech
+    cluster: MECH
+    tier: 4
+    capability_req: {precision: 4.5, quality_control: 4}
+    directions: [mfg, ctrl, struct]
+    requires: [s6.prc.precision_gear_bearing]
+    hazard: none
+    labour_p: 1200
+    mil_value: prep
+    informs:
+      - {to: s8.prc.machined_integral_skins, weight: 0.6}
+      - {to: s8.prc.swept_wing_fabrication, weight: 0.3}
+    anchor:
+      year: 1952
+      source: "R575-04"
+      estimated: false
+  - id: s9.prn.high_level_language_compiler
+    number: 104
+    type: PRN
+    gen: 2
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec]
+    requires: [s9.eng.stored_program_computer]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [aero, prop, struct, nuc], bonus: 0.02}
+    anchor:
+      year: 1957
+      source: "R575-05"
+      estimated: false
+  - id: s9.prn.finite_element_method
+    number: 105
+    type: PRN
+    gen: 2
+    discipline: mech
+    cluster: ELEC
+    directions: [struct, aero, ctrl]
+    requires: [s9.eng.stored_program_computer]
+    hazard: none
+    mil_value: base
+    effects:
+      - {kind: research_speed, dirs: [struct], bonus: 0.04}
+    informs:
+      - {to: s8.eng.composite_airframe, weight: 0.3}
+      - {to: s5.prn.fibre_composite_laminate_design, weight: 0.3}
+    anchor:
+      year: 1956
+      source: "R575-06"
+      estimated: false
+  - id: s9.cmp.transistor_computer_g2
+    number: 106
+    type: CMP
+    gen: 2
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec]
+    requires: [s9.eng.stored_program_computer, s9.cmp.silicon_transistor]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [aero, prop, struct, nuc], bonus: 0.03}
+    anchor:
+      year: 1959
+      source: "R575-07"
+      estimated: false
+  - id: s9.eng.mainframe_family_g3
+    number: 107
+    type: ENG
+    gen: 3
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec]
+    requires: [s9.cmp.transistor_computer_g2, s9.cmp.silicon_transistor]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: all, bonus: 0.02}
+    anchor:
+      year: 1964
+      source: "R575-08"
+      estimated: false
+  - id: s9.prn.computational_fluid_dynamics
+    number: 108
+    type: PRN
+    gen: 3
+    discipline: aero
+    cluster: ELEC
+    directions: [aero, prop, ctrl]
+    requires: [s9.cmp.transistor_computer_g2, s8.fnd.compressible_flow]
+    hazard: none
+    mil_value: base
+    effects:
+      - {kind: research_speed, dirs: [aero, prop], bonus: 0.05}
+    informs:
+      - {to: s8.prn.rcs_computational_prediction, weight: 0.6}
+      - {to: s8.prn.low_observable_shaping, weight: 0.3}
+      - {to: s8.eng.thrust_vectoring_supercruise_engine, weight: 0.3}
+      - {to: s8.eng.turbofan_g5, weight: 0.3}
+    anchor:
+      year: 1967
+      source: "R575-09"
+      estimated: false
+  - id: s9.cmp.microprocessor
+    number: 109
+    type: CMP
+    gen: 4
+    discipline: chem
+    cluster: ELEC
+    directions: [elec, ctrl]
+    requires: [s9.prc.mos_lsi_manufacturing]
+    hazard: none
+    mil_value: base
+    effects:
+      - {kind: research_speed, dirs: [ctrl, elec], bonus: 0.03}
+    informs:
+      - {to: s8.cmp.digital_flight_control_computer, weight: 0.6}
+      - {to: s8.prn.programmable_signal_processing, weight: 0.6}
+      - {to: s8.prn.electronic_engine_control, weight: 0.3}
+    anchor:
+      year: 1971
+      source: "R575-10"
+      estimated: false
+  - id: s9.eng.vector_supercomputer
+    number: 110
+    type: ENG
+    gen: 4
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, aero, nuc, prop]
+    requires: [s9.eng.mainframe_family_g3, s9.prc.planar_monolithic_ic_manufacturing]
+    hazard: hz
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [aero, prop, nuc, mat], bonus: 0.04}
+    anchor:
+      year: 1976
+      source: "R575-11"
+      estimated: false
+  - id: s9.eng.massively_parallel_hpc
+    number: 111
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, nuc, aero]
+    requires: [s9.eng.vector_supercomputer, s9.prn.vlsi_design_methodology]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [nuc, aero, prop, mat], bonus: 0.04}
+    anchor:
+      year: 1996
+      source: "R575-12"
+      estimated: false
+  - id: s9.eng.gpu_accelerated_computing
+    number: 112
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, elec, mat]
+    requires: [s9.eng.massively_parallel_hpc]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [mat, chem, ctrl, elec], bonus: 0.03}
+    anchor:
+      year: 2007
+      source: "R575-13"
+      estimated: false
+  - id: s9.prn.deep_learning_science
+    number: 113
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: ELEC
+    directions: [ctrl, chem, mat]
+    requires: [s9.eng.gpu_accelerated_computing]
+    hazard: hz
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [chem, mat, ctrl], bonus: 0.03}
+    anchor:
+      year: 2020
+      source: "R575-14"
+      estimated: false
+  - id: s9.prn.point_contact_transistor
+    number: 114
+    type: PRN
+    gen: 1
+    discipline: chem
+    cluster: ELEC
+    directions: [elec, mat]
+    requires: []
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1947
+      source: "R575-16"
+      estimated: false
+  - id: s5.prc.zone_refining_semiconductor
+    number: 115
+    type: PRC
+    gen: 2
+    discipline: chem
+    cluster: MET
+    tier: 4
+    capability_req: {purity: 4.5, quality_control: 3.5}
+    directions: [chem, met, elec]
+    requires: [s5.prc.alloying_element_refining]
+    hazard: none
+    labour_p: 600
+    mil_value: prep
+    informs:
+      - {to: s5.prn.single_crystal_growth, weight: 0.3}
+      - {to: s5.prn.gaas_wafer_growth, weight: 0.3}
+    anchor:
+      year: 1951
+      source: "R575-17"
+      estimated: false
+  - id: s9.cmp.silicon_transistor
+    number: 116
+    type: CMP
+    gen: 2
+    discipline: chem
+    cluster: ELEC
+    directions: [elec, mat]
+    requires: [s9.prn.point_contact_transistor, s5.prc.zone_refining_semiconductor]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1954
+      source: "R575-18"
+      estimated: false
+  - id: s9.cmp.integrated_circuit
+    number: 117
+    type: CMP
+    gen: 2
+    discipline: chem
+    cluster: ELEC
+    directions: [elec, ctrl, mat]
+    requires: [s9.cmp.silicon_transistor]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.integrated_avionics_architecture, weight: 0.3}
+      - {to: s8.cmp.digital_flight_control_computer, weight: 0.3}
+    anchor:
+      year: 1958
+      source: "R575-19"
+      estimated: false
+  - id: s9.prc.planar_monolithic_ic_manufacturing
+    number: 118
+    type: PRC
+    gen: 2
+    discipline: chem
+    cluster: CHEM
+    tier: 5
+    capability_req: {precision: 4.5, purity: 5, quality_control: 4.5}
+    directions: [elec, mfg, chem]
+    requires: [s9.cmp.integrated_circuit]
+    hazard: none
+    labour_p: 2250
+    mil_value: prep
+    informs:
+      - {to: s5.cmp.gaas_mmic, weight: 0.3}
+    anchor:
+      year: 1959
+      source: "R575-20"
+      estimated: false
+  - id: s9.prn.laser_principle
+    number: 119
+    type: PRN
+    gen: 2
+    discipline: chem
+    cluster: ELEC
+    directions: [elec, sens, ord]
+    requires: []
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1960
+      source: "R575-21"
+      estimated: false
+  - id: s9.prc.mos_lsi_manufacturing
+    number: 120
+    type: PRC
+    gen: 3
+    discipline: chem
+    cluster: CHEM
+    tier: 5
+    capability_req: {precision: 5, purity: 5.5, quality_control: 5}
+    directions: [elec, mfg, chem]
+    requires: [s9.prc.planar_monolithic_ic_manufacturing]
+    hazard: none
+    labour_p: 3750
+    mil_value: prep
+    anchor:
+      year: 1968
+      source: "R575-22"
+      estimated: false
+  - id: s9.prn.vlsi_design_methodology
+    number: 121
+    type: PRN
+    gen: 4
+    discipline: chem
+    cluster: ELEC
+    directions: [elec, ctrl]
+    requires: [s9.prc.mos_lsi_manufacturing, s9.cmp.microprocessor]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [elec, ctrl], bonus: 0.04}
+    anchor:
+      year: 1979
+      source: "R575-23"
+      estimated: false
+  - id: s9.prc.euv_lithography
+    number: 122
+    type: PRC
+    gen: 6
+    discipline: mech
+    cluster: MECH
+    tier: 5
+    capability_req: {precision: 5.5, purity: 5.5, quality_control: 5.5}
+    directions: [mfg, elec, chem, mat]
+    requires: [s9.prn.vlsi_design_methodology, s9.prn.laser_principle]
+    hazard: key
+    labour_p: 8000
+    mil_value: prep
+    anchor:
+      year: 2019
+      source: "R575-24"
+      estimated: false
+  - id: s8.eng.fire_control_radar_interceptor
+    number: 123
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    directions: [sens, ctrl, ord]
+    requires: []
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.prn.phased_array_radar_pesa, weight: 0.3}
+    anchor:
+      year: 1951
+      source: "R575-25"
+      estimated: false
+  - id: s8.eng.infrared_air_to_air_missile
+    number: 124
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    directions: [ord, sens, elec]
+    requires: []
+    hazard: none
+    mil_value: direct
+    anchor:
+      year: 1953
+      source: "R575-26"
+      estimated: false
+  - id: s8.eng.inertial_navigation_system
+    number: 125
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    directions: [ctrl, aero, ord]
+    requires: [s6.prc.precision_gear_bearing]
+    hazard: none
+    mil_value: base
+    informs:
+      - {to: s8.eng.integrated_avionics_architecture, weight: 0.3}
+    anchor:
+      year: 1953
+      source: "R575-27"
+      estimated: false
+  - id: s8.prn.pulse_doppler_look_down_radar
+    number: 126
+    type: PRN
+    gen: 3
+    discipline: aero
+    cluster: AERO
+    directions: [sens, elec, ctrl]
+    requires: [s8.eng.fire_control_radar_interceptor, s9.cmp.integrated_circuit]
+    hazard: hz
+    mil_value: direct
+    informs:
+      - {to: s8.prn.phased_array_radar_pesa, weight: 0.3}
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
+    anchor:
+      year: 1966
+      source: "R575-28"
+      estimated: false
+  - id: s5.cmp.maraging_steel
+    number: 127
+    type: CMP
+    gen: 3
+    discipline: metal
+    cluster: CHEM
+    directions: [met, struct, ord]
+    requires: [s5.prc.vacuum_induction_melt]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1959
+      source: "R575-29"
+      estimated: true
+  - id: s5.cmp.ablative_heat_shield
+    number: 128
+    type: CMP
+    gen: 2
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, struct, chem]
+    requires: [s7.fnd.blunt_body_reentry]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1957
+      source: "R575-30"
+      estimated: false
+  - id: s5.cmp.carbon_carbon_composite
+    number: 129
+    type: CMP
+    gen: 2
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, struct, prop]
+    requires: [s5.cmp.ablative_heat_shield]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1959
+      source: "R575-31"
+      estimated: true
+  - id: s5.prc.hot_isostatic_pressing
+    number: 130
+    type: PRC
+    gen: 3
+    discipline: mech
+    cluster: CHEM
+    tier: 4
+    capability_req: {precision: 4, purity: 4.5, quality_control: 4}
+    directions: [mfg, met, mat]
+    requires: [s5.prc.vacuum_induction_melt]
+    hazard: none
+    labour_p: 1500
+    mil_value: prep
+    informs:
+      - {to: s5.prc.single_crystal_casting, weight: 0.3}
+    anchor:
+      year: 1955
+      source: "R575-32"
+      estimated: true
+  - id: s5.cmp.thermal_barrier_coating
+    number: 131
+    type: CMP
+    gen: 4
+    discipline: chem
+    cluster: CHEM
+    directions: [mat, prop, met]
+    requires: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_cooled]
+    hazard: none
+    mil_value: direct
+    informs:
+      - {to: s8.eng.turbofan_g5, weight: 0.3}
+      - {to: s8.eng.thrust_vectoring_supercruise_engine, weight: 0.3}
+    anchor:
+      year: 1980
+      source: "R575-33"
+      estimated: true
+  - id: s5.prc.additive_manufacturing_metal
+    number: 132
+    type: PRC
+    gen: 6
+    discipline: mech
+    cluster: CHEM
+    tier: 5
+    capability_req: {precision: 5.5, purity: 5, quality_control: 5}
+    directions: [mfg, mat, met]
+    requires: [s9.prn.laser_principle, s5.prc.hot_isostatic_pressing]
+    hazard: none
+    labour_p: 6000
+    mil_value: prep
+    anchor:
+      year: 2016
+      source: "R575-34"
+      estimated: false
+  - id: s7.eng.liquid_rocket_engine_g1
+    number: 133
+    type: ENG
+    gen: 1
+    discipline: prop
+    cluster: AERO
+    directions: [prop, ord, chem, ctrl]
+    requires: []
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1942
+      source: "R575-35"
+      estimated: false
+  - id: s7.prn.composite_solid_propellant
+    number: 134
+    type: PRN
+    gen: 2
+    discipline: chem
+    cluster: AERO
+    directions: [chem, prop, ord]
+    requires: []
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1954
+      source: "R575-36"
+      estimated: false
+  - id: s7.fnd.blunt_body_reentry
+    number: 135
+    type: FND
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    directions: [aero, struct, mat]
+    requires: [s8.fnd.transonic_aerodynamics]
+    hazard: none
+    mil_value: base
+    anchor:
+      year: 1951
+      source: "R575-37"
+      estimated: false
+  - id: s7.eng.intercontinental_ballistic_missile
+    number: 136
+    type: ENG
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    directions: [prop, ord, ctrl, struct]
+    requires: [s7.eng.liquid_rocket_engine_g1, s8.eng.inertial_navigation_system]
+    hazard: key
+    mil_value: none
+    anchor:
+      year: 1957
+      source: "R575-38"
+      estimated: false
+  - id: s7.eng.cryogenic_hydrogen_engine
+    number: 137
+    type: ENG
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    directions: [prop, chem, mat, space]
+    requires: [s7.eng.liquid_rocket_engine_g1]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 1963
+      source: "R575-39"
+      estimated: false
+  - id: s7.eng.staged_combustion_hydrogen_engine
+    number: 138
+    type: ENG
+    gen: 4
+    discipline: prop
+    cluster: AERO
+    directions: [prop, met, mat, ctrl]
+    requires: [s7.eng.cryogenic_hydrogen_engine, s5.cmp.heat_resistant_alloy]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 1981
+      source: "R575-40"
+      estimated: false
+  - id: s7.eng.reusable_booster_landing
+    number: 139
+    type: ENG
+    gen: 6
+    discipline: prop
+    cluster: AERO
+    directions: [prop, space, ctrl, struct]
+    requires: [s7.eng.staged_combustion_hydrogen_engine, s9.eng.massively_parallel_hpc]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 2015
+      source: "R575-41"
+      estimated: false
+  - id: s10.eng.sounding_rocket_science
+    number: 140
+    type: ENG
+    gen: 1
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, prop]
+    requires: [s7.eng.liquid_rocket_engine_g1]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1946
+      source: "R575-43"
+      estimated: false
+  - id: s10.eng.artificial_satellite
+    number: 141
+    type: ENG
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    directions: [space, prop, ctrl, elec]
+    requires: [s7.eng.intercontinental_ballistic_missile]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1957
+      source: "R575-44"
+      estimated: false
+  - id: s10.eng.scientific_satellite
+    number: 142
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, elec, nuc]
+    requires: [s10.eng.artificial_satellite, s9.cmp.silicon_transistor]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1958
+      source: "R575-45"
+      estimated: false
+  - id: s10.eng.reconnaissance_satellite
+    number: 143
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, ord, ctrl]
+    requires: [s10.eng.artificial_satellite, s5.cmp.ablative_heat_shield]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1960
+      source: "R575-46"
+      estimated: false
+  - id: s10.eng.crewed_orbital_flight
+    number: 144
+    type: ENG
+    gen: 3
+    discipline: mech
+    cluster: AERO
+    directions: [space, struct, ctrl, mat]
+    requires: [s10.eng.artificial_satellite, s5.cmp.ablative_heat_shield]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1961
+      source: "R575-47"
+      estimated: false
+  - id: s10.eng.crewed_lunar_landing
+    number: 145
+    type: ENG
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    directions: [space, prop, ctrl, struct]
+    requires: [s7.eng.cryogenic_hydrogen_engine, s10.eng.crewed_orbital_flight, s9.eng.mainframe_family_g3]
+    hazard: key
+    mil_value: none
+    anchor:
+      year: 1969
+      source: "R575-48"
+      estimated: false
+  - id: s10.eng.satellite_navigation_gps
+    number: 146
+    type: ENG
+    gen: 4
+    discipline: aero
+    cluster: AERO
+    directions: [space, ctrl, sens, elec]
+    requires: [s10.eng.scientific_satellite, s9.cmp.microprocessor]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1978
+      source: "R575-49"
+      estimated: false
+  - id: s10.eng.space_shuttle_orbiter
+    number: 147
+    type: ENG
+    gen: 4
+    discipline: prop
+    cluster: AERO
+    directions: [space, prop, struct, mat]
+    requires: [s7.eng.staged_combustion_hydrogen_engine, s5.cmp.carbon_carbon_composite, s10.eng.crewed_orbital_flight]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 1981
+      source: "R575-50"
+      estimated: false
+  - id: s10.eng.space_telescope
+    number: 148
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    directions: [space, sens, ctrl, elec]
+    requires: [s10.eng.space_shuttle_orbiter, s10.eng.scientific_satellite]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [space, sens], bonus: 0.02}
+    anchor:
+      year: 1990
+      source: "R575-51"
+      estimated: false
+  - id: s11.prc.gaseous_diffusion_enrichment
+    number: 149
+    type: PRC
+    gen: 1
+    discipline: chem
+    cluster: CHEM
+    tier: 5
+    capability_req: {purity: 5, quality_control: 4.5}
+    directions: [nuc, chem, mfg]
+    requires: []
+    hazard: hz
+    labour_p: 6750
+    mil_value: prep
+    anchor:
+      year: 1945
+      source: "R575-53"
+      estimated: false
+  - id: s11.eng.fission_weapon_g1
+    number: 150
+    type: ENG
+    gen: 1
+    discipline: chem
+    cluster: NUC
+    directions: [nuc, ord, chem]
+    requires: []
+    hazard: key
+    mil_value: none
+    anchor:
+      year: 1945
+      source: "R575-54"
+      estimated: false
+  - id: s11.prn.neutron_transport_monte_carlo
+    number: 151
+    type: PRN
+    gen: 1
+    discipline: chem
+    cluster: NUC
+    directions: [nuc, ctrl]
+    requires: [s9.eng.electronic_computer_g1]
+    hazard: none
+    mil_value: none
+    effects:
+      - {kind: research_speed, dirs: [nuc], bonus: 0.04}
+    anchor:
+      year: 1948
+      source: "R575-55"
+      estimated: false
+  - id: s5.cmp.zirconium_nuclear_cladding
+    number: 152
+    type: CMP
+    gen: 3
+    discipline: metal
+    cluster: NUC
+    directions: [met, nuc, chem]
+    requires: [s5.prc.titanium_reduction_forging]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1950
+      source: "R575-56"
+      estimated: true
+  - id: s11.eng.naval_nuclear_propulsion
+    number: 153
+    type: ENG
+    gen: 3
+    discipline: chem
+    cluster: NUC
+    directions: [nuc, prop, met, struct]
+    requires: [s5.cmp.zirconium_nuclear_cladding]
+    hazard: hz
+    mil_value: none
+    anchor:
+      year: 1955
+      source: "R575-57"
+      estimated: false
+  - id: s11.eng.light_water_power_reactor
+    number: 154
+    type: ENG
+    gen: 3
+    discipline: chem
+    cluster: NUC
+    directions: [nuc, met, struct]
+    requires: [s11.eng.naval_nuclear_propulsion]
+    hazard: none
+    mil_value: none
+    anchor:
+      year: 1957
+      source: "R575-58"
+      estimated: false
+  - id: s11.prc.gas_centrifuge_enrichment
+    number: 155
+    type: PRC
+    gen: 3
+    discipline: chem
+    cluster: MECH
+    tier: 5
+    capability_req: {precision: 5, purity: 4.5, quality_control: 5}
+    directions: [nuc, mfg, met]
+    requires: [s11.prc.gaseous_diffusion_enrichment, s5.cmp.maraging_steel, s6.prc.precision_gear_bearing]
+    hazard: hz
+    labour_p: 5000
+    mil_value: prep
+    anchor:
+      year: 1960
+      source: "R575-59"
+      estimated: false
+  - id: s11.prn.laser_inertial_confinement
+    number: 156
+    type: PRN
+    gen: 6
+    discipline: chem
+    cluster: NUC
+    directions: [nuc, elec, mat]
+    requires: [s9.prn.laser_principle, s9.eng.massively_parallel_hpc]
+    hazard: key
+    mil_value: none
+    anchor:
+      year: 2021
+      source: "R575-60"
+      estimated: false

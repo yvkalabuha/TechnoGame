@@ -6,6 +6,9 @@ kind: scenario
 define:
   - id: jet_slice_1945
     start: {year: 1945, month: 9}
+    # O-095 (#575): semiconductor band theory (1931), transfer-orbit astrodynamics (1925) and nuclear fission (1938, CP-1 1942) are known by all five
+    # countries at the start. They are not nodes: the nodes that build on them (s9 point-contact transistor, s10 sounding rockets, s11.*) have no
+    # requires on them, so they are openable by everyone (tested in ExpandedTreeTests). Nothing to list under known.
     clusters: [MET, CHEM, MECH, AERO]
     disciplines: [aero, prop, metal, chem, mech]
     tech_lead: USA

@@ -16,7 +16,7 @@ public class F17bTests(ITestOutputHelper output)
         int coexistence = 0, rateBound = 0, candidateProduces = 0;
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2 });
             SliceWorld w = s.World;
             Fx6 rKeep = w.IndustryParameters.RKeep;
             int designs = w.ProductsLayout.Designs;
@@ -60,7 +60,7 @@ public class F17bTests(ITestOutputHelper output)
     {
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = LineCloseRule.Admit });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, LineClose = LineCloseRule.Admit });
             SliceWorld w = s.World;
             for (long t = 0; t < 384; t++)
             {
@@ -90,11 +90,11 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0182: schema v15 (new column pol.flt.gFront, the G_front a fleet sale was priced at); the old columns are unchanged (the identity and projection tests pass with the column left out of the projection).
     private static readonly string[] AdmitGolden =
     [
-        "ef25a46288772db3da77547fff049013771f0cf72290fcb3c6da597ade16d352",
-        "a6d0737c396abe7a1a4e4e6588f2cc5ba4af5fa25e3aff09cef5c6ba5904b387",
-        "e7c0d919942338bea19820933f9f3e5d03bd284da895bd264417fbbb876fe2ae",
-        "08ede1410ea37f83b23fdd77ad104d58dbe8cdec11624813a26fe9eca728d28a",
-        "043afca1da2fbcb490b4a2e31f706b59f4846fddd59c569fda10f87b18895829",
+        "c68e2c2756df8c3312d66b27d7cc57b1b3d75cb0e89ff5f4e7277cb67a9437d5",
+        "bcce7d3527a8a1f31e63f61d4f4b17b8b78415f3671c5030ccbdcdbeeee36a80",
+        "d0ecd048d6e264acefd40d605c09e4a24a9e43d6389c04d30414b2caa0575e08",
+        "b16ef69bcccee9166771e71af772001cf21b637f347ef2e25706f25c26065afd",
+        "2a911892ebe508874ce9ac2d4c5cf4ade6da011a0e59318cd23bec5a96dda12b",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
@@ -106,19 +106,20 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0147 (train 2, schema train of the day): nodes 82-99 of the G5/G6 rev 3.1 chains and the ahead-of-time cost defaults (k 0.02, pow 2, max 10, #465) change every trajectory on the current data; the old columns stay identical on the 61-node data with k = 0 (identity tests, CreateLegacyNeutral); explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
+    // Re-recorded in TASK-0188 (#575): 57 new nodes 100-156 (computing, electronics, materials, rockets, space, nuclear) and 9 new processes change every trajectory; old columns and schema layout rules unchanged.
     private static readonly string[] YProdGolden = [
-        "3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68",
-        "c00968670d80d351d41215e57ae76e82e44a1a547d872d8e0c42a4e5399c7c75",
-        "6c8fdebace77f67ee73a3a7c8bf8e4ac4adf8321ed7cdccbbc2189bd19e03a9e",
-        "9e1b210c0ed0d998ad670e380359ef1611c567075db3d7ea4f839687e5a814ca",
-        "3be93c29d3c7e2628c7f96f9822ffc23d85b872cc8f50b08036f51f54cbf7aa0",
+        "c79505d72eb10f41fbed33785979c82d7475ab0f5712d52b9212d1fffcbad401",
+        "8cd92e2402facdfd797f1ca63da78174bd6029ddba67206f5971e0e6941eb161",
+        "bf359eba934c04b3d9e5af86930414d820fd6e0ac1ce487cafeede53eb88ce8f",
+        "330c072334b97c147c9a9daa02cce57c916a86f9eddd67a5a4e42587db331bed",
+        "18164783a49dbe1c3394685fc6250dd1438ac4e11c58569fd900f7686ec86422",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
     {
         // ADMIT is the pre-F17b build, whose tooling pass 2 was V0; YPROD runs under the default V5 (A39 «V5 default», #163).
         ToolingTargetSpec target = rule == LineCloseRule.Admit ? ToolingTargetSpec.Parse("V0") : new ToolingTargetSpec();
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
         for (long t = 0; t < 150; t++)
             s.StepThroughMonth(t);
         // StaleHandle is outside the old-column projections: prove here that the golden runs never hit it.
@@ -147,7 +148,7 @@ public class F17bTests(ITestOutputHelper output)
         int candidateL = 0;
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2 });
             SliceWorld w = s.World;
             int gens = w.ProductsLayout.Generations, designs = w.ProductsLayout.Designs;
             int n = w.Scenario.ActorCount;
@@ -189,6 +190,6 @@ public class F17bTests(ITestOutputHelper output)
         Assert.Equal(LineCloseRule.YProd, LineCloseRules.Parse("YPROD"));
         Assert.Equal(LineCloseRule.Admit, LineCloseRules.Parse("ADMIT"));
         Assert.Throws<ArgumentException>(() => LineCloseRules.Parse("yprod"));
-        Assert.Equal(LineCloseRule.YProd, new SliceRunConfig().LineClose);
+        Assert.Equal(LineCloseRule.YProd, SliceRunConfig.Legacy.LineClose);
     }
 }

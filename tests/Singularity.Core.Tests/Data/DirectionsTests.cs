@@ -61,11 +61,11 @@ public class DirectionsTests
         Assert.Throws<DataLoadException>(() => Directions.ReadForNode(Field(yaml), "n"));
 
     [Fact]
-    public void SpaceDirection_IsKnown_AndNoNodeUsesItYet()
+    public void SpaceDirection_IsKnown_AndUsedByTheSpaceNodes()
     {
         int space = Directions.Ids.IndexOf("space");
         Assert.Equal(12, space);
-        Assert.DoesNotContain(space, Data.Nodes.Direction);
+        Assert.Contains(space, Data.Nodes.Direction);
         Assert.Equal([space, 0], Directions.ReadForNode(((Singularity.Core.Data.Yaml.YMap)Singularity.Core.Data.Yaml.StrictYaml.Parse("d: [space, aero]\n", "t.yaml")).Entries[0].Value, "n"));
     }
 
@@ -91,11 +91,17 @@ public class DirectionsTests
     }
 
     [Fact]
-    public void InstituteHash_IgnoresDirections_SoGoldensStay()
+    public void InstituteHash_ContainsDirectionsAndTheFoundingMonth()
     {
-        string Row(string dirs) => $"id: x\ncountry: SUN\nfounded: 1940\nref_year: 1945\nsource: s\nareas:\n  aero: 2\n{dirs}";
+        // The slot core reads both (O-094), so editing either changes the identity of the table.
+        string Row(string dirs, string month = "") => $"id: x\ncountry: SUN\nfounded: 1940\n{month}ref_year: 1945\nsource: s\nareas:\n  aero: 2\n{dirs}";
         string a = InstituteTable.Build([("x", (YMap)StrictYaml.Parse(Row(""), "t.yaml"))]).Hash;
         string b = InstituteTable.Build([("x", (YMap)StrictYaml.Parse(Row("directions: {aero: 2, prop: 1}\n"), "t.yaml"))]).Hash;
-        Assert.Equal(a, b);
+        string c = InstituteTable.Build([("x", (YMap)StrictYaml.Parse(Row("", "founded_month: 10\n"), "t.yaml"))]).Hash;
+        Assert.NotEqual(a, b);
+        Assert.NotEqual(a, c);
+        InstituteTable t = InstituteTable.Build([("x", (YMap)StrictYaml.Parse(Row("", "founded_month: 10\n"), "t.yaml"))]);
+        Assert.Equal(10, t.FoundedMonth(0));
+        Assert.Equal(0, InstituteTable.Build([("x", (YMap)StrictYaml.Parse(Row(""), "t.yaml"))]).FoundedMonth(0));
     }
 }

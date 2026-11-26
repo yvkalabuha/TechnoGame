@@ -8,7 +8,7 @@ namespace Singularity.Session.Tests;
 public class ReserveTests
 {
     private static SliceSession Make(bool reserve, int threads = 1) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = 7, Reserve = reserve, Threads = threads });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Reserve = reserve, Threads = threads });
 
     private static BudgetShares Shares(long r, long c, long d, long p, long q) =>
         new(Fx6.FromRaw(r), Fx6.FromRaw(c), Fx6.FromRaw(d), Fx6.FromRaw(p), Fx6.FromRaw(q));
@@ -42,12 +42,12 @@ public class ReserveTests
                 HashAssert.Equal(ColumnProjection.Hash(off, _ => true), ColumnProjection.Hash(on, n => !ColumnProjection.IsReserveColumn(n)), $"an old column moved by month {t}");
         }
         // The run with the flag off is the run of main: the default config and Reserve = false share one fingerprint and the very same hash.
-        SliceSession main = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession main = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         for (long t = 0; t < 36; t++)
             main.StepThroughMonth(t);
         HashAssert.Equal(main.LastHash, off.LastHash, "Reserve = false is not the run of main");
-        Assert.Equal(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Reserve = false }.SnapshotFingerprint());
-        Assert.NotEqual(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Reserve = true }.SnapshotFingerprint());
+        Assert.Equal((SliceRunConfig.Legacy with { Seed = 7 }).SnapshotFingerprint(), (SliceRunConfig.Legacy with { Seed = 7, Reserve = false }).SnapshotFingerprint());
+        Assert.NotEqual((SliceRunConfig.Legacy with { Seed = 7 }).SnapshotFingerprint(), (SliceRunConfig.Legacy with { Seed = 7, Reserve = true }).SnapshotFingerprint());
         for (int a = 0; a < on.World.Table.RowCount; a++)
             Assert.Equal(Fx6.Zero, on.World.Reserve!.Balance(a));
         Assert.DoesNotContain(off.World.Table.Columns, c => ColumnProjection.IsReserveColumn(c.Name));
@@ -55,9 +55,9 @@ public class ReserveTests
 
     // Recorded from main before TASK-0150 (e011cbb), the same run (seed 7, 36 months, default config): the hash over ALL columns and the state hash.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
-    private const string MainAllColumns = "e2868ee75c0d7d493f95dbe3d9a69850c7b3bba6d04ef7ed981d584416ead4bb";
+    private const string MainAllColumns = "bc6d5b11baebbfcb3b1271e15378cd28adfe1a03f4d4204d1ded83e26e1f15cd";
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-    private const string MainStateHash = "6c5d83b7e1750e2338143e375520fe1ed5fb289ef7534adfc8d37364428e5b24";
+    private const string MainStateHash = "c578b593c0d1bbba6af812683a35840656a912151cd80074fd96766d984dbfe1";
 
     [Fact]
     public void FlagOff_IsBitIdenticalToMainBeforeTheTask_AndFlagOnEqualsItOnTheOldColumns()
@@ -205,7 +205,7 @@ public class ReserveTests
     [Fact]
     public void FundProgramme_IsRefusedWhereKnowledgeIsAScheduleAndNeverCrossesOne()
     {
-        SliceSession sched = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, Reserve = true, Layer = LayerControl.Lk0 });
+        SliceSession sched = SliceTestData.CreateLegacy(SliceRunConfig.Legacy with { Seed = 7, Reserve = true, Layer = LayerControl.Lk0 });
         Assert.Equal(CommandRefusal.ReserveOff, sched.Submit(SourceClass.Player, 0, 0, new FundProgramme(0, 1, Fx6.One)).Reason);
         // Every frontier node of every actor, plain or hazard: the capacity leaves the node at or below 1.
         SliceSession s = Make(true);
@@ -313,7 +313,7 @@ public class ReserveTests
         string h1 = Run(1, out string log), h2 = Run(2, out _);
         HashAssert.Equal(h1, h2, "L2: thread count changed the state");
         Assert.Contains("fund_programme", log);
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Reserve = true }, log, Make(true).World.Calendar.TickOfMonth(23) + 1);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, Reserve = true }, log, Make(true).World.Calendar.TickOfMonth(23) + 1);
         HashAssert.Equal(h1, replay.LastHash, "L1: the replay differs");
     }
 

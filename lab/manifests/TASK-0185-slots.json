@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0185-slots",
+  "description": "TASK-0185 (docs/simulation/slot-model-pilot.md): slot science model (#561) in the sandbox lab/results/sandbox-0185 (src copy + lab/patches/TASK-0185-slots.sandbox.diff); the variant (T_n scale, slots, directions) is chosen by SLOT_* environment variables per matrix invocation; without SLOT=1 the sandbox is the branch build (old share model). All five actors AI, levers ON. JetSlice FULL 1945-09..2030-12.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full",
+    "LEVERS": "ON"
+  },
+  "series": [
+    {
+      "name": "RUN",
+      "params": {}
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/slot-model-pilot.md",
+    "sandbox_patch": "lab/patches/TASK-0185-slots.sandbox.diff"
+  }
+}

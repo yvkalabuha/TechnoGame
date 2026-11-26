@@ -13,7 +13,7 @@ public class IntelligenceTests
     private static readonly Fx6 KDiff = new KnowledgeParams().KDiff;
 
     private static SliceSession Make(bool reserve = false, int threads = 1, int chunk = 1, ulong seed = 7) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = seed, Intelligence = true, Reserve = reserve, Threads = threads, ChunkSize = chunk });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Intelligence = true, Reserve = reserve, Threads = threads, ChunkSize = chunk });
 
     private static IntelTarget T(int target, IntelMode mode) => new(target, mode);
 
@@ -32,11 +32,11 @@ public class IntelligenceTests
     [Fact]
     public void FlagOff_HasNoIntelligenceColumns_AndTheFingerprintOfMain()
     {
-        SliceSession off = SliceTestData.Create(new SliceRunConfig { Seed = 7, Intelligence = false });
+        SliceSession off = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Intelligence = false });
         Assert.Null(off.World.Intel);
         Assert.DoesNotContain(off.World.Table.Columns, c => ColumnProjection.IsIntelColumn(c.Name));
-        Assert.Equal(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Intelligence = false }.SnapshotFingerprint());
-        Assert.NotEqual(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Intelligence = true }.SnapshotFingerprint());
+        Assert.Equal((SliceRunConfig.Legacy with { Seed = 7 }).SnapshotFingerprint(), (SliceRunConfig.Legacy with { Seed = 7, Intelligence = false }).SnapshotFingerprint());
+        Assert.NotEqual((SliceRunConfig.Legacy with { Seed = 7 }).SnapshotFingerprint(), (SliceRunConfig.Legacy with { Seed = 7, Intelligence = true }).SnapshotFingerprint());
         // The data object is outside the data hash: loading it did not move the identity of the data (the main-fixture hashes are pinned in ReserveTests).
         Assert.NotNull(SliceTestData.Data.Intelligence);
         Assert.Null(SliceTestData.LegacyData.Intelligence);
@@ -46,19 +46,19 @@ public class IntelligenceTests
     public void FlagOff_RunEqualsTheRunOfMain_ByTheSharedPinnedHash()
     {
         // The same pinned values as ReserveTests (recorded on main before TASK-0150): the build with the seventh share and the theft term is still that run.
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         for (long t = 0; t < 36; t++)
             s.StepThroughMonth(t);
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
-        HashAssert.Equal("e2868ee75c0d7d493f95dbe3d9a69850c7b3bba6d04ef7ed981d584416ead4bb", ColumnProjection.Hash(s, _ => true));
+        HashAssert.Equal("bc6d5b11baebbfcb3b1271e15378cd28adfe1a03f4d4204d1ded83e26e1f15cd", ColumnProjection.Hash(s, _ => true));
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-        HashAssert.Equal("6c5d83b7e1750e2338143e375520fe1ed5fb289ef7534adfc8d37364428e5b24", s.LastHash);
+        HashAssert.Equal("c578b593c0d1bbba6af812683a35840656a912151cd80074fd96766d984dbfe1", s.LastHash);
     }
 
     [Fact]
     public void Validator_RefusesSecurityAndTargetsWithoutTheFlag_AndMalformedPlans()
     {
-        SliceSession off = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession off = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         BudgetShares b = off.World.SharesOf(0);
         Assert.Equal(CommandRefusal.IntelOff, off.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, b with { Security = Fx6.FromRaw(10_000), Procurement = b.Procurement - Fx6.FromRaw(10_000) })).Reason);
         Assert.Equal(CommandRefusal.IntelOff, off.Submit(SourceClass.Player, 0, 1, new SetBudgetShares(0, b, [new IntelTarget(1, IntelMode.Observe)])).Reason);
@@ -167,7 +167,7 @@ public class IntelligenceTests
     [Fact]
     public void Theft_LetsTheThiefOpenNodesTheTargetKnowsEarlier_ThroughCEffOnly()
     {
-        var config = new SliceRunConfig { Seed = 7, Intelligence = true };
+        var config = SliceRunConfig.Legacy with { Seed = 7, Intelligence = true };
         SliceSession theft = SliceSession.Create(SliceTestData.Data, config), none = SliceSession.Create(DataWithoutTheft(), config);
         foreach (SliceSession s in new[] { theft, none })
             Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal))).Accepted);
@@ -317,7 +317,7 @@ public class IntelligenceTests
     public void Turned_AnExposedNetworkCanBeTurned_ItStealsNothing_AndIsFoundOutLater()
     {
         // Every exposure turns the network; the draws are the real ones.
-        var config = new SliceRunConfig { Seed = 7, Intelligence = true };
+        var config = SliceRunConfig.Legacy with { Seed = 7, Intelligence = true };
         SliceSession s = SliceSession.Create(DataWith(("turn_on_exposure: 0.30", "turn_on_exposure: 1.00"), ("hazard_base_per_year: 0.20", "hazard_base_per_year: 1.00")), config);
         Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal))).Accepted);
         bool sawTurned = false, sawFoundOut = false;
@@ -371,7 +371,7 @@ public class IntelligenceTests
     [Fact]
     public void Snapshot_OfAnotherIntelligenceParameterSet_IsRefused()
     {
-        var config = new SliceRunConfig { Seed = 7, Intelligence = true };
+        var config = SliceRunConfig.Legacy with { Seed = 7, Intelligence = true };
         SliceSession a = SliceSession.Create(SliceTestData.Data, config);
         for (long m = 0; m < 3; m++)
             a.StepThroughMonth(m);
@@ -387,7 +387,7 @@ public class IntelligenceTests
     public void HiddenEvents_AreEmittedAboveTheThreshold_AndTheOrdinaryViewDoesNotLeakThem()
     {
         // GBR watches USA and SUN with a full network; the ordinary view is the one of GBR (PlayerActor).
-        var config = new SliceRunConfig { Seed = 7, Intelligence = true, PlayerActor = Gbr };
+        var config = SliceRunConfig.Legacy with { Seed = 7, Intelligence = true, PlayerActor = Gbr };
         SliceSession s = SliceSession.Create(SliceTestData.Data, config);
         Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Gbr, 30_000, T(Usa, IntelMode.Observe), T(Sun, IntelMode.Observe))).Accepted);
         IntelParams p = Intel(s).Parameters;
@@ -432,7 +432,7 @@ public class IntelligenceTests
     [Fact]
     public void PlayerView_DoesNotCarryTheKnowledgeOrTheIntelligenceOfOtherActors()
     {
-        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, Intelligence = true, PlayerActor = Gbr });
+        SliceSession s = SliceSession.Create(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, Intelligence = true, PlayerActor = Gbr });
         for (long m = 0; m < 30; m++)
             s.StepThroughMonth(m);
         for (int a = 0; a < s.World.Table.RowCount; a++)
@@ -476,7 +476,7 @@ public class IntelligenceTests
     public void Trace_PastTheThreshold_MakesTheExposureCertainWithinTwelveMonths()
     {
         // Turning off, so that every exposure is a loss; the hazard is the real one, only the base is raised so that traces reach the threshold.
-        SliceSession s = SliceSession.Create(DataWith(("turn_on_exposure: 0.30", "turn_on_exposure: 0.00"), ("hazard_base_per_year: 0.20", "hazard_base_per_year: 1.00")), new SliceRunConfig { Seed = 7, Intelligence = true });
+        SliceSession s = SliceSession.Create(DataWith(("turn_on_exposure: 0.30", "turn_on_exposure: 0.00"), ("hazard_base_per_year: 0.20", "hazard_base_per_year: 1.00")), SliceRunConfig.Legacy with { Seed = 7, Intelligence = true });
         Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal), T(Gbr, IntelMode.Observe))).Accepted);
         int rows = s.World.Table.RowCount, windows = 0;
         var due = new long[rows, rows];

@@ -24,7 +24,9 @@ public static class SliceChecks
     // change every trajectory on the current data; equals Session MainSeed1Month149. Earlier: TASK-0134 (Hcap(t), mastery). docs/simulation/golden-rerecord-train2.md.
     // TASK-0180: early G5/G6 requires changed (#555), = Session MainSeed1Month149.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront.
-    private const string Golden150 = "3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68";
+    // Re-recorded in TASK-0187/TASK-0188 (one golden batch): 57 new nodes 100-156 (#575) change every trajectory; the default Lab config is the legacy
+    // build (levers off, shares model), which the slot model leaves unchanged (S11), so this equals Session MainSeed1Month149 of TASK-0188. Old value 3d466f77…f82f68.
+    private const string Golden150 = "c79505d72eb10f41fbed33785979c82d7475ab0f5712d52b9212d1fffcbad401";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
@@ -50,6 +52,7 @@ public static class SliceChecks
         ("slice: LIC_END — a lapse of LicenceView.Active gives a t_end and an event", () => LicenceEnd(tmp)),
         ("slice: eng_short_months counts months at one bureau, not at any bureau", EngShortOneBureau),
         ("slice: licence track — replace, lapse, resume without a purchase (DEBT-0032)", LicenceTrack),
+        ("slice: LIC_PROBE — the market table has the deals and the licensed projects, the golden is the run without it; no market rejected (TASK-0179)", () => MarketProbeCheck(tmp)),
         ("slice: control tables — CONTROL_TABLES file → LkTables, hash in model_info, bad files rejected (TASK-0054)", () => ControlTablesFile(tmp)),
         ("slice: stage manifests stay valid after freezing; matrix --point/--seeds select one point (TASK-0055)", () => StageManifests(tmp)),
         ("slice: C3 distance — a tiny positive d_C3 is reported positive at full precision (TASK-0055 Codex)", C3DistanceExact),
@@ -363,9 +366,9 @@ public static class SliceChecks
             return $"actor_month on the core-g4 data: '{head4}'";
         // (3) O-040: mods/core has a licensable PRC above 63 (single_crystal_casting, 73), so the world registers word 1 of the licence masks; the
         // core-g4 data (licensable PRC ≤ 63) does not. The run above is the end-to-end proof that the wide mask runs.
-        if (!HasColumn(new SliceWorld(current, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+        if (!HasColumn(new SliceWorld(current, SliceRunConfig.Legacy with { Seed = 1 }), "pol.lic.mask.1"))
             return "six-generation data: no pol.lic.mask.1";
-        if (HasColumn(new SliceWorld(legacy, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+        if (HasColumn(new SliceWorld(legacy, SliceRunConfig.Legacy with { Seed = 1 }), "pol.lic.mask.1"))
             return "core-g4 data: pol.lic.mask.1 is registered without a licensable PRC above 63";
         return null;
     }
@@ -834,6 +837,29 @@ public static class SliceChecks
         if (ended.Count != ends.Count)
             return $"{ended.Count} licences with t_end, {ends.Count} LIC_END events";
         return ended.All(l => ends.Any(e => e["t"] == l["t_end"] && e["actor"] == l["buyer"])) ? null : "a t_end without a LIC_END of the buyer in that month";
+    }
+
+    // TASK-0179: the probe reads views only. Seed 1 buys a G1 licence in month 37 (licence-market-calibration.md §3), so 60 months show a DEAL and its LDESIGN.
+    private static string? MarketProbeCheck(string tmp)
+    {
+        var (plain, d0) = Run(tmp, Manifest("JetSlice", Ticks60, pars: """{"LIC_MARKET": true}"""), 1, 1, "lic-probe-off");
+        var (probe, d1) = Run(tmp, Manifest("JetSlice", Ticks60, pars: """{"LIC_MARKET": true, "LIC_PROBE": true}"""), 1, 1, "lic-probe-on");
+        if (!plain.Ok || !probe.Ok)
+            return plain.Error ?? probe.Error;
+        if (plain.GoldenHash != probe.GoldenHash)
+            return "LIC_PROBE changed the golden";
+        if (File.Exists(Path.Combine(d0, "market.csv")))
+            return "market.csv written without LIC_PROBE";
+        var rows = Rows(d1, "market.csv");
+        var deal = rows.FirstOrDefault(r => r["kind"] == "DEAL");
+        if (deal is null || deal["price"].Length == 0 || deal["seller"] == deal["buyer"])
+            return "no DEAL row with a price";
+        if (!rows.Any(r => r["kind"] == "LDESIGN" && r["buyer"] == deal["buyer"] && r["seller"] == deal["seller"] && r["t"] == deal["t"]))
+            return "the DEAL has no LDESIGN of the same buyer, seller and month";
+        if (!rows.Any(r => r["kind"] == "OFFER" && r["t"] == "0"))
+            return "no OFFER row in month 0";
+        var (bad, _) = Run(tmp, Manifest("JetSlice", Ticks60, pars: """{"LIC_PROBE": true}"""), 1, 1, "lic-probe-nomarket");
+        return bad.Ok ? "LIC_PROBE without the market accepted" : null;
     }
 
     private static List<Dictionary<string, string>> Rows(string dir, string file)

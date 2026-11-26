@@ -174,7 +174,7 @@ public class NoMutableStaticsTests
         ["Singularity.Core.Knowledge.KnowledgeStart.FromScenario -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (1, EnumerableToArrayReason),
         ["Singularity.Core.Industry.IndustryLayout.Create -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (14, EnumerableToArrayReason),
         ["Singularity.Core.Data.ModLoader.Load -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (1, EnumerableToArrayReason),
-        ["Singularity.Core.Data.NodeTable.Build -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (18, EnumerableToArrayReason),
+        ["Singularity.Core.Data.NodeTable.Build -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (19, EnumerableToArrayReason),
         ["Singularity.Core.Data.ScenarioData.Build -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (6, EnumerableToArrayReason),
         ["Singularity.Core.Data.ScenarioData.Rebuild -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (1, EnumerableToArrayReason),
         ["Singularity.Core.Data.ScenarioData.RebuildWith -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"] = (12, EnumerableToArrayReason),

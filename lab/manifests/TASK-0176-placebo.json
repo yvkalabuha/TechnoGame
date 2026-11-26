@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0176-placebo",
+  "description": "TASK-0176: noise floor of the §8 tolerance; research cost divisor K_DIV perturbed by ±0.5..1 % (all actors) against LEGACY.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "LEGACY",
+      "params": {}
+    },
+    {
+      "name": "KDIV1005",
+      "params": {
+        "K_DIV": 1.005
+      }
+    },
+    {
+      "name": "KDIV101",
+      "params": {
+        "K_DIV": 1.01
+      }
+    },
+    {
+      "name": "KDIV099",
+      "params": {
+        "K_DIV": 0.99
+      }
+    },
+    {
+      "name": "KDIV102",
+      "params": {
+        "K_DIV": 1.02
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/institutes-recalibration.md",
+    "baseline": "LEGACY"
+  }
+}

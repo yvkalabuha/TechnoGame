@@ -39,7 +39,7 @@ public sealed class KnowledgeInvariantException(long month, int actorNumber, str
 /// read <c>t_known</c>) also <c>know.since.N</c> per node: −1 unknown, else the month of the merge that made the node known, or
 /// <c>startKnownSince</c> for the start knowledge (SLICE_COMPOSITION §13.2). Without the flag the table has no such columns.
 /// </summary>
-public sealed class KnowledgeSystem : ITickSystem
+public sealed partial class KnowledgeSystem : ITickSystem
 {
     public const int DefaultSystemId = 100;
 
@@ -84,10 +84,15 @@ public sealed class KnowledgeSystem : ITickSystem
         IKnowledgeInputs inputs, CounterRng know, int chunkCount, KnowledgeMode mode = KnowledgeMode.Full,
         ImmutableArray<long>? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId,
         bool trackKnownSince = false, long startKnownSince = KnownSinceMarks.StartKnown, bool fundProgrammes = false,
-        Singularity.Core.Institutes.InstituteParams? priorities = null)
+        Singularity.Core.Institutes.InstituteParams? priorities = null, Singularity.Core.Institutes.SlotParams? slots = null, int slotCount = 0)
     {
         priorities?.Validate();
         _prio = priorities;
+        if (slots is not null && (mode != KnowledgeMode.Full || priorities is null || fundProgrammes))
+            throw new ArgumentException("The slot model needs the full knowledge mode, the institute parameters and no programmes (they are the focus now, O-088).", nameof(slots));
+        slots?.Validate();
+        _slots = slots;
+        _slotCount = slotCount;
         // The start value must lie below every month of the horizon (tau of the start section starts at the horizon, spec §6.1 v0.24 r2); −1 is the mark «unknown».
         if (trackKnownSince && startKnownSince > KnownSinceMarks.StartKnown)
             throw new ArgumentOutOfRangeException(nameof(startKnownSince), startKnownSince, $"startKnownSince must be at most {KnownSinceMarks.StartKnown}.");
@@ -182,6 +187,8 @@ public sealed class KnowledgeSystem : ITickSystem
         _opened = new List<(int, int, bool)>[chunkCount];
         for (int c = 0; c < chunkCount; c++)
             _opened[c] = new();
+        if (_slots is not null)
+            AddSlotColumns(table);
     }
 
     public int SystemId { get; }
@@ -269,6 +276,8 @@ public sealed class KnowledgeSystem : ITickSystem
     {
         if (!InFrontier(actorRow, nodeRow))
             return Fx6.Zero;
+        if (_slots is not null)
+            return SlotProgressRate(actorRow, nodeRow, month);
         if (_prio is not null)
         {
             Span<int> goalRows = stackalloc int[GoalCap];
@@ -433,7 +442,7 @@ public sealed class KnowledgeSystem : ITickSystem
     /// Reserve money the actor's programme takes in month t: the funded amount when its node is in the frontier, else zero (the money stays).
     /// The reserve reads this, so what leaves the account is exactly what the node received.
     /// </summary>
-    public Fx6 ProgrammeSpend(int actorRow, long month) => FundedAmount(actorRow, month, out _);
+    public Fx6 ProgrammeSpend(int actorRow, long month) => _slots is not null ? SlotReserveSpend(actorRow, month) : FundedAmount(actorRow, month, out _);
 
     private Fx6 FundedAmount(int a, long t, out int row)
     {
@@ -479,7 +488,9 @@ public sealed class KnowledgeSystem : ITickSystem
             Array.Clear(_trace, a * _n, _n);
             Array.Clear(_amount, a * _d, _d);
             _spent[a] = 0;
-            if (_mode == KnowledgeMode.Full)
+            if (_mode == KnowledgeMode.Full && _slots is not null)
+                ComputeSlots(a, t, opened);
+            else if (_mode == KnowledgeMode.Full)
                 ComputeFull(a, t, opened);
             else
                 ComputeSchedule(a, t, opened);
@@ -689,6 +700,9 @@ public sealed class KnowledgeSystem : ITickSystem
 
     // The ahead-of-time multiplier is a pure function of (node, month): a few integer operations, no table to refresh, nothing stored.
     private Fx6 CEffOf(int a, int r, Fx6 kmix, long month) =>
+        _slots is null ? CEffBase(a, r, kmix, month) : CEffBase(a, r, kmix, month) * _slots.PriceScale;
+
+    private Fx6 CEffBase(int a, int r, Fx6 kmix, long month) =>
         KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r), _inputs.StealShare(a, r, month));
 
     private bool RequiresKnown(int a, int r)

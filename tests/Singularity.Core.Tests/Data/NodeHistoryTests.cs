@@ -188,7 +188,9 @@ public class NodeHistoryTests : IDisposable
         }
         // History only: no product alternative, process, generation, research edge or dependant uses the node today,
         // so a bonus line would be a fake mechanic.
-        string[] expected = ["s8.eng.digital_beamforming"];   // no node requires or is informed by it, and no product uses it
+        // #575: the leaves of the new tree that nothing requires and no product slice uses yet. A node with a research_speed effect has a derived effect now (the slot model reads it, TASK-0187),
+        // so it is no longer in this list.
+        string[] expected = ["s10.eng.crewed_lunar_landing", "s10.eng.reconnaissance_satellite", "s10.eng.satellite_navigation_gps", "s10.eng.sounding_rocket_science", "s11.eng.fission_weapon_g1", "s11.eng.light_water_power_reactor", "s11.prc.gas_centrifuge_enrichment", "s11.prn.laser_inertial_confinement", "s5.prc.additive_manufacturing_metal", "s7.eng.reusable_booster_landing", "s7.prn.composite_solid_propellant", "s8.eng.digital_beamforming", "s8.eng.infrared_air_to_air_missile", "s9.prc.euv_lithography"];
         Assert.Equal(expected, without.Order(StringComparer.Ordinal).ToArray());
     }
 

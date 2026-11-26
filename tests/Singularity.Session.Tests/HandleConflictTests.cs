@@ -14,7 +14,7 @@ public class HandleConflictTests
     private const int Usa = 0;
     private static int _local;
 
-    private static SliceSession Make() => SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+    private static SliceSession Make() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false });
 
     private static CommandVerdict Submit(SliceSession s, SliceCommand c) => s.Submit(SourceClass.Player, 0, _local++, c);
 

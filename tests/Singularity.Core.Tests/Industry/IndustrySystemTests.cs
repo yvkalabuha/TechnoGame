@@ -482,7 +482,7 @@ public class IndustrySystemTests
         ScenarioData sc = data.Scenario("jet_slice_1945");
         var p = new IndustryParams();
         IndustryLayout l = IndustryLayout.FromData(data.Nodes, sc, workforceCategories: 2, requesters: 15);
-        Assert.Equal(24, l.ProcessCount);   // 20 + 4 processes of G5/G6
+        Assert.Equal(33, l.ProcessCount);   // 20 + 4 processes of G5/G6 + 9 of #575
         Assert.Equal(sc.ActorCount, l.SiteCount);
         Assert.Equal([39, 40, 41], l.AlloyGrades.Select(r => l.Number[r]));
         IndustryStart st = IndustryStart.FromScenario(sc, data.Nodes, l, p);

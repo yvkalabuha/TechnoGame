@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
 using Singularity.Core.Institutes;
+using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Core.Data;
@@ -18,8 +19,8 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 26 (TASK-0151) adds the research institutes (see session-surface.v26.txt): <c>SliceRunConfig.Institutes</c>, <c>ActorView.Institutes</c> (<c>InstituteView</c>) and the commands <c>SetPriorityNode</c>/<c>BuildInstitute</c>; 25 (TASK-0153) adds <c>SliceRunConfig.AdviserActors</c>, <c>AdviserRefuseYears</c>, <c>AdviserMaxLines</c>, <c>PolicyDecisionView.Proposals</c>, <c>ProposalView</c> and the command <c>RefuseProposal</c>; 24 (TASK-0160) adds <c>SliceRunConfig.Intelligence</c>, <c>ActorInputsView.Intel</c> (<c>IntelView</c>, <c>IntelTargetView</c>), the seventh item <c>BudgetShares.Security</c> and <c>SetBudgetShares.Targets</c> with their refusals; 23 (TASK-0152) adds the licence market: <see cref="SliceRunConfig.LicenceMarket"/>, <c>LicenceExternalActors</c>, <c>Alliances</c>, the commands <c>BuyLicence</c>/<c>OfferLicence</c> (<c>CommandVerdict.Licence</c>, <c>Offer</c>), <c>ActorView.Market</c> (<c>LicenceMarketView</c>) and <c>DesignView.LicensedFrom</c>; 22 (TASK-0150) adds <c>SliceRunConfig.Reserve</c>, <c>ActorInputsView.Reserve</c> (<c>ReserveView</c>) and the command <c>FundProgramme</c> with its refusals; 21 (TASK-0119) adds <c>ActorView.Alloy</c> (<c>AlloyCoverage</c>) and <c>ActorView.Research</c> (<c>ResearchView</c>); 20 (TASK-0147) adds <c>SliceRunConfig.ResearchWeightByDiscipline</c> and <c>DisciplineWeight</c>; 19 (TASK-0147) adds <c>SliceRunConfig.AheadCostK</c>, <c>AheadCostPow</c>, <c>AheadCostMax</c> (ahead-of-time cost of a node, #458); 18 (TASK-0134) adds <c>SliceRunConfig.HcapGrowthPerYear</c>, <c>HcapGrowthMax</c>, <c>MasteryXProg</c>, <c>MasteryUpkeepMult</c>, <c>MasteryRules</c> and the commands <c>StartMasteryProgramme</c>/<c>CancelMasteryProgramme</c> (<c>CommandVerdict.Mastery</c> carries the <c>why_not</c> code); 17 (TASK-0131) adds <c>SliceRunConfig.CostMultG5</c> and <c>CostMultG6</c> (c_n multipliers of generations 5 and 6, a calibration parameter); 16 (TASK-0131) makes <c>LicenceView.Mask</c> and <c>OfferMask</c> a two-word <c>LicenceMask</c> (nodes 1…127); 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
-    public const int TestApiVersion = 26;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 28 (TASK-0187) adds the slot science model: <c>SliceRunConfig.ScienceSlots</c>, the commands <c>AssignNode</c>/<c>Unassign</c>/<c>ReorderQueue</c>/<c>SetFocus</c>, <c>ActorView.Slots</c> (<c>SlotScienceView</c>) and the slot fields of <c>InstituteView</c>; 27 (TASK-0171) turns the five levers of wave 1 on by default (<c>Reserve</c>, <c>Institutes</c>, <c>Intelligence</c>, <c>LicenceMarket</c> and the new <c>AdviserForPlayer</c>), adds <c>SliceRunConfig.Legacy</c> (all off) and <c>GameData.Alliances</c>; 26 (TASK-0151) adds the research institutes (see session-surface.v26.txt): <c>SliceRunConfig.Institutes</c>, <c>ActorView.Institutes</c> (<c>InstituteView</c>) and the commands <c>SetPriorityNode</c>/<c>BuildInstitute</c>; 25 (TASK-0153) adds <c>SliceRunConfig.AdviserActors</c>, <c>AdviserRefuseYears</c>, <c>AdviserMaxLines</c>, <c>PolicyDecisionView.Proposals</c>, <c>ProposalView</c> and the command <c>RefuseProposal</c>; 24 (TASK-0160) adds <c>SliceRunConfig.Intelligence</c>, <c>ActorInputsView.Intel</c> (<c>IntelView</c>, <c>IntelTargetView</c>), the seventh item <c>BudgetShares.Security</c> and <c>SetBudgetShares.Targets</c> with their refusals; 23 (TASK-0152) adds the licence market: <see cref="SliceRunConfig.LicenceMarket"/>, <c>LicenceExternalActors</c>, <c>Alliances</c>, the commands <c>BuyLicence</c>/<c>OfferLicence</c> (<c>CommandVerdict.Licence</c>, <c>Offer</c>), <c>ActorView.Market</c> (<c>LicenceMarketView</c>) and <c>DesignView.LicensedFrom</c>; 22 (TASK-0150) adds <c>SliceRunConfig.Reserve</c>, <c>ActorInputsView.Reserve</c> (<c>ReserveView</c>) and the command <c>FundProgramme</c> with its refusals; 21 (TASK-0119) adds <c>ActorView.Alloy</c> (<c>AlloyCoverage</c>) and <c>ActorView.Research</c> (<c>ResearchView</c>); 20 (TASK-0147) adds <c>SliceRunConfig.ResearchWeightByDiscipline</c> and <c>DisciplineWeight</c>; 19 (TASK-0147) adds <c>SliceRunConfig.AheadCostK</c>, <c>AheadCostPow</c>, <c>AheadCostMax</c> (ahead-of-time cost of a node, #458); 18 (TASK-0134) adds <c>SliceRunConfig.HcapGrowthPerYear</c>, <c>HcapGrowthMax</c>, <c>MasteryXProg</c>, <c>MasteryUpkeepMult</c>, <c>MasteryRules</c> and the commands <c>StartMasteryProgramme</c>/<c>CancelMasteryProgramme</c> (<c>CommandVerdict.Mastery</c> carries the <c>why_not</c> code); 17 (TASK-0131) adds <c>SliceRunConfig.CostMultG5</c> and <c>CostMultG6</c> (c_n multipliers of generations 5 and 6, a calibration parameter); 16 (TASK-0131) makes <c>LicenceView.Mask</c> and <c>OfferMask</c> a two-word <c>LicenceMask</c> (nodes 1…127); 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 28;
 
     private SliceView _view = null!;
     private long _month = -1;
@@ -53,6 +54,7 @@ public sealed partial class SliceSession
         _world = world;
         _knowsProcess = KnowsProcess;
         _subscribed = world.Config.ViewScope == ViewScope.Subscribed ? new bool[world.Scenario.ActorCount] : null;
+        world.RefreshAirPower(0);   // the index the AI of month 0 reads
         _hash = ComputeHash();
         Layout = ViewBuilder.Layout(world);
         _view = ViewBuilder.Snapshot(world, Tick, _hash, _month, null, null, _subscribed);
@@ -183,10 +185,19 @@ public sealed partial class SliceSession
         if (command is RetireCohort { Acknowledged: false } retire && NeedsConfirmation(retire) is { } warning)
             return warning;
 
+        string? slotWarning = null;
+        if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
+        {
+            string percent = $"{after.Raw * 100 / Fx6.Scale} %";
+            if (before >= _world.Institutes.SlotParameters.UnderfundedBelow && !assign.Acknowledged)
+                return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {percent} of what the institutes ask (now {before.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to start anyway");
+            slotWarning = $"accepted; the money covers only {percent} of what the institutes ask after the start";
+        }
+
         int at = _pending.FindIndex(p => p.Key > logged.Key);
         _pending.Insert(at < 0 ? _pending.Count : at, logged);
         RememberLocal(source, sourceId, localN);
-        return CommandVerdict.Ok;
+        return slotWarning is null ? CommandVerdict.Ok : new CommandVerdict(CommandRefusal.None, slotWarning);
     }
 
     // Levers doc 1.2: a player actor under an adviser runs at most MaxLines lines. A start on a design that is already a line only changes its rate.
@@ -597,6 +608,11 @@ public sealed partial class SliceSession
             _month = month;
         }
         _world.Runner.RunTick();
+        if (monthly)
+        {
+            _world.RefreshAirPower(_month + 1);   // between ticks, once per actor: the index the next step reads
+            _world.SettleBorrowed();
+        }
         SliceRunConfig config = _world.Config;
         // HashEveryTick hashes every non-empty tick (ADR-0017 п. 4), also one that publishes no view.
         bool nonEmpty = monthly || applied || _world.Runner.LastTickRan;
@@ -652,6 +668,8 @@ public sealed partial class SliceSession
                     v0 = PriorityVerdict(priority, month);
                 if (v0.Accepted && command is BuildInstitute build)
                     v0 = BuildVerdict(build, month);
+                if (v0.Accepted && command is AssignNode or Unassign or ReorderQueue or SetFocus or ApplyQueues)
+                    v0 = SlotVerdict(command, month);
                 verdicts[i] = !v0.Accepted ? v0 : command is BuyLicence or OfferLicence ? LicenceVerdict(command, month) : _world.Commands.Apply(command, month);
             }
         }
@@ -697,6 +715,82 @@ public sealed partial class SliceSession
         return CommandVerdict.Ok;
     }
 
+    // §1.2, O-096: Submit judges a start by the state and the command alone, never by the other commands waiting (their order of arrival must not decide, S14); the starts that
+    // together cross the line are judged again at application, in key order, on the budget the commands before them made. A node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the start moves the coverage of the money from
+    // 60 % or more to less; when the money already covers less, the start goes with a warning. Returns the coverage after the start, or null when the node would not start now.
+    private Fx6? StartCoverage(AssignNode a, long month, out Fx6 before)
+    {
+        before = Fx6.One;
+        if (StartOf(a, month) is not { } mine)
+            return null;
+        before = _world.Knowledge.CoverageWith(a.Actor, month, []);
+        return _world.Knowledge.CoverageWith(a.Actor, month, [mine]);
+    }
+
+    // The slot work an AssignNode would begin in the month (a free institute, the node in the frontier, not worked on elsewhere), or null.
+    private SlotWork? StartOf(AssignNode a, long month)
+    {
+        InstituteSystem institutes = _world.Institutes!;
+        int row = _world.Graph.RowOf(a.Node);
+        if (!_world.SlotsOn || row < 0 || (uint)a.Slot >= (uint)institutes.Layout.SlotCount(a.Actor) || !institutes.Standing(new InstituteHandle(a.Actor, a.Slot))
+            || !_world.Knowledge.InFrontier(a.Actor, row) || _world.Knowledge.Released(a.Actor, row))
+            return null;
+        var node = new int[institutes.Layout.SlotCount(a.Actor)];
+        institutes.Resolve(a.Actor, month, node, new byte[node.Length]);
+        if (node[a.Slot] != 0 || node.Contains(a.Node))
+            return null;
+        return new SlotWork(a.Slot, row, institutes.InstituteMultiplier(new InstituteHandle(a.Actor, a.Slot), row), 0);
+    }
+
+    /// <summary>
+    /// The adviser's proposals for the free institutes of the player's actor as <c>AssignNode</c> commands (O-099): what the AI would give each free institute, confirmed in advance, so a client
+    /// without a research screen of its own keeps the institutes working. Empty without the slot model, for another actor, or when nothing is free or left to take. A pure read.
+    /// </summary>
+    public ImmutableArray<AssignNode> AdviserStarts(int actor)
+    {
+        if (!_world.SlotsOn || _world.Config.PlayerActor != actor)
+            return [];
+        InstituteSystem inst = _world.Institutes!;
+        int slots = inst.Layout.SlotCount(actor);
+        long month = NextStepMonth;
+        var node = new int[slots];
+        inst.Resolve(actor, month, node, new byte[slots]);
+        var goals = new int[InstituteSystem.MaxSlotsLimit];
+        inst.Propose(actor, month, goals, new bool[InstituteSystem.MaxSlotsLimit]);
+        var starts = ImmutableArray.CreateBuilder<AssignNode>();
+        for (int k = 0; k < slots; k++)
+        {
+            if (node[k] == 0 && goals[k] != 0)
+                starts.Add(new AssignNode(actor, k, goals[k], Acknowledged: true));
+        }
+        return starts.ToImmutable();
+    }
+
+    private long NextStepMonth => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));
+
+    /// <summary>
+    /// <c>FitInstitutes(node)</c> (SCIENCE_SLOTS §12): every institute of the actor against the node: overlap level, speed, months, what it works on now. Empty without the slot model or for an unknown node.
+    /// A pure read of the snapshot.
+    /// </summary>
+    public ImmutableArray<InstituteFitView> FitInstitutes(int actor, int nodeNumber) =>
+        _world.SlotsOn && !ViewBuilder.HiddenFromPlayer(_world, actor) && _world.Graph.RowOf(nodeNumber) is >= 0 and int row ? SlotPlanner.Fit(_world, actor, row, NextStepMonth) : [];
+
+    /// <summary><c>FocusQuote(node, institute)</c>: months, money per month and the price of the rest of the node at focus 0, 1 and 2. Empty as <see cref="FitInstitutes"/>.</summary>
+    public ImmutableArray<FocusQuoteView> FocusQuote(int actor, int nodeNumber, int slot) =>
+        _world.SlotsOn && !ViewBuilder.HiddenFromPlayer(_world, actor) && _world.Graph.RowOf(nodeNumber) is >= 0 and int row && (uint)slot < (uint)_world.Institutes!.Layout.SlotCount(actor) ? SlotPlanner.Focus(_world, actor, row, slot, NextStepMonth) : [];
+
+    /// <summary><c>PathToGoal(node)</c>: the unknown nodes on the way, their months and prices, and the time of the whole way (a range). Null without the slot model or for an unknown node.</summary>
+    public PathView? PathToGoal(int actor, int nodeNumber) =>
+        _world.SlotsOn && !ViewBuilder.HiddenFromPlayer(_world, actor) && _world.Graph.RowOf(nodeNumber) is >= 0 and int row ? SlotPlanner.Path(_world, actor, row, NextStepMonth) : null;
+
+    /// <summary><c>PathToGoal(product)</c>: the way to the generation of the product (its APP node).</summary>
+    public PathView? PathToGeneration(int actor, int generation) =>
+        generation >= 1 && generation <= _world.ProductsLayout.Generations ? PathToGoal(actor, _world.ProductsLayout.GenApp[generation - 1]) : null;
+
+    /// <summary><c>SuggestQueues(goal)</c>: a layout of the path over the standing institutes, to send as <c>ApplyQueues</c> after the player confirms it (§4.3). Empty without the slot model.</summary>
+    public ImmutableArray<QueuePlan> SuggestQueues(int actor, int goalNodeNumber) =>
+        _world.SlotsOn && !ViewBuilder.HiddenFromPlayer(_world, actor) && _world.Graph.RowOf(goalNodeNumber) is >= 0 and int row ? SlotPlanner.Suggest(_world, actor, row, NextStepMonth) : [];
+
     // build_institute: the window of the project, the cap of a small country and one project per slot (research-institutes-priorities §8).
     private CommandVerdict BuildVerdict(BuildInstitute b, long month)
     {
@@ -708,8 +802,30 @@ public sealed partial class SliceSession
             BuildCheck.AlreadyStanding => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the institute stands already"),
             BuildCheck.AlreadyBuilding => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the project of this institute runs already"),
             BuildCheck.TooEarly => CommandVerdict.Refuse(CommandRefusal.BuildRefused, $"the window opens in {institutes.Layout.RefYear(h) - institutes.Parameters.WindowYears}"),
+            BuildCheck.UpkeepCeiling => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the upkeep of the institutes would pass its share of the research money (#574)"),
             _ => CommandVerdict.Refuse(CommandRefusal.BuildRefused, $"a small country builds at most {institutes.Parameters.SmallCountryLevelCap} levels in one project"),
         };
+    }
+
+    // Slot model: the node must still be unknown; a node of another institute's list is refused by the list itself (NodeTaken).
+    private CommandVerdict SlotVerdict(SliceCommand command, long month)
+    {
+        InstituteSystem institutes = _world.Institutes ?? throw new InvalidOperationException("The validator accepted a slot command without institutes.");
+        if (command is AssignNode a)
+        {
+            if (!institutes.Standing(new InstituteHandle(a.Actor, a.Slot)))
+                return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"the institute in slot {a.Slot} is not built");
+            int row = _world.Graph.RowOf(a.Node);
+            if (row < 0 || _world.Knowledge.IsKnown(a.Actor, row))
+                return CommandVerdict.Refuse(CommandRefusal.NodeKnown, $"node {a.Node} is already known to actor {a.Actor}");
+        }
+        // The budget the month will have is only known once the commands before this one are applied (a cut of the research share sent earlier in the batch): judge again, as at Submit.
+        if (command is AssignNode { Acknowledged: false } start && StartCoverage(start, month, out Fx6 before) is { } after
+            && before >= institutes.SlotParameters.UnderfundedBelow && after < institutes.SlotParameters.UnderfundedBelow)
+            return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {after.Raw * 100 / Fx6.Scale} % of what the institutes ask (it was {before.Raw * 100 / Fx6.Scale} %): send the command with Acknowledged to start anyway");
+        if (command is SetFocus f && f.Level > 0 && !institutes.Standing(new InstituteHandle(f.Actor, f.Slot)))
+            return CommandVerdict.Refuse(CommandRefusal.NoActiveNode, $"the institute in slot {f.Slot} is not built");
+        return CommandVerdict.Ok;
     }
 
     // set_priority_node: the node must still be unknown and no other slot of the actor works on it; a slot the player has set may be changed once per period.
@@ -722,6 +838,19 @@ public sealed partial class SliceSession
         if (row < 0 || _world.Knowledge.IsKnown(p.Actor, row))
             return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"node {p.Node} is already known to actor {p.Actor}");
         var slot = new InstituteHandle(p.Actor, p.Slot);
+        if (_world.SlotsOn)
+        {
+            // The slot model: the node becomes the active one of the slot; another institute that works on it keeps it.
+            Span<int> work = stackalloc int[institutes.Layout.SlotCount(p.Actor)];
+            Span<byte> focus = stackalloc byte[work.Length];
+            institutes.Resolve(p.Actor, month, work, focus);
+            for (int k = 0; k < work.Length; k++)
+            {
+                if (k != p.Slot && work[k] == p.Node)
+                    return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"another institute already works on node {p.Node}");
+            }
+            return CommandVerdict.Ok;
+        }
         for (int k = 0; k < institutes.Layout.SlotCount(p.Actor); k++)
         {
             if (k != p.Slot && institutes.GoalNode(new InstituteHandle(p.Actor, k)) == p.Node)

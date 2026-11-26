@@ -22,8 +22,10 @@ public sealed partial class NodeTable
             for (int e = InformsStart[r]; e < InformsStart[r + 1]; e++)
             {
                 int to = InformsTo[e];
-                if (Type[r] != NodeType.FND || Type[to] is not (NodeType.ENG or NodeType.PRC) || Discipline[to] != Discipline[r])
-                    throw DataLoadException.At(raw[r].Map, $"informs edge from '{Id[r]}' to '{Id[to]}' must go from FND to ENG/PRC of the same discipline");
+                // Spec §1.3: an FND informs ENG/PRC of its own discipline. #575: a PRN, CMP, ENG or PRC (computing, electronics,
+                // machining) may inform any other non-FND, non-APP node across disciplines (a product generation is opened by requires only).
+                if (to == r || Type[to] is NodeType.FND or NodeType.APP || (Type[r] == NodeType.FND && (Type[to] is not (NodeType.ENG or NodeType.PRC) || Discipline[to] != Discipline[r])))
+                    throw DataLoadException.At(raw[r].Map, $"informs edge from '{Id[r]}' to '{Id[to]}' must go to a non-FND, non-APP node other than itself (an FND: to ENG/PRC of its own discipline)");
                 if (InformsWeight[e] <= Fx6.Zero || InformsWeight[e] > Fx6.One)
                     throw DataLoadException.At(raw[r].Map, $"informs weight {InformsWeight[e]} must be in (0, 1]");
             }
@@ -94,6 +96,17 @@ public sealed partial class NodeTable
             w.Bool(AnchorBefore[r]);
             w.Str(AnchorSource[r]);
             w.Bool(AnchorEstimated[r]);
+            w.Int(DirectionCount(r));
+            for (int k = 0; k < DirectionCount(r); k++)
+                w.Int(DirectionAt(r, k));
+            // The slot model reads both (research_speed effects, the military value word of the card), so both are part of the identity of the data.
+            w.Int(SpeedStart[r + 1] - SpeedStart[r]);
+            for (int k = SpeedStart[r]; k < SpeedStart[r + 1]; k++)
+            {
+                w.Int(SpeedMask[k]);
+                w.Fixed(SpeedBonus[k]);
+            }
+            w.Str(DataNames.NameOf(DataNames.MilValues, MilValue[r]));
         }
     }
 }

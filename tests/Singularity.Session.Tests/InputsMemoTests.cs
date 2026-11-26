@@ -23,7 +23,7 @@ public class InputsMemoTests
 
     private static List<string> Run(ulong seed, bool memo)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, HashEveryTick = true });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, HashEveryTick = true });
         s.World.MemoizeInputs = memo;
         var hashes = new List<string>();
         int local = 0, playerLocal = 0;
@@ -50,7 +50,7 @@ public class InputsMemoTests
     [Fact]
     public void Memo_ServesTheComputeOfTheMonth_AndNotAChangedSnapshot()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1 });
         SliceWorld w = s.World;
         s.StepThroughMonth(2);
         long month = 3;

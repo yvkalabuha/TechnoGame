@@ -93,6 +93,30 @@ public enum CommandRefusal
 
     /// <summary>A priority order in a run whose knowledge is a schedule (L_K, L_K0): the order cannot change research.</summary>
     PriorityNoEffect,
+
+    /// <summary>Slot model: the list of the slot holds the active node and 5 queued (§4.1).</summary>
+    QueueFull,
+
+    /// <summary>Slot model: the node stands in a list of the actor already, or another institute works on it.</summary>
+    NodeTaken,
+
+    /// <summary>Slot model: the node is not in the list, or the order is not a permutation of it.</summary>
+    NotInList,
+
+    /// <summary>Slot model: the focus of the institute was set less than the repeat period ago.</summary>
+    FocusTooSoon,
+
+    /// <summary>Slot model: a focus level outside 0..2.</summary>
+    BadLevel,
+
+    /// <summary>Slot model: the slot works on no node, so there is nothing to focus on.</summary>
+    NoActiveNode,
+
+    /// <summary>The slot science model is off in this run.</summary>
+    SlotsOff,
+
+    /// <summary>Slot model: the node is not in the frontier of the actor (known, or a requirement missing) and cannot be started yet; queueing it is allowed.</summary>
+    NodeKnown,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -122,6 +146,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 
     /// <summary>Institutes per actor row (<c>set_priority_node</c>); empty = the run has no institutes.</summary>
     public ImmutableArray<int> InstituteSlots { get; init; } = [];
+
+    /// <summary>The slot science model runs: the list, queue and focus commands are accepted; <c>fund_programme</c> is the focus now (O-088).</summary>
+    public bool SlotsEnabled { get; init; }
 
     /// <summary>Knowledge is a schedule (L_K, L_K0): priority orders are refused.</summary>
     public bool ScheduledKnowledge { get; init; }
@@ -200,6 +227,36 @@ public static class CommandValidator
                 return limits.NodeNumbers.Contains(pn.Node)
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {pn.Node} is not in the graph");
+            case CancelBuild cbd:
+                if (limits.InstituteSlots.IsDefaultOrEmpty)
+                    return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                return (uint)cbd.Actor < (uint)limits.InstituteSlots.Length && (uint)cbd.Slot < (uint)limits.InstituteSlots[cbd.Actor]
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {cbd.Actor} has no institute slot {cbd.Slot}");
+            case ApplyQueues aqs:
+                if (!limits.SlotsEnabled)
+                    return CommandVerdict.Refuse(CommandRefusal.SlotsOff, "this run has no slot science model");
+                if (aqs.Plan.IsDefault)
+                    return CommandVerdict.Refuse(CommandRefusal.NotInList, "the plan is empty");
+                foreach (QueuePlan qp in aqs.Plan)
+                {
+                    if ((uint)aqs.Actor >= (uint)limits.InstituteSlots.Length || (uint)qp.Slot >= (uint)limits.InstituteSlots[aqs.Actor])
+                        return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {aqs.Actor} has no institute slot {qp.Slot}");
+                    if (qp.Nodes.IsDefault || qp.Nodes.Any(n => !limits.NodeNumbers.Contains(n)))
+                        return CommandVerdict.Refuse(CommandRefusal.BadNode, "the plan names a node that is not in the graph");
+                }
+                return CommandVerdict.Ok;
+            case AssignNode or Unassign or ReorderQueue or SetFocus:
+                if (!limits.SlotsEnabled)
+                    return CommandVerdict.Refuse(CommandRefusal.SlotsOff, "this run has no slot science model");
+                int slotActor = c.Actor, slotNo = c switch { AssignNode x => x.Slot, Unassign x => x.Slot, ReorderQueue x => x.Slot, _ => ((SetFocus)c).Slot };
+                if ((uint)slotActor >= (uint)limits.InstituteSlots.Length || (uint)slotNo >= (uint)limits.InstituteSlots[slotActor])
+                    return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {slotActor} has no institute slot {slotNo}");
+                if (c is SetFocus { Level: < 0 or > 2 })
+                    return CommandVerdict.Refuse(CommandRefusal.BadLevel, "the focus level is 0, 1 or 2");
+                if (c is AssignNode { Node: var an } && !limits.NodeNumbers.Contains(an))
+                    return CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {an} is not in the graph");
+                return CommandVerdict.Ok;
             case BuildInstitute bi:
                 if (limits.InstituteSlots.IsDefaultOrEmpty)
                     return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
@@ -207,6 +264,8 @@ public static class CommandValidator
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {bi.Actor} has no institute slot {bi.Slot}");
             case FundProgramme fp:
+                if (limits.SlotsEnabled)
+                    return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "the one-off programme is the focus of an institute in the slot model: use set_focus");
                 if (!limits.ReserveEnabled || !limits.FundEnabled)
                     return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run cannot fund programmes (no reserve account, or the knowledge layer is a schedule)");
                 if (!limits.NodeNumbers.Contains(fp.Node))

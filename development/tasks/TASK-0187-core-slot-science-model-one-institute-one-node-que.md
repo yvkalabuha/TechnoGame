@@ -41,4 +41,11 @@ created: 2026-11-25
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+**Сделано (ветка worktree-agent-a810348052da178f2, коммиты по шагам):**
+- Режим слотов в ядре: `SlotParams`/`SlotMath` (T_n = 6·c_тип·(1+0,5·gen), цена ×0,25, M ≤ 2,5, ставка C·M·s^0,6/T_eff, u общий), `KnowledgeSystem.Slots` (прогресс только у узла в слоте, излишек науки возвращается в бюджет, диффузия и кража сокращают и время, выпуск слота рисковым узлом у потолка прогресса с пониженным шансом), `InstituteSystem.Slots` (Resolve: очередь 1+5, первый доступный, заимствование нетронутого узла из чужой очереди, ИИ: PATH, затем любой узел фронта, институт с наибольшим пересечением, фокус по отношению воздушной мощи; опыт ∝ прогресс·вес по направлениям, новое направление на уровне 1, потолок по содержанию).
+- Команды AssignNode/Unassign/ReorderQueue/SetFocus (+ SetPriorityNode как «активный узел»), поля Session (SlotScienceView, поля InstituteView), FleetValue/MPI каждый месяц, TestApiVersion 28.
+- Доп. объём координатора (founded_month): founded_month в institutes.yaml (CEA: 1945-10, кандидат; уровни CEA chem 2 + metal 1 — лимит малой страны 3), направления в хэшах DataHash и InstituteTable.Hash; ядро читает направления данных (TASK-0189, слита) с запасным вариантом «дисциплина = направление».
+- Режим Shares и Legacy: побайтно прежние (эталоны Legacy не менялись); эталоны конфигурации по умолчанию перезаписаны один раз (LinkedRun, ViewTests, TwoWorlds): режим слотов по умолчанию и FRA с 2 институтами.
+- Тесты: tests/Singularity.Session.Tests/SlotScienceTests.cs (S1, S2, S3, S5, S6 L1/L2, S10, S11, живость, команды, фокус), tests/Singularity.Core.Tests/Institutes/SlotMathTests.cs.
+- Часть 2: запросы FitInstitutes/FocusQuote/PathToGoal/PathToGeneration/SuggestQueues, команды CancelBuild/ApplyQueues, подтверждение невыгодного старта (Acknowledged), фокус из резерва, эффект research_speed (чтение из данных, данных пока нет), второй ярус пути ИИ (g*+1), общее правило стройки ИИ (при нынешнем дереве не срабатывает: путь уже слотов), уведомление «институт свободен» раз в год (S12), излишек науки идёт в статью закупок, пороги уровней покрывают 5.
+- Не сделано в части 1 (кроме перечисленного в части 2): Lab SurfaceVersion 27→28 (зона simulation-engineer), запросы FitInstitutes/FocusQuote/PathToGoal/SuggestQueues, CancelBuild/ApplyQueues, оплата фокуса из резерва, общее правило стройки ИИ, ступень g*+1, research_speed R, пауза S12, свойство S13, полосы темпа через Lab.

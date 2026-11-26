@@ -78,7 +78,7 @@ public class DailyTickProbeTests
     public void ReusedView_EqualsAFreshSnapshot_OnEveryProbeDay()
     {
         // Seed 3 with the A40 stress arm first closes a line in month 220 (found by a scan): the window below holds that monthly view.
-        SliceSession s = SliceSession.Create(SliceTestData.LegacyData, new SliceRunConfig   // month 239 is tuned on the 61-node data
+        SliceSession s = SliceSession.Create(SliceTestData.LegacyData, SliceRunConfig.Legacy with   // month 239 is tuned on the 61-node data
         {
             Seed = 3, LicKnows = true, EffortShare = EffortShareArm.X0, DailyTickProbe = true, HashEveryTick = true,
             AheadCostK = Fx6.Zero,   // TASK-0147: the scanned month is that of the data without the ahead-of-time cost (default k 0.02 moves it)

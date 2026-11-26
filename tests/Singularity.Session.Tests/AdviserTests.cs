@@ -12,9 +12,10 @@ namespace Singularity.Session.Tests;
 /// </summary>
 public class AdviserTests
 {
-    private const int Horizon = 400;
+    // 400 before #575: the first line closes ~70+ months later since the 57 new nodes share the research money (pace-check: G2 first unit +70 months).
+    private const int Horizon = 560;
 
-    private static SliceRunConfig Base => new() { Seed = 1, Threads = 2 };
+    private static SliceRunConfig Base => SliceRunConfig.Legacy with { Seed = 1, Threads = 2 };
 
     private sealed record Found(int Actor, int Design, long Month, Fx6 Rate, List<(long Month, int Actor, DesignCommand Command)> Designs)
     {

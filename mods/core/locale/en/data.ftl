@@ -594,6 +594,348 @@ node-s8-prn-adaptive_third_stream_fan =
     .anchor = GE ADVENT: engine run (26.11.2013)
     .history = GE and the US Air Force have been working on an adaptive engine since 2007: first ADVENT, then AETD. The second XA100 engine was run on 26 August 2021 in Evendale, the last prototype under AETP; the first engine had been tested since December 2020. GE describes the third stream as a means of thermal management; in November 2023 a third cycle of tests was reported.
 
+node-s9-fnd-stored_program_architecture =
+    .name = Stored-program architecture
+    .short = Stored prog.
+    .anchor = von Neumann EDVAC report, 30.06.1945
+    .history = Von Neumann's report on the EDVAC of 30 June 1945 described a computer that keeps program and data in one memory, so a program can be changed like data.
+
+node-s9-eng-electronic_computer_g1 =
+    .name = Vacuum-tube electronic computer (ENIAC)
+    .short = ENIAC
+    .anchor = ENIAC, 15.02.1946
+    .history = ENIAC was presented on 15 February 1946: about 18,000 vacuum tubes, ballistic tables computed orders of magnitude faster than by hand.
+
+node-s9-eng-stored_program_computer =
+    .name = Stored-program computer (EDSAC)
+    .short = EDSAC
+    .anchor = EDSAC, first program 06.05.1949
+    .history = EDSAC ran its first program on 6 May 1949, a general-purpose stored-program machine that made computing a tool for science.
+
+node-s6-prc-numerical_control_machining =
+    .name = Numerically controlled machining
+    .short = NC machining
+    .anchor = MIT NC milling machine, 09.1952
+    .history = MIT's Servomechanisms Laboratory showed a numerically controlled milling machine in September 1952, paid for by the US Air Force; it opened the way to monolithic aircraft panels.
+
+node-s9-prn-high_level_language_compiler =
+    .name = High-level language and compiler (FORTRAN)
+    .short = FORTRAN
+    .anchor = FORTRAN compiler, 04.1957
+    .history = The first FORTRAN compiler appeared in April 1957: engineers could write calculations without machine code.
+
+node-s9-prn-finite_element_method =
+    .name = Finite element method
+    .short = FEM
+    .anchor = Turner, Clough et al., 1956
+    .history = Turner, Clough, Martin and Topp published in 1956 a way to compute airframes with stiffness matrices; the name "finite elements" was given by Clough in 1960.
+
+node-s9-cmp-transistor_computer_g2 =
+    .name = Transistor computer (IBM 7090)
+    .short = IBM 7090
+    .anchor = IBM 7090, first delivery 12.1959
+    .history = The transistorised IBM 7090 was first delivered in December 1959: more reliable and faster than tube machines.
+
+node-s9-eng-mainframe_family_g3 =
+    .name = Third-generation mainframes (CDC 6600)
+    .short = CDC 6600
+    .anchor = CDC 6600, 09.1964
+    .history = The CDC 6600 of Seymour Cray (September 1964, about 1 Mflops) started supercomputing; IBM System/360 followed in April 1964 (from memory).
+
+node-s9-prn-computational_fluid_dynamics =
+    .name = Computational fluid dynamics (panel methods)
+    .short = CFD
+    .anchor = Hess and Smith, 1967
+    .history = Hess and Smith (Douglas Aircraft, 1967) published the first work on a three-dimensional panel model: flow around a body without a wind tunnel.
+
+node-s9-cmp-microprocessor =
+    .name = Microprocessor
+    .short = Microproc.
+    .anchor = Intel 4004, 15.11.1971
+    .history = The Intel 4004 of 15 November 1971 put a processor on one chip, the basis of on-board computers.
+
+node-s9-eng-vector_supercomputer =
+    .name = Vector supercomputer (Cray-1)
+    .short = Cray-1
+    .anchor = Cray-1 at Los Alamos, 1976
+    .history = The first Cray-1 was installed at Los Alamos in 1976; vector machines made flow and nuclear calculations routine.
+
+node-s9-eng-massively_parallel_hpc =
+    .name = Massively parallel supercomputer (ASCI Red)
+    .short = ASCI Red
+    .anchor = ASCI Red, 1.06 Tflops, 12.1996
+    .history = ASCI Red reached 1.06 Tflops in December 1996 and served to model the nuclear arsenal without tests.
+
+node-s9-eng-gpu_accelerated_computing =
+    .name = GPU-accelerated scientific computing (CUDA)
+    .short = GPU / CUDA
+    .anchor = CUDA release, 2007
+    .history = CUDA, released in 2007, allowed general scientific calculations on graphics chips.
+
+node-s9-prn-deep_learning_science =
+    .name = Deep learning for science (AlphaFold 2)
+    .short = AlphaFold 2
+    .anchor = AlphaFold 2 wins CASP14, 11.2020
+    .history = AlphaFold 2 won CASP14 in November 2020: protein structures predicted by a learned model.
+
+node-s9-prn-point_contact_transistor =
+    .name = Point-contact transistor
+    .short = Point trans.
+    .anchor = Bardeen, Brattain, 23.12.1947
+    .history = Bardeen and Brattain at Bell Labs demonstrated the point-contact transistor on 23 December 1947.
+
+node-s5-prc-zone_refining_semiconductor =
+    .name = Zone refining of semiconductors
+    .short = Zone refine
+    .anchor = Pfann patent filed 16.11.1951
+    .history = Pfann of Bell Labs filed patent US2739088 on 16 November 1951 (granted 1956); the first zone-refining tube was shown in 1953. It gives germanium and silicon of the purity that devices need.
+
+node-s9-cmp-silicon_transistor =
+    .name = Silicon transistor
+    .short = Si trans.
+    .anchor = Teal, Texas Instruments, 04.1954
+    .history = Gordon Teal of Texas Instruments made the first commercial silicon transistor in April 1954.
+
+node-s9-cmp-integrated_circuit =
+    .name = Integrated circuit
+    .short = IC
+    .anchor = Kilby, 12.09.1958
+    .history = Jack Kilby of Texas Instruments built the first integrated circuit on 12 September 1958; US Air Force orders sped up its development.
+
+node-s9-prc-planar_monolithic_ic_manufacturing =
+    .name = Planar process for monolithic ICs
+    .short = Planar IC
+    .anchor = Hoerni, Fairchild, 1959
+    .history = Fairchild (Hoerni, 1959) invented the planar process; serial monolithic circuits appeared from 1961.
+
+node-s9-prn-laser_principle =
+    .name = Laser
+    .short = Laser
+    .anchor = Maiman, ruby laser, 16.05.1960
+    .history = Theodore Maiman ran the ruby laser on 16 May 1960; range finders and target designators followed.
+
+node-s9-prc-mos_lsi_manufacturing =
+    .name = Silicon-gate MOS LSI process
+    .short = MOS LSI
+    .anchor = Faggin, Fairchild, 04.1968
+    .history = Fairchild (Faggin) had working silicon-gate MOS transistors by April 1968, the base of large-scale integration.
+
+node-s9-prn-vlsi_design_methodology =
+    .name = VLSI design methodology (Mead-Conway)
+    .short = VLSI design
+    .anchor = Mead-Conway textbook, 1979
+    .history = The 1979 textbook "Introduction to VLSI Systems" standardised the computer-aided design of chips.
+
+node-s9-prc-euv_lithography =
+    .name = Extreme ultraviolet lithography
+    .short = EUV
+    .anchor = ASML EUV in production, 2019
+    .history = Series chip production with extreme ultraviolet lithography (ASML) began in 2019.
+
+node-s8-eng-fire_control_radar_interceptor =
+    .name = Interceptor airborne fire-control radar
+    .short = Fire radar
+    .anchor = F-86D, AN/APG-36, in service 1951
+    .history = The F-86D "Sabre Dog" carried the AN/APG-36 radar in its nose; first flight 22 December 1949, in service from 1951.
+
+node-s8-eng-infrared_air_to_air_missile =
+    .name = Infrared air-to-air missile (AIM-9)
+    .short = AIM-9
+    .anchor = First AIM-9 intercept, 11.09.1953
+    .history = The infrared missile later called AIM-9 made its first target intercept on 11 September 1953 and entered US Navy service in 1956.
+
+node-s8-eng-inertial_navigation_system =
+    .name = Inertial navigation system
+    .short = INS
+    .anchor = Draper, SPIRE flight tests, 1953
+    .history = The MIT Instrumentation Laboratory (Draper) flight-tested the SPIRE inertial navigation system in 1953.
+
+node-s8-prn-pulse_doppler_look_down_radar =
+    .name = Pulse-Doppler look-down radar
+    .short = Look-down
+    .anchor = F-4J, AN/AWG-10, 1966
+    .history = The F-4J (AN/AWG-10 radar, deliveries from 1966) was the first fighter able to look down and shoot down.
+
+node-s5-cmp-maraging_steel =
+    .name = Maraging steel
+    .short = Maraging
+    .anchor = Inco (Bieber), late 1950s
+    .history = Inco (Bieber) developed maraging steel in the late 1950s for rocket casings and rotors; the year is an estimate.
+
+node-s5-cmp-ablative_heat_shield =
+    .name = Ablative heat shield
+    .short = Ablative
+    .anchor = Jupiter AM-3, 23.10.1957
+    .history = The Jupiter AM-3 rocket flew with an ablative heat shield on 23 October 1957; the blunt shape of Allen and Eggers dates from 1951.
+
+node-s5-cmp-carbon_carbon_composite =
+    .name = Carbon-carbon composite
+    .short = C-C compos.
+    .anchor = Chance Vought, about 1959
+    .history = Carbon-carbon was developed for ICBM warheads (Chance Vought, 1958-59, from memory) and later used on the Shuttle.
+
+node-s5-prc-hot_isostatic_pressing =
+    .name = Hot isostatic pressing
+    .short = HIP
+    .anchor = Battelle, 1950s
+    .history = Hot isostatic pressing was invented in the 1950s at Battelle (the year 1955 is an estimate); it densifies castings and powders.
+
+node-s5-cmp-thermal_barrier_coating =
+    .name = Thermal barrier coating
+    .short = TBC
+    .anchor = Ceramic TBC, 1980s
+    .history = First thermal barrier coatings (aluminide) are of the 1970s, improved ceramic ones of the 1980s; the year 1980 is an estimate in this range.
+
+node-s5-prc-additive_manufacturing_metal =
+    .name = Metal additive manufacturing
+    .short = Metal AM
+    .anchor = LEAP nozzles delivered, 2016
+    .history = Laser melting was invented in 1995 (Fraunhofer ILT); the first LEAP engines with printed fuel nozzles were delivered to Airbus in 2016.
+
+node-s7-eng-liquid_rocket_engine_g1 =
+    .name = Liquid-propellant rocket engine (A-4/V-2)
+    .short = A-4 / V-2
+    .anchor = First successful A-4 launch, 03.10.1942
+    .history = The A-4 (V-2) first launched successfully on 3 October 1942 and was used in combat from September 1944.
+
+node-s7-prn-composite_solid_propellant =
+    .name = Composite solid propellant
+    .short = Solid fuel
+    .anchor = Atlantic Research, Al fuel, 1954
+    .history = Parsons (Caltech) used asphalt and perchlorate from 1942; Atlantic Research added aluminium to the mix in 1954.
+
+node-s7-fnd-blunt_body_reentry =
+    .name = Blunt-body re-entry theory
+    .short = Blunt body
+    .anchor = Allen and Eggers, NACA, 1951
+    .history = Allen and Eggers (NACA, 1951) showed that a blunt shape lowers re-entry heating.
+
+node-s7-eng-intercontinental_ballistic_missile =
+    .name = Intercontinental ballistic missile (R-7)
+    .short = ICBM
+    .anchor = R-7, first flight 21.08.1957
+    .history = The R-7 flew successfully for the first time on 21 August 1957, the first intercontinental ballistic missile.
+
+node-s7-eng-cryogenic_hydrogen_engine =
+    .name = Cryogenic hydrogen engine (RL10)
+    .short = RL10
+    .anchor = RL10, first flight 27.11.1963
+    .history = The RL10 hydrogen engine made its first successful flight on 27 November 1963 (Centaur stage).
+
+node-s7-eng-staged_combustion_hydrogen_engine =
+    .name = Staged-combustion hydrogen engine (SSME/RS-25)
+    .short = SSME / RS-25
+    .anchor = STS-1, 12.04.1981
+    .history = The RS-25 is a reusable staged-combustion hydrogen engine; first flight 12 April 1981 (STS-1).
+
+node-s7-eng-reusable_booster_landing =
+    .name = Reusable booster landing (Falcon 9)
+    .short = Booster
+    .anchor = Falcon 9 landing, 12.2015
+    .history = The first successful landing of an orbital first stage (Falcon 9) took place in December 2015.
+
+node-s10-eng-sounding_rocket_science =
+    .name = Sounding-rocket upper-atmosphere science
+    .short = Sounding rkt
+    .anchor = V-2 No. 13 photo, 24.10.1946
+    .history = The first photograph of Earth from space was taken from V-2 No. 13 on 24 October 1946 in the USA.
+
+node-s10-eng-artificial_satellite =
+    .name = Artificial satellite
+    .short = Satellite
+    .anchor = Sputnik 1, 04.10.1957
+    .history = Sputnik 1 was launched on 4 October 1957.
+
+node-s10-eng-scientific_satellite =
+    .name = Scientific satellite (Explorer 1)
+    .short = Explorer 1
+    .anchor = Explorer 1, 31.01.1958
+    .history = Explorer 1 (31 January / 1 February 1958) found the Van Allen radiation belts.
+
+node-s10-eng-reconnaissance_satellite =
+    .name = Reconnaissance satellite (Corona)
+    .short = Corona
+    .anchor = Discoverer 14, 20.08.1960
+    .history = Discoverer 14 returned a film capsule from orbit on 20 August 1960, the first reconnaissance satellite success (Corona).
+
+node-s10-eng-crewed_orbital_flight =
+    .name = Crewed orbital flight (Vostok)
+    .short = Vostok
+    .anchor = Vostok 1, 12.04.1961
+    .history = Vostok 1 carried the first human into orbit on 12 April 1961.
+
+node-s10-eng-crewed_lunar_landing =
+    .name = Crewed lunar landing (Apollo)
+    .short = Apollo
+    .anchor = Apollo 11, 20.07.1969
+    .history = Apollo 11 landed two astronauts on the Moon on 20 July 1969.
+
+node-s10-eng-satellite_navigation_gps =
+    .name = Satellite navigation (GPS)
+    .short = GPS
+    .anchor = First NAVSTAR Block I, 22.02.1978
+    .history = The first NAVSTAR Block I satellite (the start of GPS) was launched on 22 February 1978.
+
+node-s10-eng-space_shuttle_orbiter =
+    .name = Reusable orbiter (Space Shuttle)
+    .short = Shuttle
+    .anchor = STS-1, 12.04.1981
+    .history = The first Space Shuttle flight, STS-1, took place on 12 April 1981: a reusable orbiter.
+
+node-s10-eng-space_telescope =
+    .name = Space telescope (Hubble)
+    .short = Hubble
+    .anchor = Hubble, STS-31, 24.04.1990
+    .history = The Hubble Space Telescope was launched with STS-31 on 24 April 1990.
+
+node-s11-prc-gaseous_diffusion_enrichment =
+    .name = Gaseous diffusion enrichment
+    .short = Gas diffus.
+    .anchor = K-25, Oak Ridge, 1945
+    .history = The K-25 plant at Oak Ridge began enriching uranium by gaseous diffusion in 1945.
+
+node-s11-eng-fission_weapon_g1 =
+    .name = Fission weapon
+    .short = Fission bomb
+    .anchor = Trinity, 16.07.1945
+    .history = The Trinity test on 16 July 1945 was the first fission weapon.
+
+node-s11-prn-neutron_transport_monte_carlo =
+    .name = Monte Carlo neutron transport
+    .short = Monte Carlo
+    .anchor = Ulam, von Neumann, ENIAC, 1948
+    .history = Ulam, von Neumann and Metropolis computed neutron transport by the Monte Carlo method on ENIAC in spring 1948.
+
+node-s5-cmp-zirconium_nuclear_cladding =
+    .name = Zirconium alloy fuel cladding (Zircaloy)
+    .short = Zircaloy
+    .anchor = Zircaloy, late 1940s
+    .history = Zircaloy fuel cladding was developed for submarine reactors from the late 1940s; the year 1950 is an estimate.
+
+node-s11-eng-naval_nuclear_propulsion =
+    .name = Naval nuclear propulsion
+    .short = Nuclear sub
+    .anchor = Nautilus, 17.01.1955
+    .history = USS Nautilus signalled "Underway on nuclear power" on 17 January 1955.
+
+node-s11-eng-light_water_power_reactor =
+    .name = Pressurised-water power reactor
+    .short = PWR
+    .anchor = Shippingport, 18.12.1957
+    .history = The Shippingport station delivered its first power on 18 December 1957: a pressurised-water power reactor.
+
+node-s11-prc-gas_centrifuge_enrichment =
+    .name = Gas centrifuge enrichment
+    .short = Centrifuge
+    .anchor = Zippe, Univ. of Virginia, 1960
+    .history = Gernot Zippe, back in the West since 1956, moved to the USA in 1960 (University of Virginia) and rebuilt the gas centrifuge; rotors need high-strength steel.
+
+node-s11-prn-laser_inertial_confinement =
+    .name = Laser inertial confinement fusion (NIF)
+    .short = NIF
+    .anchor = NIF first ignition, 08.08.2021
+    .history = The National Ignition Facility reached the first ignited plasma on 8 August 2021; energy output above input followed on 5 December 2022 (from memory).
+
 # Product classes and the scenario.
 
 pc-jet_fighter =
