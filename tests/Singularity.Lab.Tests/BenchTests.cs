@@ -37,6 +37,16 @@ public sealed class BenchTests : IDisposable
     // ---- 1, 2: BenchStats ----
 
     [Fact]
+    public void NumberStride_IsDerivedFromTheLargestCoreNumber()
+    {
+        Assert.Equal(200, SynthWorldGenerator.NumberStrideFor(156));   // TASK-0188 tree: old constant kept
+        Assert.Equal(200, SynthWorldGenerator.NumberStrideFor(199));
+        Assert.Equal(300, SynthWorldGenerator.NumberStrideFor(200));
+        Assert.Equal(300, SynthWorldGenerator.NumberStrideFor(214));   // TASK-0193 tree
+        Assert.Equal(100, SynthWorldGenerator.NumberStrideFor(99));
+    }
+
+    [Fact]
     public void Percentile_SingleValue_AnyP()
     {
         foreach (double p in (double[])[0, 0.3, 1])

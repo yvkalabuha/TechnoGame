@@ -26,12 +26,13 @@ public sealed record SynthWorldSpec(int Actors, int Nodes, SynthGraph Graph, ulo
 {
     public const ulong DefaultGeneratorSeed = 0x5_1A7_B0B;
 
-    /// <summary>The ADR-0016 grid (EXP-0007 pre-registration): actors 6/24/96/200 × nodes 180/500/2000 × both graph variants.</summary>
+    /// <summary>The ADR-0016 grid (EXP-0007 pre-registration): actors 6/24/96/200 × nodes 250/500/2000 × both graph variants. The smallest point was 180 until TASK-0193
+    /// grew the core tree to 211 nodes (a point must hold at least the whole core); 250 keeps headroom.</summary>
     public static IReadOnlyList<SynthWorldSpec> BenchmarkGrid(ulong generatorSeed = DefaultGeneratorSeed) =>
     [
         .. from g in (SynthGraph[])[SynthGraph.Clones, SynthGraph.CrossEdges]
            from a in (int[])[6, 24, 96, 200]
-           from n in (int[])[180, 500, 2000]
+           from n in (int[])[250, 500, 2000]
            select new SynthWorldSpec(a, n, g, generatorSeed),
     ];
 
@@ -47,13 +48,13 @@ public sealed record SynthWorld(SynthWorldSpec Spec, GameData Data, string Scena
 
 /// <summary>Counts of the generated world, for the EXP record and the unit costs.</summary>
 public sealed record SynthWorldStats(int Actors, int Nodes, int Copies, int RequiresMembers, int InformsEdges, int CrossRequires, int CrossInforms,
-    int KnownAtStart, int MasteredAtStart);
+    int KnownAtStart, int MasteredAtStart, int NumberStride);
 
 /// <summary>
 /// Synthetic full-scale world for the tick benchmark (ADR-0016, tick-benchmark-m0.md §2, TASK-0065): a Lab-only mod overlay (ADR-0010) on top of
 /// <c>mods/core</c>. No Core or Session change: the overlay is plain mod data, loaded by <see cref="ModLoader"/> and validated like any mod.
 /// <list type="bullet">
-/// <item>Nodes: copy 0 is the core graph itself; copies 1… are renamed clones (<c>id_kC</c>, number <c>C·200 + n</c>); the last copy may be
+/// <item>Nodes: copy 0 is the core graph itself; copies 1… are renamed clones (<c>id_kC</c>, number <c>C·S + n</c>, where the stride <c>S</c> is <see cref="SynthWorldGenerator.NumberStrideFor"/> of the core data); the last copy may be
 /// partial — a prefix of a topological order, so it is closed under requires.</item>
 /// <item>Actors: the core actors stay first and unchanged (USA, GBR, SUN keep their names: Session looks them up); the clones cycle through
 /// them with ids XAA, XAB, … and a seeded ±10% perturbation of GDP, GDP per capita and budget index. Every actor knows and masters the clone of
@@ -68,7 +69,13 @@ public static class SynthWorldGenerator
 {
     public const string ModId = "synth_bench";
     public const string ScenarioId = "synth_bench";
-    public const int NumberStride = 200;   // above the largest core node number (156 since TASK-0188, #575); Validate checks it
+    /// <summary>
+    /// Clone number stride: the largest core node number rounded up to the next hundred (157 → 200, 214 → 300). Derived from the data so that
+    /// growing the core tree (TASK-0193 added nodes up to 214) needs no Lab change; worlds whose core stays below 200 keep their old numbers.
+    /// </summary>
+    public static int NumberStrideFor(int maxCoreNumber) => (maxCoreNumber / 100 + 1) * 100;
+
+    public static int NumberStrideFor(NodeTable core) => NumberStrideFor(core.Number.Max());
     public const int CrossInformsPerFnd = 2;
     public static readonly Fx6 CrossInformsWeight = Fx6.FromRaw(300_000);
     public static readonly Fx6 CrossRequiresChance = Fx6.FromRaw(250_000);
@@ -121,7 +128,7 @@ public static class SynthWorldGenerator
         string scenarioId = overrideCoreScenario ? sc.Id : ScenarioId;
         ScenarioData synth = data.Scenario(scenarioId);
         var stats = new SynthWorldStats(synth.ActorCount, data.Nodes.Count, plan.Copies, data.Nodes.Requires.Members.Length,
-            data.Nodes.InformsTo.Length, cross.RequiresCount, cross.InformsCount, synth.Known.Length, synth.Mastered.Length);
+            data.Nodes.InformsTo.Length, cross.RequiresCount, cross.InformsCount, synth.Known.Length, synth.Mastered.Length, plan.Stride);
         if (stats.Actors != spec.Actors || stats.Nodes != spec.Nodes)
             throw new InvalidOperationException($"The overlay loaded {stats.Actors} actors and {stats.Nodes} nodes, the spec asks {spec.Actors} and {spec.Nodes}.");
         return new SynthWorld(spec, data, scenarioId, Path.GetFullPath(outDirectory), overlaySha, stats);
@@ -132,9 +139,8 @@ public static class SynthWorldGenerator
         if (spec.Actors < sc.ActorCount || spec.Actors > sc.ActorCount + 26 * 26)
             throw new ArgumentOutOfRangeException(nameof(spec), spec.Actors, $"Actors must be in {sc.ActorCount}…{sc.ActorCount + 676} (the core actors stay).");
         int maxNumber = nodes.Number.Max();
-        if (maxNumber >= NumberStride)
-            throw new InvalidOperationException($"Core node numbers reach {maxNumber}; the clone numbering needs them below {NumberStride}.");
-        int maxCopies = (Core.Knowledge.KnowledgeRng.MaxNodeNumber - maxNumber) / NumberStride + 1;
+        int stride = NumberStrideFor(maxNumber);
+        int maxCopies = (Core.Knowledge.KnowledgeRng.MaxNodeNumber - maxNumber) / stride + 1;
         if (spec.Nodes < nodes.Count || spec.Nodes > nodes.Count * maxCopies)
             throw new ArgumentOutOfRangeException(nameof(spec), spec.Nodes, $"Nodes must be in {nodes.Count}…{nodes.Count * maxCopies}.");
     }
@@ -147,10 +153,12 @@ public static class SynthWorldGenerator
         /// <summary>Core rows of copy c: all rows for a full copy, a prefix of <see cref="Topo"/> for the partial last one.</summary>
         public readonly int[][] Rows;
         public readonly int[] Topo;
+        public readonly int Stride;
 
         public NodePlan(NodeTable core, SynthWorldSpec spec)
         {
             Core = core;
+            Stride = NumberStrideFor(core);
             Topo = TopologicalOrder(core);
             int full = spec.Nodes / core.Count, rest = spec.Nodes % core.Count;
             Copies = full + (rest > 0 ? 1 : 0);
@@ -168,7 +176,7 @@ public static class SynthWorldGenerator
 
         public string Id(int copy, int row) => copy == 0 ? Core.Id[row] : string.Create(CultureInfo.InvariantCulture, $"{Core.Id[row]}_k{copy}");
 
-        public int Number(int copy, int row) => copy * NumberStride + Core.Number[row];
+        public int Number(int copy, int row) => copy * Stride + Core.Number[row];
 
         // Kahn's order; among ready nodes the smallest node number first. A prefix of it is closed under requires.
         private static int[] TopologicalOrder(NodeTable n)
@@ -260,7 +268,7 @@ public static class SynthWorldGenerator
             {
                 foreach (int r in plan.Rows[c])
                 {
-                    int entity = c * NumberStride + n.Number[r];
+                    int entity = c * plan.Stride + n.Number[r];
                     if (n.Type[r] == NodeType.FND)
                     {
                         var targets = all.Where(t => t.Copy != c && n.Type[t.Row] is NodeType.ENG or NodeType.PRC

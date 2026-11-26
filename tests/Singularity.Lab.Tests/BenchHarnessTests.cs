@@ -458,7 +458,7 @@ public sealed class BenchHarnessTests : IDisposable
     public void Cli_NoFref_WithFref_Exit2()
     {
         string f = Path.Combine(_tmp, "nf.json");
-        Assert.Equal(2, Cli("bench", "--mode", "process", "--actors", "6", "--nodes", "180", "--threads", "1", "--warmup", "1", "--measure", "1",
+        Assert.Equal(2, Cli("bench", "--mode", "process", "--actors", "6", "--nodes", "250", "--threads", "1", "--warmup", "1", "--measure", "1",
             "--no-fref", "true", "--fref", "3000", "--allow-debug", "true", "--out", f).Code);
     }
 
@@ -955,7 +955,7 @@ public sealed class BenchHarnessTests : IDisposable
     public void Cli_Process_Smoke_FrequencyAndMachine()
     {
         string f = Path.Combine(_tmp, "p.json");
-        Assert.Equal(0, Cli("bench", "--mode", "process", "--actors", "6", "--nodes", "180", "--threads", "2", "--warmup", "1", "--measure", "2",
+        Assert.Equal(0, Cli("bench", "--mode", "process", "--actors", "6", "--nodes", "250", "--threads", "2", "--warmup", "1", "--measure", "2",
             "--fref", "3000", "--allow-debug", "true", "--out", f).Code);
         using JsonDocument d = Json(f);
         JsonElement fr = d.RootElement.GetProperty("frequency");
@@ -971,7 +971,7 @@ public sealed class BenchHarnessTests : IDisposable
     public void Cli_Alloc_Smoke()
     {
         string f = Path.Combine(_tmp, "a.json");
-        Assert.Equal(0, Cli("bench", "--mode", "alloc", "--actors", "6", "--nodes", "180", "--months", "3", "--warmup", "1", "--allow-debug", "true", "--out", f).Code);
+        Assert.Equal(0, Cli("bench", "--mode", "alloc", "--actors", "6", "--nodes", "250", "--months", "3", "--warmup", "1", "--allow-debug", "true", "--out", f).Code);
         using JsonDocument d = Json(f);
         JsonElement r = d.RootElement;
         foreach (string k in (string[])["provenance", "conditions", "params", "world", "machine"])
@@ -990,7 +990,7 @@ public sealed class BenchHarnessTests : IDisposable
     public void R2d_WritesPairwiseRatios()
     {
         string f = Path.Combine(_tmp, "r2.json");
-        Assert.Equal(0, Cli("bench", "--mode", "r2", "--variants", "d", "--actors", "6", "--nodes", "180", "--month-warmup", "1", "--months", "3",
+        Assert.Equal(0, Cli("bench", "--mode", "r2", "--variants", "d", "--actors", "6", "--nodes", "250", "--month-warmup", "1", "--months", "3",
             "--threads-list", "1", "--allow-debug", "true", "--out", f).Code);
         using JsonDocument d = Json(f);
         JsonElement t = d.RootElement.GetProperty("r2").GetProperty("d_month_cow_vs_full").GetProperty("by_threads")[0];
