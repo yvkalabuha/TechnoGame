@@ -116,6 +116,33 @@ class LandingJournalTests(unittest.TestCase):
 
 
 @unittest.skipUnless(kb_db.available(), "PostgreSQL is not available")
+class JournalFailureTests(unittest.TestCase):
+    def test_record_landing_swallows_write_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / ".claude").mkdir()
+            (root / ".claude/.state").write_text("a file, so mkdir and open fail")
+            old = land.main_worktree
+            land.main_worktree = lambda: root
+            land.LAND_INFO.update(branch="br", task="")
+            try:
+                land.record_landing(0, 1.0)  # must not raise
+            finally:
+                land.main_worktree = old
+
+    def test_record_landing_skips_without_branch(self):
+        with tempfile.TemporaryDirectory() as d:
+            old = land.main_worktree
+            land.main_worktree = lambda: Path(d)
+            land.LAND_INFO.clear()
+            try:
+                land.record_landing(4, 1.0)
+            finally:
+                land.main_worktree = old
+            self.assertFalse((Path(d) / ".claude").exists())
+
+
+@unittest.skipUnless(kb_db.available(), "PostgreSQL is not available")
 class DatabaseTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -160,6 +187,11 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual((first["sessions"], first["llm_calls"], first["landings"]), (2, 2, 1))
         self.assertEqual(metrics.collect(quiet=True), 0)
         self.assertEqual({t: self.count(t) for t in metrics.COLS}, first)
+        led = Path(self.env["SINGULARITY_LEDGER"])
+        led.write_text(led.read_text() + line(id="a", t="settle", ts="2026-11-20T11:01:00+00:00", usd="0.03") + "\n")
+        metrics.collect(quiet=True)  # settle after reserve corrects the amount, no new row
+        self.assertEqual(self.count("llm_calls"), 2)
+        self.assertEqual(kb_db.psql(self.db, "select usd from llm_calls where key = 'ledger:a'", "-At", schema=True).strip(), "0.03")
         kb_db.psql(self.db, "update sessions set deleted_at = now() where key = 'session:sess1'", schema=True)
         metrics.collect(quiet=True)
         self.assertEqual(self.count("sessions where deleted_at is not null"), 1)
@@ -174,7 +206,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertIn("developer", text)
         self.assertIn("TASK-0206", text)
         self.assertIn("review records", text)
-        self.assertRegex(text, r"developer\s+1\s+10\s+\d+\s+50")  # one run, 10 min, 50 output tokens (not 100)
+        self.assertRegex(text, r"developer\s+1\s+10\s+\d+\s+\d+\s+50")  # one run, 10 min, 50 output tokens (not 100)
 
 
 if __name__ == "__main__":

@@ -120,6 +120,8 @@ LAND_INFO: dict[str, str] = {}
 def record_landing(code: int, total_s: float) -> None:
     """Append one line per landing run to .claude/.state/landings.jsonl (metrics.py reads it). Never fails."""
     try:
+        if not LAND_INFO.get("branch"):
+            return  # arguments were not parsed: nothing to attribute
         root = main_worktree()
         path = root / ".claude" / ".state" / "landings.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)

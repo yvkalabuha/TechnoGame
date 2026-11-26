@@ -318,7 +318,7 @@ def load_script(data: dict[str, list[dict]]) -> str:
         out.append(f"create temp table tmp_{table} ({', '.join(f'{c} {types[c]}' for c in cols)}) on commit drop;\n")
         out.append(kb_db.copy_block(f"tmp_{table}", cols, data[table]))
         names = ", ".join(cols)
-        if table == "sessions":  # aggregate of a growing file: refresh it unless soft-deleted
+        if table in ("sessions", "llm_calls"):  # growing file / reserve then settle: refresh unless soft-deleted
             upd = ", ".join(f"{c} = excluded.{c}" for c in cols[1:])
             tail = f"on conflict (key) do update set {upd} where {table}.deleted_at is null"
         else:
@@ -352,6 +352,9 @@ def collect(quiet: bool = False) -> int:
         return 0 if quiet else 1
     if not quiet:
         print("metrics: read " + ", ".join(f"{k}={len(v)}" for k, v in data.items()))
+        base = claude_dir()
+        if not data["sessions"] and base.is_dir() and any(base.glob("*.jsonl")):
+            print("metrics: warning: transcript files exist but none could be parsed (format changed?)", file=sys.stderr)
     return 0
 
 
@@ -373,7 +376,8 @@ def report_data(since: str, until: str) -> dict:
     p = lambda col: period_sql(col, since, until)
     return dict(
         by_agent=rows(f"""select a.type, count(*) runs, round(avg(extract(epoch from a.stop_t - a.start_t)) / 60) avg_min,
-            coalesce(sum(s.input_tokens + s.cache_write_tokens), 0) in_tokens, coalesce(sum(s.output_tokens), 0) out_tokens
+            coalesce(sum(s.input_tokens + s.cache_write_tokens), 0) in_tokens,
+            coalesce(sum(s.cache_read_tokens), 0) cache_read_tokens, coalesce(sum(s.output_tokens), 0) out_tokens
             from agent_runs a left join sessions s on s.kind = 'agent' and s.agent_id = a.agent_id and s.deleted_at is null
             where {p('a.start_t')} group by a.type order by out_tokens desc, a.type"""),
         by_task=rows(f"""select t.task, count(*) runs, round(sum(extract(epoch from a.stop_t - a.start_t)) / 60) minutes,
@@ -396,7 +400,7 @@ def report_data(since: str, until: str) -> dict:
             from x where nxt is not null and {p('t')} group by to_status order by hours desc nulls last, status"""),
         owner=rows(f"""select count(*) answered, round(avg(answered - asked), 1) avg_days, max(answered - asked) max_days
             from owner_waits where deleted_at is null and {p('answered')}"""),
-        landings=rows(f"""select code, count(*) landings, round(avg(verify_s)) avg_verify_s, round(sum(verify_s)) cpu_s
+        landings=rows(f"""select code, count(*) landings, round(avg(verify_s)) avg_verify_s, round(sum(verify_s)) verify_wall_s
             from landings where deleted_at is null and {p('t')} group by code order by code"""))
 
 
@@ -409,7 +413,7 @@ def summary(d: dict) -> dict[str, float]:
             "agent input tokens": s("by_agent", "in_tokens"), "llm calls": s("llm", "calls"),
             "llm usd": round(s("llm", "usd"), 4), "review records": reviews,
             "reviews with changes requested": s("rounds", "changes"), "errors": s("errors", "errors"),
-            "landings": land, "landings failed": land - ok, "verify cpu s": s("landings", "cpu_s"),
+            "landings": land, "landings failed": land - ok, "verify wall s": s("landings", "verify_wall_s"),
             "hours in task statuses": s("stalls", "hours"), "owner answers": s("owner", "answered")}
 
 
@@ -426,14 +430,14 @@ def table(title: str, items: list[dict]) -> str:
 
 def render(d: dict, since: str, until: str) -> str:
     out = [f"Platform metrics {since} .. {until} (end exclusive)\n",
-           table("Agents by type (tokens from subagent transcripts)", d["by_agent"]),
-           table("Tasks by agent output tokens", d["by_task"]),
+           table("Agents by type (subagent transcripts; in_tokens = input + cache writes, cache reads apart)", d["by_agent"]),
+           table("Tasks by agent output tokens (a run with several tasks counts fully for each)", d["by_task"]),
            table("LLM calls by provider and kind (usd from the ledger)", d["llm"]),
            table("Review rounds per task", d["rounds"]),
            table("Errors by executor (errors.yaml)", d["errors"]),
            table("Where tasks stand: time spent in a status, from status changes", d["stalls"]),
            table("Owner wait (question to answer)", d["owner"]),
-           table("Landings by exit code (verify time is the CPU wait)", d["landings"])]
+           table("Landings by exit code (verify_wall_s: wall time of verify, includes waiting for CPU)", d["landings"])]
     return "\n".join(out)
 
 
