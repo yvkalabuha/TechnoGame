@@ -453,7 +453,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
+    // Re-recorded once more in TASK-0193 (O-105): 27 late prerequisites change when the 1990-2030 nodes open.
     // Re-recorded in TASK-0193: 55 new nodes 160-214 (1990-2030) and 3 new processes move every trajectory; no schema change.
-    private const string Golden150 = "6d829d92b9dfdd165e473e94f5e912e78479ab44df834c730137fecb51f56385";
+    private const string Golden150 = "870e7e030cb32495a2dec38bee63fbba1e55547347f66e96fa2f10f5c8007650";
     // Earlier records:
 }
