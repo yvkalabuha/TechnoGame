@@ -1,0 +1,246 @@
+items:
+  - id: R1990-01
+    claim: "Automated fibre placement machines for composite structures were developed in the late 1980s and 1990s. [node s5.prc.automated_fibre_placement, year 1990 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Automated_fiber_placement
+  - id: R1990-02
+    claim: "Friction stir welding was invented at The Welding Institute (TWI) in December 1991. [node s5.prc.friction_stir_welding, year 1991]"
+    urls:
+      - https://en.wikipedia.org/wiki/Friction_stir_welding
+  - id: R1990-03
+    claim: "The World Wide Web was made publicly available outside CERN in August 1991. [node s9.eng.world_wide_web, year 1991]"
+    urls:
+      - https://en.wikipedia.org/wiki/World_Wide_Web
+      - https://en.wikipedia.org/wiki/History_of_the_World_Wide_Web
+  - id: R1990-04
+    claim: "The AIM-120 AMRAAM reached initial operational capability in September 1991. [node s7.eng.amraam_bvr_missile, year 1991]"
+    urls:
+      - https://en.wikipedia.org/wiki/AIM-120_AMRAAM
+  - id: R1990-05
+    claim: "The Spalart–Allmaras turbulence model was published in 1992. [node s9.prn.rans_cfd_industrial, year 1992]"
+    urls:
+      - https://en.wikipedia.org/wiki/Spalart%E2%80%93Allmaras_turbulence_model
+      - https://en.wikipedia.org/wiki/Reynolds-averaged_Navier%E2%80%93Stokes_equations
+  - id: R1990-06
+    claim: "Link 16 reached initial operating capability in the mid 1990s. [node s8.eng.tactical_data_link16, year 1994 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Link_16
+      - https://en.wikipedia.org/wiki/Tactical_data_link
+  - id: R1990-07
+    claim: "The first Beowulf cluster was built at NASA Goddard Space Flight Center in 1994. [node s9.eng.beowulf_commodity_cluster, year 1994]"
+    urls:
+      - https://en.wikipedia.org/wiki/Beowulf_cluster
+  - id: R1990-08
+    claim: "The Mitsubishi J/APG-1 on the F-2 was the first AESA radar in operational use on a fighter aircraft (about 1995). [node s8.eng.aesa_fighter_radar_fielded, year 1995]"
+    urls:
+      - https://en.wikipedia.org/wiki/Mitsubishi_J/APG-1J/APG-1
+      - https://en.wikipedia.org/wiki/Active_electronically_scanned_array
+      - https://en.wikipedia.org/wiki/Mitsubishi_F-2
+  - id: R1990-09
+    claim: "Digital radio frequency memory (DRFM) jammers became widely deployed in electronic warfare during the 1990s. [node s8.prn.digital_rf_memory_jamming, year 1995 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Digital_radio_frequency_memory
+      - https://en.wikipedia.org/wiki/Electronic_warfare
+  - id: R1990-10
+    claim: "GPS declared full operational capability on 17 July 1995 (earlier source: April 1995). [node s10.eng.gps_operational_constellation, year 1995]"
+    urls:
+      - https://en.wikipedia.org/wiki/Global_Positioning_System
+      - https://en.wikipedia.org/wiki/History_of_GPS
+  - id: R1990-11
+    claim: "RADARSAT-1 was launched on 4 November 1995. [node s10.eng.sar_earth_observation_satellite, year 1995]"
+    urls:
+      - https://en.wikipedia.org/wiki/RADARSAT-1
+  - id: R1990-12
+    claim: "The US Navy Cooperative Engagement Capability network was first fielded in the mid 1990s. [node s8.eng.cooperative_engagement_capability, year 1996 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Cooperative_Engagement_Capability
+  - id: R1990-13
+    claim: "NASA Ames SHARP-B1 flight experiment in 1997 tested ultra-high-temperature ceramic nose cone and leading edges. [node s5.cmp.ultra_high_temperature_ceramic, year 1997 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Ultra-high-temperature_ceramics
+      - https://en.wikipedia.org/wiki/Sharp_edges_flight_experiment
+  - id: R1990-14
+    claim: "Integrated computational materials engineering (ICME) combines computational tools to design materials; commercial alloy design software appeared in the 1990s. [node s9.prn.computational_materials_design, year 1997 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Integrated_computational_materials_engineering
+  - id: R1990-15
+    claim: "Lockheed Martin Silent Sentry, a passive coherent location system, was developed in the late 1990s. [node s8.prn.passive_coherent_location, year 1998 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Passive_radar
+      - https://en.wikipedia.org/wiki/Silent_Sentry
+  - id: R1990-16
+    claim: "The first ISS module, Zarya, was launched on 20 November 1998. [node s10.eng.international_space_station, year 1998]"
+    urls:
+      - https://en.wikipedia.org/wiki/International_Space_Station
+  - id: R1990-17
+    claim: "The Joint Direct Attack Munition (JDAM) entered service in 1998 and was first used in combat in 1999. [node s7.eng.satellite_guided_bomb, year 1998 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Joint_Direct_Attack_Munition
+  - id: R1990-18
+    claim: "IKONOS, launched on 24 September 1999, was the first commercial satellite with one-metre resolution imagery. [node s10.eng.commercial_high_res_imaging, year 1999]"
+    urls:
+      - https://en.wikipedia.org/wiki/IKONOS
+  - id: R1990-19
+    claim: "The US Ground-based Midcourse Defense achieved a first hit-to-kill intercept in flight test IFT-3 on 2 October 1999. [node s7.eng.hit_to_kill_interceptor, year 1999]"
+    urls:
+      - https://en.wikipedia.org/wiki/Ground-Based_Midcourse_Defense
+      - https://en.wikipedia.org/wiki/Kinetic_energy_weapon
+  - id: R1990-20
+    claim: "In 2000 a team around David Smith demonstrated the first composite metamaterial with negative refractive index at microwave frequencies. [node s5.prn.metamaterial_electromagnetic, year 2000]"
+    urls:
+      - https://en.wikipedia.org/wiki/Metamaterial
+      - https://en.wikipedia.org/wiki/Negative-index_metamaterial
+  - id: R1990-21
+    claim: "The MQ-1 Predator fired a Hellfire missile in a first armed test in February 2001. [node s8.eng.armed_reconnaissance_uav, year 2001]"
+    urls:
+      - https://en.wikipedia.org/wiki/General_Atomics_MQ-1_Predator
+  - id: R1990-22
+    claim: "IBM POWER4, released in 2001, was the first non-embedded dual-core microprocessor. [node s9.cmp.multicore_processor, year 2001]"
+    urls:
+      - https://en.wikipedia.org/wiki/POWER4
+      - https://en.wikipedia.org/wiki/Multi-core_processor
+  - id: R1990-23
+    claim: "Atlas V first launched on 21 August 2002. [node s10.eng.heavy_expendable_launcher, year 2002]"
+    urls:
+      - https://en.wikipedia.org/wiki/Atlas_V
+      - https://en.wikipedia.org/wiki/Evolved_Expendable_Launch_Vehicle
+  - id: R1990-24
+    claim: "The Joint Helmet Mounted Cueing System (JHMCS) was fielded on the US Navy F/A-18 in 2003. [node s8.prn.helmet_mounted_cueing, year 2003]"
+    urls:
+      - https://en.wikipedia.org/wiki/Joint_Helmet_Mounted_Cueing_System
+      - https://en.wikipedia.org/wiki/Helmet-mounted_display
+  - id: R1990-25
+    claim: "The AGM-158 JASSM entered service with initial operational capability in 2003. [node s7.eng.stealth_cruise_missile, year 2003]"
+    urls:
+      - https://en.wikipedia.org/wiki/AGM-158_JASSM
+  - id: R1990-26
+    claim: "The first CubeSats were launched on 30 June 2003. [node s10.eng.cubesat_small_satellite, year 2003]"
+    urls:
+      - https://en.wikipedia.org/wiki/CubeSat
+  - id: R1990-27
+    claim: "The AIM-9X Sidewinder entered service in 2003. [node s7.prn.imaging_ir_seeker_high_offboresight, year 2003]"
+    urls:
+      - https://en.wikipedia.org/wiki/AIM-9_Sidewinder
+  - id: R1990-28
+    claim: "The Sniper advanced targeting pod entered service about 2004 on US Air Force aircraft. [node s8.eng.electro_optical_targeting_pod, year 2004]"
+    urls:
+      - https://en.wikipedia.org/wiki/AN/AAQ-33_Sniper_Advanced_Targeting_Pod
+      - https://en.wikipedia.org/wiki/Targeting_pod
+  - id: R1990-29
+    claim: "The NASA X-43A reached about Mach 9.6 under scramjet power on 16 November 2004. [node s7.eng.scramjet_flight_x43, year 2004]"
+    urls:
+      - https://en.wikipedia.org/wiki/NASA_X-43
+  - id: R1990-30
+    claim: "Gallium nitride transmit/receive modules for AESA radars entered production in the 2000s. [node s8.cmp.gan_tr_module, year 2005 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Gallium_nitride
+      - https://en.wikipedia.org/wiki/Active_electronically_scanned_array
+  - id: R1990-31
+    claim: "The first F-35A (AA-1) made its first flight on 15 December 2006. [node s8.eng.lo_multirole_fighter_f35, year 2006]"
+    urls:
+      - https://en.wikipedia.org/wiki/Lockheed_Martin_F-35_Lightning_II
+      - https://en.wikipedia.org/wiki/Lockheed_Martin_F-35_Lightning_II_development
+  - id: R1990-32
+    claim: "The Eurofighter Typhoon PIRATE infrared search and track system entered service around 2007. [node s8.prn.irst_infrared_search_track, year 2007 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Infra-red_search_and_track
+      - https://en.wikipedia.org/wiki/PIRATE_(IRST)
+  - id: R1990-33
+    claim: "China destroyed the Fengyun-1C satellite with a kinetic kill vehicle on 11 January 2007. [node s10.eng.kinetic_antisatellite_test, year 2007]"
+    urls:
+      - https://en.wikipedia.org/wiki/2007_Chinese_anti-satellite_missile_test
+  - id: R1990-34
+    claim: "The S-400 Triumf entered service with the Russian military in 2007. [node s7.eng.long_range_sam_s400, year 2007]"
+    urls:
+      - https://en.wikipedia.org/wiki/S-400_missile_system
+  - id: R1990-35
+    claim: "IBM Roadrunner became the first supercomputer to exceed one petaflop in 2008. [node s9.eng.petaflop_supercomputer, year 2008]"
+    urls:
+      - https://en.wikipedia.org/wiki/IBM_Roadrunner
+  - id: R1990-36
+    claim: "The Boeing 787 Dreamliner first flew on 15 December 2009 with a primarily carbon-fibre composite airframe. [node s5.cmp.composite_airliner_wing_box, year 2009]"
+    urls:
+      - https://en.wikipedia.org/wiki/Boeing_787_Dreamliner
+  - id: R1990-37
+    claim: "The Boeing X-37B first launched on 22 April 2010. [node s10.eng.reusable_uncrewed_spaceplane, year 2010]"
+    urls:
+      - https://en.wikipedia.org/wiki/Boeing_X-37
+  - id: R1990-38
+    claim: "The DF-21D anti-ship ballistic missile was reported to reach initial operational capability around 2010. [node s7.eng.antiship_ballistic_missile, year 2010 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/DF-21
+  - id: R1990-39
+    claim: "The X-51A Waverider flew for about 200 seconds under scramjet power on 26 May 2010. [node s7.eng.scramjet_sustained_x51, year 2010]"
+    urls:
+      - https://en.wikipedia.org/wiki/Boeing_X-51_Waverider
+  - id: R1990-40
+    claim: "The Northrop Grumman X-47B made its first flight on 4 February 2011. [node s8.eng.lo_unmanned_combat_air_vehicle, year 2011]"
+    urls:
+      - https://en.wikipedia.org/wiki/Northrop_Grumman_X-47B
+  - id: R1990-41
+    claim: "GEnx engines use titanium aluminide low-pressure turbine blades, in service from about 2011. [node s5.cmp.titanium_aluminide_blade, year 2011 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/Titanium_aluminide
+      - https://en.wikipedia.org/wiki/General_Electric_GEnx
+  - id: R1990-42
+    claim: "Intel began volume production of 22 nm tri-gate (FinFET) transistors in 2011 (Ivy Bridge). [node s9.prc.finfet_manufacturing, year 2011]"
+    urls:
+      - https://en.wikipedia.org/wiki/FinFET
+      - https://en.wikipedia.org/wiki/Ivy_Bridge_(microarchitecture)
+  - id: R1990-43
+    claim: "SBIRS GEO-1 was launched on 7 May 2011. [node s10.eng.missile_warning_satellite_geo, year 2011]"
+    urls:
+      - https://en.wikipedia.org/wiki/Space-Based_Infrared_System
+  - id: R1990-44
+    claim: "The F-35 Electro-Optical Distributed Aperture System (EODAS, AN/AAQ-37) provides spherical infrared coverage; the F-35B reached initial operational capability in 2015. [node s8.eng.distributed_aperture_system, year 2015]"
+    urls:
+      - https://en.wikipedia.org/wiki/AN/AAQ-37_Electro-optical_Distributed_Aperture_System
+      - https://en.wikipedia.org/wiki/Lockheed_Martin_F-35_Lightning_II
+  - id: R1990-45
+    claim: "The F-35 AN/ASQ-239 Barracuda electronic warfare suite integrates radar warning, jamming and electronic support. [node s8.eng.multifunction_rf_aperture_ew, year 2015 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/AN/ASQ-239
+      - https://en.wikipedia.org/wiki/Lockheed_Martin_F-35_Lightning_II
+  - id: R1990-46
+    claim: "The CFM LEAP engine, which entered service in 2016, uses ceramic matrix composite turbine shrouds. [node s5.cmp.cmc_hot_section_in_service, year 2016]"
+    urls:
+      - https://en.wikipedia.org/wiki/CFM_International_LEAP
+      - https://en.wikipedia.org/wiki/Ceramic_matrix_composite
+  - id: R1990-47
+    claim: "The MBDA Meteor ramjet air-to-air missile entered service in 2016 on the Gripen. [node s7.eng.ramjet_bvr_missile, year 2016]"
+    urls:
+      - https://en.wikipedia.org/wiki/Meteor_(missile)
+  - id: R1990-48
+    claim: "Project Maven was established in April 2017 to apply machine learning to analysing drone imagery. [node s8.prn.ml_target_recognition, year 2017]"
+    urls:
+      - https://en.wikipedia.org/wiki/Project_Maven
+  - id: R1990-49
+    claim: "The XQ-58 Valkyrie made its first flight in March 2019. [node s8.eng.loyal_wingman_uav, year 2019]"
+    urls:
+      - https://en.wikipedia.org/wiki/Kratos_XQ-58_Valkyrie
+  - id: R1990-50
+    claim: "Google reported quantum supremacy with its 53-qubit Sycamore processor in October 2019. [node s9.prn.quantum_advantage_demo, year 2019]"
+    urls:
+      - https://en.wikipedia.org/wiki/Quantum_supremacy
+      - https://en.wikipedia.org/wiki/Sycamore_processor
+  - id: R1990-51
+    claim: "SpaceX launched the first 60 operational Starlink satellites on 24 May 2019. [node s10.eng.leo_megaconstellation, year 2019]"
+    urls:
+      - https://en.wikipedia.org/wiki/Starlink
+  - id: R1990-52
+    claim: "The Avangard hypersonic glide vehicle was placed on combat duty in December 2019. [node s7.eng.hypersonic_glide_vehicle, year 2019]"
+    urls:
+      - https://en.wikipedia.org/wiki/Avangard_(hypersonic_glide_vehicle)
+  - id: R1990-53
+    claim: "The 3M22 Zircon hypersonic cruise missile was test-launched in 2020 and reported ready for service around 2022. [node s7.eng.hypersonic_cruise_missile, year 2020 approx.]"
+    urls:
+      - https://en.wikipedia.org/wiki/3M22_Zircon
+  - id: R1990-54
+    claim: "The Frontier supercomputer at Oak Ridge reached 1.1 exaflops in 2022, the first exascale system on the TOP500 list. [node s9.eng.exascale_supercomputer, year 2022]"
+    urls:
+      - https://en.wikipedia.org/wiki/Frontier_(supercomputer)
+  - id: R1990-55
+    claim: "The first integrated flight test of Starship took place on 20 April 2023. [node s10.eng.fully_reusable_heavy_launcher, year 2023]"
+    urls:
+      - https://en.wikipedia.org/wiki/SpaceX_Starship
+      - https://en.wikipedia.org/wiki/Starship_flight_test_1
