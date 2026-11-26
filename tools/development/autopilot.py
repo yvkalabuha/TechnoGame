@@ -8,6 +8,7 @@
 
 The path can be overridden with AUTOPILOT_STATE (tests). Used by capacity.py and the SessionStart hook.
 """
+import fcntl
 import json
 import os
 import sys
@@ -42,10 +43,15 @@ def is_stopped() -> bool:
 def write(state: str) -> None:
     p = state_path()
     p.parent.mkdir(parents=True, exist_ok=True)
-    tmp = p.with_name(p.name + ".tmp")
-    tmp.write_text(json.dumps({"state": state, "since": time.strftime("%Y-%m-%d %H:%M", time.localtime())}),
-                   encoding="utf-8")
-    os.replace(tmp, p)  # atomic: a reader never sees a half-written file
+    fd = os.open(p.parent, os.O_RDONLY)  # lock the directory: two switches never interleave
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        tmp = p.with_name(p.name + ".tmp")
+        tmp.write_text(json.dumps({"state": state, "since": time.strftime("%Y-%m-%d %H:%M", time.localtime())}),
+                       encoding="utf-8")
+        os.replace(tmp, p)  # atomic: a reader never sees a half-written file
+    finally:
+        os.close(fd)
 
 
 def describe() -> str:

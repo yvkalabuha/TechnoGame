@@ -61,7 +61,7 @@ def check_branch(branch: str) -> str | None:
     if behind:
         return f"behind main in client sources ({len(behind.splitlines())} commit(s)): merge main"
     if not worktree_of(branch):
-        return f"no worktree: git worktree add ../shots-{branch.replace('/', '-')} {shlex.quote(branch)}"
+        return "no worktree: " + shlex.join(["git", "worktree", "add", f"../shots-{branch.replace('/', '-')}", branch])
     return None
 
 
@@ -78,8 +78,12 @@ def collect(items) -> list[dict]:
             s = s if isinstance(s, dict) else {}
             branch, only = str(s.get("branch") or ""), str(s.get("only") or "")
             flags = str(s.get("flags") or "--shots")
+            try:
+                bad_flags = not shlex.split(flags)
+            except ValueError:
+                bad_flags = True
             problem = None if branch and only else "shots needs both branch and only"
-            problem = problem or check_branch(branch)
+            problem = problem or ("malformed flags: " + flags if bad_flags else None) or check_branch(branch)
             rows.append({"id": it.id, "branch": branch, "only": only, "flags": flags, "problem": problem})
     return rows
 

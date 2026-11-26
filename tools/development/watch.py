@@ -23,6 +23,10 @@ What it reports:
   to-review         it stopped, its task is still IN_PROGRESS and its own branch (worktree-agent-<agent_id>)
                     has commits not in main:
                     start the reviewer at once.
+orphan branch     a worktree-agent-* branch with commits not in main, older than --ping-hours, with no running agent
+                    and no task in REVIEW (a foreground agent leaves no agent_id in the log): to-review?
+A branch without a task id in its commit subjects takes the task of its agent's start record, else the task
+named in its first commit body. A newer agent suppresses to-review only when its record names the same branch.
 Agents that run within the thresholds, or whose work is accounted for, print nothing.
 
 Read-only. Sources: the registry, git, .claude/.state/agents.jsonl.
@@ -73,8 +77,42 @@ def branches(now: float) -> list[dict]:
             continue
         rows = [l.split("\t", 1) for l in log.splitlines()]
         tasks = sorted({t for _, s in rows for t in TASK_RE.findall(s)})
+        first = git("log", f"main..{name}", "--format=%H").splitlines()[-1]
+        body = sorted(set(TASK_RE.findall(git("show", "-s", "--format=%B", first))))
         out.append({"name": name, "commits": len(rows), "last": int(rows[0][0]),
-                    "tasks": tasks, "subject": rows[0][1][:70]})
+                    "tasks": tasks, "body_tasks": body, "subject": rows[0][1][:70]})
+    return out
+
+
+AGENT_BRANCH = "worktree-agent-"
+
+
+def resolve_tasks(br: list[dict], events: list[dict]) -> None:
+    """Fill the tasks of a branch whose commit subjects name none: the task of its agent's start record,
+    else the task in the body of its first commit."""
+    starts = {e.get("agent_id"): e for e in events if e.get("event") != "stop" and e.get("agent_id")}
+    for b in br:
+        if b["tasks"] or not b["name"].startswith(AGENT_BRANCH):
+            continue
+        rec = starts.get(b["name"][len(AGENT_BRANCH):])
+        b["tasks"] = (agent_task(rec)[0] if rec else []) or b.get("body_tasks", [])
+
+
+def orphan_branches(br: list[dict], events: list[dict], status_of: dict[str, str], handled: set[str],
+                    now: float, min_hours: float) -> list[dict]:
+    """Agent branches with commits not in main, no open review and no running agent: the work of a foreground
+    agent (its start record has no agent_id) or of an agent whose stop was missed."""
+    running = {e["agent_id"] for e in events if e.get("event") != "stop" and e.get("agent_id")} - \
+              {e["agent_id"] for e in events if e.get("event") == "stop" and e.get("agent_id")}
+    out = []
+    for b in br:
+        if not b["name"].startswith(AGENT_BRANCH) or b["name"] in handled:
+            continue
+        if b["name"][len(AGENT_BRANCH):] in running or any(status_of.get(t) == "REVIEW" for t in b["tasks"]):
+            continue
+        h = age_h(b["last"], now)
+        if h is not None and h > min_hours:
+            out.append({**b, "hours": h})
     return out
 
 
@@ -119,6 +157,11 @@ def agent_task(e: dict) -> tuple[list[str], bool]:
     return tasks[:1], len(tasks) > 1
 
 
+def same_branch(o: dict, branch: str) -> bool:
+    """A later agent works on this branch when its record names it (record 'branch' or description)."""
+    return o.get("branch") == branch or branch in (o.get("description") or "")
+
+
 def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
                   status_of: dict[str, str], unlanded: dict[str, list]) -> list[dict]:
     """Pure decision: one action per agent id (see the module docstring). Pass the task statuses and the
@@ -141,14 +184,15 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
         if key not in stopped:
             action = "stop+redispatch" if h > stop_h else "ping" if h > ping_h else None
         elif any(status_of.get(t) == "IN_PROGRESS"
-                 and any(b.get("name") == f"worktree-agent-{key}" for b in unlanded.get(t, []))
+                 and any(b.get("name") == AGENT_BRANCH + key for b in unlanded.get(t, []))
                  for t in tasks) and not any(
                 o is not e and o.get("t", 0.0) > stopped[key] and set(agent_task(o)[0]) & set(tasks)
-                for o in started.values()):  # a newer agent on the same task is the replacement
+                and same_branch(o, AGENT_BRANCH + key)
+                for o in started.values()):  # a newer agent on the same branch is the replacement
             action = "to-review"
         if action:
             out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks, "candidate": candidate,
-                        "agent_type": e.get("agent_type", "?")})
+                        "agent_type": e.get("agent_type", "?"), "branch": AGENT_BRANCH + key})
     return out
 
 
@@ -165,6 +209,7 @@ def main() -> int:
     items = [i for i in registry.load_items([]) if i.type.prefix == "TASK"]
     by_id = {i.id: i for i in items}
     br = branches(now)
+    resolve_tasks(br, agent_events())
     by_task: dict[str, list[dict]] = {}
     for b in br:
         for t in b["tasks"]:
@@ -176,7 +221,12 @@ def main() -> int:
         for a in acts:
             print(f"{a['action']:<16} {a['agent_id']}  {a['agent_type']:<20} {fmt(a['hours'])}  "
                   f"{','.join(a['tasks']) or '-'}{' (candidate)' if a['candidate'] else ''}")
-        if not acts:
+        orphans = orphan_branches(br, agent_events(), status, {a["branch"] for a in acts if a["action"] == "to-review"},
+                                  now, args.ping_hours)
+        for b in orphans:
+            print(f"{'orphan branch':<16} {b['name']}  +{b['commits']}  {fmt(b['hours'])}  "
+                  f"{','.join(b['tasks']) or '-'}  to-review?")
+        if not acts and not orphans:
             print("no agent needs action")
         return 0
 

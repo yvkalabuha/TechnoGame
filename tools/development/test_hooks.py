@@ -3,12 +3,14 @@
 
 Run: python3 tools/development/test_hooks.py
 """
+import fcntl
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import textwrap
 import unittest
 from pathlib import Path
@@ -200,8 +202,35 @@ class WatchActionsTest(unittest.TestCase):
 
     def test_replacement_agent_after_stop_suppresses_to_review(self):
         ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
-              self.started("b", 1)]
+              dict(self.started("b", 1), branch="worktree-agent-a")]
         self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{"name": "worktree-agent-a"}]}), {})
+
+    def test_later_agent_on_another_branch_does_not_suppress(self):
+        ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
+              self.started("b", 1)]
+        un = {"TASK-0001": [{"name": "worktree-agent-a"}]}
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, un), {"a": "to-review"})
+        ev[2]["description"] = "continue worktree-agent-a"
+        self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, un), {})
+
+    def test_orphan_branch_of_foreground_agent(self):
+        old = self.NOW - 5 * 3600
+        br = [{"name": "worktree-agent-fg", "commits": 2, "last": old, "tasks": ["TASK-0001"]},
+              {"name": "worktree-agent-run", "commits": 1, "last": old, "tasks": []},
+              {"name": "worktree-agent-rev", "commits": 1, "last": old, "tasks": ["TASK-0002"]},
+              {"name": "worktree-agent-new", "commits": 1, "last": self.NOW, "tasks": []},
+              {"name": "feature-x", "commits": 1, "last": old, "tasks": []}]
+        ev = [{"event": "start", "t": old}, self.started("run", 5)]
+        got = watch.orphan_branches(br, ev, {"TASK-0002": "REVIEW"}, set(), self.NOW, 2.0)
+        self.assertEqual([b["name"] for b in got], ["worktree-agent-fg"])
+
+    def test_branch_task_from_agent_record_then_first_commit_body(self):
+        br = [{"name": "worktree-agent-x1", "tasks": [], "body_tasks": ["TASK-0009"]},
+              {"name": "worktree-agent-x2", "tasks": [], "body_tasks": ["TASK-0009"]},
+              {"name": "worktree-agent-x3", "tasks": ["TASK-0005"], "body_tasks": ["TASK-0009"]}]
+        ev = [self.started("x1", 1, ("TASK-0003",))]
+        watch.resolve_tasks(br, ev)
+        self.assertEqual([b["tasks"] for b in br], [["TASK-0003"], ["TASK-0009"], ["TASK-0005"]])
 
     def test_foreign_branch_does_not_trigger_to_review(self):
         ev = [self.started("a", 1), {"event": "stop", "agent_id": "a", "t": self.NOW}]
@@ -276,6 +305,21 @@ class AutopilotTest(unittest.TestCase):
         self.run_tool("autopilot.py", "on")
         self.assertEqual(json.loads(self.state.read_text())["state"], "on")
         self.assertEqual([p.name for p in self.state.parent.iterdir()], ["autopilot.json"])
+
+    def test_switch_waits_for_the_lock(self):
+        self.state.parent.mkdir(parents=True)
+        fd = os.open(self.state.parent, os.O_RDONLY)
+        self.addCleanup(lambda: os.close(fd) if fd >= 0 else None)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        proc = subprocess.Popen([sys.executable, str(ROOT / "tools/development/autopilot.py"), "stop"],
+                                env=self.env, stdout=subprocess.DEVNULL)
+        self.addCleanup(proc.wait)
+        time.sleep(0.5)
+        self.assertIsNone(proc.poll())
+        self.assertFalse(self.state.exists())
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        self.assertEqual(proc.wait(timeout=10), 0)
+        self.assertTrue(self.state.exists())
 
     def test_stop_zeroes_capacity_and_on_restores_default(self):
         self.assertEqual(self.run_tool("autopilot.py", "status", "--brief").stdout, "")
@@ -358,6 +402,21 @@ class ShotBatchTest(unittest.TestCase):
         self.assertEqual([(r["id"], r["problem"]) for r in rows],
                          [("TASK-1", "missing shots field"), ("TASK-2", None), ("TASK-2", None)])
         self.assertIn("--map-frames --only 'map1945_*'", shot_batch.command(rows[2]))
+
+    def test_malformed_flags_reported_and_others_continue(self):
+        class It:
+            def __init__(s, i, **m):
+                s.id, s.meta = i, m
+        rows = shot_batch.collect([It("TASK-1", status="REVIEW", category="client", shots=[
+            {"branch": "fresh", "only": "a", "flags": "--map-frames 'oops"},
+            {"branch": "fresh", "only": "b"}])])
+        self.assertIn("malformed flags", rows[0]["problem"])
+        self.assertIsNone(rows[1]["problem"])
+
+    def test_recovery_command_quotes_every_argument(self):
+        self.g("branch", "a&b")
+        self.assertIn("git worktree add ../shots-a&b 'a&b'".replace("../shots-a&b", "'../shots-a&b'"),
+                      shot_batch.check_branch("a&b"))
 
     def test_recovery_command_quotes_branch(self):
         self.g("branch", "a&b")
