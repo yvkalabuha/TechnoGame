@@ -1,7 +1,7 @@
 ---
 id: TASK-0211
 title: "Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #605, #606"
+review_ref: "reviewer: APPROVE 240a35f0 (part 1), 1910355c (part 2); second review: agy-sonnet (claude-sonnet-5-5-medium) accept, 2 findings, record review-TASK-0211-1910355c-agy-sonnet.json"
 created: 2026-11-26
 tags: [task, external-llm, platform, active]
 ---
@@ -66,3 +67,6 @@ tags: [task, external-llm, platform, active]
 - .claude/hooks/session_context.py: одна строка «Лимиты: …» (#606) из `llm_limits.py --session` (подпроцесс, таймаут 1,8 с, без sys.path); только потребители out/low/short с обновлением в UTC, иначе «всё в норме»; без строки, если все unknown.
 - DEBT-0126: llm_limits.status запоминает неудачный запрос на 60 с (FAIL_TTL_S); строка журнала review.py упрощена.
 - Тесты: test_llm_limits (SessionLineTest, test_failed_fetch_is_remembered_for_a_minute), test_hooks SessionContextTest (2 новых); без изменений падают (проверено).
+
+## Посадка части 2 (Orchestrator)
+- reviewer APPROVE 1910355c (low: при медленном сервисе отказ может не попасть в кэш — задержка ≤ 1,8 с). Второе ревью: agy-sonnet (claude-sonnet-5-5-medium) accept, 2 findings, record review-TASK-0211-1910355c-agy-sonnet.json. Влито 7ef7d84 по #612.

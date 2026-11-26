@@ -226,7 +226,7 @@
 | [TASK-0208](../development/tasks/TASK-0208-kb-upkeep.md) | DONE | Knowledge base upkeep: fact drift is an error, decision-to-facts check at landing, freshness, /fact, facts in kb_db and mandatory facts block for code/data agents, agent DB access read-only (#597) | MS-M0 |
 | [TASK-0209](../development/tasks/TASK-0209-kb-structure.md) | DONE | Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599) | MS-M0 |
 | [TASK-0210](../development/tasks/TASK-0210-ci-land-syspath.md) | DONE | CI fix: land.py imports redis_kv without putting tools/development first on sys.path (llm_worker test_rejections collision) | MS-M0 |
-| [TASK-0211](../development/tasks/TASK-0211-llm-limits.md) | IN_PROGRESS | Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606) | MS-M0 |
+| [TASK-0211](../development/tasks/TASK-0211-llm-limits.md) | DONE | Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606) | MS-M0 |
 
 ## Гипотезы
 
