@@ -57,7 +57,24 @@ internal static class SlotPlanner
     }
 
     // The unknown nodes the goal needs, in the order of their requirements (a node after its requirements). A group of alternatives takes the member that is cheapest in time.
-    private static List<int> Closure(SliceWorld w, int actor, int goalRow)
+    /// <summary>The quickest member of a group of alternatives (the lower node number on a tie); the months are those of the month of the quote.</summary>
+    internal static int PickQuickest(ReadOnlySpan<int> members, Func<int, Fx6> months, Func<int, int> number)
+    {
+        int pick = -1;
+        Fx6 best = Fx6.Zero;
+        foreach (int m in members)
+        {
+            Fx6 mine = months(m);
+            if (pick < 0 || mine < best || (mine == best && number(m) < number(pick)))
+            {
+                pick = m;
+                best = mine;
+            }
+        }
+        return pick;
+    }
+
+    internal static List<int> Closure(SliceWorld w, int actor, int goalRow, long month)
     {
         var order = new List<int>();
         var state = new Dictionary<int, byte>();   // lookup only, never enumerated
@@ -74,13 +91,9 @@ internal static class SlotPlanner
             {
                 stack.Push((row, g + 1));
                 bool satisfied = false;
-                int pick = -1;
                 foreach (int m in req.GroupMembers(g))
-                {
                     satisfied |= w.Knowledge.IsKnown(actor, m);
-                    if (pick < 0 || w.Graph.Number[m] < w.Graph.Number[pick] && w.Knowledge.EffectiveMonths(actor, m, 0) <= w.Knowledge.EffectiveMonths(actor, pick, 0))
-                        pick = m;
-                }
+                int pick = PickQuickest(req.GroupMembers(g), m => w.Knowledge.EffectiveMonths(actor, m, month), m => w.Graph.Number[m]);
                 if (!satisfied && !state.ContainsKey(pick))
                 {
                     state[pick] = 1;
@@ -107,7 +120,7 @@ internal static class SlotPlanner
 
     public static PathView Path(SliceWorld w, int actor, int goalRow, long month)
     {
-        List<int> nodes = Closure(w, actor, goalRow);
+        List<int> nodes = Closure(w, actor, goalRow, month);
         InstituteSystem inst = w.Institutes!;
         int slots = 0;
         for (int k = 0; k < inst.Layout.SlotCount(actor); k++)
@@ -179,7 +192,7 @@ internal static class SlotPlanner
     /// </summary>
     public static ImmutableArray<QueuePlan> Suggest(SliceWorld w, int actor, int goalRow, long month)
     {
-        List<int> nodes = Closure(w, actor, goalRow);
+        List<int> nodes = Closure(w, actor, goalRow, month);
         InstituteSystem inst = w.Institutes!;
         int slots = inst.Layout.SlotCount(actor);
         var lists = new List<int>[slots];

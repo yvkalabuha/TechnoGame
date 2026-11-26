@@ -393,7 +393,7 @@ internal static class ViewBuilder
 
     // With intelligence and a named player, what another actor knows is not the player's to read: its node block is not carried, the count of its unknown nodes
     // shrinks to "some left or none" (the exact count is what the estimate of the intelligence card gives as a range), and its own intelligence card is not published.
-    private static bool HiddenFromPlayer(SliceWorld w, int a) => w.Intel is not null && w.Config.PlayerActor is int viewer && viewer != a;
+    internal static bool HiddenFromPlayer(SliceWorld w, int a) => w.Intel is not null && w.Config.PlayerActor is int viewer && viewer != a;
 
     // The licence of an actor. For the player's own eyes another actor's deal is a hidden event: it is shown only when intelligence sees it (#508), else empty.
     private static LicenceView LicenceOf(SliceWorld w, int a, ImmutableArray<long> refusals)

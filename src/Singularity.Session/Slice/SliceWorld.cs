@@ -430,6 +430,22 @@ internal sealed class SliceWorld
         _mpi.Load(values);
     }
 
+    /// <summary>
+    /// After a monthly step: a node a player's institute works on that was taken from the queue of another institute (a free one takes an unstarted node, O-089c) leaves that queue
+    /// and stands in the list of the institute that works on it (§4.1), between ticks like every write of the lists.
+    /// </summary>
+    internal void SettleBorrowed()
+    {
+        if (Institutes is not { } inst || SlotOrders is not { } orders || Config.PlayerActor is not int a)
+            return;
+        for (int k = 0; k < inst.Layout.SlotCount(a); k++)
+        {
+            int node = inst.ActiveNode(new InstituteHandle(a, k));
+            if (node != 0 && inst.Standing(new InstituteHandle(a, k)))
+                orders.Transfer(a, k, node);
+        }
+    }
+
     /// <summary>The air power index of the actor as of the last refresh (the column; 0 without the slot model).</summary>
     public Fx6 Mpi(int actor) => _mpi is null ? Fx6.Zero : Fx6.FromRaw(_mpi.Current[actor]);
 
