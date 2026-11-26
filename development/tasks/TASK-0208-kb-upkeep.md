@@ -45,7 +45,7 @@ created: 2026-11-26
 1. kb_check: дрейф зонда факта — ошибка (exit 1); факт со ссылкой на решение, помеченное SUPERSEDED, — ошибка.
 2. Свежесть: поле `reviewed: YYYY-MM-DD` у факта; файл-источник менялся позже (git log) — предупреждение «проверить»; старше 30 дней — список для /handoff (`kb_check.py stale`).
 3. Решение → факты: kb_guard после записи DECISIONS_LOG печатает связанные факты новой строки; land.py отказывает, если дифф добавляет строку решения, а связанные факты не изменены и в сообщении коммита нет `facts-ok: #NNN`.
-4. kb_db: таблица facts (id, statement, source, keywords, reviewed, drift) и `q facts text~…`.
+4. kb_db: таблица facts (id, statement, source, keywords, reviewed, drift) и `q facts text~…` (O-112).
 5. guard_dispatch: для агентов developer, simulation-engineer, test-engineer, 3d-modeler — в задании должен быть блок «Факты:» (печать `kb_check.py related` по теме); иначе отказ с подсказкой команды.
 6. guard_bash (агенты): прямые `psql` и `redis-cli` закрыты, кроме тестов на временной базе (переменная SINGULARITY_KB_TEST); чтение — через kb_db.py и metrics.py.
 7. Тесты на всё.
