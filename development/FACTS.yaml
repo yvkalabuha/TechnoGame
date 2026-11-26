@@ -84,7 +84,7 @@ facts:
   - id: decision-levels
     statement: "Крупные решения (направление, объём, необратимое, дороже дня работы) принимает владелец; мелкие обратимые — Orchestrator с записью в ORCH_DECISIONS.md (#421)."
     source: "DECISIONS_LOG #421"
-    keywords: [решени, владелец, вопрос, Orchestrator]
+    keywords: [D1, D2, ORCH_DECISIONS, уровень решени]
 
   - id: data-licences
     statement: "Внешние данные и ассеты — только PD, CC0 или CC BY (ADR-0009)."
