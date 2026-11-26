@@ -584,6 +584,14 @@ class GuardDispatchTest(unittest.TestCase):
                                               "agent_id": "a3"})
         self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
 
+    def test_damaged_log_fails_open(self):
+        self.log.parent.mkdir(parents=True, exist_ok=True)
+        self.log.write_bytes(b'{"t": 1, "event": "launched", "agent_id": "a1", "description": "\xff TASK-0001"}\n')
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+        self.agents({"t": time.time(), "event": "launched", "agent_id": "a2", "description": 5, "tasks": "TASK-0001"},
+                    {"t": time.time(), "event": "launched", "agent_id": "a3", "description": None, "tasks": [7]})
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+
 
 class KbCheckDecisionsLogTest(unittest.TestCase):
     def test_decisions_log_has_no_unknown_ids(self):

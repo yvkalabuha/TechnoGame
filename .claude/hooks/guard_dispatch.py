@@ -123,4 +123,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:  # fail open on an internal error; block() exits via SystemExit, so breaches still block
+        pass
