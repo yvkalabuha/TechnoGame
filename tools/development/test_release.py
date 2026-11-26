@@ -1,4 +1,5 @@
 """Tests of release.py on temporary git repositories (no push, no client, no network)."""
+import json
 import os
 import subprocess
 import sys
@@ -26,8 +27,12 @@ class Repo(unittest.TestCase):
         run(self.root, "config", "tag.gpgsign", "false")
         (self.root / "development" / "tasks").mkdir(parents=True)
         (self.root / "development" / "TECH_DEBT.md").write_text("# D\n", encoding="utf-8")
+        stub = (  # stands for errors.py: records its arguments
+            "import json, sys\nopen(__file__ + '.log', 'a').write(json.dumps(sys.argv[1:]) + '\\n')\nprint('ERR-0001 added')\n"
+            "sys.exit(int(__import__('os').environ.get('STUB_FAIL', '0')))\n")
+        (self.root / "tools" / "development").mkdir(parents=True)
+        (self.root / "tools" / "development" / "errors.py").write_text(stub, encoding="utf-8")
         self.commit("init")
-        self.env = os.environ.copy()
         os.environ["SINGULARITY_RELEASES"] = str(Path(self.tmp.name) / "rel")
 
     def tearDown(self):
@@ -46,6 +51,10 @@ class Repo(unittest.TestCase):
         self.commit(f"feat: task {n}", {f"development/tasks/TASK-{n:04d}-x.md": f'---\nid: TASK-{n:04d}\ntitle: "{title} (#1)"\n---\n'})
         self.commit(f"chore(registry): TASK-{n:04d} DONE")
 
+    def errors_logged(self):
+        log = self.root / "tools" / "development" / "errors.py.log"
+        return [json.loads(l) for l in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
+
     def merge_task(self, n):
         run(self.root, "checkout", "-q", "-b", f"b{n}")
         self.commit(f"feat: work {n}", {f"f{n}.txt": "x"})
@@ -61,6 +70,12 @@ class TestPeriod(Repo):
         self.task(3, "Newer")
         self.assertEqual(release.done_tasks(self.root, "v0.1"), ["TASK-0002", "TASK-0003"])
         self.assertEqual(release.done_tasks(self.root, None), ["TASK-0001", "TASK-0002", "TASK-0003"])
+
+    def test_done_by_status_change_without_registry_commit(self):
+        self.commit("t", {"development/tasks/TASK-0009-x.md": "---\nid: TASK-0009\nstatus: REVIEW\n---\n"})
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        self.commit("flip", {"development/tasks/TASK-0009-x.md": "---\nid: TASK-0009\nstatus: DONE\n---\n"})
+        self.assertEqual(release.done_tasks(self.root, "v0.1"), ["TASK-0009"])
 
     def test_release_tag_order_is_numeric(self):
         for t in ("v0.2", "v0.10", "v0.9", "rc-2026-01-01-1"):
@@ -127,6 +142,17 @@ class TestApprove(Repo):
             release.cmd_approve(self.root, rc2, "", build=False)
         self.assertEqual(release.release_tags(self.root), [])
 
+    def test_approve_only_once_and_not_after_reject(self):
+        rc = self.rc_with_checks("PASS")
+        release.cmd_approve(self.root, rc, "#600", build=False)
+        run(self.root, "commit", "-q", "-am", "x", "--allow-empty")
+        with self.assertRaises(release.ReleaseError):  # report status is now ОДОБРЕН
+            release.cmd_approve(self.root, rc, "#601", build=False)
+        rc2 = self.rc_with_checks("PASS")
+        release.cmd_reject(self.root, rc2, "bad")
+        with self.assertRaises(release.ReleaseError):
+            release.cmd_approve(self.root, rc2, "#602", build=False)
+
     def test_approve_refuses_without_check_results(self):
         self.task(1, "Alpha")
         rc = release.cmd_rc(self.root, day="2026-11-26")
@@ -150,8 +176,9 @@ class TestRollbackAndErrors(Repo):
         self.assertIn("TASK-0002", text)
         self.assertNotIn("TASK-0001 work", text)
         self.assertEqual(release.git(self.root, "rev-parse", "HEAD"), head)  # nothing executed
-        pending = (self.root / "docs" / "releases" / "errors-pending.jsonl").read_text(encoding="utf-8")
-        self.assertIn("crash on start", pending)
+        args = self.errors_logged()[0]
+        self.assertIn("v0.2: crash on start", args[args.index("--cause") + 1])
+        self.assertNotIn("v0.2", args[args.index("--symptom") + 1])
 
     def test_rollback_needs_two_releases(self):
         run(self.root, "tag", "-a", "v0.1", "-m", "r")
@@ -163,7 +190,18 @@ class TestRollbackAndErrors(Repo):
         rc = release.cmd_rc(self.root, day="2026-11-26")
         release.cmd_reject(self.root, rc, "determinism hash drift")
         self.assertIn("ОТКЛОНЁН", (self.root / "docs" / "releases" / f"{rc}.md").read_text(encoding="utf-8"))
-        self.assertTrue((self.root / "docs" / "releases" / "errors-pending.jsonl").exists())
+        args = self.errors_logged()[0]
+        self.assertIn(rc, args[args.index("--cause") + 1])
+        self.assertFalse((self.root / "docs" / "releases" / "errors-pending.jsonl").exists())
+
+    def test_failing_errors_tool_is_an_error(self):
+        os.environ["STUB_FAIL"] = "3"
+        self.addCleanup(os.environ.pop, "STUB_FAIL")
+        with self.assertRaises(release.ReleaseError):
+            release.record_error(self.root, "process", "release", "s", "c")
+        (self.root / "tools" / "development" / "errors.py").unlink()
+        with self.assertRaises(release.ReleaseError):
+            release.record_error(self.root, "process", "release", "s", "c")
 
 
 class TestPure(unittest.TestCase):

@@ -88,14 +88,28 @@ def task_title(root: Path, task_id: str) -> str:
     return ""
 
 
+def status_at(root: Path, ref: str, path: str) -> str:
+    text = git(root, "show", f"{ref}:{path}", check=False)
+    m = re.search(r"^status:\s*(\w+)", text, re.M)
+    return m.group(1) if m else ""
+
+
 def done_tasks(root: Path, base: str | None, head: str = "HEAD") -> list[str]:
-    """Task ids that went DONE in base..head (registry commits), in order of landing, no duplicates."""
+    """Task ids that went DONE in base..head: registry commits in landing order, then task files whose status became DONE."""
     span = f"{base}..{head}" if base else head
     seen: list[str] = []
     for subject in reversed(git(root, "log", "--format=%s", span).splitlines()):
         m = DONE_RE.search(subject)
         if m and m.group(1) not in seen:
             seen.append(m.group(1))
+    if base:
+        files = git(root, "diff", "--name-only", base, head, "--", "development/tasks").splitlines()
+    else:
+        files = git(root, "ls-tree", "-r", "--name-only", head, "development/tasks").splitlines()
+    for f in sorted(files):
+        m = TASK_RE.match(Path(f).name)
+        if m and m.group(0) not in seen and status_at(root, head, f) == "DONE" and (not base or status_at(root, base, f) != "DONE"):
+            seen.append(m.group(0))
     return seen
 
 
@@ -130,21 +144,17 @@ def open_debts(root: Path, base: str | None, head: str = "HEAD") -> list[str]:
 # ---------------------------------------------------------------- error catalogue
 
 def record_error(root: Path, kind: str, area: str, symptom: str, cause: str) -> str:
-    """errors.py add when the catalogue tool exists; else a pending line the catalogue import can pick up."""
+    """Add an entry to the error catalogue through errors.py; a failure is an error of the release."""
     tool = root / "tools" / "development" / "errors.py"
-    if tool.exists():
-        r = subprocess.run([sys.executable, str(tool), "add", "--executor", "tool:release", "--kind", kind,
-                            "--area", area, "--symptom", symptom, "--cause", cause, "--found-by", "self"],
-                           cwd=root, text=True, capture_output=True)
-        if r.returncode == 0:
-            return "errors.py add: " + (r.stdout.strip().splitlines() or ["ok"])[-1]
-    pending = root / "docs" / "releases" / "errors-pending.jsonl"
-    pending.parent.mkdir(parents=True, exist_ok=True)
-    row = {"date": datetime.date.today().isoformat(), "executor": "tool:release", "kind": kind, "area": area,
-           "symptom": symptom, "cause": cause}
-    with pending.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(row, ensure_ascii=False) + "\n")
-    return f"errors.py add unavailable; wrote {pending.relative_to(root).as_posix()}"
+    if not tool.exists():
+        raise ReleaseError("errors.py is missing: the error was not recorded")
+    r = subprocess.run([sys.executable, str(tool), "add", "--executor", "tool:release", "--kind", kind,
+                        "--area", area, "--symptom", symptom, "--cause", cause, "--found-by", "self"],
+                       cwd=root, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out = r.stdout.strip()
+    if r.returncode != 0:
+        raise ReleaseError(f"errors.py add failed ({r.returncode}): {out[-300:]}")
+    return out or "errors.py add: ok"
 
 
 # ---------------------------------------------------------------- rc
@@ -240,6 +250,19 @@ def godot_path() -> Path:
     return Path(os.environ.get("GODOT") or Path.home() / ".local/opt/godot/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64")
 
 
+GODOT_TIMEOUT_S = 1800
+
+
+def run_godot(cmd: list[str], cwd: Path, env: dict) -> tuple[bool, str]:
+    try:
+        r = subprocess.run(cmd, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=GODOT_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        return False, f"timeout after {GODOT_TIMEOUT_S} s"
+    except OSError as e:
+        return False, str(e)
+    return r.returncode == 0, " / ".join(r.stdout.splitlines()[-2:])[:200]
+
+
 def build_client(tree: Path, out: Path | None) -> tuple[str, str]:
     """Build (and export when presets and templates exist) the Godot client of a tree. Never runs the game."""
     godot = godot_path()
@@ -247,16 +270,14 @@ def build_client(tree: Path, out: Path | None) -> tuple[str, str]:
         return "SKIP", f"Godot not found at {godot}"
     project = tree / CLIENT_DIR
     env = dict(os.environ, PATH=f"{Path.home() / '.dotnet'}:{os.environ.get('PATH', '')}")
-    r = subprocess.run([str(godot), "--headless", "--path", str(project), "--build-solutions", "--quit"],
-                       cwd=project, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    if r.returncode != 0:
-        return "FAIL", "build-solutions: " + " / ".join(r.stdout.splitlines()[-2:])[:200]
+    ok, d = run_godot([str(godot), "--headless", "--path", str(project), "--build-solutions", "--quit"], project, env)
+    if not ok:
+        return "FAIL", "build-solutions: " + d
     templates = Path.home() / ".local/share/godot/export_templates"
     if out is not None and (project / "export_presets.cfg").exists() and templates.is_dir():
         out.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run([str(godot), "--headless", "--path", str(project), "--export-release", "Linux", str(out / "singularity")],
-                           cwd=project, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        return ("PASS", "built and exported") if r.returncode == 0 else ("FAIL", "export: " + " / ".join(r.stdout.splitlines()[-2:])[:200])
+        ok, d = run_godot([str(godot), "--headless", "--path", str(project), "--export-release", "Linux", str(out / "singularity")], project, env)
+        return ("PASS", "built and exported") if ok else ("FAIL", "export: " + d)
     return "PASS", "built (no export presets or templates: the release runs from the source snapshot)"
 
 
@@ -336,7 +357,7 @@ def cmd_check(root: Path, rc: str | None, slot_dirs: list[str], l2_dir: str | No
     print(render_checks(rows))
     failed = [n for n, s, _ in rows if s == "FAIL"]
     for n in failed:
-        print(record_error(root, "process", "release", f"{rc}: check '{n}' failed", "see the RC report"))
+        print(record_error(root, "process", "release", f"RC check '{n}' failed", f"{rc}: see the RC report"))
     return 1 if failed else 0
 
 
@@ -358,14 +379,19 @@ def render_notes(tag: str, rc: str, tasks: list[tuple[str, str]], owner_ref: str
 def deploy(root: Path, tag: str) -> tuple[str, str]:
     """Snapshot of the tag (git archive) + client build into the releases folder, outside git."""
     dest = releases_dir() / tag
-    if dest.exists():
-        shutil.rmtree(dest)
-    src = dest / "src"
-    src.mkdir(parents=True)
-    arch = subprocess.run(["git", "archive", tag], cwd=root, stdout=subprocess.PIPE)
-    if arch.returncode != 0:
-        return "FAIL", "git archive failed"
-    subprocess.run(["tar", "-x", "-C", str(src)], input=arch.stdout, check=True)
+    try:
+        if dest.exists():
+            shutil.rmtree(dest)
+        src = dest / "src"
+        src.mkdir(parents=True)
+        arch = subprocess.run(["git", "archive", tag], cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if arch.returncode != 0:
+            return "FAIL", "git archive: " + arch.stderr.decode(errors="replace").strip()[-200:]
+        tar = subprocess.run(["tar", "-x", "-C", str(src)], input=arch.stdout, stderr=subprocess.PIPE)
+        if tar.returncode != 0:
+            return "FAIL", "tar: " + tar.stderr.decode(errors="replace").strip()[-200:]
+    except OSError as e:
+        return "FAIL", f"{dest}: {e}"
     status, detail = build_client(src, dest / "bin")
     (dest / "RELEASE").write_text(f"{tag}\n", encoding="utf-8")
     return status, f"{dest}: {detail}"
@@ -376,7 +402,9 @@ def cmd_approve(root: Path, rc: str, owner_ref: str, build: bool = True) -> str:
         raise ReleaseError("--owner-ref is required: the release is approved by the owner's answer")
     sha = git(root, "rev-parse", f"{rc}^{{commit}}")
     report = root / "docs" / "releases" / f"{rc}.md"
-    checks = parse_checks(report) if report.exists() else {}
+    if not report.exists() or "- Статус: НА ПРОВЕРКЕ" not in report.read_text(encoding="utf-8"):
+        raise ReleaseError("the RC report is missing or its status is not НА ПРОВЕРКЕ (already approved or rejected)")
+    checks = parse_checks(report)
     if checks.get("verify --full") != "PASS":
         raise ReleaseError("verify --full is not PASS in the RC report: run release.py check")
     bad = [n for n, s in checks.items() if s == "FAIL"]
@@ -396,7 +424,7 @@ def cmd_approve(root: Path, rc: str, owner_ref: str, build: bool = True) -> str:
         status, detail = deploy(root, tag)
         print(f"deploy {status}: {detail}")
         if status == "FAIL":
-            print(record_error(root, "tooling", "release", f"{tag}: client build failed", detail))
+            print(record_error(root, "tooling", "release", "release client build failed", f"{tag}: {detail}"))
     return tag
 
 
@@ -406,7 +434,7 @@ def cmd_reject(root: Path, rc: str, reason: str) -> str:
     if report.exists():
         text = report.read_text(encoding="utf-8").replace("- Статус: НА ПРОВЕРКЕ", f"- Статус: ОТКЛОНЁН ({reason})")
         report.write_text(text, encoding="utf-8")
-    return record_error(root, "process", "release", f"{rc} rejected: {reason}", reason)
+    return record_error(root, "process", "release", "RC rejected", f"{rc}: {reason}")
 
 
 def cmd_rollback(root: Path, reason: str | None) -> list[str]:
@@ -420,7 +448,7 @@ def cmd_rollback(root: Path, reason: str | None) -> list[str]:
              f"Fix on {MAIN} (history is not rewritten): revert the task merges of {cur}, newest first (printed, not run):"]
     lines += [f"  git revert -m 1 {sha}   # {subject}" for sha, subject in merge_commits(root, prev, cur, ids)]
     if reason:
-        lines.append(record_error(root, "process", "release", f"rollback from {cur}: {reason}", reason))
+        lines.append(record_error(root, "process", "release", "rollback to the previous release", f"{cur}: {reason}"))
     return lines
 
 
@@ -447,17 +475,22 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         if args.cmd == "rc":
-            print(cmd_rc(ROOT))
+            tag = cmd_rc(ROOT)
+            print(tag)
+            print(f"Reminder: commit docs/releases/{tag}.md (the Orchestrator commits it)")
         elif args.cmd == "check":
             return cmd_check(ROOT, args.rc, args.slot_dir, args.l2_dir, not args.no_ci_dispatch)
         elif args.cmd == "approve":
-            print(cmd_approve(ROOT, args.rc, args.owner_ref, not args.no_build))
+            tag = cmd_approve(ROOT, args.rc, args.owner_ref, not args.no_build)
+            print(tag)
+            print(f"Reminder: commit docs/releases/{tag}.md and docs/releases/{args.rc}.md (the Orchestrator commits them)")
         elif args.cmd == "release":
             status, detail = deploy(ROOT, args.tag)
             print(f"{status}: {detail}")
             return 0 if status != "FAIL" else 1
         elif args.cmd == "reject":
             print(cmd_reject(ROOT, args.rc, args.reason))
+            print(f"Reminder: commit docs/releases/{args.rc}.md (the Orchestrator commits it)")
         else:
             print("\n".join(cmd_rollback(ROOT, args.reason)))
     except ReleaseError as e:
