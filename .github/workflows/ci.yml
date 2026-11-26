@@ -34,6 +34,9 @@ jobs:
           fi
       - name: Hook self-test
         run: python tools/development/test_hooks.py
+      # Platform tools (errors catalogue, kb index, autopilot): database tests skip without PostgreSQL.
+      - name: Platform tool tests
+        run: python -m unittest discover -s tools/development -p 'test_*.py'
       # Living documents must not cite ids that do not exist; fact drift and stale claims print as warnings.
       - name: Knowledge base check
         run: python tools/development/kb_check.py check
