@@ -162,6 +162,70 @@ class ErrorsTest(unittest.TestCase):
             errors.save = real
         self.assertIn("1 event(s), 1 new draft(s)", self.run_cli("import")[1])
 
+    def test_recovery_after_unrelated_catalogue_edit_still_imports_the_events(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        self.append("land_failures.jsonl", {"t": t, "code": 1, "branch": "b1"})
+        real = errors.save
+        errors.save = lambda *a, **k: (_ for _ in ()).throw(KeyboardInterrupt)
+        try:
+            with self.assertRaises(KeyboardInterrupt):
+                self.run_cli("import")
+        finally:
+            errors.save = real
+        self.run_cli("add", *BASE)  # an unrelated edit changes the catalogue between the crash and the retry
+        self.assertIn("1 event(s), 1 new draft(s)", self.run_cli("import")[1])
+        self.assertEqual(sum(1 + len(e["repeats"]) for e in errors.load(self.file)), 2)
+        self.assertIn("0 event(s)", self.run_cli("import")[1])
+
+    def test_repeat_is_attributed_to_its_own_executor(self):
+        self.run_cli("add", "--executor", "agent:a", "--kind", "code", "--area", "x", "--symptom", "boom", today="2026-11-20")
+        self.run_cli("add", "--executor", "agent:b", "--kind", "code", "--area", "x", "--symptom", "boom", today="2026-11-25")
+        self.run_cli("repeat", "ERR-0001", today="2026-11-26")
+        out = self.run_cli("stats", today="2026-11-26")[1].split("30 days")[0]
+        self.assertIn("repeats by executor: agent:a 1, agent:b 1", out)
+        self.assertEqual(errors.validate(errors.load(self.file)), [])
+
+    def test_same_land_failure_on_different_branches_is_one_entry(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        self.append("land_failures.jsonl", {"t": t, "code": 1, "branch": "b1"}, {"t": t, "code": 1, "branch": "b2"})
+        self.run_cli("import")
+        e = errors.load(self.file)
+        self.assertEqual(len(e), 1)
+        self.assertEqual(e[0]["repeats"][0]["detail"], "branch b2")
+        self.assertIn("branch b1", e[0]["cause"])
+
+    def test_alternate_catalogue_has_its_own_cursors(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        self.append("land_failures.jsonl", {"t": t, "code": 1, "branch": "b1"})
+        self.run_cli("import")
+        other = self.tmp / "other.yaml"
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            errors.main(["--file", str(other), "--state", str(self.state), "--today", "2026-11-26", "import"])
+        self.assertIn("1 event(s), 1 new draft(s)", out.getvalue())
+
+    def test_wrong_shape_json_lines_are_skipped_with_a_warning(self):
+        t = dt.datetime(2026, 11, 26, 12, tzinfo=dt.timezone.utc).timestamp()
+        self.append("land_failures.jsonl", raw='[1, 2]\n"text"\n{"t": 1, "code": 1, "branch": "ok"}\n')
+        self.append("hook_refusals.jsonl", {"t": t, "hook": "bad hook name", "msg": "x"},
+                    {"t": t, "hook": "guard_zone", "msg": "fine"})
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rc, out = self.run_cli("import")
+        self.assertEqual(rc, 0)
+        self.assertIn("2 event(s)", out)  # the odd hook name and the two non-objects are skipped, the rest imported
+        self.assertIn("skipped", err.getvalue())
+        self.assertEqual(errors.validate(errors.load(self.file)), [])
+
+    def test_schema_rejects_invalid_repeats(self):
+        good = {"id": "ERR-0001", "date": "2026-11-26", "executor": "orchestrator", "kind": "code", "area": "a",
+                "symptom": "s", "cause": "c", "found_by": "self", "cost": "low", "fix": "", "status": "open"}
+        for rep in (["2026-13-01"], [5], [{"executor": "orchestrator"}], [{"date": "2026-11-26", "executor": "bob"}],
+                    [{"date": "2026-11-26", "extra": 1}], [None], [["2026-11-26"]]):
+            self.assertTrue(errors.validate([{**good, "repeats": rep}]), rep)
+        ok = [{"date": "2026-11-26", "executor": "agent:x", "detail": "branch b"}, "2026-11-27"]
+        self.assertEqual(errors.validate([{**good, "repeats": ok}]), [])
+
     def test_schema_rejects_values_that_crash_commands(self):
         good = {"id": "ERR-0001", "date": "2026-11-26", "executor": "orchestrator", "kind": "code", "area": "a",
                 "symptom": "s", "cause": "c", "found_by": "self", "cost": "low", "fix": "", "repeats": [], "status": "open"}
@@ -297,10 +361,11 @@ class ErrorsTest(unittest.TestCase):
         real = watch.subprocess.run
         watch.subprocess.run = lambda *a, **k: subprocess.CompletedProcess(a, 0, json.dumps(runs), "")
         try:
-            (self.state / errors.IMPORT_STATE).write_text(json.dumps({"ci_seen": [7, 3]}))
+            self.spath = errors.import_state_path(self.state, self.file)
+            self.spath.write_text(json.dumps({"ci_seen": [7, 3]}))
             _, out = self.run_cli("import", "--ci")
             self.assertIn("1 event(s), 1 new draft(s)", out)  # run 6 finished late with an older id than 7: not skipped
-            self.assertEqual(json.loads((self.state / errors.IMPORT_STATE).read_text())["ci_seen"], [3, 6, 7])
+            self.assertEqual(json.loads(self.spath.read_text())["ci_seen"], [3, 6, 7])
             _, out = self.run_cli("import", "--ci")
             self.assertIn("0 event(s)", out)
         finally:
