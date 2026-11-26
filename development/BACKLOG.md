@@ -211,9 +211,15 @@
 | [TASK-0193](../development/tasks/TASK-0193-research-data-knowledge-tree-1990-2030-avionics-st.md) | REVIEW | Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 | MS-M0 |
 | [TASK-0194](../development/tasks/TASK-0194-air-power-goal-565-session-goal-state-parity-super.md) | IN_PROGRESS | Air power goal (#565): Session goal state parity/superiority/dominance and a header indicator in the client | MS-M0 |
 | [TASK-0195](../development/tasks/TASK-0195-era-node-price.md) | IN_PROGRESS | Era price of research nodes: node cost grows with era so leaders spend science money after 1990 (#579) | MS-M0 |
-| [TASK-0196](../development/tasks/TASK-0196-tech-map-stage2-design.md) | APPROVED | Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) | MS-M0 |
-| [TASK-0197](../development/tasks/TASK-0197-autopilot-tooling.md) | APPROVED | Autopilot tooling: watch acts on silent and finished-unsubmitted agents, shared shot batch collector, autopilot stop flag (#583) | MS-M0 |
-| [TASK-0198](../development/tasks/TASK-0198-error-catalogue.md) | APPROVED | Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584) | MS-M0 |
+| [TASK-0196](../development/tasks/TASK-0196-tech-map-stage2-design.md) | IN_PROGRESS | Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) | MS-M0 |
+| [TASK-0197](../development/tasks/TASK-0197-autopilot-tooling.md) | IN_PROGRESS | Autopilot tooling: watch acts on silent and finished-unsubmitted agents, shared shot batch collector, autopilot stop flag (#583) | MS-M0 |
+| [TASK-0198](../development/tasks/TASK-0198-error-catalogue.md) | IN_PROGRESS | Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584) | MS-M0 |
+| [TASK-0199](../development/tasks/TASK-0199-surplus-institutes-era-price.md) | IN_PROGRESS | Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) | MS-M0 |
+| [TASK-0200](../development/tasks/TASK-0200-platform-db-postgres.md) | IN_PROGRESS | Platform DB index in PostgreSQL: kb_db.py build/query from registry, decisions, debt, questions, errors, agent log (#590) | MS-M0 |
+| [TASK-0201](../development/tasks/TASK-0201-platform-redis.md) | APPROVED | Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed | MS-M0 |
+| [TASK-0202](../development/tasks/TASK-0202-repeat-guard-hooks.md) | APPROVED | Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591) | MS-M0 |
+| [TASK-0203](../development/tasks/TASK-0203-skills-shots-recheck-error.md) | APPROVED | Skills /shots, /recheck, /error for the Orchestrator (#591) | MS-M0 |
+| [TASK-0204](../development/tasks/TASK-0204-review-rejection-memory.md) | APPROVED | Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) | MS-M0 |
 
 ## Гипотезы
 

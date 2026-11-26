@@ -1,7 +1,7 @@
 ---
 id: TASK-0196
 title: "Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: ui-art-director         # ответственный агент
