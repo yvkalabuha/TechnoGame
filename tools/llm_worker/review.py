@@ -483,7 +483,7 @@ def _service_skip(chain, limits, now, fallbacks, state_dir, auto):
             codex_reset = datetime.fromisoformat(at)
             if auto:
                 try:
-                    limitstate.record_limit(codex_reset, now, state_dir)
+                    codex_reset = limitstate.record_limit(codex_reset, now, state_dir)  # the stored (clamped) time
                 except OSError:
                     pass  # the cache is a convenience
     return keep, codex_reset

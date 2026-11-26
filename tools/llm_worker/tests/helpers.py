@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -11,6 +12,7 @@ from tools.llm_worker.config import PACKAGE_DIR
 from tools.llm_worker.provider import Completion
 
 CONTRACTS = PACKAGE_DIR / "contracts"
+os.environ["SINGULARITY_LLM_LIMITS"] = "off"  # no test of this package may reach the live llmlimits service (#605)
 
 
 class FakeProvider:

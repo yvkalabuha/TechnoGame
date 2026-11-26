@@ -83,12 +83,12 @@ def status(now=None, source=None, cache_file=CACHE_FILE, ttl=TTL_S):
     now_ts = (now or datetime.now(timezone.utc)).timestamp()
     try:
         cached = json.loads(Path(cache_file).read_text(encoding="utf-8"))
-        if cached["source"] == source and 0 <= now_ts - cached["fetched_at"] < ttl:
+        if cached["source"] == source and 0 <= now_ts - cached["fetched_at"] < ttl and _valid(cached["payload"]):
             return cached["payload"]
     except (OSError, ValueError, KeyError, TypeError):
         pass
     payload = _fetch(source)
-    if payload is not None:
+    if _valid(payload):
         _store(cache_file, {"source": source, "fetched_at": now_ts, "payload": payload})
     return payload
 
@@ -112,6 +112,18 @@ def _headroom(w):
     return None if w.get("used_pct") is None else 100.0 - float(w["used_pct"])
 
 
+def _valid(payload):
+    return isinstance(payload, dict) and isinstance(payload.get("providers"), list)
+
+
+def safe_state(payload, consumer, cmap=None, now=None):
+    """consumer_state that never raises: a payload of a wrong shape is "unknown", reason "bad payload"."""
+    try:
+        return consumer_state(payload, consumer, cmap, now)
+    except Exception:  # noqa: BLE001 - advisory data must never break a caller
+        return {"consumer": consumer, "state": UNKNOWN, "headroom": None, "resets_at": None, "reason": "bad payload"}
+
+
 def consumer_state(payload, consumer, cmap=None, now=None):
     """{consumer, state, headroom, resets_at, reason}; resets_at is an ISO string or None."""
     now = now or datetime.now(timezone.utc)
@@ -124,7 +136,7 @@ def consumer_state(payload, consumer, cmap=None, now=None):
         res["reason"] = f"{spec['provider']} data missing or stale"
         return res
     wins = {w.get("window"): w for w in prov.get("windows", [])}
-    seen, out_until, low, short, worst = False, None, False, False, None
+    seen, out_until, low, short, worst = False, None, None, None, None  # low/short hold the reset of their window
     for name in spec["windows"]:
         w = wins.get(name)
         if not w or not w.get("ok", True):
@@ -142,7 +154,7 @@ def consumer_state(payload, consumer, cmap=None, now=None):
             if head <= 0:
                 out_until = out_until or "balance"
             elif head < floor:
-                low = True
+                low = reset or True
             continue
         head = _headroom(w)
         if head is None:
@@ -155,12 +167,13 @@ def consumer_state(payload, consumer, cmap=None, now=None):
             elif out_until in (None, "?") or reset > _parse_time(out_until):
                 out_until = reset.isoformat(timespec="seconds")  # all exhausted windows must reset
         elif head <= LOW_PCT:
-            low = True
+            low = low or reset or True
         if (w.get("forecast") or {}).get("enough_until_reset") is False:
-            short = True
+            short = short or reset or True
     if not seen:
         res["reason"] = "no usable window"
         return res
+    decider = None
     res["headroom"] = None if worst is None else round(worst, 2)
     unit = "USD" if "balance" in spec["windows"] else "%"
     if out_until:
@@ -168,10 +181,14 @@ def consumer_state(payload, consumer, cmap=None, now=None):
                    reason=f"{consumer} exhausted (headroom {res['headroom']}{unit})")
     elif low:
         res.update(state=LOW, reason=f"headroom {res['headroom']}{unit}")
+        decider = low
     elif short:
         res.update(state=SHORT, reason="forecast: runs out before the reset")
+        decider = short
     else:
         res.update(state=OK, reason=f"headroom {res['headroom']}{unit}")
+    if isinstance(decider, datetime):
+        res["resets_at"] = decider.isoformat(timespec="seconds")  # the window that decides the state
     nxt = [t for t in (_parse_time(w.get("resets_at")) for n in spec["windows"] for w in [wins.get(n) or {}]) if t and t > now]
     if res["resets_at"] is None and nxt:
         res["resets_at"] = min(nxt).isoformat(timespec="seconds")
@@ -180,13 +197,13 @@ def consumer_state(payload, consumer, cmap=None, now=None):
 
 def check(consumer, now=None, source=None, cache_file=CACHE_FILE):
     """State of one consumer; unknown when there is no service."""
-    return consumer_state(status(now, source, cache_file), consumer, now=now)
+    return safe_state(status(now, source, cache_file), consumer, now=now)
 
 
 def summary(now=None, source=None, cache_file=CACHE_FILE):
     """{consumer: state dict} in the order of the map; unknown everywhere without data."""
     payload, cmap = status(now, source, cache_file), load_map()
-    return {c: consumer_state(payload, c, cmap, now) for c in cmap}
+    return {c: safe_state(payload, c, cmap, now) for c in cmap}
 
 
 def line(states):

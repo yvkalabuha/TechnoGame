@@ -381,7 +381,8 @@ class ChainTest(unittest.TestCase):
         until = "2026-11-28T08:04:03+00:00"
         limits = lambda c: {"state": "out" if c == "codex" else "ok", "resets_at": until if c == "codex" else None}
         _, _, rec = self.run_review("auto", codex_runner=never, agy_runner=self.agy_ok(), limits=limits)
-        self.assertEqual((rec["provider"], rec["fallback"], rec["codex_reset_at"]), ("agy-sonnet", "codex_limit_service", until))
+        stored = (NOW + timedelta(hours=24)).isoformat(timespec="seconds")  # limitstate clamps to 24 h; the record shows what it stored
+        self.assertEqual((rec["provider"], rec["fallback"], rec["codex_reset_at"]), ("agy-sonnet", "codex_limit_service", stored))
         self.assertEqual(rec["fallbacks"][0]["codex_reset_at"], until)
         self.assertIsNotNone(limitstate.limited_until(NOW, self.state))
 

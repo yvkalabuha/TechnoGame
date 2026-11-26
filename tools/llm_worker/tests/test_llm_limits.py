@@ -51,6 +51,12 @@ class StatesTest(unittest.TestCase):
         self.assertEqual(state(payload(claude=[win("7d", 9, "2026-11-29T04:00:00Z")]), "claude")["state"], "low")
         self.assertEqual(state(payload(claude=[win("7d", 60, "2026-11-29T04:00:00Z")]), "claude")["state"], "ok")
 
+    def test_resets_at_is_the_deciding_window(self):
+        p = payload(claude=[win("5h", 95, "2026-11-26T23:30:00Z"), win("7d", 16, "2026-11-29T04:00:00Z", enough=False)])
+        self.assertEqual(state(p, "claude")["resets_at"], "2026-11-29T04:00:00+00:00")
+        p = payload(claude=[win("5h", 5, "2026-11-26T23:30:00Z"), win("7d", 50, "2026-11-29T04:00:00Z")])
+        self.assertEqual(state(p, "claude")["resets_at"], "2026-11-26T23:30:00+00:00")
+
     def test_gemini_groups_are_independent(self):
         p = payload(gemini=[win("claude-and-gpt-models:7d", 0, "2026-12-02T02:00:00Z"), win("gemini-models:7d", 98, "2026-12-03T13:00:00Z")])
         self.assertEqual(state(p, "agy-sonnet")["state"], "out")
@@ -71,6 +77,41 @@ class StatesTest(unittest.TestCase):
         old = win("7d", 0, "2026-11-28T08:04:03Z")
         old["sampled_at"] = "2026-11-26T10:00:00Z"
         self.assertEqual(state(payload(codex=[old]), "codex")["state"], "unknown")
+
+
+class BadPayloadTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.cache = self.tmp / "cache.json"
+
+    def from_file(self, data):
+        f = self.tmp / "s.json"
+        f.write_text(json.dumps(data))
+        return ll.check("codex", NOW, "file:" + str(f), self.cache)
+
+    def test_wrong_shapes_are_unknown_not_a_crash(self):
+        good = win("7d", 0, "2026-11-28T08:04:03Z")
+        bad_head = dict(good, forecast={"headroom": "n/a", "enough_until_reset": True})
+        for data in ({"providers": "x"}, {"providers": ["x"]}, [1], "x", {"providers": [{"provider": "codex", "ok": True, "windows": "x"}]},
+                     payload(codex=[bad_head])):
+            s = self.from_file(data)
+            self.assertEqual(s["state"], "unknown", data)
+        s = self.from_file(payload(codex=[bad_head]))
+        self.assertEqual(s["reason"], "bad payload")
+        bad_balance = payload(deepseek=[win("balance", None, value="4.31")])
+        self.assertEqual(ll.safe_state(bad_balance, "deepseek", CMAP, NOW)["state"], "unknown")
+
+    def test_corrupt_or_misshapen_cache_is_refetched(self):
+        url = "http://127.0.0.1:8790/x"
+        for junk in ("{not json", json.dumps({"source": url, "fetched_at": NOW.timestamp(), "payload": {"providers": "x"}}),
+                     json.dumps([1, 2])):
+            self.cache.write_text(junk)
+            orig = ll._fetch
+            ll._fetch = lambda s: {"providers": []}
+            try:
+                self.assertEqual(ll.status(NOW, url, self.cache), {"providers": []})
+            finally:
+                ll._fetch = orig
 
 
 class SourceTest(unittest.TestCase):
@@ -121,7 +162,7 @@ class ChainTest(unittest.TestCase):
         self.assertEqual(chain, ["agy-sonnet", "deepseek"])
         self.assertEqual(fb, [{"from": "codex", "reason": "codex_limit_service", "codex_reset_at": "2026-11-28T08:04:03+00:00"}])
         self.assertIsNotNone(limitstate.limited_until(NOW, self.sd))
-        self.assertEqual(reset, datetime.fromisoformat("2026-11-28T08:04:03+00:00"))
+        self.assertEqual(reset, NOW + timedelta(hours=24))  # the stored (clamped) time, as limitstate keeps it
 
     def test_explicit_provider_does_not_write_shared_state(self):
         chain, _ = review._service_skip(["codex", "deepseek"], out_codex, NOW, [], self.sd, False)
