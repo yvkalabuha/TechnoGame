@@ -36,8 +36,8 @@
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0193 [REVIEW] Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 (research-scientist)
+- TASK-0203 [REVIEW] Skills /shots, /recheck, /error for the Orchestrator (#591) (orchestrator)
 - TASK-0201 [APPROVED] Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed (developer)
-- TASK-0203 [APPROVED] Skills /shots, /recheck, /error for the Orchestrator (#591) (orchestrator)
 - TASK-0204 [APPROVED] Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) (developer)
 <!-- registry:active:end -->
 

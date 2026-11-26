@@ -1,7 +1,7 @@
 ---
 id: TASK-0203
 title: "Skills /shots, /recheck, /error for the Orchestrator (#591)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: orchestrator         # ответственный агент
