@@ -229,7 +229,7 @@
 | [TASK-0211](../development/tasks/TASK-0211-llm-limits.md) | DONE | Model limits from llmlimits: client, consumer map, llm_worker skips exhausted providers, capacity.py shows limits; session line after TASK-0209 (#605, #606) | MS-M0 |
 | [TASK-0212](../development/tasks/TASK-0212-ci-rollover-git-identity.md) | DONE | CI fix: test_kb_structure LandRolloverTest sets git identity in its temporary repo | MS-M0 |
 | [TASK-0213](../development/tasks/TASK-0213-ci-after-doc-split.md) | DONE | CI fix: kb_structure and localization tests after the UI_DESIGN_SYSTEM split (#607) | MS-M0 |
-| [TASK-0214](../development/tasks/TASK-0214-ci-llm-limits-clock.md) | APPROVED | CI fix: capacity file-source test samples the real clock (MAX_AGE 3 h) | MS-M0 |
+| [TASK-0214](../development/tasks/TASK-0214-ci-llm-limits-clock.md) | DONE | CI fix: capacity file-source test samples the real clock (MAX_AGE 3 h) | MS-M0 |
 
 ## Гипотезы
 

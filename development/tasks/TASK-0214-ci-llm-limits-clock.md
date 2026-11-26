@@ -2,7 +2,7 @@
 id: TASK-0214
 title: "CI fix: capacity file-source test samples the real clock (MAX_AGE 3 h)"
 tags: [task, platform, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: orchestrator
@@ -14,6 +14,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "red CI on main (run 45906448513), orchestration.md §2"
+review_ref: "reviewer: APPROVE 7dff6449 (code read; test run by orchestrator in worktree: 22 OK)"
 created: 2026-11-26
 ---
 
