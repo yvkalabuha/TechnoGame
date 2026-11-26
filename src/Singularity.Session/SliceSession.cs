@@ -54,6 +54,7 @@ public sealed partial class SliceSession
         _world = world;
         _knowsProcess = KnowsProcess;
         _subscribed = world.Config.ViewScope == ViewScope.Subscribed ? new bool[world.Scenario.ActorCount] : null;
+        world.RefreshAirPower(0);   // the index the AI of month 0 reads
         _hash = ComputeHash();
         Layout = ViewBuilder.Layout(world);
         _view = ViewBuilder.Snapshot(world, Tick, _hash, _month, null, null, _subscribed);
@@ -607,6 +608,8 @@ public sealed partial class SliceSession
             _month = month;
         }
         _world.Runner.RunTick();
+        if (monthly)
+            _world.RefreshAirPower(_month + 1);   // between ticks, once per actor: the index the next step reads
         SliceRunConfig config = _world.Config;
         // HashEveryTick hashes every non-empty tick (ADR-0017 п. 4), also one that publishes no view.
         bool nonEmpty = monthly || applied || _world.Runner.LastTickRan;
@@ -715,16 +718,33 @@ public sealed partial class SliceSession
     {
         before = Fx6.One;
         InstituteSystem institutes = _world.Institutes!;
+        if (StartOf(a, month, null) is not { } mine)
+            return null;
+        // The starts the player queued for this month already count: two nodes sent in one month are judged together.
+        var queued = new List<SlotWork>();
+        foreach (LoggedCommand p in _pending)
+        {
+            if (p.Command is AssignNode other && other.Actor == a.Actor && StartOf(other, month, queued) is { } work)
+                queued.Add(work);
+        }
+        before = _world.Knowledge.CoverageWith(a.Actor, month, queued.ToArray());
+        queued.Add(mine);
+        return _world.Knowledge.CoverageWith(a.Actor, month, queued.ToArray());
+    }
+
+    // The slot work an AssignNode would begin in the month (a free institute, the node in the frontier, not worked on elsewhere nor by an earlier queued start), or null.
+    private SlotWork? StartOf(AssignNode a, long month, List<SlotWork>? queued)
+    {
+        InstituteSystem institutes = _world.Institutes!;
         int row = _world.Graph.RowOf(a.Node);
         if (!_world.SlotsOn || row < 0 || (uint)a.Slot >= (uint)institutes.Layout.SlotCount(a.Actor) || !institutes.Standing(new InstituteHandle(a.Actor, a.Slot))
             || !_world.Knowledge.InFrontier(a.Actor, row) || _world.Knowledge.Released(a.Actor, row))
             return null;
         var node = new int[institutes.Layout.SlotCount(a.Actor)];
         institutes.Resolve(a.Actor, month, node, new byte[node.Length]);
-        if (node[a.Slot] != 0 || node.Contains(a.Node))
+        if (node[a.Slot] != 0 || node.Contains(a.Node) || (queued is not null && queued.Exists(w => w.Slot == a.Slot || w.NodeRow == row)))
             return null;
-        before = _world.Knowledge.CoverageWith(a.Actor, month, null);
-        return _world.Knowledge.CoverageWith(a.Actor, month, new SlotWork(a.Slot, row, institutes.InstituteMultiplier(new InstituteHandle(a.Actor, a.Slot), row), 0));
+        return new SlotWork(a.Slot, row, institutes.InstituteMultiplier(new InstituteHandle(a.Actor, a.Slot), row), 0);
     }
 
     private long NextStepMonth => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));

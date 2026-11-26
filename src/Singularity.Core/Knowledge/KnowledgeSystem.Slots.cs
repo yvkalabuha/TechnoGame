@@ -155,13 +155,14 @@ public sealed partial class KnowledgeSystem
     }
 
     /// <summary>
-    /// The coverage <c>u</c> the actor's slots would have in month t if one more slot worked on <paramref name="extra"/> (null: as they are; the check before a start the money does not cover, §1.2).
+    /// The coverage <c>u</c> the actor's slots would have in month t if more slots worked on <paramref name="extras"/> (empty: as they are; the check before a start the money does not
+    /// cover, §1.2; the extras are the starts the player has queued for the month already and the one asked).
     /// </summary>
-    public Fx6 CoverageWith(int a, long t, SlotWork? extra)
+    public Fx6 CoverageWith(int a, long t, ReadOnlySpan<SlotWork> extras)
     {
-        Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit + 1];
+        Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit * 2];
         int n = _inputs.SlotWork(a, t, work[..InstituteSystem.MaxSlotsLimit]);
-        if (extra is { } more)
+        foreach (SlotWork more in extras)
             work[n++] = more;
         Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
         Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);

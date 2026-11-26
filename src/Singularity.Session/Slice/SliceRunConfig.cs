@@ -234,7 +234,7 @@ public sealed partial record SliceRunConfig
     /// <summary>
     /// The slot science model (TASK-0187, SCIENCE_SLOTS.md, #561–#576): research only in institutes, one node per institute with a queue, focus, directions and the speed
     /// of an institute paid in money. On in main; needs <see cref="Institutes"/>, the full knowledge layer (not L_K / L_K0) and no other run of the layer controls
-    /// that replace knowledge. Off = the shares model: the table, the hash and every golden are those of the build before it (S11); <see cref="Legacy"/> has it off.
+    /// that replace knowledge. Off = the shares model: no slot columns and the shares rules. <see cref="Legacy"/> (institutes off as well) is byte for byte the build before the slot model (S11); with institutes on and slots off the state still differs from that build, because the institute table hash now holds the founding month and the directions and FRA starts with 2 institutes.
     /// </summary>
     public bool ScienceSlots { get; init; } = true;
 

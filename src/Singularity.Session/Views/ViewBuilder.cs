@@ -99,7 +99,7 @@ internal static class ViewBuilder
             standing += node[k] >= 0 ? 1 : 0;
             free += node[k] == 0 ? 1 : 0;
         }
-        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.AirPower(a, month), w.AirPowerRatio(a, month), inst.SlotParameters.SpeedCap, w.Config.PlayerActor == a ? inst.FreeNoticeMonth(a) : -1);
+        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.Mpi(a), w.AirPowerRatio(a), inst.SlotParameters.SpeedCap, w.Config.PlayerActor == a ? inst.FreeNoticeMonth(a) : -1);
     }
 
     // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.

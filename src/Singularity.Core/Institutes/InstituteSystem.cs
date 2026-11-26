@@ -69,8 +69,8 @@ public interface IInstituteInputs
     /// <summary>Own air power over the best rival's (#565); 1 when there is none to compare.</summary>
     Fx6 AirPowerRatio(int actorRow, long month) => Fx6.One;
 
-    /// <summary>Share of the research money the slots left unused in the last step (returned to the budget).</summary>
-    Fx6 SurplusShare(int actorRow) => Fx6.Zero;
+    /// <summary>Share of the research money (the money the slots were given) they left unused in the last step (returned to the budget).</summary>
+    Fx6 SurplusShare(int actorRow, long month) => Fx6.Zero;
 
     /// <summary><c>T_n</c> of the node in months.</summary>
     Fx6 NodeMonths(int nodeRow) => Fx6.One;

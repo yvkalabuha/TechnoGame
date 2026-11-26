@@ -118,6 +118,7 @@ public class SlotScienceTests
     [Fact]
     public void TheSharesModel_HasNoSlotColumns_S11()
     {
+        // S11 is pinned by the goldens of every test on SliceRunConfig.Legacy (unchanged); this one shows that slots off adds no slot columns.
         SliceSession off = Make(slots: false);
         Assert.False(off.World.SlotsOn);
         Assert.DoesNotContain(off.World.Table.Columns, c => c.Name.StartsWith("inst.act", StringComparison.Ordinal) || c.Name.StartsWith("know.sprog", StringComparison.Ordinal)
@@ -549,5 +550,81 @@ public class SlotScienceTests
             if (tierShares[r] == 1)
                 Assert.Equal(1, tierSlots[r]);
         }
+    }
+
+    [Fact]
+    public void FocusOffThenOnBeforeSixMonths_IsFocusTooSoon_ButOffIsFreeAtAnyTime()
+    {
+        SliceSession s = Make(2, player: 0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new AssignNode(0, 0, f[0], Acknowledged: true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetFocus(0, 0, 2, false)).Accepted);
+        s.StepThroughMonth(0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new SetFocus(0, 0, 0, false)).Accepted);   // off at once
+        s.StepThroughMonth(1);
+        Assert.DoesNotContain(s.Outcomes, o => o.Contains("rejected"));
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new SetFocus(0, 0, 1, false)).Accepted);   // on again: the period runs from the off
+        s.StepThroughMonth(2);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: FocusTooSoon"));
+        for (long t = 3; t < 8; t++)
+            s.StepThroughMonth(t);
+        Assert.True(s.Submit(SourceClass.Player, 0, 4, new SetFocus(0, 0, 1, false)).Accepted);
+        s.StepThroughMonth(8);
+        Assert.Equal(1, s.World.SlotOrders!.FocusLevel(new InstituteHandle(0, 0)));
+    }
+
+    [Fact]
+    public void ApplyQueues_WithAnInstituteTwice_IsRefused()
+    {
+        SliceSession s = Make(2, player: 0);
+        int[] f = Frontier(s, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new ApplyQueues(0, [new QueuePlan(0, [f[0]]), new QueuePlan(0, [f[1]])])).Accepted);   // the form is fine; the state refuses
+        s.StepThroughMonth(0);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: NotInList") && o.Contains("twice"));
+        Span<int> entries = stackalloc int[6];
+        Assert.Equal(0, s.World.SlotOrders!.Entries(new InstituteHandle(0, 0), entries));
+    }
+
+    [Fact]
+    public void TwoStartsSentInOneMonth_AreJudgedTogether_O096()
+    {
+        SliceSession s = Make(2, player: 0);
+        SliceWorld w = s.World;
+        var inputs = new KnowledgeInputsAdapter(w);
+        BudgetShares sh = w.SharesOf(0);
+        BudgetShares With(Fx6 research) => new(research, sh.Capability, sh.Effort, sh.Procurement, sh.Quality, sh.Security);
+        // Find the research money that covers one node of the first institute exactly: start tiny, read the coverage of one start, scale up.
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, With(sh.Research / Fx6.FromInt(200)))).Accepted);
+        s.StepThroughMonth(0);
+        int[] f = Frontier(s, 0);
+        var inst = w.Institutes!;
+        SlotWork Work(int slot, int number) { int row = w.Graph.RowOf(number); return new SlotWork(slot, row, inst.InstituteMultiplier(new InstituteHandle(0, slot), row), 0); }
+        Fx6 s1 = inputs.ResearchBudget(0, 1), c1 = w.Knowledge.CoverageWith(0, 1, [Work(0, f[0])]);
+        Assert.True(c1 < Fx6.One && c1 > Fx6.Zero);
+        Fx6 ask0 = s1 / c1;
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetBudgetShares(0, With(sh.Research / Fx6.FromInt(200) * (ask0 / s1)))).Accepted);
+        s.StepThroughMonth(1);
+        Fx6 one = w.Knowledge.CoverageWith(0, 2, [Work(0, f[0])]);
+        Fx6 two = w.Knowledge.CoverageWith(0, 2, [Work(0, f[0]), Work(1, f[1])]);
+        Assert.True(one >= new SlotParams().UnderfundedBelow && two < new SlotParams().UnderfundedBelow, $"the setup: one start covers {one}, two cover {two}");
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new AssignNode(0, 0, f[0])).Accepted);
+        CommandVerdict second = s.Submit(SourceClass.Player, 0, 3, new AssignNode(0, 1, f[1]));
+        Assert.Equal(CommandRefusal.NeedsConfirmation, second.Reason);
+    }
+
+    [Fact]
+    public void TheAirPowerIndexOfTheAi_IsReadFromAColumnRefreshedOncePerMonth_NotComputedInTheStep()
+    {
+        SliceSession s = Make(6);
+        SliceWorld w = s.World;
+        Assert.Contains(w.Table.Columns, c => c.Name == "inst.mpi");
+        for (long t = 0; t < 30; t++)
+        {
+            for (int a = 0; a < w.Scenario.ActorCount; a++)
+                Assert.Equal(w.AirPower(a, t).Raw, w.Mpi(a).Raw);   // the column holds what the fleet value of the month is
+            s.StepThroughMonth(t);
+        }
+        Assert.Contains(Enumerable.Range(0, w.Scenario.ActorCount).Select(a => w.Mpi(a)), v => v > Fx6.Zero);
+        HashAssert.NotEqual(Make(6, slots: false).LastHash, s.LastHash);
     }
 }

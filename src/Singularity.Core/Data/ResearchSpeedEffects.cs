@@ -5,7 +5,7 @@ namespace Singularity.Core.Data;
 
 /// <summary>
 /// The <c>research_speed</c> effect of a node (SCIENCE_SLOTS §3.2, §6): a share added to the research rate R of the listed
-/// directions once the node is known. Data only: the core does not read it yet (TASK-0187). Not part of the data hash yet.
+/// directions once the node is known. The slot model reads it (`KnowledgeSystem.ResearchFactor`); it is part of the data hash.
 /// </summary>
 public static class ResearchSpeedEffects
 {

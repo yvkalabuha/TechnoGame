@@ -397,7 +397,7 @@ public sealed partial class InstituteSystem
     private void StepAiFocus(int a, long t, int slots, ReadOnlySpan<int> node)
     {
         int want = 0, bestSlot = -1;
-        if (_inputs.SurplusShare(a) >= _slots!.AiFocusMargin)
+        if (_inputs.SurplusShare(a, t) >= _slots!.AiFocusMargin)
         {
             Fx6 ratio = _inputs.AirPowerRatio(a, t);
             want = ratio < _slots.AiFocusRatio2 ? 2 : ratio < _slots.AiFocusRatio1 ? 1 : 0;

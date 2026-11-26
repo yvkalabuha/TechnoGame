@@ -166,10 +166,16 @@ public sealed class SlotOrders
     public CommandVerdict Apply(ApplyQueues c)
     {
         var seen = new List<int>();
-        foreach (QueuePlan p in c.Plan)
+        for (int i = 0; i < c.Plan.Length; i++)
         {
+            QueuePlan p = c.Plan[i];
             if (CheckSlot(c.Actor, p.Slot) is { Accepted: false } bad)
                 return bad;
+            for (int j = 0; j < i; j++)
+            {
+                if (c.Plan[j].Slot == p.Slot)
+                    return CommandVerdict.Refuse(CommandRefusal.NotInList, $"slot {p.Slot} stands twice in the plan");
+            }
             if (p.Nodes.Length > Length)
                 return CommandVerdict.Refuse(CommandRefusal.QueueFull, $"the list of slot {p.Slot} holds {_p.QueueLength} queued and the active node");
             foreach (int n in p.Nodes)
@@ -228,8 +234,11 @@ public sealed class SlotOrders
         int active = _probe.ActiveNode(c.Actor, c.Slot, month);
         if (c.Level == 0)
         {
+            // Off is allowed at any time, but it counts as a choice: switching on again waits out the period like any other change.
+            if (FocusLevel(h) == 0)
+                return CommandVerdict.Ok;
             Set(_level[c.Slot], c.Actor, 0);
-            Set(_node[c.Slot], c.Actor, 0);
+            Set(_stamp[c.Slot], c.Actor, checked((int)month) + 1);
             return CommandVerdict.Ok;
         }
         if (active == 0)
@@ -238,8 +247,8 @@ public sealed class SlotOrders
         if (same && FocusFromReserve(h) == c.FromReserve)
             return CommandVerdict.Ok;
         long last = FocusMonth(h);
-        if (FocusLevel(h) > 0 && FocusNode(h) == active && last >= 0 && month - last < _p.FocusRepeatMonths)
-            return CommandVerdict.Refuse(CommandRefusal.FocusTooSoon, $"the focus of slot {c.Slot} was set in month {last}; the next change is allowed in month {last + _p.FocusRepeatMonths}");
+        if (FocusNode(h) == active && last >= 0 && month - last < _p.FocusRepeatMonths)
+            return CommandVerdict.Refuse(CommandRefusal.FocusTooSoon, $"the focus of slot {c.Slot} was changed in month {last}; the next change is allowed in month {last + _p.FocusRepeatMonths}");
         Set(_level[c.Slot], c.Actor, c.Level);
         Set(_node[c.Slot], c.Actor, active);
         Set(_stamp[c.Slot], c.Actor, checked((int)month) + 1);
