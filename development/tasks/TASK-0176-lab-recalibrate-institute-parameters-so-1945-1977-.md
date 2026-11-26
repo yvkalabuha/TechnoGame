@@ -1,7 +1,7 @@
 ---
 id: TASK-0176
 title: "Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
@@ -13,6 +13,7 @@ related: [TASK-0171]
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#549"
+review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115; Lab keys landed with the train"
 created: 2026-11-25
 ---
 

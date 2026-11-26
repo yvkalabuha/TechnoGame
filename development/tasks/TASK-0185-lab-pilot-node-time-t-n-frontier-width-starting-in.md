@@ -1,7 +1,7 @@
 ---
 id: TASK-0185
 title: "Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#563, #564"
+review_ref: "train f12684f: reviewer APPROVE (a74ab0a, rounds to 8a4b96b7); codex 4 returns, waived by #432, DEBT-0115; pilot note in docs/simulation/slot-model-pilot.md"
 created: 2026-11-25
 ---
 
