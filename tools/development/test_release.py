@@ -221,6 +221,20 @@ class TestApprove(Repo):
         self.grant()
         self.assertEqual(release.cmd_approve(self.root, rc, "#600"), "v0.1")
 
+    def test_release_command_and_deploy_need_a_live_permit(self):
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        release.client_permit.PERMIT.unlink()
+        with self.assertRaisesRegex(release.ReleaseError, "client_permit.py grant 30"):
+            release.cmd_release(self.root, "v0.1")
+        sha = release.git(self.root, "rev-parse", "HEAD")
+        status, detail = release.deploy(self.root, "v0.1", sha)   # direct call: refused as well
+        self.assertEqual(status, "FAIL")
+        self.assertIn("grant 30", detail)
+        self.assertFalse((self.base / "smoke.log").exists())
+        self.assertFalse((self.base / "rel").exists() and os.listdir(self.base / "rel"))
+        self.grant()
+        release.cmd_release(self.root, "v0.1")
+
     def assert_no_release(self, rc):
         self.assertEqual(release.release_tags(self.root), [])
         self.assertFalse((self.root / "docs" / "releases" / "v0.1.md").exists())

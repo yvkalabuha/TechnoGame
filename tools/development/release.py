@@ -582,9 +582,14 @@ def smoke_start(snapshot: Path, bin_dir: Path) -> str | None:
     return None
 
 
+PERMIT_HINT = "the build is smoke-started (the client runs): grant a permit: python3 tools/development/client_permit.py grant 30 (owner allows)"
+
+
 def deploy(root: Path, tag: str, sha: str) -> tuple[str, str]:
     """Snapshot of sha (git archive) + client build into <releases>/<tag>, via a staging directory made here and renamed.
     An existing or symlinked destination is refused, nothing is deleted except the staging directory of this call."""
+    if not permit_live():   # defensive: every path that smoke-starts the client needs the owner's permit
+        return "FAIL", PERMIT_HINT
     dest = release_dir(tag)
     if os.path.lexists(dest):
         return "FAIL", f"{dest} already exists (not deleting it: remove it by hand)"
@@ -636,7 +641,7 @@ def cmd_approve(root: Path, rc: str, owner_ref: str) -> str:
     if latest and subprocess.run(["git", "merge-base", "--is-ancestor", latest, sha], cwd=root).returncode != 0:
         raise ReleaseError(f"{rc} is not newer than {latest}: approving it would silently roll the release back (use rollback)")
     if not permit_live():   # the smoke start of the deployed build launches the client: owner's permission first
-        raise ReleaseError("approve starts the client for a smoke test: grant a permit: python3 tools/development/client_permit.py grant 30 (owner allows)")
+        raise ReleaseError("approve: " + PERMIT_HINT)
     tag = next_release_tag(root)
     base = last_release_tag(root)
     tasks = [(i, task_title(root, i)) for i in done_tasks(root, base, sha)]
@@ -677,6 +682,8 @@ def cmd_approve(root: Path, rc: str, owner_ref: str) -> str:
 
 def cmd_release(root: Path, tag: str) -> str:
     """Build the client of an existing release tag (a repeat after a failed or lost build)."""
+    if not permit_live():
+        raise ReleaseError(PERMIT_HINT)
     release_dir(tag)
     if tag not in release_tags(root):
         raise ReleaseError(f"no release tag {tag}")
