@@ -1,8 +1,8 @@
 ---
 id: TASK-0213
 title: "CI fix: kb_structure and localization tests after the UI_DESIGN_SYSTEM split (#607)"
-tags: [task, platform, testing, active]
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+tags: [task, platform, testing, done]
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -14,6 +14,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "red CI on main (run 45902170825), orchestration.md §2"
+review_ref: "reviewer: APPROVE d9b2a56b; second review: deepseek accept, 1 low (agy-sonnet failed: agent_tool_violation)"
 created: 2026-11-26
 ---
 

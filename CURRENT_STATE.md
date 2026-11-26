@@ -18,7 +18,6 @@
 - TASK-0196 [IN_PROGRESS] Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) (ui-art-director)
 - TASK-0199 [IN_PROGRESS] Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) (developer)
 - TASK-0205 [IN_PROGRESS] Data: build candidate institutes 1960-2030 for USA, SUN, GBR, FRA, SWE with directions and levels (#589, O-110) (research-scientist)
-- TASK-0213 [IN_PROGRESS] CI fix: kb_structure and localization tests after the UI_DESIGN_SYSTEM split (#607) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0193 [REVIEW] Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 (research-scientist)
@@ -29,4 +28,4 @@
 - Лимиты: Claude — прогноз исчерпания до обновления 2026-11-29; Codex исчерпан до 2026-11-28.
 
 ## Точка продолжения
-Последний handoff: `development/handoff/2026-11-26-3.md`. Платформа: #607 (ужатие и разделение файлов до 2026-12-03), долги DEBT-0122…0125, 0127, 0128. Затем по слову владельца снять паузу продукта.
+Последний handoff: `development/handoff/2026-11-26-3.md`. Платформа: #607 сделан (TASK-0213); долги DEBT-0122…0125, 0127, 0128. Затем по слову владельца снять паузу продукта.
