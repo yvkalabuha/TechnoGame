@@ -20,6 +20,10 @@ What it reports:
 --actions prints one action per tracked agent (a launched agent has an agent_id in the log):
   ping              no stop record for more than --ping-hours: ask it for a status (SendMessage);
   stop+redispatch   no stop record for more than --stop-hours: TaskStop, then redispatch on its branch;
+                    with Redis up (#590), an agent that has a heartbeat (hook agent_beat.py) is judged by it instead:
+                    ping after --silent-min minutes (default 45: a beat comes after each tool call, and one
+                    call - a build, a test run - may take half an hour) without a beat, stop+redispatch after 3 x that;
+                    an agent without any beat, or Redis down, keeps the log rule above;
   to-review         it stopped, its task is still IN_PROGRESS and its own branch (worktree-agent-<agent_id>)
                     has commits not in main:
                     start the reviewer at once.
@@ -44,6 +48,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import redis_kv  # noqa: E402
 import registry  # noqa: E402
 
 OPEN = {"APPROVED", "IN_PROGRESS", "REVIEW", "BLOCKED"}
@@ -183,9 +188,12 @@ def same_branch(o: dict, branch: str) -> bool:
 
 
 def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
-                  status_of: dict[str, str], unlanded: dict[str, list]) -> list[dict]:
+                  status_of: dict[str, str], unlanded: dict[str, list],
+                  beats: dict[str, float] | None = None, silent_min: float = 45.0) -> list[dict]:
     """Pure decision: one action per agent id (see the module docstring). Pass the task statuses and the
-    unlanded branches by task id."""
+    unlanded branches by task id. beats (agent id -> time of its last heartbeat, None when Redis is down) replaces
+    the time-since-start rule for an agent that has beaten: ping after silent_min minutes without a beat,
+    stop+redispatch after 3 x silent_min. An agent with no beat at all keeps the log rule."""
     started: dict[str, dict] = {}
     stopped: dict[str, float] = {}
     for e in events:
@@ -202,7 +210,11 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
         mine = e.get("branch") or AGENT_BRANCH + key  # a replacement works on the branch it was given
         h = (now - e.get("t", now)) / 3600.0
         action = None
-        if key not in stopped:
+        last = (beats or {}).get(key)
+        if key not in stopped and last is not None:
+            quiet = (now - last) / 60.0
+            action = "stop+redispatch" if quiet > 3 * silent_min else "ping" if quiet > silent_min else None
+        elif key not in stopped:
             action = "stop+redispatch" if h > stop_h else "ping" if h > ping_h else None
         elif any(status_of.get(t) == "IN_PROGRESS"
                  and any(b.get("name") == mine for b in unlanded.get(t, []))
@@ -213,7 +225,8 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
             action = "to-review"
         if action:
             out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks, "candidate": candidate,
-                        "agent_type": e.get("agent_type", "?"), "branch": mine})
+                        "agent_type": e.get("agent_type", "?"), "branch": mine,
+                        "beat_min": None if last is None else (now - last) / 60.0})
     seen: set[str] = set()  # one to-review per branch (the original and its replacement name the same one)
     return [a for a in out if a["action"] != "to-review" or not (a["branch"] in seen or seen.add(a["branch"]))]
 
@@ -225,6 +238,7 @@ def main() -> int:
     ap.add_argument("--actions", action="store_true")
     ap.add_argument("--ping-hours", type=float, default=2.0)
     ap.add_argument("--stop-hours", type=float, default=3.0)
+    ap.add_argument("--silent-min", type=float, default=45.0)
     args = ap.parse_args()
     now = time.time()
 
@@ -239,10 +253,15 @@ def main() -> int:
 
     if args.actions:
         status = {i.id: str(i.meta.get("status")) for i in items}
-        acts = agent_actions(agent_events(), now, args.ping_hours, args.stop_hours, status, by_task)
+        events = agent_events()
+        beats = redis_kv.last_beats([e.get("agent_id") or "" for e in events])  # None: Redis down, log rule
+        acts = agent_actions(events, now, args.ping_hours, args.stop_hours, status, by_task, beats, args.silent_min)
+        if beats is None:
+            print("(redis unavailable: silence judged by the agent log)", file=sys.stderr)
         for a in acts:
+            beat = f"  last beat {a['beat_min']:.0f} min ago" if a["beat_min"] is not None else ""
             print(f"{a['action']:<16} {a['agent_id']}  {a['agent_type']:<20} {fmt(a['hours'])}  "
-                  f"{','.join(a['tasks']) or '-'}{' (candidate)' if a['candidate'] else ''}  {a['branch']}")
+                  f"{','.join(a['tasks']) or '-'}{' (candidate)' if a['candidate'] else ''}  {a['branch']}{beat}")
         orphans = orphan_branches(br, agent_events(), status, {a["branch"] for a in acts if a["action"] == "to-review"},
                                   now, args.ping_hours)
         for b in orphans:

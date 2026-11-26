@@ -33,12 +33,16 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import redis_kv  # noqa: E402
+
 
 # Paths whose content verify.py builds or tests.
 # One review may walk the whole chain: Codex (up to 1800 s), agy (900 s + 60 s grace), then DeepSeek.
 REVIEW_TIMEOUT_S = 3600
 LAND_LOCK = Path.home() / ".cache" / "singularity" / "land.lock"  # flock file, see main()
 LAND_WAIT_S = 900  # how long a landing waits for a running Codex sketch
+LAND_HOLDER_TTL = REVIEW_TIMEOUT_S + 3600  # lock:land in Redis outlives the longest landing; deleted at the end
 CODE_PATHS = ("src/", "tests/", "mods/", "tools/", "lab/", ".github/")
 
 
@@ -248,6 +252,8 @@ def main() -> int:
     os.ftruncate(fd, 0)
     os.write(fd, str(os.getpid()).encode())  # information only
     info["steps"]["lock_wait"] = time.monotonic() - started
+    # The flock stays the lock (Codex sketches share it); Redis only names the holder for status tools (#590).
+    token = redis_kv.holder_set("land", {"branch": peek_args().get("branch") or "?"}, LAND_HOLDER_TTL)
     code = 1
     try:
         code = run(info)
@@ -255,6 +261,7 @@ def main() -> int:
             log_failure(main_worktree(), code, info.get("branch", "?"))
         return code
     finally:
+        redis_kv.holder_clear("land", token)
         os.close(fd)  # releases the lock
         record_landing(info, code, time.monotonic() - started)
 
