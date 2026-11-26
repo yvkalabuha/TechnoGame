@@ -8,15 +8,11 @@
 Файлы журнала:
 <!-- kblog:index:start -->
 - [archive-0001-0400.md](log/archive-0001-0400.md) — #1–#400, строк: 400
-- [2026-11.md](log/2026-11.md) — #401–#600, строк: 200
+- [2026-11.md](log/2026-11.md) — #401–#604, строк: 204
 <!-- kblog:index:end -->
 
 | # | Дата | Решение | Ссылка |
 |---|---|---|---|
-| 601 | 2026-11-26 | Разовое разрешение: агент (general-purpose по роли developer) правит защитный фильтр команд .claude/hooks/guard_bash.py и тесты к нему по замечаниям ревью TASK-0201 (ложные отказы после nice/timeout/xargs/env, heredoc, kbtest_*); другие файлы .claude/ не трогает; изменения показать владельцу перед посадкой | владелец, AskUserQuestion | development/tasks/TASK-0201-platform-redis.md |
-| 602 | 2026-11-26 | Влить TASK-0201 (Redis, исправленный фильтр команд guard_bash, reviewer APPROVE на c709b559); три мелкие лазейки фильтра — в долг DEBT-0124 | владелец, AskUserQuestion | development/tasks/TASK-0201-platform-redis.md |
-| 603 | 2026-11-26 | Разрешение на TASK-0208 и TASK-0209: агент (general-purpose по роли developer) правит хуки в .claude/hooks только по пунктам этих задач, другие файлы .claude/ не трогает; рецензент и второе ревью; изменения хуков показать владельцу перед посадкой | владелец, AskUserQuestion | development/tasks/TASK-0208-kb-upkeep.md |
-| 604 | 2026-11-26 | Уточнение #597: расхождение факта с кодом при коммите в ветке агента — предупреждение (ошибка, если в коммите есть development/FACTS.yaml); в CI и при посадке — ошибка (land.py отказывает ветке с расхождением). Влить TASK-0208 (хуки kb_guard, guard_dispatch показаны владельцу по #603) | владелец, AskUserQuestion (A22) | development/tasks/TASK-0208-kb-upkeep.md |
 | 605 | 2026-11-26 | Внедрить в платформу сервис лимитов llmlimits (devLLMex, 127.0.0.1:8790, ADR-yk-0007): тонкий клиент в tools/development (только loopback, таймаут 1,5 с, без сервиса — как сейчас), карта «потребитель → окна лимитов» своя в gameDev, цепочка второго ревью и прочие вызовы llm_worker пропускают исчерпанного провайдера по данным сервиса, capacity.py показывает лимиты. Политика — только предупреждать: при прогнозе «Claude не хватит до обновления» темп и модели агентов не меняются автоматически | владелец, AskUserQuestion | docs/architecture/platform-llmlimits.md |
 | 606 | 2026-11-26 | Разрешение: агент добавляет в хук начала сессии (.claude/hooks/session_context.py) одну строку о лимитах моделей из llmlimits; без сервиса строки нет; другие файлы .claude/ не трогает; изменения показать владельцу перед посадкой | владелец, AskUserQuestion | docs/architecture/platform-llmlimits.md |
 | 607 | 2026-11-26 | Пределы размера (#600) к 2026-12-03: CLAUDE.md, CURRENT_STATE.md, PLAN.md ужать (старое — в архив); UI_DESIGN_SYSTEM.md и M_PLAY_LOOP.md разделить на части по темам с оглавлением, смысл не менять | владелец, AskUserQuestion | development/tasks/TASK-0209-kb-structure.md |
