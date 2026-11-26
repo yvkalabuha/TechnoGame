@@ -26,6 +26,7 @@ errors:
   fix: Commit the task before dispatching an agent
   repeats:
   - '2026-11-26'
+  - '2026-11-26'
   status: open
 - id: ERR-0003
   date: '2026-11-26'
@@ -61,5 +62,17 @@ errors:
   found_by: self
   cost: medium
   fix: git merge-base --is-ancestor f12684f <branch>; shot_batch.py (TASK-0197)
+  repeats: []
+  status: open
+- id: ERR-0006
+  date: '2026-11-26'
+  executor: orchestrator
+  kind: process
+  area: agents
+  symptom: 'Same task dispatched twice: an unblock message to a stopped agent and a fresh dispatch both ran (TASK-0200)'
+  cause: Sent SendMessage to a finished agent and redispatched without checking that it would resume
+  found_by: self
+  cost: medium
+  fix: After unblocking an agent by message, do not redispatch; one owner per task (dispatch guard TASK-0202)
   repeats: []
   status: open
