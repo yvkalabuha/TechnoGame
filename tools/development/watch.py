@@ -87,6 +87,20 @@ def silent_agents(now: float, hours: float) -> list[dict]:
             if k not in stopped and (now - e.get("t", now)) / 3600.0 > hours]
 
 
+def red_ci_event() -> dict | None:
+    """The latest CI run on main when it failed: {"date", "title"}; None when green, running or gh is unavailable."""
+    try:
+        r = subprocess.run(["gh", "run", "list", "--branch", "main", "--limit", "1",
+                            "--json", "conclusion,displayTitle,createdAt"],
+                           cwd=ROOT, text=True, capture_output=True, timeout=20)
+        runs = json.loads(r.stdout) if r.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+    if runs and runs[0].get("conclusion") == "failure":
+        return {"date": str(runs[0].get("createdAt", ""))[:10], "title": str(runs[0].get("displayTitle", ""))[:100]}
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--brief", action="store_true")

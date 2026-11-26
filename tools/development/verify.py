@@ -41,6 +41,7 @@ def steps(full: bool, with_map: bool) -> list[tuple[str, list[str]]]:
         ("geo", [py, "tools/map/ensure_geo.py"]),   # arcs.bin is generated (ADR-0011 section 5); the client and its tests read it
         ("registry", [py, "tools/development/registry.py", "check"]),
         ("hooks", [py, "tools/development/test_hooks.py"]),
+        ("errors", [py, "tools/development/test_errors.py"]),
         ("build", [dn, "build", "Singularity.sln", "-c", "Release", "-v", "q", "-nologo"]),
         ("test", [dn, "test", "Singularity.sln", "-c", "Release", "--no-build", "-v", "q", "-nologo"]),
         ("selftest", [dn, "src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll", "selftest"]),
