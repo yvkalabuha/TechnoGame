@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, 'llm/**']
   pull_request:
+  # Windows and macOS (ARM64) determinism runs once a day and on demand, not on every push:
+  # macOS minutes cost 10x and Windows 2x (owner, 2026-11-26).
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && fromJSON('["ubuntu-latest","windows-latest","macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
