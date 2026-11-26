@@ -29,9 +29,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import client_permit  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 CLIENT_DIR = "src/Singularity.Client.Spike"
@@ -596,6 +600,14 @@ def cmd_run(tag: str, args: list[str]) -> list[str]:
     raise ReleaseError(f"{dest} holds no launcher")
 
 
+def permit_live() -> bool:
+    """True while the owner's launch permit (client_permit.py grant) is alive: the same file guard_shots reads."""
+    try:
+        return float(client_permit.PERMIT.read_text()) > time.time()
+    except (OSError, ValueError):
+        return False
+
+
 def cmd_reject(root: Path, rc: str, reason: str) -> str:
     git(root, "rev-parse", f"{rc}^{{commit}}")
     report = root / "docs" / "releases" / f"{rc}.md"
@@ -664,8 +676,11 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "run":
             cmd = cmd_run(args.tag, args.args)
             if args.do_exec:
+                if not permit_live():   # exec bypasses the guard_shots hook, so the permit is checked here
+                    raise ReleaseError("no live client launch permit (client_permit.py grant, only after the owner allows)")
                 os.execv(cmd[0], cmd)
             print(" ".join(cmd))
+            print("The owner starts it from his own terminal: run the line above, or add --exec when a permit is granted.")
         elif args.cmd == "reject":
             print(cmd_reject(ROOT, args.rc, args.reason))
             print(commit.format(f"{args.rc}.md"))

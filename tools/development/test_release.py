@@ -287,6 +287,39 @@ class TestDeploySafety(Repo):
             release.cmd_run("../v0.1", [])
 
 
+class TestExecPermit(Repo):
+    def test_permit_live_reads_the_guard_file(self):
+        old = release.client_permit.PERMIT
+        release.client_permit.PERMIT = self.base / "permit"
+        self.addCleanup(setattr, release.client_permit, "PERMIT", old)
+        self.assertFalse(release.permit_live())
+        release.client_permit.PERMIT.write_text(str(release.time.time() - 5), encoding="utf-8")
+        self.assertFalse(release.permit_live())
+        release.client_permit.PERMIT.write_text("junk", encoding="utf-8")
+        self.assertFalse(release.permit_live())
+        release.client_permit.PERMIT.write_text(str(release.time.time() + 60), encoding="utf-8")
+        self.assertTrue(release.permit_live())
+
+    def test_run_exec_without_permit_is_refused_before_exec(self):
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        release.cmd_release(self.root, "v0.1")
+        old, oldx, oldroot = release.client_permit.PERMIT, release.os.execv, release.ROOT
+        release.client_permit.PERMIT = self.base / "no-permit"
+        calls = []
+        release.os.execv = lambda *a: calls.append(a)
+        try:
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(release.main(["run", "v0.1", "--exec"]), 1)
+            self.assertEqual(calls, [])
+            self.assertIn("permit", err.getvalue())
+            release.client_permit.PERMIT.write_text(str(release.time.time() + 60), encoding="utf-8")
+            release.main(["run", "v0.1", "--exec"])
+            self.assertEqual(len(calls), 1)
+        finally:
+            release.client_permit.PERMIT, release.os.execv, release.ROOT = old, oldx, oldroot
+
+
 class TestRollbackAndErrors(Repo):
     def test_rollback_lists_revert_commands_and_records_error(self):
         self.merge_task(1)
