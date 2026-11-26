@@ -81,3 +81,16 @@ Node: dirs[2..4], cost, teffMonths, monthsWithFocus[1..2], flowPerMonth, militar
 
 ## Directions (update by Orchestrator, O-091/O-093)
 There are 13 research directions, not 5: aero (aerodynamics), prop (propulsion), met (metals), mat (materials), chem (chemistry), struct (structures), mfg (manufacturing), elec (electronics), sens (sensors), ctrl (control), nuc (nuclear), ord (ordnance), space (space). Show them as short labels with a distinct shape mark each (not colour alone). A node shows 2–4 of them, main first; an institute shows 2–4 with levels 1–5.
+
+
+## Round 2 fixes (Orchestrator, O-098; review docs/ui/reviews/task-0192-sketch-review.md)
+- Direction marks: do NOT reuse node-type shapes (circle, diamond, square, triangle, hexagon…). Use a small rounded tag with a 3-letter label (AER, PRP, MET, MAT, CHM, STR, MFG, ELE, SEN, CTL, NUC, ORD, SPC) and a level digit where relevant.
+- Remove all annotation captions (NODE CHOICE CARD, GOAL HEADER BAR, BOTTOM-LEFT…, «пример»).
+- Buttons with icons only (⇄, ×) get words: «Переставить», «Убрать».
+- Focus levels: «Фокус 1» and «Фокус 2» distinct, no duplicates.
+- «Что мешает: ничего» instead of «0 — узел доступен».
+- Year rings only 1945–2100.
+- Path total: «≈ 38 мес. с учётом параллельной работы институтов»; per-institute totals must equal the sum of their items.
+- Comparison A/B and «goal unreachable» boxes must not cover the map: dock them to the right panel.
+- Lighter route line (single line, not double).
+- Deliver each screen also as a greyscale twin.
