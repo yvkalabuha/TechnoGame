@@ -29,6 +29,7 @@ internal sealed class SlotProbe
     private readonly int[] _node = new int[InstituteSystem.MaxSlotsLimit];
     private readonly byte[] _focus = new byte[InstituteSystem.MaxSlotsLimit];
     private readonly long[] _c;              // [actor][period][metric]
+    private readonly long[] _returned, _science, _returned1, _science1, _upkeepMax, _lastWorkable, _institutesMax;   // per actor (TASK-0187 review: the smoke gates of SCIENCE_SLOTS §10)
     private long _firstViolation = -1;
     private int _firstViolationActor = -1;
 
@@ -42,6 +43,14 @@ internal sealed class SlotProbe
         _ids = ids;
         _player = _w.Config.PlayerActor ?? -1;
         _c = new long[ids.Length * 2 * Metrics];
+        _returned = new long[ids.Length];
+        _science = new long[ids.Length];
+        _returned1 = new long[ids.Length];
+        _science1 = new long[ids.Length];
+        _upkeepMax = new long[ids.Length];
+        _lastWorkable = new long[ids.Length];
+        _institutesMax = new long[ids.Length];
+        Array.Fill(_lastWorkable, -1);
     }
 
     private int At(int a, long t, int m) => (a * 2 + (t <= Period1LastMonth ? 0 : 1)) * Metrics + m;
@@ -81,6 +90,22 @@ internal sealed class SlotProbe
                 if (node.IndexOf(g.Number[r]) < 0)
                     untaken++;
             }
+            if (workable > 0)
+                _lastWorkable[a] = t;
+            _institutesMax[a] = Math.Max(_institutesMax[a], standing);
+            // The research money the step of t reads, and the upkeep share of the institutes built by a project (the share the ceiling of #574 limits).
+            long science = (_w.SharesOf(a).Research * _w.Policy.Budget(a)).Raw;
+            _science[a] += science;
+            if (t <= Period1LastMonth)
+                _science1[a] += science;
+            long upkeep = 0;
+            for (int k = 0; k < slots; k++)
+            {
+                var h = new InstituteHandle(a, k);
+                if (_inst.BuiltByProject(h))
+                    upkeep += (_inst.Parameters.UpkeepPerLevel * Singularity.Kernel.Fx6.FromInt(_inst.Layout.TotalLevels(h))).Raw;
+            }
+            _upkeepMax[a] = Math.Max(_upkeepMax[a], upkeep);
             _c[At(a, t, MSlots)] += standing;
             _c[At(a, t, MIdle)] += idle;
             _c[At(a, t, MFrontier)] += workable;
@@ -109,6 +134,9 @@ internal sealed class SlotProbe
         {
             if (_know.Coverage(a) < Singularity.Kernel.Fx6.One)
                 _c[At(a, t, MShort)]++;
+            _returned[a] += _know.ReturnedToBudget(a).Raw;
+            if (t <= Period1LastMonth)
+                _returned1[a] += _know.ReturnedToBudget(a).Raw;
         }
     }
 
@@ -118,6 +146,18 @@ internal sealed class SlotProbe
         static string I(long v) => v.ToString(CultureInfo.InvariantCulture);
         yield return new("slot_ai_idle_with_frontier", I(AiIdleWithFrontier));
         yield return new("slot_ai_idle_with_frontier_first", _firstViolation < 0 ? "-1" : $"{_ids[_firstViolationActor]}:{I(_firstViolation)}");
+        yield return new("slot_upkeep_ceiling_ppm", I(_inst.SlotParameters.UpkeepCeilingShare.Raw));
+        yield return new("slot_player", _player < 0 ? "" : _ids[_player]);
+        for (int a = 0; a < _ids.Length; a++)
+        {
+            yield return new($"slot_{_ids[a]}_returned_raw", I(_returned[a]));
+            yield return new($"slot_{_ids[a]}_science_raw", I(_science[a]));
+            yield return new($"slot_p1_{_ids[a]}_returned_raw", I(_returned1[a]));
+            yield return new($"slot_p1_{_ids[a]}_science_raw", I(_science1[a]));
+            yield return new($"slot_{_ids[a]}_upkeep_max_ppm", I(_upkeepMax[a]));
+            yield return new($"slot_{_ids[a]}_workable_last", I(_lastWorkable[a]));
+            yield return new($"slot_{_ids[a]}_institutes_max", I(_institutesMax[a]));
+        }
         for (int a = 0; a < _ids.Length; a++)
         {
             for (int p = 0; p < 2; p++)
