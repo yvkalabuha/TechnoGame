@@ -962,6 +962,8 @@ public sealed partial class Main : Node3D
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
     int _capRow, _noticeBefore;
+    // What the size matrix will run and what --only skipped: printed at the start, so the first lines of a run prove the selection.
+    readonly List<(string Sfx, string Group, bool Run)> _shotPlan = new();
     Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
 
@@ -997,11 +999,11 @@ public sealed partial class Main : Node3D
             string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
             if (!OnlyWantsSuffix(sfx)) continue;
             // --only: a group of steps runs only when one of its frames is wanted, and a live check that saves no frame runs only in a full run (the first batch walked the old finance checks before any tech map frame).
-            bool Wn(params string[] names) => _only == null || _only.WantsGroup(sfx, names);
+            bool Wg(string id) { bool run = _only == null || _only.WantsGroup(sfx, ShotRegistry.Group(id)); _shotPlan.Add((sfx, id, run)); return run; }
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
             Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); CheckScaleApplied(sfx, scale); _mainMenu.Open(true); });
-            if (Wn("menu_ingame", "main_menu", "credits", "credits_end", "new_game_empty", "new_game_selected", "settings_video", "settings_sound", "settings_general", "settings_rollback", "alert_tint5", "area_finance", "area_forces", "area_science", "area_production"))
+            if (Wg("menus_areas"))
             {
             Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); TitleScene(true); _mainMenu.Open(false); });
             Q(0.5, () => { SaveShot($"main_menu{sfx}.png"); _mainMenu.Close(); TitleScene(false); _credits.Open(); });   // the real title screen (no HUD) at every scale
@@ -1053,14 +1055,16 @@ public sealed partial class Main : Node3D
                 });
             }
             // Tech map stage 1 (TASK-0192): the strip, the card, the queue, the path and the layout on the live session of the player; each frame comes with an assertion on what the session put on screen.
-            if (scale == 100 && lang == "ru" && Wn("tech_s1_overview", "tech_s1_card", "tech_s1_card_disabled", "tech_s1_queue", "tech_s1_path", "tech_s1_plan", "tech_s1_confirm60", "tech_s1_notice"))
+            if (scale == 100 && lang == "ru" && Wg("tech_s1"))
             {
-                int sciRow = -1; int[] extra = Array.Empty<int>();
-                void SciFail(string what) { _shotLog += $"tech map stage 1 {sfx}: FAIL {what}\n"; InstFail($"tech map stage 1 {sfx}: {what}"); }
+                int sciRow = -1; int[] extra = Array.Empty<int>(); bool sciDead = false;
+                void SciFail(string what) { sciDead = true; _shotLog += $"tech map stage 1 {sfx}: FAIL {what}\n"; InstFail($"tech map stage 1 {sfx}: {what}"); }
+                void SQ(double wait, Action act) => Q(wait, () => { if (!sciDead) act(); });   // after the first failure the rest of the group is skipped, so the log names the first cause only
                 void SciPass(string what) => _shotLog += $"tech map stage 1 {sfx}: PASS {what}\n";
-                Q(0.4, () => { _tree.Player = _player; _host.AskScience(0, 0); _tree.ShowFor(_player, 0); });
-                Q(1.2, () =>
+                SQ(0.4, () => { _tree.Player = _player; _host.WhyActor = _player; _host.AskScience(0, 0); _tree.ShowFor(_player, 0); });
+                SQ(1.2, () =>
                 {
+                    if (!_tree.ShotHasModel) { SciFail($"the tree has no model: shown actor {_tree.ShotActor}, player {_player}, snapshot why actor {_host.Snap.WhyActor}, nodes of the player in the view present {_host.Snap.View.Actors[_player].Nodes.IsPresent}, tree visible {_tree.Visible}"); return; }
                     if (!_tree.ShotSlotsUi) { SciFail("the institute strip is not shown: the player has no slot science in the live view"); return; }
                     int inst = _host.Snap.View.Actors[_player].Institutes.Length, cards = _tree.ShotStripCards;
                     if (cards != Math.Min(6, inst)) { SciFail($"the strip shows {cards} cards for {inst} institutes"); return; }
@@ -1069,7 +1073,7 @@ public sealed partial class Main : Node3D
                     sciRow = _tree.ShotRowByState(1); if (sciRow < 0) { SciFail("no frontier node"); return; }
                     _tree.Select(sciRow);
                 });
-                Q(1.2, () =>
+                SQ(1.2, () =>
                 {
                     if (sciRow < 0) return;
                     if (_host.Snap.Science.Node != _host.Data.Nodes.Number[sciRow]) { SciFail("the session answered for another node than the selected one"); return; }
@@ -1079,7 +1083,7 @@ public sealed partial class Main : Node3D
                     if (off < 0) { SciFail("no node to show the disabled button"); return; }
                     _tree.Select(off);
                 });
-                Q(1.2, () =>
+                SQ(1.2, () =>
                 {
                     if (_tree.ShotAssignEnabled || string.IsNullOrEmpty(_tree.ShotReason)) { SciFail($"a node that cannot be assigned shows the button enabled {_tree.ShotAssignEnabled} or no reason '{_tree.ShotReason}'"); return; }
                     SciPass($"the button is off with the reason '{_tree.ShotReason}'");
@@ -1089,14 +1093,14 @@ public sealed partial class Main : Node3D
                     extra = _tree.ShotFreeFrontier(8);
                     foreach (int n in extra) _host.Submit(new Singularity.Core.Commands.AssignNode(_player, 0, n, true), "cmd.sci");
                 });
-                Q(2.0, () =>
+                SQ(2.0, () =>
                 {
                     var v0 = _host.Snap.View.Actors[_player].Institutes;
                     int slot = -1; for (int k = 0; k < v0.Length && slot < 0; k++) if (!v0[k].Queue.IsDefault && v0[k].Queue.Length > 0) slot = k;
                     if (slot < 0) { SciFail($"no institute has a queue after assigning {extra.Length} nodes"); return; }
                     _tree.ShotSelectInstitute(slot);
                 });
-                Q(0.8, () =>
+                SQ(0.8, () =>
                 {
                     int slot = _tree.ShotSelectedInstitute; var q = _host.Snap.View.Actors[_player].Institutes[slot].Queue;
                     if (_tree.ShotQueueRows != q.Length) { SciFail($"the queue panel shows {_tree.ShotQueueRows} rows, the view has {q.Length}"); return; }
@@ -1105,7 +1109,7 @@ public sealed partial class Main : Node3D
                     int g = _tree.ShotGoalRow(); if (g < 0) { SciFail("no unknown product node to take as a goal"); return; }
                     _tree.Select(-1); _tree.ShotSetGoal(g);
                 });
-                Q(1.5, () =>
+                SQ(1.5, () =>
                 {
                     var p = _host.Snap.Science.Path;
                     if (p == null || p.Nodes.Length == 0) { SciFail("the session gave no path to the goal"); return; }
@@ -1114,21 +1118,21 @@ public sealed partial class Main : Node3D
                     SaveShot($"tech_s1_path{sfx}.png", null, true);
                     _tree.ShotOpenPlan();
                 });
-                Q(1.0, () =>
+                SQ(1.0, () =>
                 {
                     if (!_tree.ShotPlanOpen || _tree.ShotPlanLines == 0) { SciFail("the layout sheet did not open with lines"); return; }
                     SciPass($"layout sheet with {_tree.ShotPlanLines} lines");
                     SaveShot($"tech_s1_plan{sfx}.png", null, true);
                     _tree.ShotApplyPlan();
                 });
-                Q(1.5, () =>
+                SQ(1.5, () =>
                 {
                     // The 60 % refusal comes only when the layout really moves the coverage from 60 % or more to less; the frame is taken only then.
                     if (!_tree.ShotConfirmShown) { _shotLog += $"tech map stage 1 {sfx}: tech_s1_confirm60 not taken: the layout did not cross 60 % in this state (the session accepted it)\n"; return; }
                     SciPass("confirmation of a start the money does not cover");
                     SaveShot($"tech_s1_confirm60{sfx}.png", null, true);
                 });
-                Q(0.4, () =>
+                SQ(0.4, () =>
                 {
                     // The notice: free an institute for real (unassign its work, the adviser fill is off) and let a month pass; the banner shows only if the session raised the notice.
                     _host.AutoFillFreeInstitutes = false; int before = _host.Snap.Science.NoticeSeq;
@@ -1137,7 +1141,7 @@ public sealed partial class Main : Node3D
                     _host.StepTicks(70);
                     _noticeBefore = before;
                 });
-                Q(1.5, () =>
+                SQ(1.5, () =>
                 {
                     _host.AutoFillFreeInstitutes = true;
                     if (_host.Snap.Science.NoticeSeq == _noticeBefore || !_tree.ShotNoticeShown) { _shotLog += $"tech map stage 1 {sfx}: tech_s1_notice not taken: the session raised no notice (yearly rule or 25 s throttle)\n"; _tree.ShotClearNotice(); _tree.Visible = false; _signal.SetSpeed(1); return; }
@@ -1146,7 +1150,7 @@ public sealed partial class Main : Node3D
                     _tree.ShotClearNotice(); _tree.Select(-1); _tree.ShotSetGoal(-1); _tree.Visible = false; _signal.SetSpeed(1);
                 });
             }
-            if (Wn("tech_tree_b"))
+            if (Wg("goal_statement"))
             {
             // The goal statement with the legend flag left open in the chart view: the hidden sheet must reserve no space and the first Esc must close the tree (category D).
             Q(0.3, () => { OpenTree(1); _tree.ToggleLegend(true); });
@@ -1165,7 +1169,7 @@ public sealed partial class Main : Node3D
                 _tree.ToggleLegend(false); _tree.Visible = false;
             });
             }
-            if (Wn("tree_zoom_icons_all"))
+            if (Wg("icons_all"))
             {
             // The Icons level with all six node types in one view (FND, PRN, ENG, CMP, PRC, APP): the in-node glyphs the legend shows.
             string allTypes = null;
@@ -1179,7 +1183,7 @@ public sealed partial class Main : Node3D
                 SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ShotProbe = false; _tree.ResetView(); _tree.Visible = false;
             });
             }
-            if (Wn("tree_caption_turbine", "tree_caption_jet_test", "tree_caption_frontier"))
+            if (Wg("captions"))
             {
             // Captions the art director asked to see (TASK-0126): the nodes are centred at the Nodes level, the named ones selected, a frontier node left alone (its number tag or name).
             {   // every scale and language: the coverage rule wants each 100 % frame at 125 % and 150 % too
@@ -1192,7 +1196,7 @@ public sealed partial class Main : Node3D
                 Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
             }
-            if (Wn("tree_key_tip", "tree_key_enter"))
+            if (Wg("keyboard_walk"))
             {
             // Keyboard walk (TASK-0132, A6-A8) on the live session: real Tab key events reach the focused tree; the ring and the key tip show, Enter opens the node panel.
             {
@@ -1216,7 +1220,7 @@ public sealed partial class Main : Node3D
                 });
             }
             }
-            if (Wn("tree_year_overview", "tree_year_step2", "tree_year_step3", "tree_year_step5", "tree_year_step6", "tree_year_menu", "tree_year_focus", "tree_year_focus_plus", "tree_year_focus_tab_b"))
+            if (Wg("year_rings"))
             {
             // Year rings (TASK-0161, #473): radius = year, sectors = disciplines; the six zoom steps, the node menu with a hatched item, the keyboard ring; on the live session state.
             {
@@ -1252,7 +1256,7 @@ public sealed partial class Main : Node3D
                 Q(0.4, () => { SaveShot($"tree_year_focus_tab_b{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
             }
-            if (Wn("rail_narrow_normal", "rail_narrow_badges", "rail_wide_normal", "rail_wide_badges", "tree_nolegend", "tree_legend_closed_zoom", "tree_legend", "tree_legend_sel", "journal"))
+            if (Wg("rail_tree_journal"))
             {
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
@@ -1319,6 +1323,15 @@ public sealed partial class Main : Node3D
             }
         }
         _sizeQ.Add((0.5, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang("ru"); }));
+        PrintShotPlan();
+    }
+
+    void PrintShotPlan()
+    {
+        string plan = $"[shot plan] --only {(_only == null ? "(none: full set)" : _only.Describe)}: legacy stage {(OnlyWantsLegacy ? "RUNS" : "skipped")}; steps queued {_sizeQ.Count}; groups run: "
+            + string.Join(", ", _shotPlan.Where(p => p.Run).Select(p => p.Group + p.Sfx).DefaultIfEmpty("none")) + "; skipped: " + string.Join(", ", _shotPlan.Where(p => !p.Run).Select(p => p.Group + p.Sfx).DefaultIfEmpty("none"));
+        GD.Print(plan);
+        _shotLog = plan + "\n" + _shotLog;
     }
     void ShotStep(double dt)
     {
@@ -1336,6 +1349,8 @@ public sealed partial class Main : Node3D
         {
             case 0:
                 _shotLog += $"session start: seed {_host.Seed} start_hash {_host.StartHash}\n";
+                GD.Print($"[shot plan] --only {(_only == null ? "(none)" : _only.Describe)}: legacy stage {(OnlyWantsLegacy ? "RUNS" : "skipped")}");
+                if (OS.GetCmdlineUserArgs().Contains("--dry-run")) { BuildSizeShots(); GD.Print($"[shot plan] dry run: {_sizeQ.Count} steps, nothing executed"); GetTree().Quit(0); return; }
                 RunValidator();
                 if (_only != null && _largeSize.X == 0 && !OnlyWantsLegacy) { ShowPower(_player, false); _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break; }   // --only names sized frames: skip the first stage
                 _signal.SetSpeed(4); ShowPower(_player, false); OpenArea(AreaId.Finance); _shotStep = 1; _shotT = 0; break;

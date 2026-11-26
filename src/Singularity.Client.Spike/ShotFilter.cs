@@ -50,7 +50,11 @@ public sealed class ShotFilter
     }
 
     /// <summary>The first (legacy) stage has frames without a size suffix; it is needed unless every pattern names a sized frame.</summary>
-    public bool WantsLegacyStage => _patterns.Any(p => !SizeToken.IsMatch(p));
+    /// <summary>
+    /// A pattern without a size asks for the first stage unless it names only frames of the size matrix: it matches a registered sized frame and no frame of the first stage
+    /// (the first batch of tech_s1_* walked the whole first stage because «no size» meant «legacy»). A pattern that matches nothing known also keeps the stage, so that a typo is reported.
+    /// </summary>
+    public bool WantsLegacyStage => _patterns.Any(p => !SizeToken.IsMatch(p) && (ShotRegistry.Legacy.Any(n => Glob(p, n)) || !ShotRegistry.SizedNames().Any(n => Glob(p, n))));
 
     public static bool Glob(string p, string s)
     {

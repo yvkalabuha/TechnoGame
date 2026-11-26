@@ -163,6 +163,8 @@ public sealed partial class TechTree
     }
 
     // ---- shot run hooks: what the live session put on screen, for the run-time assertions (frames alone do not prove the live path) ----
+    public bool ShotHasModel => _state != null;
+    public int ShotActor => _actor;
     public bool ShotSlotsUi => SlotsUi && _strip.Visible;
     public int ShotStripCards => _stripCards.GetChildCount();
     public bool ShotAssignEnabled => _shotAssignEnabled;
