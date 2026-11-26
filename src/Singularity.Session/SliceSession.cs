@@ -186,7 +186,7 @@ public sealed partial class SliceSession
             return warning;
 
         string? slotWarning = null;
-        if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
+        if (command is AssignNode assign && StartCoverage(assign, NextStepMonth, out Fx6 before, below: logged.Key) is { } after && after < _world.Institutes!.SlotParameters.UnderfundedBelow)
         {
             string percent = $"{after.Raw * 100 / Fx6.Scale} %";
             if (before >= _world.Institutes.SlotParameters.UnderfundedBelow && !assign.Acknowledged)
@@ -717,7 +717,7 @@ public sealed partial class SliceSession
 
     // §1.2, O-096: a node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the start moves the coverage of the money from
     // 60 % or more to less; when the money already covers less, the start goes with a warning. Returns the coverage after the start, or null when the node would not start now.
-    private Fx6? StartCoverage(AssignNode a, long month, out Fx6 before, bool withPending = true)
+    private Fx6? StartCoverage(AssignNode a, long month, out Fx6 before, bool withPending = true, CommandKey? below = null)
     {
         before = Fx6.One;
         if (StartOf(a, month, null) is not { } mine)
@@ -726,7 +726,8 @@ public sealed partial class SliceSession
         var queued = new List<SlotWork>();
         foreach (LoggedCommand p in withPending ? _pending : [])
         {
-            if (p.Command is AssignNode other && other.Actor == a.Actor && StartOf(other, month, queued) is { } work)
+            // Only the commands that sort before this one count: they are applied before it, whatever the order of arrival (S14).
+            if (p.Command is AssignNode other && other.Actor == a.Actor && (below is not { } bound || p.Key < bound) && StartOf(other, month, queued) is { } work)
                 queued.Add(work);
         }
         before = _world.Knowledge.CoverageWith(a.Actor, month, queued.ToArray());
@@ -747,6 +748,30 @@ public sealed partial class SliceSession
         if (node[a.Slot] != 0 || node.Contains(a.Node) || (queued is not null && queued.Exists(w => w.Slot == a.Slot || w.NodeRow == row)))
             return null;
         return new SlotWork(a.Slot, row, institutes.InstituteMultiplier(new InstituteHandle(a.Actor, a.Slot), row), 0);
+    }
+
+    /// <summary>
+    /// The adviser's proposals for the free institutes of the player's actor as <c>AssignNode</c> commands (O-099): what the AI would give each free institute, confirmed in advance, so a client
+    /// without a research screen of its own keeps the institutes working. Empty without the slot model, for another actor, or when nothing is free or left to take. A pure read.
+    /// </summary>
+    public ImmutableArray<AssignNode> AdviserStarts(int actor)
+    {
+        if (!_world.SlotsOn || _world.Config.PlayerActor != actor)
+            return [];
+        InstituteSystem inst = _world.Institutes!;
+        int slots = inst.Layout.SlotCount(actor);
+        long month = NextStepMonth;
+        var node = new int[slots];
+        inst.Resolve(actor, month, node, new byte[slots]);
+        var goals = new int[InstituteSystem.MaxSlotsLimit];
+        inst.Propose(actor, month, goals, new bool[InstituteSystem.MaxSlotsLimit]);
+        var starts = ImmutableArray.CreateBuilder<AssignNode>();
+        for (int k = 0; k < slots; k++)
+        {
+            if (node[k] == 0 && goals[k] != 0)
+                starts.Add(new AssignNode(actor, k, goals[k], Acknowledged: true));
+        }
+        return starts.ToImmutable();
     }
 
     private long NextStepMonth => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));

@@ -147,43 +147,52 @@ internal static class SlotPlanner
             sum += months[i];
             view.Add(new PathNodeView(w.Graph.Number[r], months[i], left * w.Knowledge.CEff(actor, r, month), w.Knowledge.InFrontier(actor, r)));
         }
-        // Greedy schedule on the standing institutes (nodes in requirement order, each on the earliest free one, after its requirements); the lower bound is the longest chain or the work over the slots.
-        var finish = new Fx6[nodes.Count];
-        var free = new Fx6[slots];
-        Fx6 longest = Fx6.Zero, makespan = Fx6.Zero;
-        int longestEnd = 0;
+        var prereq = new int[nodes.Count][];
         for (int i = 0; i < nodes.Count; i++)
+            prereq[i] = [.. AllMembers(w, nodes[i]).Select(m => nodes.IndexOf(m)).Where(j => j >= 0)];
+        (Fx6 min, Fx6 max, int end) = Schedule(months, prereq, slots);
+        return new PathView(view.MoveToImmutable(), min, max, end < 0 ? 0 : w.Graph.Number[nodes[end]]);
+    }
+
+    /// <summary>
+    /// The time of a path on <paramref name="slots"/> institutes (a range): the lower bound is the longest chain of requirements (waiting for a free institute is not part of it) or the
+    /// work shared over the institutes, the upper one a greedy schedule (nodes in requirement order, each on the first institute that is free, after its requirements). Returns the
+    /// bounds and the index of the node that ends the longest chain (−1 for an empty path).
+    /// </summary>
+    internal static (Fx6 Min, Fx6 Max, int LongestChainEnd) Schedule(Fx6[] months, int[][] prereq, int slots)
+    {
+        int n = months.Length;
+        var finish = new Fx6[n];
+        var chain = new Fx6[n];
+        var free = new Fx6[Math.Max(1, slots)];
+        Fx6 sum = Fx6.Zero, makespan = Fx6.Zero, longest = Fx6.Zero;
+        int longestEnd = -1;
+        for (int i = 0; i < n; i++)
         {
-            Fx6 ready = Fx6.Zero;
-            foreach (int m in AllMembers(w, nodes[i]))
+            Fx6 ready = Fx6.Zero, before = Fx6.Zero;
+            foreach (int j in prereq[i])
             {
-                int j = nodes.IndexOf(m);
-                if (j >= 0 && finish[j] > ready)
-                    ready = finish[j];
+                ready = finish[j] > ready ? finish[j] : ready;
+                before = chain[j] > before ? chain[j] : before;
             }
             int slot = 0;
-            for (int k = 1; k < slots; k++)
+            for (int k = 1; k < free.Length; k++)
                 slot = free[k] < free[slot] ? k : slot;
             Fx6 start = free[slot] > ready ? free[slot] : ready;
             finish[i] = start + months[i];
             free[slot] = finish[i];
+            chain[i] = before + months[i];
+            sum += months[i];
             makespan = finish[i] > makespan ? finish[i] : makespan;
-            Fx6 chain = Fx6.Zero;
-            foreach (int m in AllMembers(w, nodes[i]))
+            if (chain[i] > longest)
             {
-                int j = nodes.IndexOf(m);
-                if (j >= 0 && finish[j] > chain)
-                    chain = finish[j];
-            }
-            if (finish[i] - start + chain > longest)
-            {
-                longest = finish[i] - start + chain;
-                longestEnd = w.Graph.Number[nodes[i]];
+                longest = chain[i];
+                longestEnd = i;
             }
         }
-        Fx6 bound = sum / Fx6.FromInt(slots);
+        Fx6 bound = sum / Fx6.FromInt(free.Length);
         Fx6 min = longest > bound ? longest : bound;
-        return new PathView(view.MoveToImmutable(), min, makespan > min ? makespan : min, longestEnd);
+        return (min, makespan > min ? makespan : min, longestEnd);
     }
 
     /// <summary>

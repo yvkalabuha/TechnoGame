@@ -74,6 +74,47 @@ public class SlotMathTests
         Assert.Equal(P.SpeedCap, SlotMath.Speed(P, F(1.5), 2, F(1.25)));          // a value of the data above that is cut (#568)
     }
 
+    [Theory]
+    [InlineData(3, 1)]                // the surcharge of 3 raw units, 1 raw unit in the reserve: a share of 0.333333 rounds the part to nothing
+    [InlineData(7, 5)]
+    [InlineData(1_000_001, 3)]
+    [InlineData(5_000_000, 7)]
+    public void SplitReserve_OneSlot_TheReserveGivesExactlyWhatItPays(long surcharge, long paid)
+    {
+        Span<Fx6> reserved = stackalloc Fx6[1];
+        SlotMath.SplitReserve([Fx6.FromRaw(surcharge)], Fx6.FromRaw(paid), reserved);
+        Assert.Equal(paid, reserved[0].Raw);
+    }
+
+    [Fact]
+    public void SplitReserve_ManySlots_AddsUpToWhatIsPaid_AndStaysInProportion()
+    {
+        var rnd = new Random(5);
+        for (int round = 0; round < 500; round++)
+        {
+            int n = 1 + rnd.Next(6);
+            var surcharge = new Fx6[n];
+            long wanted = 0;
+            for (int i = 0; i < n; i++)
+            {
+                surcharge[i] = Fx6.FromRaw(rnd.Next(0, 8) == 0 ? 0 : rnd.NextInt64(1, 9_000_000));
+                wanted += surcharge[i].Raw;
+            }
+            if (wanted == 0)
+                continue;
+            long paid = rnd.NextInt64(1, wanted + 1);
+            var reserved = new Fx6[n];
+            SlotMath.SplitReserve(surcharge, Fx6.FromRaw(paid), reserved);
+            Assert.Equal(paid, reserved.Sum(x => x.Raw));
+            for (int i = 0; i < n; i++)
+            {
+                Assert.True(reserved[i] >= Fx6.Zero);
+                if (surcharge[i] == Fx6.Zero)
+                    Assert.Equal(Fx6.Zero, reserved[i]);
+            }
+        }
+    }
+
     [Fact]
     public void Coverage_IsOneWhenTheMoneySuffices_AndTheSameShareForEverySlot()
     {

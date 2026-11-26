@@ -104,9 +104,10 @@ public sealed partial class KnowledgeSystem
     }
 
     // The asks of the working slots on the research money; returns their sum. Same numbers for the step, the why_not read and the reserve.
-    // A focus bought from the reserve (O-088) moves its surcharge over the plain ask to the reserve, as far as the reserve can pay it (`reserveAsk` = what the
-    // reserve is asked for before the coverage u; the rest of the surcharge stays on the research money).
-    private Fx6 PlanSlots(int a, long t, ReadOnlySpan<SlotWork> work, Span<Fx6> speed, Span<Fx6> teff, Span<Fx6> ask, out Fx6 reserveAsk)
+    // A focus bought from the reserve (O-088) moves its surcharge over the plain ask to the reserve, as far as the reserve can pay it: `reserved[i]` is the part of the ask of
+    // slot i the reserve pays (before the coverage u), and they add up to exactly what the reserve can pay (the rounding residue goes to the largest surcharge), so what leaves the
+    // reserve is what leaves the research bill, to the last raw unit. The rest of the surcharge stays on the research money.
+    private Fx6 PlanSlots(int a, long t, ReadOnlySpan<SlotWork> work, Span<Fx6> speed, Span<Fx6> teff, Span<Fx6> ask, Span<Fx6> reserved)
     {
         Span<Fx6> surcharge = stackalloc Fx6[work.Length];
         Fx6 wanted = Fx6.Zero;
@@ -119,6 +120,7 @@ public sealed partial class KnowledgeSystem
             Fx6 c = CEffOf(a, r, KMix(a, r), t);
             ask[i] = SlotMath.Rate(_slots!, c, speed[i], work[i].Focus, teff[i]);
             surcharge[i] = Fx6.Zero;
+            reserved[i] = Fx6.Zero;
             if (work[i].FromReserve && work[i].Focus > 0)
             {
                 Fx6 plain = SlotMath.Rate(_slots!, c, SlotMath.Speed(_slots!, work[i].InstituteMultiplier, 0, research), 0, teff[i]);
@@ -126,19 +128,15 @@ public sealed partial class KnowledgeSystem
                 wanted += surcharge[i];
             }
         }
-        Fx6 share = Fx6.Zero;
-        reserveAsk = Fx6.Zero;
         if (wanted > Fx6.Zero)
         {
             Fx6 available = _inputs.ReserveAvailable(a, t);
-            Fx6 paid = available < wanted ? available : wanted;
-            share = paid / wanted;
-            reserveAsk = paid;
+            SlotMath.SplitReserve(surcharge, available < wanted ? available : wanted, reserved);
         }
         Fx6 total = Fx6.Zero;
         for (int i = 0; i < work.Length; i++)
         {
-            ask[i] -= surcharge[i] * share;
+            ask[i] -= reserved[i];
             total += ask[i];
         }
         return total;
@@ -149,9 +147,17 @@ public sealed partial class KnowledgeSystem
     {
         Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit];
         int n = _inputs.SlotWork(a, t, work);
-        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
-        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out Fx6 reserveAsk);
-        return reserveAsk * SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
+        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n], reserved = stackalloc Fx6[n];
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, reserved);
+        Fx6 u = SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
+        // Slot by slot the full bill (ask + reserved) times u less what the research money pays (ask times u): the two sides of one bill, so they add up exactly.
+        Fx6 spend = Fx6.Zero, cap = Fx6.Zero;
+        for (int i = 0; i < n; i++)
+        {
+            spend += (ask[i] + reserved[i]) * u - ask[i] * u;
+            cap += reserved[i];
+        }
+        return spend < cap ? spend : cap;
     }
 
     /// <summary>
@@ -164,8 +170,8 @@ public sealed partial class KnowledgeSystem
         int n = _inputs.SlotWork(a, t, work[..InstituteSystem.MaxSlotsLimit]);
         foreach (SlotWork more in extras)
             work[n++] = more;
-        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
-        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
+        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n], reserved = stackalloc Fx6[n];
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, reserved);
         return SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
     }
 
@@ -173,8 +179,8 @@ public sealed partial class KnowledgeSystem
     {
         Span<SlotWork> work = stackalloc SlotWork[Singularity.Core.Institutes.InstituteSystem.MaxSlotsLimit];
         int n = _inputs.SlotWork(a, t, work);
-        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
-        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
+        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n], reserved = stackalloc Fx6[n];
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, reserved);
         Fx6 u = SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
         for (int i = 0; i < n; i++)
         {
@@ -195,8 +201,8 @@ public sealed partial class KnowledgeSystem
         }
         Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit];
         int n = _inputs.SlotWork(a, t, work);
-        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
-        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
+        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n], reserved = stackalloc Fx6[n];
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, reserved);
         Fx6 u = SlotMath.Coverage(s, total);
 
         for (int k = 0; k < _slotCount; k++)

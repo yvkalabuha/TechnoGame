@@ -183,6 +183,7 @@ public sealed class SimHost : IDisposable
         for (long i = 0; i < ticks && !_stop; i++)
         {
             _session.Step(1);
+            FillFreeInstitutes();
             if (_pending > 0)
             {
                 // A tick applies every accepted command: the last result becomes «applied» only if it is still the pending one
@@ -194,6 +195,18 @@ public sealed class SimHost : IDisposable
         }
         _lastTickMs = ticks > 0 ? sw.Elapsed.TotalMilliseconds / ticks : 0;
         Publish();
+    }
+
+    long _filledMonth = -2;
+
+    // The client has no research screen of its own yet (TASK-0192): once a month the free institutes of the player's country take what the adviser proposes (O-099).
+    void FillFreeInstitutes()
+    {
+        if (PlayerActor < 0 || _session.View.Month == _filledMonth)
+            return;
+        _filledMonth = _session.View.Month;
+        foreach (AssignNode start in _session.AdviserStarts(PlayerActor))
+            _session.Submit(SourceClass.Player, 0, ++_localN, start);
     }
 
     void Publish()

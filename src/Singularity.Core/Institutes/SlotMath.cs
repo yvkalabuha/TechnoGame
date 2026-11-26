@@ -47,6 +47,31 @@ public static class SlotMath
     /// <summary>Money rate of a slot per month (O-089a): <c>C · M · s^0.6 / T_eff</c>.</summary>
     public static Fx6 Rate(SlotParams p, Fx6 cEff, Fx6 speed, int focus, Fx6 teff) => cEff * speed * p.FocusMoney[focus] / teff;
 
+    /// <summary>
+    /// Splits what the reserve pays (<paramref name="paid"/>, at most the sum of the surcharges) over the slots in proportion to their surcharges, so that the parts add up to <paramref name="paid"/>
+    /// exactly: the rounding residue goes to the largest surcharge. What leaves the reserve is then what leaves the research bill, to the last raw unit (S3).
+    /// </summary>
+    public static void SplitReserve(ReadOnlySpan<Fx6> surcharge, Fx6 paid, Span<Fx6> reserved)
+    {
+        Fx6 wanted = Fx6.Zero;
+        foreach (Fx6 s in surcharge)
+            wanted += s;
+        reserved.Clear();
+        if (wanted <= Fx6.Zero || paid <= Fx6.Zero)
+            return;
+        Fx6 share = paid / wanted;
+        Fx6 given = Fx6.Zero;
+        int largest = -1;
+        for (int i = 0; i < surcharge.Length; i++)
+        {
+            reserved[i] = surcharge[i] * share;
+            given += reserved[i];
+            if (surcharge[i] > Fx6.Zero && (largest < 0 || surcharge[i] > surcharge[largest]))
+                largest = i;
+        }
+        reserved[largest] += paid - given;
+    }
+
     /// <summary>Coverage <c>u = min(1, B / Σ rate)</c>, equal for all slots, independent of their order.</summary>
     public static Fx6 Coverage(Fx6 budget, Fx6 total) => total <= budget || total == Fx6.Zero ? Fx6.One : budget / total;
 }
