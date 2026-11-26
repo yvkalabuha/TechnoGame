@@ -1025,6 +1025,25 @@ class ClientPermitTest(unittest.TestCase):
         self.assertEqual(rc(), 0)  # Redis down: the file alone, as before
 
 
+class RedisKvHoldCliTest(unittest.TestCase):
+    def test_hold_runs_the_command_under_the_lock(self):
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        env = dict(os.environ, HOME=str(home), SINGULARITY_NO_REDIS="1")
+        tool = str(ROOT / "tools/development/redis_kv.py")
+
+        def run(*a):
+            return subprocess.run([sys.executable, tool, *a], capture_output=True, text=True, env=env).returncode
+        self.assertEqual(run("hold", "test", "--", sys.executable, "-c", "raise SystemExit(3)"), 3)
+        self.assertEqual(run("hold", "test", "--ttl"), 2)
+        self.assertEqual(run("hold", "test"), 2)
+        lockf = home / ".cache" / "singularity" / "test.lock"
+        fd = os.open(lockf, os.O_RDWR)
+        self.addCleanup(os.close, fd)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        self.assertEqual(run("hold", "test", "--", "true"), 75)
+
+
 class GuardBashDenyDbTest(unittest.TestCase):
     def call(self, cmd, agent="a1", env=None):
         payload = {"tool_input": {"command": cmd}}
@@ -1038,12 +1057,17 @@ class GuardBashDenyDbTest(unittest.TestCase):
     def test_agents_may_not_run_db_clients(self):
         for cmd in ["psql -d kb", "redis-cli KEYS '*'", "nice -n 10 psql", "cd /tmp && /usr/bin/redis-cli ping",
                     "bash -lc 'psql -c 1'", "sudo -u postgres psql", "X=1 redis-cli get a", "ls | xargs psql",
-                    "eval redis-cli ping"]:
+                    "eval redis-cli ping", 'v="$(redis-cli get a)"', 'echo "$(psql -c 1)"', "echo `psql -c 1`",
+                    "for k in a b; do redis-cli get $k; done", "if psql -c 1; then :; fi", "{ psql -c 1; }",
+                    "! psql -c 1", "SINGULARITY_KB_TEST=1 redis-cli get a",
+                    "echo SINGULARITY_KB_TEST=1; psql -c 1", "psql -c 'SINGULARITY_KB_TEST=1'"]:
             self.assertEqual(self.call(cmd), 2, cmd)
+        self.assertEqual(self.call("redis-cli ping", env={"SINGULARITY_KB_TEST": "1"}), 2)
 
     def test_main_session_mentions_and_kb_test_pass(self):
         self.assertEqual(self.call("psql -d kb", agent=None), 0)
         for cmd in ["git commit -m 'psql and redis-cli'", "git grep psql", "python3 tools/development/kb_db.py status",
+                    "if grep -q psql f; then echo x; fi",
                     "echo redis-cli", "SINGULARITY_KB_TEST=1 psql -d kbtest_x -c 'select 1'"]:
             self.assertEqual(self.call(cmd), 0, cmd)
         self.assertEqual(self.call("psql -d kbtest_x", env={"SINGULARITY_KB_TEST": "1"}), 0)

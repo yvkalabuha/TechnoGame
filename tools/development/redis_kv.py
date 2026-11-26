@@ -272,19 +272,20 @@ def permit_get():
 
 
 def main(argv: list[str]) -> int:
-    if argv[:1] == ["hold"] and len(argv) >= 2:
-        name, rest = argv[1], argv[2:]
-        ttl, wait = 3600, 0.0
-        while rest and rest[0] != "--":
-            flag, val, rest = rest[0], rest[1], rest[2:]
-            ttl, wait = (int(val), wait) if flag == "--ttl" else (ttl, float(val))
-        cmd = rest[1:]
+    if argv[:1] == ["hold"]:
+        import argparse
+        cut = argv.index("--") if "--" in argv else len(argv)
+        ap = argparse.ArgumentParser(prog="redis_kv.py hold")
+        ap.add_argument("name")
+        ap.add_argument("--ttl", type=int, default=3600)
+        ap.add_argument("--wait", type=float, default=0.0)
+        a = ap.parse_args(argv[1:cut])
+        cmd = argv[cut + 1:]
         if not cmd:
-            print("usage: redis_kv.py hold NAME [--ttl S] [--wait S] -- CMD...")
-            return 2
-        with lock(name, ttl, wait, info={"cmd": " ".join(cmd)[:120]}) as ok:
+            ap.error("the command to run goes after --")
+        with lock(a.name, a.ttl, a.wait, info={"cmd": " ".join(cmd)[:120]}) as ok:
             if not ok:
-                print(f"redis_kv: lock {name} is held by {(holders([name]) or {}).get(name, 'another process')}")
+                print(f"redis_kv: lock {a.name} is held by {(holders([a.name]) or {}).get(a.name, 'another process')}")
                 return 75
             return subprocess.run(cmd).returncode
     r = connect()

@@ -256,7 +256,7 @@ def main() -> int:
         beats = redis_kv.last_beats([e.get("agent_id") or "" for e in events])  # None: Redis down, log rule
         acts = agent_actions(events, now, args.ping_hours, args.stop_hours, status, by_task, beats, args.silent_min)
         if beats is None:
-            print("(redis unavailable: silence judged by the agent log)")
+            print("(redis unavailable: silence judged by the agent log)", file=sys.stderr)
         for a in acts:
             beat = f"  last beat {a['beat_min']:.0f} min ago" if a["beat_min"] is not None else ""
             print(f"{a['action']:<16} {a['agent_id']}  {a['agent_type']:<20} {fmt(a['hours'])}  "

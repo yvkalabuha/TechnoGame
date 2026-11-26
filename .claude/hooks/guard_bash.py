@@ -7,8 +7,8 @@ contain no shell chaining, redirection or substitution.
 
 --deny-db mode (settings.json, every Bash call): inside a subagent (the hook input carries agent_id) refuses a
 direct psql or redis-cli (owner #597: agents read PostgreSQL and Redis only through kb_db.py and metrics.py, Redis
-is written only by hooks and tools). The main session is not checked. A command that sets SINGULARITY_KB_TEST
-(tests on a temporary database) passes.
+is written only by hooks and tools). The main session is not checked. A psql prefixed with
+SINGULARITY_KB_TEST=1 (tests on a temporary database), or run while the hook's own environment sets it, passes.
   guard_bash.py --deny-db
 """
 import argparse
@@ -30,21 +30,27 @@ WRAPPERS = {"nice", "env", "exec", "time", "timeout", "nohup", "setsid", "stdbuf
 SHELLS = {"bash", "sh", "dash", "zsh"}
 SHELL_C = re.compile(r"^-[a-zA-Z]*c[a-zA-Z]*$")
 ASSIGN = re.compile(r"^[A-Za-z_]\w*=")
-KB_TEST = re.compile(r"(^|[\s;&|(])(export\s+)?SINGULARITY_KB_TEST=[^\s;&|]")
+KEYWORDS = {"if", "then", "else", "elif", "while", "until", "do", "!", "{", "}", "function"}
+SUBST = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
+KB_TEST = re.compile(r"^SINGULARITY_KB_TEST=.+")
 
 
 def db_commands(raw: str, depth: int = 0) -> list[str]:
     """Names of psql/redis-cli run as a command in a shell command line: tokenised like the shell, leading
-    assignments and wrappers skipped, "bash -c '...'" and eval read inside. An unreadable line falls back to a
-    plain word search (fail closed)."""
+    keywords, assignments and wrappers skipped, "bash -c '...'", eval, $(...) and backticks read inside (also within
+    quotes: fail closed). An unreadable line falls back to a plain word search (fail closed). A psql whose own
+    leading assignments set SINGULARITY_KB_TEST (a test on a temporary database) is not counted."""
+    found: list[str] = []
+    if depth < 3:
+        for m in SUBST.finditer(raw):
+            found += db_commands(m.group(1) if m.group(1) is not None else m.group(2), depth + 1)
     try:
         lex = shlex.shlex(re.sub(r"\\\n", " ", raw).replace("\n", " ; "), posix=True, punctuation_chars=True)
         lex.whitespace_split = True
         lex.commenters = ""
         tokens = list(lex)
     except ValueError:
-        return [m.group(2) for m in DB_WORD.finditer(raw)]
-    found: list[str] = []
+        return found + [m.group(2) for m in DB_WORD.finditer(raw)]
     cmds: list[list[str]] = [[]]
     for t in tokens:
         if t in SEPS:
@@ -52,6 +58,9 @@ def db_commands(raw: str, depth: int = 0) -> list[str]:
         else:
             cmds[-1].append(t)
     for ws in cmds:
+        while ws and ws[0] in KEYWORDS:
+            ws = ws[1:]
+        kb_test = any(KB_TEST.match(w) for w in ws[:next((j for j, w in enumerate(ws) if not ASSIGN.match(w)), len(ws))])
         i = 0
         while i < len(ws) and (ASSIGN.match(ws[i]) or os.path.basename(ws[i]) in WRAPPERS
                                or (i and (ws[i].startswith("-") or ws[i].replace(".", "").isdigit()))):
@@ -60,7 +69,8 @@ def db_commands(raw: str, depth: int = 0) -> list[str]:
             continue
         name = os.path.basename(ws[i])
         if name in DB_TOOLS:
-            found.append(name)
+            if not (name == "psql" and kb_test):
+                found.append(name)
         elif i and any(os.path.basename(w) in DB_TOOLS for w in ws[i:]):
             # a wrapper with its own arguments (sudo -u postgres psql, env -u X redis-cli): fail closed
             found += [os.path.basename(w) for w in ws[i:] if os.path.basename(w) in DB_TOOLS]
@@ -79,11 +89,13 @@ def deny_db(data: dict) -> None:
         return
     cmd = (data.get("tool_input") or {}).get("command") or ""
     found = db_commands(cmd)
-    if not found or os.environ.get("SINGULARITY_KB_TEST") or KB_TEST.search(cmd):
+    if os.environ.get("SINGULARITY_KB_TEST"):
+        found = [f for f in found if f != "psql"]
+    if not found:
         return
     block(f"Blocked (owner #597): agents do not run {', '.join(sorted(set(found)))} directly. Read through "
           "python3 tools/development/kb_db.py or metrics.py; Redis is written only by hooks and tools. "
-          "Tests on a temporary database set SINGULARITY_KB_TEST=1.")
+          "A psql test on a temporary database is prefixed with SINGULARITY_KB_TEST=1.")
 
 
 def main() -> None:
