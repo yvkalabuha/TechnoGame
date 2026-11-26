@@ -1,11 +1,11 @@
-"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate,visual,sketch} ..."""
+"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate,visual,sketch,research} ..."""
 
 import argparse
 import json
 import sys
 from pathlib import Path
 
-from . import codexsketch, config, gitleaks, report, review as review_mod, sketch as sketch_mod, visual as visual_mod
+from . import codexsketch, config, gitleaks, report, research as research_mod, review as review_mod, sketch as sketch_mod, visual as visual_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
@@ -95,6 +95,10 @@ def main(argv=None):
                    help="provider of the --with-visual run: agy (subscription, default) or key (AI Studio key)")
     p.add_argument("--allow-small", action="store_true", help="with --with-visual: send frames below 1920x1080")
     p.add_argument("--dry-run", action="store_true", help="check inputs, run nothing")
+    p = sub.add_parser("research", help="DeepSeek checks claims against pages the tool fetched (#577)")
+    p.add_argument("--input", type=Path, required=True, help="YAML with items: id, claim or question, urls")
+    p.add_argument("--profile", choices=["deepseek-flash", "deepseek-v4-pro"], default="deepseek-flash")
+    p.add_argument("--dry-run", action="store_true", help="fetch and scan pages, send nothing")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
     p.add_argument("--date")
@@ -159,6 +163,18 @@ def main(argv=None):
         return 0
     if a.cmd == "visual":
         return _visual(a)
+    if a.cmd == "research":
+        try:
+            path, rec, md = research_mod.run_research(a.input, runs_dir=a.runs, profile_name=a.profile, dry_run=a.dry_run)
+        except (SpendRefused, KeyFileError) as e:
+            print(f"refused: {e}")
+            return 4
+        except review_mod.ReviewError as e:
+            print(f"error: {e}")
+            return 5
+        print(md, end="")
+        print(f"record: {path}" if path else "dry-run: nothing sent")
+        return 0
     if a.cmd in ("review", "gate"):
         return _review_gate(a)
     if a.cmd == "run":

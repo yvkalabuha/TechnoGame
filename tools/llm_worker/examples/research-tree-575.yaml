@@ -1,0 +1,24 @@
+# Example input for `python3 -m tools.llm_worker research --input ...` (#577): the 4 unconfirmed nodes of TASK-0188.
+items:
+  - id: n31.carbon_carbon
+    claim: The carbon-carbon composite was first developed around 1958-1959 (Chance Vought, for ICBM re-entry vehicles).
+    year: 1959
+    urls:
+      - https://en.wikipedia.org/wiki/Reinforced_carbon-carbon
+      - https://en.wikipedia.org/wiki/Carbon_fiber_reinforced_polymer
+  - id: n32.hip
+    claim: Hot isostatic pressing was invented in 1955 at the Battelle Memorial Institute.
+    year: 1955
+    urls:
+      - https://en.wikipedia.org/wiki/Hot_isostatic_pressing
+  - id: n33.tbc
+    claim: Ceramic thermal barrier coatings for turbine blades entered use around 1980 (aluminide coatings in the 1970s).
+    year: 1980
+    urls:
+      - https://en.wikipedia.org/wiki/Thermal_barrier_coating
+      - https://en.wikipedia.org/wiki/Thermal_spraying
+  - id: n29.maraging
+    claim: Maraging steel was developed by Inco (Bieber) in the late 1950s.
+    year: 1959
+    urls:
+      - https://en.wikipedia.org/wiki/Maraging_steel
