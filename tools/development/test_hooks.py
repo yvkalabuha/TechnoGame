@@ -498,5 +498,216 @@ class ShotBatchTest(unittest.TestCase):
         self.assertIn("'a&b'", shot_batch.check_branch("a&b"))
 
 
+def git_in(repo: Path, *a: str) -> str:
+    env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+               GIT_COMMITTER_EMAIL="t@t")
+    return subprocess.run(["git", *a], cwd=repo, text=True, capture_output=True, env=env).stdout.strip()
+
+
+def commit_file(repo: Path, name: str, text: str, msg: str = "c") -> None:
+    p = repo / name
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+    git_in(repo, "add", "-A")
+    git_in(repo, "commit", "-m", msg)
+
+
+TASK_STATUS_LINE = "status: {}         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED"
+
+
+class GuardDispatchTest(unittest.TestCase):
+    """guard_dispatch.py: committed task in a working status, one running agent per task (#591, ERR-0002/0006)."""
+
+    def setUp(self):
+        self.repo = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.repo, True)
+        git_in(self.repo, "init", "-b", "main")
+        for n, st in [("0001", "IN_PROGRESS"), ("0002", "DONE"), ("0004", "APPROVED")]:
+            commit_file(self.repo, f"development/tasks/TASK-{n}-x.md",
+                        f"---\nid: TASK-{n}\n{TASK_STATUS_LINE.format(st)}\n---\n")
+        self.log = self.repo / ".claude" / ".state" / "agents.jsonl"
+
+    def call(self, prompt, description="work", agent="developer"):
+        payload = {"tool_input": {"subagent_type": agent, "description": description, "prompt": prompt}}
+        return run_hook("guard_dispatch.py", payload, project=self.repo)
+
+    def agents(self, *recs):
+        self.log.parent.mkdir(parents=True, exist_ok=True)
+        self.log.write_text("".join(json.dumps(r) + "\n" for r in recs), encoding="utf-8")
+
+    def test_working_status_passes_and_done_is_blocked_despite_status_comment(self):
+        self.assertEqual(self.call("Task: development/tasks/TASK-0001-x.md"), 0)
+        self.assertEqual(self.call("do TASK-0004"), 0)
+        self.assertEqual(self.call("Task: development/tasks/TASK-0002-x.md"), 2)
+
+    def test_uncommitted_or_modified_task_is_blocked(self):
+        (self.repo / "development/tasks/TASK-0003-new.md").write_text("---\nid: TASK-0003\n---\n")
+        self.assertEqual(self.call("do TASK-0003"), 2)
+        self.assertEqual(self.call("do TASK-0009"), 2)  # no file at all
+        (self.repo / "development/tasks/TASK-0001-x.md").write_text("---\nid: TASK-0001\nstatus: IN_PROGRESS\n---\nnew\n")
+        self.assertEqual(self.call("do TASK-0001"), 2)
+
+    def test_quoted_or_missing_status_is_read_like_the_registry(self):
+        commit_file(self.repo, "development/tasks/TASK-0005-q.md", '---\nid: TASK-0005\nstatus: "DONE"\n---\n')
+        commit_file(self.repo, "development/tasks/TASK-0006-q.md", "---\nid: TASK-0006\nstatus: 'IN_PROGRESS'  # x\n---\n")
+        commit_file(self.repo, "development/tasks/TASK-0007-q.md", "---\nid: TASK-0007\n---\n")
+        self.assertEqual(self.call("do TASK-0005"), 2)
+        self.assertEqual(self.call("do TASK-0006"), 0)
+        self.assertEqual(self.call("do TASK-0007"), 2)
+
+    def test_task_must_be_in_head_the_worktree_base(self):
+        git_in(self.repo, "checkout", "-q", "-b", "behind", "HEAD~1")  # cut before TASK-0004 was added
+        self.assertEqual(self.call("do TASK-0004"), 2)
+        self.assertEqual(self.call("do TASK-0001"), 0)
+
+    def test_status_is_read_from_main_not_the_working_tree(self):
+        git_in(self.repo, "checkout", "-b", "side")
+        commit_file(self.repo, "development/tasks/TASK-0002-x.md", f"---\nid: TASK-0002\n{TASK_STATUS_LINE.format('APPROVED')}\n---\n")
+        self.assertEqual(self.call("do TASK-0002"), 2)
+
+    def test_scope_description_then_task_path_then_all_ids(self):
+        # context ids in the prompt do not count when the description or a task path names the task
+        self.assertEqual(self.call("TASK-0001, see also TASK-0002", description="TASK-0001 work"), 0)
+        self.assertEqual(self.call("Task: development/tasks/TASK-0001-x.md; earlier TASK-0002"), 0)
+        self.assertEqual(self.call("TASK-0001 and TASK-0002"), 2)
+
+    def test_read_only_agents_and_no_task_pass(self):
+        self.assertEqual(self.call("review TASK-0002", agent="reviewer"), 0)
+        self.assertEqual(self.call("review TASK-0002", agent="Explore"), 0)
+        self.assertEqual(self.call("no task here"), 0)
+
+    def test_second_dispatch_for_running_task_is_blocked(self):
+        now = time.time()
+        self.agents({"t": now - 60, "event": "start", "agent_type": "developer", "description": "TASK-0001 work",
+                     "tasks": ["TASK-0001"]},
+                    {"t": now - 60, "event": "launched", "agent_type": "developer", "description": "TASK-0001 work",
+                     "tasks": ["TASK-0001"], "agent_id": "a1"})
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001 again"), 2)
+        self.assertEqual(self.call("do TASK-0004", description="TASK-0004"), 0)
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001 [redispatch]"), 0)
+
+    def test_running_read_only_agent_does_not_hold_the_task(self):
+        now = time.time()
+        self.agents(*[{"t": now - 60, "event": "launched", "agent_type": t, "description": "TASK-0001 review",
+                       "tasks": ["TASK-0001"], "agent_id": f"r{i}"}
+                      for i, t in enumerate(["reviewer", "Explore", "ui-art-director", "research-scientist"])])
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001 fix"), 0)
+
+    def test_stopped_stale_and_start_only_records_do_not_block(self):
+        now = time.time()
+        self.agents({"t": now - 60, "event": "start", "description": "TASK-0001", "tasks": ["TASK-0001"]},
+                    {"t": now - 60, "event": "launched", "description": "TASK-0001", "tasks": ["TASK-0001"], "agent_id": "a1"},
+                    {"t": now - 30, "event": "stop", "agent_id": "a1"},
+                    {"t": now - 4 * 3600, "event": "launched", "description": "TASK-0001", "tasks": ["TASK-0001"],
+                     "agent_id": "a2"},
+                    ["not", "an", "object"], {"t": "bad", "event": "launched", "description": "TASK-0001",
+                                              "agent_id": "a3"})
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+
+    def test_damaged_log_fails_open(self):
+        self.log.parent.mkdir(parents=True, exist_ok=True)
+        self.log.write_bytes(b'{"t": 1, "event": "launched", "agent_id": "a1", "description": "\xff TASK-0001"}\n')
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+        self.agents({"t": time.time(), "event": "launched", "agent_id": "a2", "description": 5, "tasks": "TASK-0001"},
+                    {"t": time.time(), "event": "launched", "agent_id": "a3", "description": None, "tasks": [7]})
+        self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+
+
+class KbCheckDecisionsLogTest(unittest.TestCase):
+    def test_decisions_log_has_no_unknown_ids(self):
+        r = subprocess.run([sys.executable, str(ROOT / "tools/development/kb_check.py"), "check", "--file",
+                            str(ROOT / "docs/decisions/DECISIONS_LOG.md")], capture_output=True, text=True, cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+
+class GuardShotsBranchTest(unittest.TestCase):
+    """guard_shots.py: a shot run needs the model commit and current client sources (#591, ERR-0001/0005)."""
+
+    def setUp(self):
+        base = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, base, True)
+        self.home = base / "home"
+        permit = self.home / ".cache" / "singularity" / "client-launch-ok"
+        permit.parent.mkdir(parents=True)
+        permit.write_text(str(time.time() + 3600))
+        self.repo = base / "repo"
+        self.repo.mkdir()
+        git_in(self.repo, "init", "-b", "main")
+        commit_file(self.repo, "src/Singularity.Client.Spike/a.txt", "base")
+        git_in(self.repo, "branch", "old")
+        commit_file(self.repo, "src/Singularity.Client.Spike/b.txt", "model")
+        self.model = git_in(self.repo, "rev-parse", "HEAD")
+        git_in(self.repo, "branch", "stale")
+        commit_file(self.repo, "src/Singularity.Client.Spike/c.txt", "newer client")
+        git_in(self.repo, "branch", "fresh")
+        commit_file(self.repo, "docs/x.md", "not client")  # main moves outside the client: fresh stays fresh
+        self.wt = {}
+        for b in ["old", "stale", "fresh"]:
+            self.wt[b] = base / f"wt-{b}"
+            git_in(self.repo, "worktree", "add", str(self.wt[b]), b)
+
+    def call(self, cmd, cwd=None):
+        env = dict(os.environ, HOME=str(self.home), SINGULARITY_MODEL_COMMIT=self.model,
+                   SINGULARITY_NO_REFUSAL_LOG="1", CLAUDE_PROJECT_DIR=str(self.repo))
+        payload = {"tool_input": {"command": cmd}, "cwd": str(cwd or self.repo)}
+        return subprocess.run([sys.executable, str(HOOKS / "guard_shots.py")], input=json.dumps(payload),
+                              text=True, capture_output=True, env=env).returncode
+
+    def test_checkout_from_cd_launcher_path_or_cwd(self):
+        launcher = "./run-globe" + "-spike.sh"
+        for b, rc in [("fresh", 0), ("old", 2), ("stale", 2)]:
+            self.assertEqual(self.call(f"(cd {self.wt[b]} && {launcher} --shots --only a)"), rc, b)
+            self.assertEqual(self.call(f"{self.wt[b]}/run-globe" + "-spike.sh --map-frames --only a"), rc, b)
+            self.assertEqual(self.call(f"{launcher} --time-shots --only a", cwd=self.wt[b]), rc, b)
+        self.assertEqual(self.call(f"{launcher} --shots --only a"), 0)  # main itself
+
+    def test_every_launcher_of_a_batch_is_checked(self):
+        launcher = "./run-globe" + "-spike.sh"
+        cmd = f"(cd {self.wt['fresh']} && {launcher} --shots --only a); (cd {self.wt['old']} && {launcher} --shots --only b)"
+        self.assertEqual(self.call(cmd), 2)
+
+    def test_quoted_launcher_or_flag_is_still_checked(self):
+        name = "run-globe" + "-spike.sh"
+        self.assertEqual(self.call(f"'{self.wt['old']}/{name}' --shots --only a"), 2)
+        self.assertEqual(self.call(f"./{name} '--shots' --only a", cwd=self.wt["old"]), 2)
+        self.assertEqual(self.call(f"\"{self.wt['fresh']}/{name}\" '--shots' --only a"), 0)
+        self.assertEqual(self.call(f"grep -n '{name} --shots' notes.txt", cwd=self.wt["old"]), 0)  # no launch
+
+    def test_cd_inside_a_finished_subshell_does_not_apply(self):
+        name = "./run-globe" + "-spike.sh"
+        self.assertEqual(self.call(f"(cd {self.wt['fresh']} && pwd); {name} --shots --only a", cwd=self.wt["old"]), 2)
+        self.assertEqual(self.call(f"cd {self.wt['fresh']} && {name} --shots --only a", cwd=self.wt["old"]), 0)
+
+    def test_newline_separates_commands(self):
+        name = "./run-globe" + "-spike.sh"
+        cmd = f"cd {self.wt['fresh']} && pwd\ncd {self.wt['old']} && {name} --shots --only a"
+        self.assertEqual(self.call(cmd), 2)
+        cmd = f"cd {self.wt['old']} && pwd\ncd {self.wt['fresh']} && \\\n{name} --shots --only a"
+        self.assertEqual(self.call(cmd), 0)
+
+    def test_headless_import_does_not_exempt_a_later_shot_launch(self):
+        godot = "/opt/Godot_v4.7-stable_linux.x86_64"
+        name = "run-globe" + "-spike.sh"
+        self.assertEqual(self.call(f"{godot} --headless --import && {self.wt['old']}/{name} --shots --only a"), 2)
+        self.assertEqual(self.call(f"{godot} --headless --import && {self.wt['fresh']}/{name} --shots --only a"), 0)
+        self.assertEqual(self.call(f"{godot} --headless --import", cwd=self.wt["old"]), 0)
+
+    def test_history_is_read_from_the_checkout_root(self):
+        name = "./run-globe" + "-spike.sh"  # launched from inside the client folder of a stale checkout
+        sub = self.wt["stale"] / "src" / "Singularity.Client.Spike"
+        self.assertEqual(self.call(f"{name} --shots --only a", cwd=sub), 2)
+
+    def test_unknown_directory_fails_closed(self):
+        name = "./run-globe" + "-spike.sh"
+        for cmd in [f"cd $WT && {name} --shots --only a", f"cd {self.wt['old']} || cd {self.wt['fresh']}; {name} --shots --only a",
+                    f"bash -c 'cd {self.wt['fresh']} && {name} --shots --only a'", f"cd - && {name} --shots --only a"]:
+            self.assertEqual(self.call(cmd, cwd=self.wt["fresh"]), 2, cmd)
+
+    def test_non_shot_launch_and_non_repo_dir(self):
+        launcher = "./run-globe" + "-spike.sh"
+        self.assertEqual(self.call(launcher, cwd=self.wt["old"]), 0)  # interactive launch: permit only
+        self.assertEqual(self.call(f"{launcher} --shots --only a", cwd=self.home), 2)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

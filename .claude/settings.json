@@ -40,6 +40,11 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/agent_log.py\" start"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_dispatch.py\"",
+            "onFailure": "block"
           }
         ]
       },
