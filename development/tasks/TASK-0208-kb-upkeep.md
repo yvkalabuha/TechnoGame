@@ -1,7 +1,7 @@
 ---
 id: TASK-0208
 title: "Knowledge base upkeep: fact drift is an error, decision-to-facts check at landing, freshness, /fact, facts in kb_db and mandatory facts block for code/data agents, agent DB access read-only (#597)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #597"
+review_ref: "reviewer: APPROVE db9ebd83; agy-sonnet second review accept (2 medium, 2 low -> DEBT-0125)"
 created: 2026-11-26
 ---
 
@@ -59,3 +60,7 @@ OPEN: в development/FACTS.yaml добавить `reviewed: 2026-11-26` факт
 5. guard_dispatch: для агентов developer, simulation-engineer, test-engineer, 3d-modeler — в задании должен быть блок «Факты:» (печать `kb_check.py related` по теме); иначе отказ с подсказкой команды.
 6. guard_bash (агенты): прямые `psql` и `redis-cli` закрыты, кроме тестов на временной базе (переменная SINGULARITY_KB_TEST); чтение — через kb_db.py и metrics.py.
 7. Тесты на всё.
+
+## Посадка (Orchestrator, 2026-11-26)
+- reviewer: CHANGES (374eab56) → APPROVE (db9ebd83). Второе ревью agy-sonnet (Codex — лимит): accept, 2 medium + 2 low → DEBT-0125. Влито как a904fd4 по #604 (verify --full OK).
+- reviewed: 2026-11-26 добавлено 8 фактам с зондом без дрейфа.
