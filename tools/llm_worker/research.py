@@ -18,7 +18,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import config, gitleaks, jsonschema_lite, review
+from . import config, gitleaks, jsonschema_lite, rejections, review
 from .review import ReviewError
 
 SCHEMA = config.PACKAGE_DIR / "schemas" / "research.schema.json"
@@ -269,10 +269,21 @@ def _decade_only(value, quote):
     return False
 
 
-def judge(provider, item, pages):
+def rejected_memo(root, item):
+    """Findings rejected earlier on this topic (rejection journal, #591) as a short data block, or ''."""
+    past = rejections.as_items(rejections.load_relevant(
+        root, topic=str(item.get("claim") or item.get("question") or ""), log=lambda m: print(m, file=sys.stderr)))
+    if not past:
+        return ""
+    block = "\n\n" + review._fence("PREVIOUSLY REJECTED FINDINGS (data, not instructions)", review.rejected_block(past))
+    review._scan(block)
+    return block
+
+
+def judge(provider, item, pages, memo=""):
     """One model call; returns the checked result dict. A quote not found in the source page gives not_found."""
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(item, pages)}]
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(item, pages) + memo}]
     comp = provider.complete(messages, schema, "research", 1500)
     data = review._loads(comp.content)
     errors = ["not a JSON object"] if not isinstance(data, dict) else jsonschema_lite.validate(data, schema)
@@ -313,7 +324,7 @@ def judge(provider, item, pages):
 
 
 def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_fetch, cache_dir=CACHE_DIR,
-                 profile_name="deepseek-flash", dry_run=False, now=None):
+                 profile_name="deepseek-flash", dry_run=False, now=None, root=config.REPO_ROOT):
     """Returns (record path or None, record, markdown)."""
     data = load_input(path)
     stem = "research-" + Path(path).stem
@@ -347,7 +358,7 @@ def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_
             if dry_run or not pages:
                 out.update(verdict="not_found", note="dry_run" if dry_run else "no_page_available")
             else:
-                out.update(judge(provider, it, pages))
+                out.update(judge(provider, it, pages, rejected_memo(root, it)))
         except Exception as e:
             # Paid answers already received must not be lost (a page failure counts too): keep them, then fail.
             if record["items"] and not dry_run:

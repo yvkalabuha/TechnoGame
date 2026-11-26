@@ -1,0 +1,11 @@
+# Rejected review findings and why (owner #591). Written by llm_worker review-confirm --rejected and
+# tools/development/rejections.py add; read into review, gate and research prompts. Do not edit ids.
+rejections:
+- id: deepseek|a.py|
+  provider: deepseek
+  area: a.py
+  summary: c2
+  reason: no reason recorded
+  ref: ''
+  date: '2026-11-26'
+  source: review-TASK-0001-27ab57cd-deepseek.json#2

@@ -523,6 +523,16 @@ def execute(args) -> int:
             print(f"{days} days: {s['total']} occurrence(s), repeats {s['repeats']} ({share})")
             print(f"  repeats by kind: {top(s['kind'])}")
             print(f"  repeats by executor: {top(s['executor'])}")
+        try:  # rejection memory (#591): do reviewers still repeat rejected findings
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import rejections
+            from tools.llm_worker import rejections as rej_core
+            journal = rej_core.load(rej_core.journal_path(ROOT))
+            for days in (7, 30):
+                lo = (t - dt.timedelta(days=days)).isoformat()
+                print(f"rejection memory {days}d: " + rejections.stats_line(journal, lo, (t + dt.timedelta(days=1)).isoformat()))
+        except (ValueError, OSError, ImportError) as ex:
+            print(f"rejections: not available ({ex})")
         return 0
     if args.cmd in ("repeat", "close"):
         e = next((x for x in entries if x["id"] == args.id), None)

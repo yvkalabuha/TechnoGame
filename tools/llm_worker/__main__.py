@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import codexsketch, config, gitleaks, report, research as research_mod, review as review_mod, sketch as sketch_mod, visual as visual_mod
+from . import codexsketch, config, gitleaks, rejections, report, research as research_mod, review as review_mod, sketch as sketch_mod, visual as visual_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
@@ -61,7 +61,10 @@ def main(argv=None):
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--confirmed", action="store_true")
     g.add_argument("--rejected", action="store_true")
-    p.add_argument("--reason", help="why the finding is rejected; later reviews of the task see it")
+    p.add_argument("--reason", help="why the finding is rejected; later reviews see it (also in other tasks, via the journal)")
+    p.add_argument("--ref", default="", help="decision that settles it: ADR-NNNN, #NNN, TASK-NNNN (goes to the journal)")
+    p.add_argument("--journal", type=Path, default=config.REPO_ROOT / rejections.JOURNAL_REL,
+                   help="rejection journal (default development/review-rejections.yaml)")
     p = sub.add_parser("gate", help="DeepSeek as the third voice of a gate")
     p.add_argument("--item", required=True, help="repository-relative path of the document")
     p.add_argument("--stance", choices=["third"], required=True)
@@ -155,11 +158,13 @@ def main(argv=None):
         return 0
     if a.cmd == "review-confirm":
         try:
-            n = review_mod.mark_finding(a.record, a.finding, a.confirmed, a.reason)
+            n = review_mod.mark_finding(a.record, a.finding, a.confirmed, a.reason, journal=a.journal, ref=a.ref)
         except review_mod.ReviewError as e:
             print(f"error: {e}")
             return 5
         print(f"finding {a.finding}/{n}: {'confirmed' if a.confirmed else 'rejected'}")
+        if a.rejected and not a.reason:
+            print("warning: no --reason: the journal keeps 'no reason recorded', which does not stop a repeat")
         return 0
     if a.cmd == "visual":
         return _visual(a)
