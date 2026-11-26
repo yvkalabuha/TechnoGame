@@ -231,7 +231,10 @@ class CapacityTest(unittest.TestCase):
 
     def test_file_source_shows_out(self):
         f = Path(tempfile.mkdtemp()) / "s.json"
-        f.write_text(json.dumps(payload(codex=[win("7d", 0, "2099-01-01T00:00:00Z")])))
+        # capacity.py runs on the real clock and distrusts samples older than llm_limits.MAX_AGE, so sample "now"
+        w = win("7d", 0, "2099-01-01T00:00:00Z")
+        w["sampled_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        f.write_text(json.dumps(payload(codex=[w])))
         self.assertIn("codex out until", self.run_cap("file:" + str(f)).stdout)
 
 
