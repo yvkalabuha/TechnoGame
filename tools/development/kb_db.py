@@ -7,7 +7,6 @@ land_failures), which keep soft-deleted rows (deleted_at) between rebuilds.
 
   kb_db.py build [--quiet]            rebuild the index from files
   kb_db.py q TABLE [filter ...] [--json]  short filter query, one line per row
-  kb_db.py sql "SELECT ..."           SQL, reads only (or SQL on stdin)
   kb_db.py status                     database, row counts, freshness
   kb_db.py forget TABLE KEY_PREFIX    soft-delete a journal row
 
@@ -22,11 +21,9 @@ Examples:
   kb_db.py q items status=REVIEW agent=developer
   kb_db.py q agents 'silent>2h'     (quote it: the shell reads > as a redirect; silent=2h also works)
 
-"sql" accepts only read statements (select, with, values, table, show, explain), runs
-them in BEGIN READ ONLY, and refuses backslash commands: a guard against slips, not a sandbox.
 Connection: local socket, peer authentication of the current user, database singularity_kb
 (env SINGULARITY_KB_DB, created on first use), one schema per checkout ('main' for the main
-checkout, wt_<hash> for a worktree). No passwords, no driver: the psql client is used. Without PostgreSQL "build --quiet" does nothing.
+checkout, wt_<hash> for a worktree). No passwords, no driver: the psql client is used. No passwords, no driver: the psql client is used. Without PostgreSQL "build --quiet" does nothing.
 """
 from __future__ import annotations
 
@@ -90,6 +87,10 @@ TABLES: dict[str, dict] = {
     "landfails": dict(sql="land_failures", text="msg", date="t", show=["key", "t", "branch", "msg"],
                       cols={"key": "text", "t": "ts", "branch": "text", "msg": "text"}, fuzzy={"msg"}, journal=True),
 }
+
+PRIMARY_KEY = {"items": ["id"], "links": ["from_id", "to_id", "kind"], "decisions": ["num"], "orch": ["id"],
+               "debt": ["id"], "questions": ["id"], "errors": ["id"], "agents": ["agent_id"],
+               "refusals": ["key"], "landfails": ["key"]}
 
 PG_TYPES = {"text": "text", "int": "integer", "date": "date", "bool": "boolean", "ts": "timestamptz"}
 
@@ -202,6 +203,14 @@ def parse_debt(text: str) -> list[dict]:
     return rows
 
 
+def question_closed(cells: list[str]) -> bool:
+    """Struck through (~~ at the start of the id or text), or a status/answer cell that starts
+    with закрыт/closed. Text that merely mentions the word does not close a question."""
+    if cells[0].startswith("~~") or cells[1].startswith("~~"):
+        return True
+    return any(re.match(r"[\W_]*(закрыт|closed)", c, re.I) for c in cells[2:])
+
+
 def parse_questions(text: str) -> list[dict]:
     rows = []
     kind = "other"
@@ -217,7 +226,7 @@ def parse_questions(text: str) -> list[dict]:
             else:
                 blocks, added = c[2], (c[3] if len(c) > 3 else "")
             rows.append(dict(id=qid, kind=kind, text=c[1], blocks=blocks, added=added,
-                             open=not (c[0].startswith("~~") or re.match(r"~~|.*\b(закрыт|closed)\b", c[1], re.I | re.S))))
+                             open=not question_closed(c)))
         block.clear()
 
     for line in text.splitlines():
@@ -405,16 +414,13 @@ def db_schema() -> str:
     return "wt_" + hashlib.sha1(str(ROOT).encode()).hexdigest()[:8]
 
 
-def psql(db: str, sql: str, *flags: str, schema: bool = False, readonly: bool = False) -> str:
+def psql(db: str, sql: str, *flags: str, schema: bool = False) -> str:
     # -w: never prompt for a password; the timeout keeps a hung server from hanging callers
     cmd = ["psql", "-X", "-q", "-w", "-h", SOCKET_DIR, "-d", db, "-v", "ON_ERROR_STOP=1", *flags]
     if schema:
         sql = f"set search_path = {ident(db_schema())};\n" + sql
-    env = dict(os.environ)
-    if readonly:
-        env["PGOPTIONS"] = "-c default_transaction_read_only=on"
     try:
-        r = subprocess.run(cmd, input=sql, text=True, capture_output=True, timeout=PSQL_TIMEOUT, env=env)
+        r = subprocess.run(cmd, input=sql, text=True, capture_output=True, timeout=PSQL_TIMEOUT)
     except subprocess.TimeoutExpired:
         raise PgError(f"psql timed out after {PSQL_TIMEOUT} s")
     if r.returncode != 0:
@@ -504,8 +510,6 @@ def build_script(data: dict[str, list[dict]], fp: str) -> str:
 
 
 def build(quiet: bool = False, log=None) -> int:
-    if quiet and git_common_parent() != ROOT.resolve():
-        return 0  # a worktree must not overwrite the index of the main checkout
     if not available():
         if not quiet:
             print("kb_db: PostgreSQL is not available (psql or socket)", file=sys.stderr)
@@ -609,8 +613,7 @@ def build_query(table: str, tokens: list[str]) -> str:
     if spec.get("journal") and "deleted=1" not in tokens:
         where.append("deleted_at is null")
     order = order or (f"{spec['date']} desc" if spec["date"] else None)
-    if order is None:
-        order = "1"
+    order = ", ".join(([order] if order else []) + PRIMARY_KEY[table])  # total order: ties end in the key
     select = ", ".join(cols)
     sql = f"select {select} from {spec['sql']}"
     if where:
@@ -658,76 +661,6 @@ def cmd_q(args) -> int:
     return 0
 
 
-READONLY_START = {"select", "with", "values", "table", "show", "explain"}
-
-
-def check_readonly_sql(query: str) -> str | None:
-    """None if every statement is a plain read; else the reason for the refusal.
-
-    A guard, not a sandbox: the query runs inside BEGIN READ ONLY with a read-only
-    session default, statements must start with a read keyword (so no COMMIT or SET can
-    lift the mode), and backslash commands and set_config are refused."""
-    i, n, stmt = 0, len(query), []
-    stmts: list[str] = []
-    while i < n:
-        ch = query[i]
-        if ch == "\\":
-            return "backslash outside quotes is not allowed"
-        if query.startswith("--", i):
-            j = query.find("\n", i)
-            i = n if j < 0 else j
-            continue
-        if query.startswith("/*", i):
-            j = query.find("*/", i + 2)
-            i = n if j < 0 else j + 2
-            continue
-        m = re.match(r"\$([A-Za-z_]\w*)?\$", query[i:]) if ch == "$" else None
-        if ch in "'\"" or m:
-            end = m.group(0) if m else ch
-            j = query.find(end, i + len(end))
-            while not m and j >= 0 and query.startswith(end * 2, j):  # doubled quote
-                j = query.find(end, j + 2)
-            if j < 0:
-                return "unterminated quote"
-            stmt.append("?")
-            i = j + len(end)
-            continue
-        if ch == ";":
-            stmts.append("".join(stmt))
-            stmt = []
-        else:
-            stmt.append(ch)
-        i += 1
-    stmts.append("".join(stmt))
-    for s in (x.strip() for x in stmts):
-        if not s:
-            continue
-        if re.split(r"\W+", s.lower(), 1)[0] not in READONLY_START:
-            return f"only read statements are allowed ({', '.join(sorted(READONLY_START))})"
-        if re.search(r"\b(set_config|pg_read_file|lo_import|lo_export)\b", s, re.I):
-            return "set_config and file functions are not allowed"
-    return None
-
-
-def cmd_sql(args) -> int:
-    query = " ".join(args.query) if args.query else sys.stdin.read()
-    problem = check_readonly_sql(query)
-    if problem:
-        print(f"kb_db: {problem}", file=sys.stderr)
-        return 2
-    try:
-        if not available():
-            print("kb_db: PostgreSQL is not available", file=sys.stderr)
-            return 1
-        ensure_fresh()
-        sys.stdout.write(psql(db_name(), f"begin read only;\n{query}\n;commit;\n", "-A", "-F", " | ",
-                              schema=True, readonly=True))
-    except PgError as ex:
-        print(f"kb_db: {ex}", file=sys.stderr)
-        return 1
-    return 0
-
-
 def cmd_status(_args) -> int:
     if not available():
         print("kb_db: PostgreSQL is not available")
@@ -754,9 +687,12 @@ def cmd_forget(args) -> int:
     if not spec or not spec.get("journal"):
         print("forget works on refusals and landfails", file=sys.stderr)
         return 2
+    if not args.key.strip():
+        print("forget needs the exact key of one row", file=sys.stderr)
+        return 2
     try:
         out = psql(db_name(), f"update {spec['sql']} set deleted_at = now() where deleted_at is null "
-                              f"and key like {lit(args.key + '%')} returning key", "-At", schema=True)
+                              f"and key = {lit(args.key)} returning key", "-At", schema=True)
     except PgError as ex:
         print(f"kb_db: {ex}", file=sys.stderr)
         return 1
@@ -773,8 +709,6 @@ def main(argv=None) -> int:
     q.add_argument("table")
     q.add_argument("filters", nargs="*")
     q.add_argument("--json", action="store_true")
-    s = sub.add_parser("sql")
-    s.add_argument("query", nargs="*")
     sub.add_parser("status")
     f = sub.add_parser("forget")
     f.add_argument("table")
@@ -782,7 +716,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.cmd == "build":
         return build(args.quiet)
-    return {"q": cmd_q, "sql": cmd_sql, "status": cmd_status, "forget": cmd_forget}[args.cmd](args)
+    return {"q": cmd_q, "status": cmd_status, "forget": cmd_forget}[args.cmd](args)
 
 
 if __name__ == "__main__":

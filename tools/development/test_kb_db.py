@@ -17,6 +17,21 @@ import kb_db  # noqa: E402
 
 
 class ParserTests(unittest.TestCase):
+    def test_question_closed_only_by_strike_or_status_cell(self):
+        text = ("## Прочие открытые вопросы\n| # | В | Кто | Когда | Ссылка |\n|---|---|---|---|---|\n"
+                "| 1 | ~~Закрыт~~ (TASK-0009 DONE). Сжимает ли JIT | a | b | c |\n"
+                "| 2 | The word closed appears here, still open | a | PHASE F | c |\n"
+                "| 3 | q | a | Закрыт 2026-11-20 | c |\n")
+        rows = {r["id"]: r["open"] for r in kb_db.parse_questions(text)}
+        self.assertEqual(rows, {"Q1": False, "Q2": True, "Q3": False})
+        real = kb_db.parse_questions((kb_db.ROOT / "development/OPEN_QUESTIONS.md").read_text(encoding="utf-8"))
+        self.assertFalse({r["id"]: r for r in real}["Q1"]["open"])  # real row: struck through
+
+    def test_every_limited_query_ends_in_the_primary_key(self):
+        for table in kb_db.TABLES:
+            sql = kb_db.build_query(table, ["limit=3"])
+            self.assertRegex(sql, r"order by .*" + kb_db.PRIMARY_KEY[table][-1] + r" limit 3\) q_$", table)
+
     def test_split_row_ignores_pipes_in_backticks(self):
         self.assertEqual(kb_db.split_row("| a | `x | y` z | d |"), ["a", "`x | y` z", "d"])
 
@@ -78,7 +93,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(rows["Q70"]["added"], "2026-11-20")
         self.assertFalse(rows["Q1"]["open"])
         extra = kb_db.parse_questions("## Очередь вопросов (autopilot)\n| # | В | Б | С |\n|---|---|---|---|\n"
-                                      "| A1 | done, закрыт 2026-11-26 | b | c |\n| A2 | still open | b | c |\n")
+                                      "| A1 | done | закрыт 2026-11-26 | c |\n| A2 | mentions closed in text | b | c |\n")
         self.assertEqual([r["open"] for r in extra], [False, True])
         self.assertEqual(rows["Q2"]["blocks"], "PHASE F")
         self.assertEqual(rows["A8"]["kind"], "autopilot")
@@ -109,13 +124,13 @@ class ParserTests(unittest.TestCase):
 
 
 class SafetyTests(unittest.TestCase):
-    def test_quiet_build_skips_outside_main_worktree(self):
-        old = kb_db.git_common_parent
-        kb_db.git_common_parent = lambda: Path("/nonexistent/main")
+    def test_quiet_build_without_postgres_is_silent(self):
+        old = kb_db.available
+        kb_db.available = lambda: False
         try:
-            self.assertEqual(kb_db.build(quiet=True), 0)  # returns before touching PostgreSQL
+            self.assertEqual(kb_db.build(quiet=True), 0)
         finally:
-            kb_db.git_common_parent = old
+            kb_db.available = old
 
     def test_schema_is_in_fingerprint(self):
         a = kb_db.fingerprint()
@@ -127,18 +142,7 @@ class SafetyTests(unittest.TestCase):
             kb_db.SCHEMA = old
 
 
-class ReadonlyGuardTests(unittest.TestCase):
-    def test_reads_pass(self):
-        for q in ("select 1", "with x as (select 1) select * from x;", "select ';' as semi, 'a\\b'",
-                  "-- note\nselect 2", "explain select 1"):
-            self.assertIsNone(kb_db.check_readonly_sql(q), q)
-
-    def test_escapes_are_refused(self):
-        for q in ("select 1; commit; drop table items", "delete from items", "\\! echo x", "select 1\n\\g",
-                  "select 1; set default_transaction_read_only = off", "select set_config('a','b',true)",
-                  "select 'unterminated", "end; select 1"):
-            self.assertIsNotNone(kb_db.check_readonly_sql(q), q)
-
+class SchemaTests(unittest.TestCase):
     def test_schema_name(self):
         old = (kb_db.git_common_parent, kb_db.ROOT)
         try:
@@ -221,15 +225,16 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(rows[0]["agent"], "developer")
         self.assertTrue(json.loads(self.run_q("q", "decisions", "num=590", "--json")))
         self.assertIn("zz1", self.run_q("q", "agents", "silent>2h"))
-        self.assertIn("zz1", self.run_q("sql", "select agent_id from agent_runs"))
 
-    def test_02_sql_is_read_only(self):
-        for q in ("select 1;\n\\! echo hi", "delete from items", "select 1; commit; delete from items"):
-            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-                self.assertEqual(kb_db.main(["sql", q]), 2, q)
-        with self.assertRaises(kb_db.PgError):  # the transaction itself is read-only
-            kb_db.psql(self.db, "begin read only;\ndelete from items;", schema=True, readonly=True)
-        self.assertIn("TASK-0200", self.run_q("sql", "select id from items where id = 'TASK-0200'"))
+    def test_02_forget_needs_an_exact_key(self):
+        err = io.StringIO()
+        for key in ("", "  "):
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(kb_db.main(["forget", "refusals", key]), 2)
+        self.assertIn("exact key", err.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            kb_db.main(["forget", "refusals", "a"])  # a prefix of nothing: no wildcard
+        self.assertIn("soft-deleted 0", out.getvalue())
 
     def test_02b_all_debt_ids_are_indexed(self):
         text = (kb_db.ROOT / "development/TECH_DEBT.md").read_text(encoding="utf-8")
