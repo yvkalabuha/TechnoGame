@@ -13,6 +13,7 @@ owner once, then runs the commands between `client_permit.py grant` and `revoke`
 """
 from __future__ import annotations
 
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -71,7 +72,7 @@ def collect(items) -> list[dict]:
 
 def command(row: dict) -> str:
     wt = worktree_of(row["branch"]) or "<worktree of " + row["branch"] + ">"
-    return f"(cd {wt} && {LAUNCHER} --shots --only {row['only']})"
+    return f"(cd {shlex.quote(wt)} && {LAUNCHER} --shots --only {shlex.quote(row['only'])})"
 
 
 def main() -> int:

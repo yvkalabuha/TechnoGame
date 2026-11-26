@@ -108,6 +108,16 @@ def agent_events() -> list[dict]:
     return out
 
 
+def agent_task(e: dict) -> tuple[list[str], bool]:
+    """The task an agent works on: the one named in its description, else the first id of its prompt
+    (candidate=True when the prompt names several, so the guess is shown as such)."""
+    named = sorted(set(TASK_RE.findall(e.get("description") or "")))
+    if named:
+        return named, False
+    tasks = e.get("tasks") or []
+    return tasks[:1], len(tasks) > 1
+
+
 def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
                   status_of: dict[str, str], unlanded: dict[str, list]) -> list[dict]:
     """Pure decision: one action per agent id (see the module docstring). Pass the task statuses and the
@@ -124,7 +134,7 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
             started.setdefault(key, e)
     out = []
     for key, e in started.items():
-        tasks = e.get("tasks") or []
+        tasks, candidate = agent_task(e)
         h = (now - e.get("t", now)) / 3600.0
         action = None
         if key not in stopped:
@@ -132,7 +142,7 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
         elif any(status_of.get(t) == "IN_PROGRESS" and unlanded.get(t) for t in tasks):
             action = "to-review"
         if action:
-            out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks,
+            out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks, "candidate": candidate,
                         "agent_type": e.get("agent_type", "?")})
     return out
 
@@ -160,7 +170,7 @@ def main() -> int:
         acts = agent_actions(agent_events(), now, args.ping_hours, args.stop_hours, status, by_task)
         for a in acts:
             print(f"{a['action']:<16} {a['agent_id']}  {a['agent_type']:<20} {fmt(a['hours'])}  "
-                  f"{','.join(a['tasks']) or '-'}")
+                  f"{','.join(a['tasks']) or '-'}{' (candidate)' if a['candidate'] else ''}")
         if not acts:
             print("no agent needs action")
         return 0

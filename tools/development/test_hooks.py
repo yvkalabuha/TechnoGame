@@ -5,6 +5,7 @@ Run: python3 tools/development/test_hooks.py
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,7 @@ def run_hook(script: str, payload: dict, *args: str, project: Path = ROOT) -> in
 class GuardGlobalTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
         adr = self.tmp / "docs" / "decisions"
         adr.mkdir(parents=True)
         (adr / "ADR-0001-x.md").write_text(
@@ -100,6 +102,7 @@ class RegistryTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
         (self.tmp / "tools" / "development").mkdir(parents=True)
         (self.tmp / "tools" / "development" / "registry.py").write_text(
             REGISTRY.read_text(encoding="utf-8"), encoding="utf-8")
@@ -202,9 +205,38 @@ class WatchActionsTest(unittest.TestCase):
         self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {}), {})
 
 
+class AgentLogShapeTest(unittest.TestCase):
+    """A record as agent_log.py writes it, fed from a real async tool_response payload."""
+
+    def record(self, prompt_tasks, description):
+        with tempfile.TemporaryDirectory() as d:
+            payload = {"tool_input": {"subagent_type": "developer", "description": description,
+                                      "prompt": " ".join(prompt_tasks)},
+                       "tool_response": {"agentId": "abc", "status": "async_launched"}}
+            env = dict(os.environ, CLAUDE_PROJECT_DIR=d)
+            subprocess.run([sys.executable, str(HOOKS / "agent_log.py"), "launched"], input=json.dumps(payload),
+                           text=True, env=env, check=True)
+            return json.loads((Path(d) / ".claude/.state/agents.jsonl").read_text().splitlines()[0])
+
+    def test_real_payload_feeds_agent_actions(self):
+        rec = self.record(["TASK-0002", "TASK-0001"], "TASK-0002 work")
+        self.assertEqual(rec["agent_id"], "abc")
+        rec["t"] = 0.0
+        got = watch.agent_actions([rec], 4 * 3600.0, 2.0, 3.0, {}, {})
+        self.assertEqual([(a["action"], a["tasks"], a["candidate"]) for a in got],
+                         [("stop+redispatch", ["TASK-0002"], False)])
+
+    def test_task_choice(self):
+        self.assertEqual(watch.agent_task({"description": "x", "tasks": ["TASK-0001", "TASK-0002"]}),
+                         (["TASK-0001"], True))
+        self.assertEqual(watch.agent_task({"description": "x", "tasks": ["TASK-0001"]}), (["TASK-0001"], False))
+
+
 class AutopilotTest(unittest.TestCase):
     def setUp(self):
-        self.state = Path(tempfile.mkdtemp()) / "sub" / "autopilot.json"
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        self.state = tmp / "sub" / "autopilot.json"
         self.env = dict(os.environ, AUTOPILOT_STATE=str(self.state))
 
     def run_tool(self, script, *args):
@@ -225,6 +257,7 @@ class AutopilotTest(unittest.TestCase):
 class ShotBatchTest(unittest.TestCase):
     def setUp(self):
         self.repo = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.repo, True)
         self.old = (shot_batch.ROOT, shot_batch.MODEL_COMMIT)
         shot_batch.ROOT = self.repo
         self.addCleanup(lambda: (setattr(shot_batch, "ROOT", self.old[0]),
@@ -267,7 +300,7 @@ class ShotBatchTest(unittest.TestCase):
                  It("TASK-5", status="IN_PROGRESS", category="client", shots={"branch": "old", "only": "y"})]
         rows = shot_batch.collect(items)
         self.assertEqual([(r["id"], r["problem"] is None) for r in rows], [("TASK-1", True), ("TASK-5", False)])
-        self.assertIn("--shots --only x*", shot_batch.command(rows[0]))
+        self.assertIn("--shots --only 'x*'", shot_batch.command(rows[0]))
 
 
 if __name__ == "__main__":
