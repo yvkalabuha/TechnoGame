@@ -547,6 +547,19 @@ class GuardDispatchTest(unittest.TestCase):
         (self.repo / "development/tasks/TASK-0001-x.md").write_text("---\nid: TASK-0001\nstatus: IN_PROGRESS\n---\nnew\n")
         self.assertEqual(self.call("do TASK-0001"), 2)
 
+    def test_quoted_or_missing_status_is_read_like_the_registry(self):
+        commit_file(self.repo, "development/tasks/TASK-0005-q.md", '---\nid: TASK-0005\nstatus: "DONE"\n---\n')
+        commit_file(self.repo, "development/tasks/TASK-0006-q.md", "---\nid: TASK-0006\nstatus: 'IN_PROGRESS'  # x\n---\n")
+        commit_file(self.repo, "development/tasks/TASK-0007-q.md", "---\nid: TASK-0007\n---\n")
+        self.assertEqual(self.call("do TASK-0005"), 2)
+        self.assertEqual(self.call("do TASK-0006"), 0)
+        self.assertEqual(self.call("do TASK-0007"), 2)
+
+    def test_task_must_be_in_head_the_worktree_base(self):
+        git_in(self.repo, "checkout", "-q", "-b", "behind", "HEAD~1")  # cut before TASK-0004 was added
+        self.assertEqual(self.call("do TASK-0004"), 2)
+        self.assertEqual(self.call("do TASK-0001"), 0)
+
     def test_status_is_read_from_main_not_the_working_tree(self):
         git_in(self.repo, "checkout", "-b", "side")
         commit_file(self.repo, "development/tasks/TASK-0002-x.md", f"---\nid: TASK-0002\n{TASK_STATUS_LINE.format('APPROVED')}\n---\n")
@@ -645,6 +658,24 @@ class GuardShotsBranchTest(unittest.TestCase):
         launcher = "./run-globe" + "-spike.sh"
         cmd = f"(cd {self.wt['fresh']} && {launcher} --shots --only a); (cd {self.wt['old']} && {launcher} --shots --only b)"
         self.assertEqual(self.call(cmd), 2)
+
+    def test_quoted_launcher_or_flag_is_still_checked(self):
+        name = "run-globe" + "-spike.sh"
+        self.assertEqual(self.call(f"'{self.wt['old']}/{name}' --shots --only a"), 2)
+        self.assertEqual(self.call(f"./{name} '--shots' --only a", cwd=self.wt["old"]), 2)
+        self.assertEqual(self.call(f"\"{self.wt['fresh']}/{name}\" '--shots' --only a"), 0)
+        self.assertEqual(self.call(f"grep -n '{name} --shots' notes.txt", cwd=self.wt["old"]), 0)  # no launch
+
+    def test_cd_inside_a_finished_subshell_does_not_apply(self):
+        name = "./run-globe" + "-spike.sh"
+        self.assertEqual(self.call(f"(cd {self.wt['fresh']} && pwd); {name} --shots --only a", cwd=self.wt["old"]), 2)
+        self.assertEqual(self.call(f"cd {self.wt['fresh']} && {name} --shots --only a", cwd=self.wt["old"]), 0)
+
+    def test_unknown_directory_fails_closed(self):
+        name = "./run-globe" + "-spike.sh"
+        for cmd in [f"cd $WT && {name} --shots --only a", f"cd {self.wt['old']} || cd {self.wt['fresh']}; {name} --shots --only a",
+                    f"bash -c 'cd {self.wt['fresh']} && {name} --shots --only a'", f"cd - && {name} --shots --only a"]:
+            self.assertEqual(self.call(cmd, cwd=self.wt["fresh"]), 2, cmd)
 
     def test_non_shot_launch_and_non_repo_dir(self):
         launcher = "./run-globe" + "-spike.sh"

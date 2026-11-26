@@ -8,8 +8,8 @@ Owner rules 2026-11-24/25: launch the game only with permission, in batches; nev
 - A shot run (--shots / --map-frames) must also name its frames with --only, unless the command starts with SHOTS_FULL=1.
 - A shot run must come from a checkout that contains the new model commit (MODEL_COMMIT) and is not behind main in
   the client sources (owner #591, ERR-0001/ERR-0005; same rule as tools/development/shot_batch.py check_branch).
-  The checkout of each launcher in the command is its own directory when the launcher is named with a path, resolved
-  against the nearest "cd DIR" before it (shot_batch.py prints "(cd WT && ./run-globe-spike.sh ...)"), else the hook's cwd.
+  The command is tokenised like the shell (quotes removed, cd scoped to its subshell); the checkout of each launcher
+  is its own directory, resolved against the cd in force. A launch whose directory cannot be known is refused.
 """
 import os
 import re
@@ -26,8 +26,12 @@ QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\\\]|\\\\.)*\"", re.S)
 SHOT_FLAGS = re.compile(r"(^|\s)--(shots|time-shots|map-frames)(\s|$)")
 MODEL_COMMIT = os.environ.get("SINGULARITY_MODEL_COMMIT") or "f12684f"
 CLIENT_DIR = "src/Singularity.Client.Spike"
-CD = re.compile(r"(?:^|[\s;&|(])cd\s+('[^']*'|\"[^\"]*\"|[^\s;&|()]+)")
-LAUNCHER_PATH = re.compile(r"('[^']*'|\"[^\"]*\"|[^\s;&|'\"()]+)?(?<![\w-])(run-globe-spike\.sh|run-client\.sh|play\.sh)\b")
+LAUNCHER_NAME = re.compile(r"(run-globe-spike\.sh|run-client\.sh|play\.sh|Godot_v[\w.-]+)")
+SHOT_WORDS = re.compile(r"--(shots|time-shots|map-frames)(=.*)?")
+SEPS = {";", "&&", "||", "|", "&", "|&", ";;", "\n"}
+WRAPPERS = {"nice", "env", "exec", "time", "timeout", "nohup", "setsid", "stdbuf", "xvfb-run", "bash", "sh",
+            "command", "sudo"}
+ASSIGN = re.compile(r"^[A-Za-z_]\w*=")
 
 
 def permit_live() -> bool:
@@ -37,29 +41,75 @@ def permit_live() -> bool:
         return False
 
 
-def unquote(s: str) -> str:
+def analyse(raw: str, cwd: str) -> tuple[list[tuple[str | None, bool, bool]], str | None]:
+    """Launches in a shell command: (checkout dir or None when unknown, shot run, headless) for each launcher,
+    and the reason when the command cannot be read safely. The command is tokenised like the shell does:
+    quotes are removed, "( ... )" keeps a cd inside it, a cd in a pipeline, in the background or after ||
+    makes the directory unknown."""
     try:
-        return shlex.split(s)[0]
-    except (ValueError, IndexError):
-        return s
+        lex = shlex.shlex(raw, posix=True, punctuation_chars=True)
+        lex.whitespace_split = True
+        lex.commenters = ""
+        tokens = list(lex)
+    except ValueError:
+        return [], "the command cannot be tokenised (unbalanced quotes)"
+    out: list[tuple[str | None, bool, bool]] = []
+    problem = None
+    cur: str | None = cwd
+    stack: list[str | None] = []
+    words: list[str] = []
+    prev = None
 
+    def simple(nxt: str | None) -> None:
+        nonlocal cur, problem
+        ws = list(words)
+        words.clear()
+        while ws and ASSIGN.match(ws[0]):
+            ws.pop(0)
+        if not ws:
+            return
+        if ws[0] in ("cd", "pushd", "popd"):
+            target = ws[1] if len(ws) > 1 else "~"
+            if ws[0] != "cd" or prev in ("||", "|", "&", "|&") or nxt in ("|", "&", "|&") \
+                    or re.search(r"[$`]", target) or target == "-" or cur is None and not target.startswith(("/", "~")):
+                cur = None
+            else:
+                cur = os.path.normpath(os.path.join(cur or "/", os.path.expanduser(target)))
+            return
+        for i, w in enumerate(ws):
+            if LAUNCHER_NAME.fullmatch(os.path.basename(w)):
+                if not all(x in WRAPPERS or x.startswith("-") or x.isdigit() or ASSIGN.match(x) for x in ws[:i]):
+                    break
+                rest = ws[i + 1:]
+                if "/" in w:
+                    d = None if cur is None and not w.startswith(("/", "~")) else \
+                        os.path.dirname(os.path.normpath(os.path.join(cur or "/", os.path.expanduser(w))))
+                else:
+                    d = cur
+                out.append((d, any(SHOT_WORDS.fullmatch(x) for x in rest), "--headless" in rest))
+                return
+        if (ws[0] == "eval" or ws[0] in WRAPPERS and "-c" in ws) and any(
+                LAUNCHER_NAME.search(w) and SHOT_WORDS.search(w) for w in ws):
+            problem = "the launcher runs inside a quoted command string"
 
-def base_dir(before: str, cwd: str) -> str:
-    cds = list(CD.finditer(before))
-    return os.path.join(cwd, os.path.expanduser(unquote(cds[-1].group(1)))) if cds else cwd
-
-
-def checkout_dirs(raw: str, cwd: str) -> list[str]:
-    """The directories the client is launched from (see the module docstring)."""
-    out = []
-    for m in LAUNCHER_PATH.finditer(raw):
-        base = base_dir(raw[:m.start()], cwd)
-        if m.group(1):
-            base = os.path.dirname(os.path.join(base, os.path.expanduser(unquote(m.group(1) + m.group(2)))))
-        out.append(os.path.normpath(base))
-    if not out:  # the Godot binary itself
-        out.append(os.path.normpath(base_dir(raw, cwd)))
-    return list(dict.fromkeys(out))
+    for t in tokens:
+        if t in SEPS:
+            simple(t)
+            prev = t
+        elif t == "(":
+            simple(None)
+            stack.append(cur)
+            prev = t
+        elif t == ")":
+            simple(None)
+            if not stack:
+                return out, "unbalanced parentheses"
+            cur = stack.pop()
+            prev = t
+        else:
+            words.append(t)
+    simple(None)
+    return out, problem
 
 
 def git(where: str, *args: str) -> tuple[int, str]:
@@ -89,22 +139,31 @@ def main() -> None:
     data = read_input()
     raw = (data.get("tool_input") or {}).get("command") or ""
     cmd = QUOTED.sub("''", raw)
+    launches, problem = analyse(raw, data.get("cwd") or os.getcwd())
     m = LAUNCH.search(cmd)
-    if not m:
+    if not m and not launches and not problem:
         return
-    if m.group(1).startswith("Godot_v") and re.search(r"--headless\b", cmd):
+    if m and m.group(1).startswith("Godot_v") and re.search(r"--headless\b", cmd):
         return  # imports and builds without a window
+    if not m and launches and all(h for _, _, h in launches):
+        return  # a quoted Godot path run headless
     if not permit_live():
         block("Blocked: the game client starts only with the owner's permission (no live permit). "
               "Finish code and tests, then report the frames you need; the Orchestrator asks the owner and runs one batch.")
-    if SHOT_FLAGS.search(cmd) and not re.search(r"(^|\s)--only(\s|=)", cmd) and not re.search(r"(^|[\s;&(])SHOTS_FULL=1\s", cmd):
+    shot = bool(SHOT_FLAGS.search(cmd)) or any(s for _, s, _ in launches) or bool(problem)
+    if shot and not re.search(r"(^|\s)--only(\s|=)", cmd) and not re.search(r"(^|[\s;&(])SHOTS_FULL=1\s", cmd):
         block("Blocked: a shot run must name its frames with --only a,b,c* (one batch, no full set for one fix).")
-    if SHOT_FLAGS.search(cmd):
-        problems = [p for d in checkout_dirs(raw, data.get("cwd") or os.getcwd()) if (p := checkout_problem(d))]
-        problem = "; ".join(problems)
-        if problem:
-            block(f"Blocked (ERR-0001): shots from an old client: {problem}. "
-                  "Use tools/development/shot_batch.py, which checks branches before the batch.")
+    if not shot:
+        return
+    dirs = [d for d, s, _ in launches if s] or [d for d, _, _ in launches]
+    if problem or not dirs or None in dirs:
+        block("Blocked (ERR-0001): cannot tell which checkout the shots run from ("
+              + (problem or "the directory of the launch is unknown") + "). Run the launcher from the worktree "
+              "directly: cd /path/to/worktree && ./run-globe-spike.sh --shots --only ...")
+    problems = [p for d in dict.fromkeys(dirs) if (p := checkout_problem(d))]
+    if problems:
+        block(f"Blocked (ERR-0001): shots from an old client: {'; '.join(problems)}. "
+              "Use tools/development/shot_batch.py, which checks branches before the batch.")
 
 
 if __name__ == "__main__":

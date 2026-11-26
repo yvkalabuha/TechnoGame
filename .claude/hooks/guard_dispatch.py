@@ -46,6 +46,21 @@ def git(root, *args: str) -> tuple[int, str]:
     return r.returncode, r.stdout
 
 
+def task_status(text: str) -> str | None:
+    """The status: field of the frontmatter as the registry reads it (YAML, quotes allowed), or None."""
+    m = re.match(r"---\s*\n(.*?)\n---", text, re.S)
+    if not m:
+        return None
+    try:
+        import yaml
+        meta = yaml.safe_load(m.group(1))
+        st = meta.get("status") if isinstance(meta, dict) else None
+    except Exception:  # no PyYAML or broken frontmatter: read the line itself
+        line = re.search(r"^status:\s*([^#\n]*)", m.group(1), re.M)
+        st = line.group(1).strip().strip("'\"") if line else None
+    return str(st).strip() if st else None
+
+
 def check_task(root, task: str) -> str | None:
     """None when the task may get an agent, else the reason."""
     rc, files = git(root, "ls-tree", "-r", "--name-only", "main", "--", "development/tasks")
@@ -58,9 +73,15 @@ def check_task(root, task: str) -> str | None:
             return f"{task} is not committed on main (the agent worktree will not have it): commit it first"
         return f"{task} has no task file on main: create and commit it first"
     rc, text = git(root, "show", f"main:{path}")
-    m = re.search(r"^status:\s*(\w+)", text, re.M) if rc == 0 else None
-    if m and m.group(1) not in OK_STATUS:
-        return f"{task} is {m.group(1)} on main; an agent needs APPROVED, IN_PROGRESS or REVIEW"
+    if rc != 0:
+        return None
+    status = task_status(text)
+    if status not in OK_STATUS:
+        return f"{task} is {status or 'without a status'} on main; an agent needs APPROVED, IN_PROGRESS or REVIEW"
+    # worktree.baseRef is "head": the agent worktree is cut from HEAD of the main checkout, which may lag main
+    rc, _ = git(root, "cat-file", "-e", f"HEAD:{path}")
+    if rc == 1 or rc == 128:
+        return f"{task} is not in HEAD of {root} (the agent worktree is cut from HEAD): check out or merge main first"
     rc, dirty = git(root, "status", "--porcelain", "--", path)
     if rc == 0 and dirty.strip():
         return f"{task} has uncommitted changes ({path}): commit them first, the agent worktree is cut from the last commit"
