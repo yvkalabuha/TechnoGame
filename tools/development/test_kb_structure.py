@@ -148,6 +148,9 @@ class LandRolloverTest(unittest.TestCase):
         write(self.root, kblog.DEBT, sample_debt())
         write(self.root, ".gitignore", "__pycache__/\n")
         self.git("init", "-q", "-b", "main")
+        # land.py runs its own git commit in this repo: the identity must live in the repo, not in -c flags
+        self.git("config", "user.name", "t")
+        self.git("config", "user.email", "t@t")
         self.git("add", "-A")
         self.git("commit", "-q", "-m", "start")
 

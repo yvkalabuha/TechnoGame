@@ -36,7 +36,7 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Причина: land.rollover_after_landing коммитит своим вызовом git без -c; хелпер теста передавал идентичность только через -c, поэтому на CI без глобальной идентичности коммит падал. Исправление: в setUp LandRolloverTest задана локальная идентичность репозитория (git config user.name/user.email). land.py не менялся. Остальные тесты с временными репозиториями (test_release, helpers.py, test_land_lock) уже задают идентичность. Проверка: test_kb_structure 25 OK. Воспроизведение без глобальной идентичности (HOME/GIT_CONFIG_GLOBAL) не выполнено: хук worktree запретил подмену HOME и GIT_CONFIG_GLOBAL.
 
 ## Цель
 CI красный: test_kb_structure.LandRolloverTest.test_rollover_is_committed_after_landing падает на машине CI — во временном репозитории нет git user.name/user.email ("fatal: empty ident name"). Задать имя и почту во временном репозитории теста (git config user.name/user.email локально, или GIT_AUTHOR_*/GIT_COMMITTER_* в env вызова). Проверить, не коммитит ли так же land.py сам на машине без идентичности (rollover на main локально идентичность имеет — менять land.py только если нужно).
