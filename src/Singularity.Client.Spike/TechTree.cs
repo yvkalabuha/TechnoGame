@@ -513,9 +513,8 @@ public sealed partial class TechTree : Control
         }
         // The node counter stands on its own paper plate: the hatch never runs through the digits (C5).
         var hsz = Fonts.Mono.GetStringSize(_hdrText, HorizontalAlignment.Left, -1, 14);
-        _hdrRect = new Rect2(Area.Position.X + 14 - TreeLabelRules.PlateField, Area.Position.Y + 20 - hsz.Y * 0.8f - TreeLabelRules.PlateField, hsz.X + 2 * TreeLabelRules.PlateField, hsz.Y + 2 * TreeLabelRules.PlateField);
-        _cv.DrawRect(_hdrRect, Ui.Paper);
-        Text(new Vector2(Area.Position.X + 14, Area.Position.Y + 20), _hdrText, 14, Ui.Ink, FontKind.Mono);
+        var hb = TreeLabelRules.CounterPlate(Area.Position.X, Area.Position.Y, hsz.X, hsz.Y);
+        _hdrRect = new Rect2(hb.X, hb.Y, hb.W, hb.H);   // drawn by DrawCounter, on the last layer
         DrawNowRing(c, u);   // after the counter plate: the label keeps off it
 
         var nodes = _host.Data.Nodes; var rq = nodes.Requires;
@@ -543,6 +542,7 @@ public sealed partial class TechTree : Control
         if (Step >= ZoomSteps.EdgeLabels) DrawEdgeLabels();
         // Last layer: the "now" plate and the decade years, over links and hatch, whole or not at all.
         DrawNowLabel();
+        DrawCounter();
         DrawYearPlates();
         DrawPathNumbers();
         DrawKeyFocus();
@@ -643,6 +643,12 @@ public sealed partial class TechTree : Control
         if (!TreeLabelRules.PlateFits(B(pl), B(Area), B(ZoomKeepOut))) return;
         for (int i = 0; i < _rad.Length; i++) if (!TreeLabelRules.Clear(B(pl), B(NodeBox(i).Grow(2)))) return;
         _plates.Add(pl); _plateText.Add(text);
+    }
+    // The node counter on a paper plate over links and hatch (art director: an edge crossed it).
+    void DrawCounter()
+    {
+        _cv.DrawRect(_hdrRect, Ui.Sheet);
+        Text(new Vector2(Area.Position.X + 14, Area.Position.Y + 20), _hdrText, 14, Ui.Ink, FontKind.Mono);
     }
     void DrawYearPlates()
     {
