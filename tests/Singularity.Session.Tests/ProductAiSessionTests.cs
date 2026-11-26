@@ -187,7 +187,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         {
             Observed o = Observe(SliceRunConfig.Legacy with {
                 Seed = seed, Threads = 2, EffortShare = EffortShareArm.X0, Channels = SliceChannels.Sigma | SliceChannels.KCatch,
-            }, 384);
+            }, 480);   // 384 before TASK-0193: the product chain opens later
             output.WriteLine($"seed {seed}: branch О {o.OFirings} (processes {o.OProcesses}, defects {o.ODefects})");
             Assert.Equal(0, o.BadClose);                                  // (6) still holds: only О for T_ab months or more
             fired += o.OProcesses;
@@ -453,6 +453,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-    private const string Golden150 = "9fd85e0390e0a56cbac36e3cf8477100715de3e7f744f0d20550bc20f41cf79b";
+    // Re-recorded in TASK-0193: 55 new nodes 160-214 (1990-2030) and 3 new processes move every trajectory; no schema change.
+    private const string Golden150 = "6d829d92b9dfdd165e473e94f5e912e78479ab44df834c730137fecb51f56385";
     // Earlier records:
 }

@@ -13,7 +13,7 @@ public class ExpandedTreeTests : IDisposable
 
     private const string Eniac = "{kind: research_speed, dirs: [ord, aero], bonus: 0.02}";
 
-    private static int[] NewRows => [.. Enumerable.Range(0, Data.Nodes.Count).Where(r => Data.Nodes.Number[r] >= 100)];
+    private static int[] NewRows => [.. Enumerable.Range(0, Data.Nodes.Count).Where(r => Data.Nodes.Number[r] is >= 100 and <= 156)];
 
     [Fact]
     public void Core_HasThe57NewNodes_WithPrefixesAndNoGapInNumbers()
@@ -79,6 +79,8 @@ public class ExpandedTreeTests : IDisposable
         int main = 0, secondary = 0;
         for (int r = 0; r < n.Count; r++)
         {
+            if (n.Number[r] > 156)
+                continue;   // TASK-0193 nodes are counted in Expanded1990TreeTests
             if (n.DirectionAt(r, 0) == space)
                 main++;
             else if (Enumerable.Range(0, n.DirectionCount(r)).Any(k => n.DirectionAt(r, k) == space))
@@ -92,7 +94,7 @@ public class ExpandedTreeTests : IDisposable
     public void ResearchSpeed_Is15Nodes_EachWithinTheCap_AndTheSumPerDirectionBelowTheCeiling()
     {
         NodeTable n = Data.Nodes;
-        int[] with = [.. Enumerable.Range(0, n.Count).Where(r => n.SpeedStart[r + 1] > n.SpeedStart[r])];
+        int[] with = [.. Enumerable.Range(0, n.Count).Where(r => n.Number[r] <= 156 && n.SpeedStart[r + 1] > n.SpeedStart[r])];
         Assert.Equal(15, with.Length);
         Assert.All(with, r => Assert.True(n.Number[r] >= 100));
         var sum = new Fx6[Directions.Ids.Length];

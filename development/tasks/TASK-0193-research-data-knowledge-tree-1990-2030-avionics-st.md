@@ -37,4 +37,9 @@ created: 2026-11-26
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Шаг 2 (данные, developer, 2026-11-26), ветка worktree-agent-aa98cff22496f48dc.
+- [Факт] В `mods/core/nodes.yaml` внесены 55 узлов 160–214 из записки `tree-expansion-1990-2030.md` ред. 2 (номера 157–159 не заняты): RU/EN имена, краткие названия, якоря и истории (`locale/*/data.ftl`, `_sources.tsv` перештампован), `node_history.yaml` (9 узлов O-102 — `unconfirmed: true`, `estimated: true`), направления, `mil_value`, 7 эффектов `research_speed` по 0,005 (сумма aero 0,245 ≤ 0,25 [ЗАГЛУШКА]). Из имён убраны «первая/first» (J/APG-1, Starship).
+- [Предп.] Правки к записке, нужные загрузчику: кластеры SPACE→AERO, COMP→ELEC (в загрузчике нет таких), FinFET — MECH (процесс требует кластер площадки); у 3 процессов (AFP, FSW, FinFET) tier/capability_req/labour_p выбраны мной по аналогам (4/4,5·4·4,5/7000; 4/то же/4000; 5/5,5/4500) — нужна сверка economy-analyst; рёбра informs в узлы s8.app.* (14 штук) удалены (загрузчик запрещает); gen узлов Link 16, J/APG-1, CEC поднят с 5 до 6 (предпосылки существующие G6 со старым годом); у UHTC убрана предпосылка ceramic_matrix_composite (год 2016 позже 1997).
+- Тесты: новый `Expanded1990TreeTests` (6 тестов: номера, ацикличность по году/поколению, направления, якоря, O-102, имена, research_speed, space); обновлены счётчики Core/Localization/Session и эталоны (одним пакетом, объяснения в коммитах): DataHash, схема (fingerprint, SchemaVersion 15), main seed 1 m149, ADMIT/YPROD, TwoWorlds, AI-run, mastery-baseline.
+- Приёмка Lab (`slot_core.py` на TASK-0187-core, 10 seeds, `lab/results/t0193/core`): простой после 1990 USA 0,0 %, SUN 0,2 % (было ≈65 %) — цель <20 % выполнена. Возврат денег после 1990 USA 90,1 %, SUN 91,0 % (было 93 %) — цель <20 % НЕ выполнена. Полосы G2/G3/G4 1953,7/1959,0/1969,8, LIVE0, CEIL, LEAD77 — PASS; GAP36 1947–1990 FAIL (USA 43, SUN 60, GBR 46, FRA 44, SWE 101).
+- Не проверено: Lab-тесты (`tests/Singularity.Lab.Tests`: SynthWorld.NumberStride=200 < 214 и эталоны в `lab/` — зона simulation-engineer), L2 на новых данных, первичные источники узлов.

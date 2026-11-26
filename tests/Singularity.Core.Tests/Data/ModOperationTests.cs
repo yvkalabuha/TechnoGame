@@ -55,7 +55,7 @@ public class ModOperationTests : IDisposable
     {
         string a = _mods.Mod("a", DependsOnCore, ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class());
         GameData data = ModLoader.Load(TestMods.CoreDir, a);
-        Assert.Equal(155, data.Nodes.Count);
+        Assert.Equal(210, data.Nodes.Count);
         Assert.Equal(-1, data.Nodes.IndexOf("s8.app.jet_fighter_g4"));
     }
 

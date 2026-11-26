@@ -23,13 +23,13 @@ public class CoreNodesTests
     private static Fx6 Fx(string text) => Fx6.FromRaw((long)(decimal.Parse(text, System.Globalization.CultureInfo.InvariantCulture) * Fx6.Scale));
 
     [Fact]
-    public void Core_Has156NodesWithTypeCounts()
+    public void Core_Has211NodesWithTypeCounts()
     {
         NodeTable n = Data.Nodes;
-        Assert.Equal(156, n.Count);
+        Assert.Equal(211, n.Count);
         int[] counts = [.. Enum.GetValues<NodeType>().Select(t => n.Type.Count(x => x == t))];
-        Assert.Equal([12, 33, 48, 24, 33, 6], counts);   // FND PRN ENG CMP PRC APP (61 of TASK-0011 + 20 of G5/G6 + 18 of TASK-0147 + 57 of #575)
-        Assert.Equal(Enumerable.Range(1, 156), n.Number.ToArray());
+        Assert.Equal([12, 43, 84, 30, 36, 6], counts);   // FND PRN ENG CMP PRC APP (61 of TASK-0011 + 20 of G5/G6 + 18 of TASK-0147 + 57 of #575 + 55 of TASK-0193)
+        Assert.Equal(Enumerable.Range(1, 156).Concat(Enumerable.Range(160, 55)), n.Number.ToArray());   // numbers 157-159 are unused
     }
 
     [Fact]
