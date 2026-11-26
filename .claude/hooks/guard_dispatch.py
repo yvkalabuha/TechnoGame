@@ -78,8 +78,10 @@ def running_agents(root, tasks: set[str], now: float) -> list[str]:
     for line in lines:
         try:
             e = json.loads(line)
-        except ValueError:
-            continue
+            t = float(e.get("t") or 0.0)
+        except (ValueError, TypeError, AttributeError):
+            continue  # a damaged line never blocks a dispatch
+        e["t"] = t
         key = e.get("agent_id") or ""
         if not key:
             continue  # a start record (including this very dispatch) or a foreground agent

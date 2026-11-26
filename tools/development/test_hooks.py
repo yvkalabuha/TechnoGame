@@ -579,8 +579,17 @@ class GuardDispatchTest(unittest.TestCase):
                     {"t": now - 60, "event": "launched", "description": "TASK-0001", "tasks": ["TASK-0001"], "agent_id": "a1"},
                     {"t": now - 30, "event": "stop", "agent_id": "a1"},
                     {"t": now - 4 * 3600, "event": "launched", "description": "TASK-0001", "tasks": ["TASK-0001"],
-                     "agent_id": "a2"})
+                     "agent_id": "a2"},
+                    ["not", "an", "object"], {"t": "bad", "event": "launched", "description": "TASK-0001",
+                                              "agent_id": "a3"})
         self.assertEqual(self.call("do TASK-0001", description="TASK-0001"), 0)
+
+
+class KbCheckDecisionsLogTest(unittest.TestCase):
+    def test_decisions_log_has_no_unknown_ids(self):
+        r = subprocess.run([sys.executable, str(ROOT / "tools/development/kb_check.py"), "check", "--file",
+                            str(ROOT / "docs/decisions/DECISIONS_LOG.md")], capture_output=True, text=True, cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout)
 
 
 class GuardShotsBranchTest(unittest.TestCase):
