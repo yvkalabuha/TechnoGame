@@ -21,7 +21,7 @@ REGISTRY = ROOT / "tools" / "development" / "registry.py"
 
 
 def run_hook(script: str, payload: dict, *args: str, project: Path = ROOT) -> int:
-    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project))
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project), SINGULARITY_NO_REFUSAL_LOG="1")
     proc = subprocess.run([sys.executable, str(HOOKS / script), *args],
                           input=json.dumps(payload), text=True,
                           capture_output=True, env=env)
@@ -175,6 +175,31 @@ class RegistryTest(unittest.TestCase):
             ---
             """)
         self.assertEqual(self.check(), 1)
+
+
+
+class RefusalLogTest(unittest.TestCase):
+    """#584: a blocking hook records its refusal for errors.py import."""
+
+    def test_block_appends_refusal_line(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        code = "import sys; sys.path.insert(0, %r); import _common; _common.block('no shots without permit')" % str(HOOKS)
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp))
+        env.pop("SINGULARITY_NO_REFUSAL_LOG", None)
+        proc = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 2)
+        lines = (tmp / ".claude" / ".state" / "hook_refusals.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertIn("no shots without permit", json.loads(lines[0])["msg"])
+
+    def test_env_suppresses_log(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        code = "import sys; sys.path.insert(0, %r); import _common; _common.block('x')" % str(HOOKS)
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp), SINGULARITY_NO_REFUSAL_LOG="1")
+        subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True)
+        self.assertFalse((tmp / ".claude" / ".state" / "hook_refusals.jsonl").exists())
 
 
 sys.path.insert(0, str(ROOT / "tools" / "development"))

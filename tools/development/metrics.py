@@ -22,7 +22,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import fcntl
 import json
+import math
 import os
 import re
 import subprocess
@@ -37,7 +39,7 @@ DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 DDL = """create table if not exists sessions (key text primary key, kind text, session text, agent_id text, model text,
   start_t timestamptz, end_t timestamptz, msgs integer, input_tokens bigint, output_tokens bigint,
-  cache_read_tokens bigint, cache_write_tokens bigint, deleted_at timestamptz);
+  cache_read_tokens bigint, cache_write_tokens bigint, deleted_at timestamptz, tasks text);
 create table if not exists llm_calls (key text primary key, kind text, provider text, model text, task text,
   t timestamptz, input_tokens bigint, output_tokens bigint, usd numeric, verdict text, findings integer,
   round integer, deleted_at timestamptz);
@@ -45,12 +47,13 @@ create table if not exists landings (key text primary key, t timestamptz, branch
   code integer, total_s numeric, verify_s numeric, steps text, deleted_at timestamptz);
 create table if not exists task_flow (key text primary key, task text, t timestamptz, from_status text,
   to_status text, commit_id text, deleted_at timestamptz);
+alter table sessions add column if not exists tasks text;
 create table if not exists owner_waits (key text primary key, question text, asked date, answered date,
   deleted_at timestamptz);
 """
 COLS = {
     "sessions": ["key", "kind", "session", "agent_id", "model", "start_t", "end_t", "msgs", "input_tokens",
-                 "output_tokens", "cache_read_tokens", "cache_write_tokens"],
+                 "output_tokens", "cache_read_tokens", "cache_write_tokens", "tasks"],
     "llm_calls": ["key", "kind", "provider", "model", "task", "t", "input_tokens", "output_tokens", "usd",
                   "verdict", "findings", "round"],
     "landings": ["key", "t", "branch", "task", "attempt", "code", "total_s", "verify_s", "steps"],
@@ -68,11 +71,14 @@ def iso(t) -> str | None:
     if isinstance(t, bool):
         return None
     if isinstance(t, (int, float)):
-        return dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat()
+        try:
+            return dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat()
+        except (ValueError, OverflowError, OSError):
+            return None
     if isinstance(t, str):
         try:
             return dt.datetime.fromisoformat(t.replace("Z", "+00:00")).astimezone(dt.timezone.utc).isoformat()
-        except ValueError:
+        except (ValueError, OverflowError, OSError):
             return None
     return None
 
@@ -94,6 +100,7 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
     block) with the same id and usage: it is counted once. Bad lines and unknown fields are skipped."""
     msgs: dict[str, dict] = {}
     first = last = None
+    tasks = None  # TASK ids named in the first user record; only the ids are kept
     for line in lines:
         try:
             r = json.loads(line)
@@ -101,6 +108,8 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
             continue
         if not isinstance(r, dict):
             continue
+        if tasks is None and r.get("type") == "user":
+            tasks = sorted(set(re.findall(r"TASK-\d{4}", line)))[:8]
         t = iso(r.get("timestamp"))
         if t:
             first = min(first, t) if first else t
@@ -123,7 +132,7 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
                 msgs=len(msgs), input_tokens=sum(m["i"] for m in msgs.values()),
                 output_tokens=sum(m["o"] for m in msgs.values()),
                 cache_read_tokens=sum(m["cr"] for m in msgs.values()),
-                cache_write_tokens=sum(m["cw"] for m in msgs.values()))
+                cache_write_tokens=sum(m["cw"] for m in msgs.values()), tasks=",".join(tasks or []))
 
 
 def parse_run_record(name: str, rec, mtime: float) -> dict | None:
@@ -134,14 +143,30 @@ def parse_run_record(name: str, rec, mtime: float) -> dict | None:
     res = rec.get("result") if isinstance(rec.get("result"), dict) else {}
     findings = res.get("findings", res.get("FINDINGS"))
     verdict = res.get("verdict", res.get("STATUS", rec.get("verdict", rec.get("status"))))
-    task = rec.get("task") or rec.get("item") or ""
+    task = rec.get("task") or rec.get("item") or rec.get("input") or ""
+    tin = usage.get("input_tokens", usage.get("prompt_tokens"))
+    tout = usage.get("output_tokens", usage.get("completion_tokens"))
+    items = rec.get("items")
+    if isinstance(items, list) and rec.get("kind") == "research":
+        # a research record has one usage and one verdict per item: sum them, count the verdicts
+        tin = tout = 0
+        counts: dict[str, int] = {}
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            u = it.get("usage") if isinstance(it.get("usage"), dict) else {}
+            tin += num(u.get("prompt_tokens")) or num(u.get("prompt_cache_hit_tokens")) + num(u.get("prompt_cache_miss_tokens"))
+            tout += num(u.get("completion_tokens"))
+            v = str(it.get("verdict") or "?")[:20]
+            counts[v] = counts.get(v, 0) + 1
+        verdict = ",".join(f"{k}={counts[k]}" for k in sorted(counts))
+        findings = [1] * sum(n for k, n in counts.items() if k != "confirmed")  # items not confirmed
     when = (iso(rec.get("created_at")) or iso(rec.get("started_at")) or iso(rec.get("created"))
             or iso(rec.get("date")) or iso(mtime))
     return dict(key="run:" + name, kind=str(rec.get("kind") or name.split("-")[0]), provider=str(rec.get("provider") or ""),
                 model=str(rec.get("model") or ""), task=str(task)[:120], t=when,
-                input_tokens=num(usage.get("input_tokens", usage.get("prompt_tokens"))),
-                output_tokens=num(usage.get("output_tokens", usage.get("completion_tokens"))),
-                usd=None, verdict=str(verdict)[:40] if verdict else None,
+                input_tokens=num(tin), output_tokens=num(tout),
+                usd=None, verdict=str(verdict)[:80] if verdict else None,
                 findings=len(findings) if isinstance(findings, list) else None,
                 round=rec.get("round") if isinstance(rec.get("round"), int) else None)
 
@@ -154,6 +179,8 @@ def parse_ledger(lines) -> list[dict]:
             r = json.loads(line)
             rid, usd = r["id"], float(r["usd"])
         except (ValueError, KeyError, TypeError):
+            continue
+        if not math.isfinite(usd) or usd < 0 or not isinstance(rid, str):
             continue
         if r.get("t") == "reserve":
             calls[rid] = dict(key="ledger:" + rid, kind="ledger", provider="", model=str(r.get("model") or ""),
@@ -206,22 +233,50 @@ def parse_task_flow(log: str) -> list[dict]:
     return rows
 
 
-def parse_owner_waits(text: str) -> list[dict]:
-    """Question rows with an asked date and a 'closed <date>' (Закрыт/closed/answered) date, by dates only."""
-    rows = []
-    for cells in kb_db.table_rows(text):
-        if len(cells) < 3 or not cells[0] or cells[0] in ("#", "ID"):
-            continue
-        qid = cells[0].strip("~ ")
-        qid = f"Q{qid}" if qid.isdigit() else qid
-        row = " | ".join(cells)
-        closed = re.search(r"(?:закрыт\w*|closed|answered|ответ\w*)\W{0,12}(\d{4}-\d{2}-\d{2})", row, re.I)
-        dates = DATE_RE.findall(" | ".join(cells[2:]))
-        asked = next((d for d in dates if not closed or d != closed.group(1)), None)
-        if asked and closed and real_date(asked) and real_date(closed.group(1)):
-            rows.append(dict(key=qid, question=qid, asked=asked, answered=closed.group(1)))
-    seen: set[str] = set()
-    return [r for r in rows if not (r["key"] in seen or seen.add(r["key"]))]
+def parse_question_history(log: str, decisions: list[dict]) -> list[dict]:
+    """Owner waits from the git history of OPEN_QUESTIONS.md ('git log --reverse -p -U0 --format=@@%H %cI').
+    A question is asked at the commit that adds its row and answered at the commit that removes or closes it
+    (strike-through, 'Закрыт'); a decision that names the question id (Q<n>) on a later date answers it earlier.
+    Question tables of every kind are included (a removed row has no heading to tell them apart)."""
+    asked: dict[str, str] = {}
+    answered: dict[str, str] = {}
+
+    def settle(day: str, plus: dict[str, bool], minus: set[str]) -> None:
+        for qid, closed in plus.items():
+            if closed and qid in asked and qid not in answered:
+                answered[qid] = day
+            elif not closed:
+                asked.setdefault(qid, day)
+        for qid in minus - set(plus):
+            if qid in asked and qid not in answered:
+                answered[qid] = day
+
+    day, plus, minus = None, {}, set()
+    for line in log.splitlines():
+        if line.startswith("@@") and not line.startswith("@@ "):
+            if day:
+                settle(day, plus, minus)
+            when = iso(line[2:].split(" ", 1)[1].strip()) if " " in line else None
+            day, plus, minus = (when[:10] if when else None), {}, set()
+        elif day and line[:2] in ("+|", "-|"):
+            cells = kb_db.split_row(line[1:])
+            if len(cells) < 3 or not cells[0] or set(cells[0]) <= set("-: ") or cells[0] in ("#", "ID"):
+                continue
+            qid = cells[0].strip("~ ")
+            qid = f"Q{qid}" if qid.isdigit() else qid
+            if line[0] == "+":
+                plus[qid] = kb_db.question_closed(cells)
+            else:
+                minus.add(qid)
+    if day:
+        settle(day, plus, minus)
+    for qid, a in asked.items():  # a decision dated after the question that names it
+        hit = [d["date"] for d in decisions if d.get("date") and d["date"] >= a
+               and re.search(rf"(?<![\w-]){re.escape(qid)}(?!\w)", d.get("text") or "")]
+        if hit and (qid not in answered or min(hit) < answered[qid]):
+            answered[qid] = min(hit)
+    return [dict(key=q, question=q, asked=asked[q], answered=answered[q]) for q in sorted(answered)
+            if answered[q] >= asked[q]]
 
 
 # --------------------------------------------------------------------------
@@ -297,12 +352,50 @@ def git_task_flow() -> list[dict]:
     return parse_task_flow(r.stdout) if r.returncode == 0 else []
 
 
+def git_owner_waits() -> list[dict]:
+    try:
+        r = subprocess.run(["git", "log", "--reverse", "-p", "-U0", "--format=@@%H %cI", "--",
+                            "development/OPEN_QUESTIONS.md"], cwd=ROOT, text=True, capture_output=True, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    decisions = kb_db.parse_decisions(kb_db.read_text(ROOT / "docs/decisions/DECISIONS_LOG.md"))
+    return parse_question_history(r.stdout, decisions) if r.returncode == 0 else []
+
+
 def collect_all() -> dict[str, list[dict]]:
     land = kb_db.state_dir() / "landings.jsonl"
-    oq = ROOT / "development" / "OPEN_QUESTIONS.md"
     return dict(sessions=collect_sessions(claude_dir()), llm_calls=collect_llm_calls(),
                 landings=parse_landings(read_lines(land)), task_flow=git_task_flow(),
-                owner_waits=parse_owner_waits(kb_db.read_text(oq)))
+                owner_waits=git_owner_waits())
+
+
+def sanitize(data: dict[str, list[dict]]) -> tuple[dict[str, list[dict]], list[str]]:
+    """Drop rows that PostgreSQL would refuse (empty key, out-of-range numbers, NUL), so one bad journal record
+    cannot abort the refresh. Returns the clean data and one warning per table with skipped rows."""
+    out, notes = {}, []
+    for table, cols in COLS.items():
+        types = _types(table)
+        good, bad = [], 0
+        for r in data[table]:
+            row, ok = dict(r), bool(r.get("key"))
+            for c in cols:
+                v, base = row.get(c), types[c].split()[0]
+                if v is None:
+                    continue
+                if base in ("integer", "bigint"):
+                    ok = ok and isinstance(v, int) and not isinstance(v, bool) and abs(v) < (2**31 if base == "integer" else 2**63)
+                elif base == "numeric":
+                    ok = ok and isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and abs(v) < 1e15
+                else:
+                    row[c] = str(v).replace("\x00", "")
+            if ok:
+                good.append(row)
+            else:
+                bad += 1
+        out[table] = good
+        if bad:
+            notes.append(f"{table}: skipped {bad} malformed record(s)")
+    return out, notes
 
 
 # --------------------------------------------------------------------------
@@ -337,24 +430,37 @@ def _types(table: str) -> dict[str, str]:
     return types
 
 
-def collect(quiet: bool = False) -> int:
+def refresh() -> tuple[str | None, str]:
+    """Read all sources and load them; (error or None, summary and warnings). One writer at a time: the flock is
+    held while reading the sources, so an older snapshot cannot overwrite a newer one."""
     if not kb_db.available():
-        if not quiet:
-            print("metrics: PostgreSQL is not available", file=sys.stderr)
-        return 0 if quiet else 1
+        return "PostgreSQL is not available", ""
     try:
         kb_db.ensure_db()
-        data = collect_all()
-        kb_db.psql(kb_db.db_name(), load_script(data))
-    except Exception as ex:  # metrics must never break the caller
-        if not quiet:
-            print(f"metrics: collect failed: {ex}", file=sys.stderr)
-        return 0 if quiet else 1
-    if not quiet:
-        print("metrics: read " + ", ".join(f"{k}={len(v)}" for k, v in data.items()))
+        state = kb_db.state_dir()
+        state.mkdir(parents=True, exist_ok=True)
+        with (state / "metrics.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            data, notes = sanitize(collect_all())
+            kb_db.psql(kb_db.db_name(), load_script(data))
         base = claude_dir()
         if not data["sessions"] and base.is_dir() and any(base.glob("*.jsonl")):
-            print("metrics: warning: transcript files exist but none could be parsed (format changed?)", file=sys.stderr)
+            notes.append("transcript files exist but none could be parsed (format changed?)")
+        msg = "read " + ", ".join(f"{k}={len(v)}" for k, v in data.items())
+        return None, msg + "".join(f"\nwarning: {n}" for n in notes)
+    except Exception as ex:  # metrics must never break the caller
+        return f"collect failed: {ex}", ""
+
+
+def collect(quiet: bool = False) -> int:
+    """CLI collect. --quiet (for hooks) prints nothing and always exits 0."""
+    err, msg = refresh()
+    if err:
+        if not quiet:
+            print(f"metrics: {err}", file=sys.stderr)
+        return 0 if quiet else 1
+    if not quiet:
+        print("metrics: " + msg.replace("\nwarning: ", "\nmetrics: warning: "))
     return 0
 
 
@@ -372,49 +478,64 @@ def period_sql(col: str, since: str, until: str) -> str:
     return f"{col} >= {kb_db.cast('date', since)} and {col} < {kb_db.cast('date', until)}"
 
 
-def report_data(since: str, until: str) -> dict:
+def report_data(since: str, until: str, limit: int | None = 15) -> dict:
+    """Report sections. limit cuts the per-task lists for display; the comparison asks for all rows."""
     p = lambda col: period_sql(col, since, until)
+    lim = f"limit {limit}" if limit else ""
+    day = lambda d: f"({kb_db.cast('date', d)})::timestamptz"
+    both = ("agent_runs a full join (select * from sessions where kind = 'agent' and deleted_at is null) s "
+            "on s.agent_id = a.agent_id")  # foreground agents have a transcript but no launch record
+    secs = "extract(epoch from coalesce(a.stop_t - a.start_t, s.end_t - s.start_t))"
     return dict(
-        by_agent=rows(f"""select a.type, count(*) runs, round(avg(extract(epoch from a.stop_t - a.start_t)) / 60) avg_min,
+        by_agent=rows(f"""select coalesce(a.type, 'unknown') type, count(*) runs, round(avg({secs}) / 60) avg_min,
             coalesce(sum(s.input_tokens + s.cache_write_tokens), 0) in_tokens,
             coalesce(sum(s.cache_read_tokens), 0) cache_read_tokens, coalesce(sum(s.output_tokens), 0) out_tokens
-            from agent_runs a left join sessions s on s.kind = 'agent' and s.agent_id = a.agent_id and s.deleted_at is null
-            where {p('a.start_t')} group by a.type order by out_tokens desc, a.type"""),
-        by_task=rows(f"""select t.task, count(*) runs, round(sum(extract(epoch from a.stop_t - a.start_t)) / 60) minutes,
+            from {both} where {p('coalesce(a.start_t, s.start_t)')} group by 1 order by out_tokens desc, 1"""),
+        by_task=rows(f"""select t.task, count(*) runs, round(sum({secs}) / 60) minutes,
             coalesce(sum(s.output_tokens), 0) out_tokens
-            from agent_runs a cross join lateral unnest(string_to_array(nullif(a.tasks, ''), ',')) t(task)
-            left join sessions s on s.kind = 'agent' and s.agent_id = a.agent_id and s.deleted_at is null
-            where {p('a.start_t')} group by t.task order by out_tokens desc, t.task limit 15"""),
+            from {both} cross join lateral unnest(string_to_array(nullif(coalesce(nullif(a.tasks, ''), s.tasks), ''), ',')) t(task)
+            where {p('coalesce(a.start_t, s.start_t)')} group by t.task order by out_tokens desc, t.task {lim}"""),
         llm=rows(f"""select provider, kind, count(*) calls, coalesce(sum(input_tokens), 0) in_tokens,
-            coalesce(sum(output_tokens), 0) out_tokens, coalesce(sum(usd), 0) usd
-            from llm_calls where deleted_at is null and {p('t')} group by provider, kind order by calls desc, provider, kind"""),
+            coalesce(sum(output_tokens), 0) out_tokens
+            from llm_calls where deleted_at is null and kind <> 'ledger' and {p('t')}
+            group by provider, kind order by calls desc, provider, kind"""),
+        spend=rows(f"""select model, count(*) entries, coalesce(sum(usd), 0) usd
+            from llm_calls where deleted_at is null and kind = 'ledger' and {p('t')} group by model order by usd desc, model"""),
         rounds=rows(f"""select task, count(*) reviews, coalesce(max(round), 0) max_round,
             count(*) filter (where verdict like 'changes%') changes
             from llm_calls where deleted_at is null and kind = 'review' and {p('t')} group by task
-            order by reviews desc, task limit 15"""),
+            order by reviews desc, task {lim}"""),
         errors=rows(f"""select coalesce(executor, '-') executor, count(*) errors, coalesce(sum(repeats), 0) repeats
             from errors where {p('date')} group by executor order by errors desc, executor"""),
-        stalls=rows(f"""with x as (select task, to_status, t, lead(t) over (partition by task order by t, key) nxt from task_flow
-            where deleted_at is null) select to_status status, count(*) entries,
-            round(sum(extract(epoch from nxt - t)) / 3600) hours, round(max(extract(epoch from nxt - t)) / 3600) max_hours
-            from x where nxt is not null and {p('t')} group by to_status order by hours desc nulls last, status"""),
+        stalls=rows(f"""with x as (select task, to_status, t, lead(t) over w nxt from task_flow where deleted_at is null
+              window w as (partition by task order by t, key)),
+            y as (select to_status, nxt is null ongoing, greatest(t, {day(since)}) a, least(coalesce(nxt, now()), {day(until)}, now()) b
+              from x where to_status not in ('DONE', 'REJECTED', 'DEFERRED') and t < {day(until)}
+              and coalesce(nxt, now()) > {day(since)})
+            select to_status status, count(*) intervals, count(*) filter (where ongoing) ongoing,
+              round(sum(extract(epoch from b - a)) / 3600) hours, round(max(extract(epoch from b - a)) / 3600) max_hours
+            from y where b > a group by to_status order by hours desc nulls last, status"""),
         owner=rows(f"""select count(*) answered, round(avg(answered - asked), 1) avg_days, max(answered - asked) max_days
             from owner_waits where deleted_at is null and {p('answered')}"""),
         landings=rows(f"""select code, count(*) landings, round(avg(verify_s)) avg_verify_s, round(sum(verify_s)) verify_wall_s
-            from landings where deleted_at is null and {p('t')} group by code order by code"""))
+            from landings where deleted_at is null and {p('t')} group by code order by code"""),
+        verify_steps=rows(f"""select e.k step, count(*) runs, round(avg(e.v::numeric)) avg_s, round(max(e.v::numeric)) max_s
+            from landings l cross join lateral jsonb_each_text(l.steps::jsonb) e(k, v)
+            where l.deleted_at is null and e.k like 'verify:%' and {p('l.t')}
+            group by e.k order by sum(e.v::numeric) desc, e.k {lim}"""))
 
 
 def summary(d: dict) -> dict[str, float]:
     s = lambda k, c: sum(float(r.get(c) or 0) for r in d[k])
     land = s("landings", "landings")
     ok = sum(float(r["landings"]) for r in d["landings"] if r["code"] == 0)
-    reviews = s("rounds", "reviews")
     return {"agent runs": s("by_agent", "runs"), "agent output tokens": s("by_agent", "out_tokens"),
-            "agent input tokens": s("by_agent", "in_tokens"), "llm calls": s("llm", "calls"),
-            "llm usd": round(s("llm", "usd"), 4), "review records": reviews,
-            "reviews with changes requested": s("rounds", "changes"), "errors": s("errors", "errors"),
-            "landings": land, "landings failed": land - ok, "verify wall s": s("landings", "verify_wall_s"),
-            "hours in task statuses": s("stalls", "hours"), "owner answers": s("owner", "answered")}
+            "agent input tokens": s("by_agent", "in_tokens"), "llm calls (run records)": s("llm", "calls"),
+            "ledger entries": s("spend", "entries"), "llm usd (ledger)": round(s("spend", "usd"), 4),
+            "review records": s("rounds", "reviews"), "reviews with changes requested": s("rounds", "changes"),
+            "errors": s("errors", "errors"), "landings": land, "landings failed": land - ok,
+            "verify wall s": s("landings", "verify_wall_s"), "hours in task statuses": s("stalls", "hours"),
+            "owner answers": s("owner", "answered")}
 
 
 def table(title: str, items: list[dict]) -> str:
@@ -432,12 +553,14 @@ def render(d: dict, since: str, until: str) -> str:
     out = [f"Platform metrics {since} .. {until} (end exclusive)\n",
            table("Agents by type (subagent transcripts; in_tokens = input + cache writes, cache reads apart)", d["by_agent"]),
            table("Tasks by agent output tokens (a run with several tasks counts fully for each)", d["by_task"]),
-           table("LLM calls by provider and kind (usd from the ledger)", d["llm"]),
+           table("LLM calls by provider and kind (run records; they carry no cost)", d["llm"]),
+           table("LLM spend by model (ledger; run records and ledger share no id, so they are not joined)", d["spend"]),
            table("Review rounds per task", d["rounds"]),
            table("Errors by executor (errors.yaml)", d["errors"]),
-           table("Where tasks stand: time spent in a status, from status changes", d["stalls"]),
+           table("Where tasks stand: time in a status clipped to the period, ongoing included (DONE, REJECTED, DEFERRED excluded)", d["stalls"]),
            table("Owner wait (question to answer)", d["owner"]),
-           table("Landings by exit code (verify_wall_s: wall time of verify, includes waiting for CPU)", d["landings"])]
+           table("Landings by exit code (verify_wall_s: wall time of verify, includes waiting for CPU)", d["landings"]),
+           table("Slowest verify steps", d["verify_steps"])]
     return "\n".join(out)
 
 
@@ -476,10 +599,14 @@ def cmd_report(args) -> int:
         return 1
     try:
         kb_db.ensure_fresh()
-        if collect(quiet=True) != 0:
+        err, msg = refresh()
+        if err:
+            print(f"metrics: {err}", file=sys.stderr)  # a report on stale data would mislead
             return 1
+        for w in msg.splitlines()[1:]:
+            print("metrics: " + w, file=sys.stderr)
         if args.compare:
-            print(render_compare(pa, pb, summary(report_data(*pa)), summary(report_data(*pb))), end="")
+            print(render_compare(pa, pb, summary(report_data(*pa, limit=None)), summary(report_data(*pb, limit=None))), end="")
         else:
             print(render(report_data(*pa), *pa), end="")
     except kb_db.PgError as ex:

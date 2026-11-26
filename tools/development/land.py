@@ -27,6 +27,7 @@ import argparse
 import fcntl
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -113,32 +114,65 @@ def second_review(root: Path, task: str, base: str, head: str, run: bool) -> tup
     return True, line
 
 
-STEPS: dict[str, float] = {}  # seconds per step of this landing, for landings.jsonl
-LAND_INFO: dict[str, str] = {}
-
-
-def record_landing(code: int, total_s: float) -> None:
-    """Append one line per landing run to .claude/.state/landings.jsonl (metrics.py reads it). Never fails."""
+def peek_args() -> dict:
+    """Branch and task from argv for a landing that never reached run() (lock timeout); {} if argv is not a landing."""
+    ap = argparse.ArgumentParser(add_help=False, exit_on_error=False)
+    ap.add_argument("branch", nargs="?")
+    ap.add_argument("-m", "--message", required=True)
+    ap.add_argument("--task", default="")
+    if Path(sys.argv[0]).name != "land.py":
+        return {}
     try:
-        if not LAND_INFO.get("branch"):
+        a, _ = ap.parse_known_args(sys.argv[1:])
+    except (SystemExit, argparse.ArgumentError):
+        return {}
+    return {"branch": a.branch, "task": a.task} if a.branch else {}
+
+
+def record_landing(info: dict, code: int, total_s: float) -> None:
+    """Append one line per landing run to .claude/.state/landings.jsonl (metrics.py reads it). The attempt number
+    is counted and the line appended under one flock, so concurrent runs get different numbers. Never fails."""
+    try:
+        branch = info.get("branch")
+        if not branch:
             return  # arguments were not parsed: nothing to attribute
-        root = main_worktree()
-        path = root / ".claude" / ".state" / "landings.jsonl"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        branch = LAND_INFO.get("branch", "")
-        attempt = 1
-        if path.exists():
-            for line in path.read_text(encoding="utf-8").splitlines():
-                try:
-                    attempt += json.loads(line).get("branch") == branch and bool(branch)
-                except ValueError:
-                    pass
-        rec = {"t": time.time(), "branch": branch, "task": LAND_INFO.get("task", ""), "attempt": attempt,
-               "code": code, "total_s": round(total_s, 1), "steps": {k: round(v, 1) for k, v in STEPS.items()}}
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec) + "\n")
+        state = main_worktree() / ".claude" / ".state"
+        state.mkdir(parents=True, exist_ok=True)
+        path = state / "landings.jsonl"
+        with (state / "landings.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            attempt = 1
+            if path.exists():
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    try:
+                        attempt += json.loads(line).get("branch") == branch
+                    except (ValueError, AttributeError):
+                        pass
+            rec = {"t": time.time(), "branch": branch, "task": info.get("task", ""), "attempt": attempt,
+                   "code": code, "total_s": round(total_s, 1),
+                   "steps": {k: round(v, 1) for k, v in info.get("steps", {}).items()}}
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(rec) + "\n")
     except Exception:  # a journal must never change the outcome of a landing
         pass
+
+
+STEP_RE = re.compile(r"^\s+(?:OK|FAIL)\s+(\S+)\s+([\d.]+) s")
+
+
+def run_verify(cmd: list[str], cwd: Path, steps: dict[str, float]) -> int:
+    """Run verify.py, echo its output and keep the time of each step ('verify:<name>') and the total."""
+    t0 = time.monotonic()
+    with subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                          errors="replace") as p:
+        for line in p.stdout:
+            print(line, end="", flush=True)
+            m = STEP_RE.match(line)
+            if m:
+                steps["verify:" + m.group(1)] = float(m.group(2))
+        rc = p.wait()
+    steps["verify"] = time.monotonic() - t0
+    return rc
 
 
 def main_worktree() -> Path:
@@ -156,13 +190,26 @@ def insert_trailer(message: str, line: str) -> str:
     return f"{message}\n\n{line}"
 
 
+def log_failure(root: Path, code: int, branch: str) -> None:
+    """Append one line for errors.py import (git-ignored state; main stays clean, a failure here is ignored)."""
+    try:
+        state = root / ".claude" / ".state"
+        state.mkdir(parents=True, exist_ok=True)
+        with (state / "land_failures.jsonl").open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.time(), "code": code, "branch": branch}) + "\n")
+    except OSError:
+        pass
+
+
 def main() -> int:
     """Hold an exclusive flock on LAND_LOCK for the whole landing. The kernel drops it when the process dies, so a
     dead landing never leaves a stale lock and nothing is ever deleted. Codex sketches hold it shared while they run
     (tools/llm_worker/codexsketch.py), so a landing waits for a running sketch and a sketch never starts mid-landing."""
     LAND_LOCK.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(LAND_LOCK, os.O_CREAT | os.O_RDWR, 0o600)
-    deadline = time.monotonic() + LAND_WAIT_S
+    started = time.monotonic()
+    info: dict = {"steps": {}}
+    deadline = started + LAND_WAIT_S
     while True:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -171,20 +218,25 @@ def main() -> int:
             if time.monotonic() >= deadline:
                 print(f"land: another landing or a Codex sketch holds {LAND_LOCK}; try again later")
                 os.close(fd)
+                info.update(peek_args())
+                record_landing(info, 4, time.monotonic() - started)
                 return 4
             time.sleep(1)
     os.ftruncate(fd, 0)
     os.write(fd, str(os.getpid()).encode())  # information only
-    started, code = time.monotonic(), 1
+    info["steps"]["lock_wait"] = time.monotonic() - started
+    code = 1
     try:
-        code = run()
+        code = run(info)
+        if code in (1, 6):
+            log_failure(main_worktree(), code, info.get("branch", "?"))
         return code
     finally:
         os.close(fd)  # releases the lock
-        record_landing(code, time.monotonic() - started)
+        record_landing(info, code, time.monotonic() - started)
 
 
-def run() -> int:
+def run(info: dict | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("branch")
     ap.add_argument("-m", "--message", required=True)
@@ -197,7 +249,8 @@ def run() -> int:
     ap.add_argument("--allow-status", action="store_true",
                     help="accept status changes made on the branch (new items only)")
     args = ap.parse_args()
-    LAND_INFO.update(branch=args.branch, task=args.task or "")
+    if info is not None:
+        info.update(branch=args.branch, task=args.task or "")
 
     root = main_worktree()
     head = git("rev-parse", "--abbrev-ref", "HEAD", cwd=root).stdout.strip()
@@ -223,7 +276,8 @@ def run() -> int:
         else:
             t_rev = time.monotonic()
             ok, note = second_review(root, args.task, mb, head_sha, run=True)
-            STEPS["review"] = time.monotonic() - t_rev
+            if info is not None:
+                info["steps"]["review"] = time.monotonic() - t_rev
             if not ok:
                 print(f"land: second review not passed: {note}; main untouched")
                 return 6
@@ -257,9 +311,7 @@ def run() -> int:
             cmd.append("--full")
         if args.map:
             cmd.append("--map")
-        t_ver = time.monotonic()
-        verify_rc = subprocess.run(cmd, cwd=tmp).returncode
-        STEPS["verify"] = time.monotonic() - t_ver
+        verify_rc = run_verify(cmd, tmp, info["steps"] if info is not None else {})
         if verify_rc != 0:
             print("land: verify failed on the merged tree, main untouched")
             return 1

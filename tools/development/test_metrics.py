@@ -77,10 +77,37 @@ class ParserTests(unittest.TestCase):
         rows = metrics.parse_landings([line(t=1000, branch="b", task="TASK-1", attempt=2, code=1, total_s=30.5,
                                             steps=dict(verify=20.0, review=9)), "junk"])
         self.assertEqual((len(rows), rows[0]["attempt"], rows[0]["verify_s"]), (1, 2, 20.0))
-        text = ("| # | В | Кто | Когда |\n|---|---|---|---|\n| 1 | q one | a | 2026-11-10; Закрыт 2026-11-12 |\n"
-                "| 2 | q two | a | 2026-11-10 |\n")
-        w = metrics.parse_owner_waits(text)
-        self.assertEqual([(r["question"], r["asked"], r["answered"]) for r in w], [("Q1", "2026-11-10", "2026-11-12")])
+
+    def test_question_history_added_then_removed_or_closed(self):
+        log = "\n".join([
+            "@@aaaaaaaa 2026-11-10T10:00:00+00:00", "@@ -0,0 +1,3 @@", "+| 1 | q one | a | b |", "+| 2 | q two | a | b |",
+            "+| 3 | q three | a | b |",
+            "@@bbbbbbbb 2026-11-12T10:00:00+00:00", "-| 1 | q one | a | b |",  # removed: answered
+            "-| 2 | q two | a | b |", "+| 2 | q two edited | a | b |",  # edited, still open
+            "-| 3 | q three | a | b |", "+| ~~3~~ | ~~q three~~ | a | b |"])  # struck through: answered
+        dec = [dict(date="2026-11-20", text="answers Q2 finally"), dict(date="2026-11-01", text="old Q3")]
+        rows = {r["question"]: (r["asked"], r["answered"]) for r in metrics.parse_question_history(log, dec)}
+        self.assertEqual(rows, {"Q1": ("2026-11-10", "2026-11-12"), "Q2": ("2026-11-10", "2026-11-20"),
+                                "Q3": ("2026-11-10", "2026-11-12")})
+
+    def test_research_record_sums_item_usage_and_counts_verdicts(self):
+        rec = dict(kind="research", provider="deepseek-flash", input="docs/research/notes/x.yaml", created="2026-11-26T03:03:53Z",
+                   items=[dict(verdict="confirmed", usage=dict(prompt_cache_hit_tokens=10, prompt_cache_miss_tokens=90, completion_tokens=5)),
+                          dict(verdict="not_found", usage=dict(prompt_tokens=7, completion_tokens=2)), dict(verdict="not_found")])
+        r = metrics.parse_run_record("research-x.json", rec, 0)
+        self.assertEqual((r["input_tokens"], r["output_tokens"], r["findings"], r["task"]), (107, 7, 2, "docs/research/notes/x.yaml"))
+        self.assertEqual(r["verdict"], "confirmed=1,not_found=2")
+
+    def test_sanitize_skips_bad_rows_and_cleans_nul(self):
+        data = {t: [] for t in metrics.COLS}
+        data["landings"] = [dict(key="a", t=None, branch="b\x00x", task="", attempt=2**40, code=0, total_s=1, verify_s=1, steps="{}"),
+                            dict(key="b", t=None, branch="ok\x00", task="", attempt=1, code=0, total_s=float("inf"), verify_s=1, steps="{}"),
+                            dict(key="c", t=None, branch="ok\x00", task="", attempt=1, code=0, total_s=1, verify_s=1, steps="{}"),
+                            dict(key="", t=None, branch="", task="", attempt=1, code=0, total_s=1, verify_s=1, steps="{}")]
+        out, notes = metrics.sanitize(data)
+        self.assertEqual([(r["key"], r["branch"]) for r in out["landings"]], [("c", "ok")])
+        self.assertEqual(notes, ["landings: skipped 3 malformed record(s)"])
+        self.assertIsNone(metrics.iso(1e30))  # an absurd time is dropped, not an exception
 
     def test_period_validation(self):
         self.assertEqual(metrics.parse_period("2026-11-19..2026-11-26"), ("2026-11-19", "2026-11-26"))
@@ -95,51 +122,65 @@ class ParserTests(unittest.TestCase):
 
 
 class LandingJournalTests(unittest.TestCase):
-    def test_record_landing_appends_with_attempt_number(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            old = land.main_worktree
-            land.main_worktree = lambda: root
-            land.LAND_INFO.update(branch="br", task="TASK-9")
-            land.STEPS.clear()
-            land.STEPS["verify"] = 12.34
-            try:
-                land.record_landing(1, 20.0)
-                land.record_landing(0, 21.0)
-            finally:
-                land.main_worktree = old
-                land.STEPS.clear()
-            recs = [json.loads(l) for l in (root / ".claude/.state/landings.jsonl").read_text().splitlines()]
-            self.assertEqual([(r["attempt"], r["code"], r["task"]) for r in recs], [(1, 1, "TASK-9"), (2, 0, "TASK-9")])
-            self.assertEqual(recs[0]["steps"], {"verify": 12.3})
-            self.assertEqual(metrics.parse_landings([json.dumps(recs[1])])[0]["verify_s"], 12.3)
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        old = land.main_worktree
+        land.main_worktree = lambda: self.root
+        self.addCleanup(setattr, land, "main_worktree", old)
 
+    def journal(self):
+        return [json.loads(l) for l in (self.root / ".claude/.state/landings.jsonl").read_text().splitlines()]
 
-@unittest.skipUnless(kb_db.available(), "PostgreSQL is not available")
-class JournalFailureTests(unittest.TestCase):
+    def test_record_landing_appends_with_attempt_number_and_step_timings(self):
+        info = dict(branch="br", task="TASK-9", steps={"verify": 12.34, "verify:build": 5.55})
+        land.record_landing(info, 1, 20.0)
+        land.record_landing(info, 0, 21.0)
+        recs = self.journal()
+        self.assertEqual([(r["attempt"], r["code"], r["task"]) for r in recs], [(1, 1, "TASK-9"), (2, 0, "TASK-9")])
+        self.assertEqual(recs[0]["steps"], {"verify": 12.3, "verify:build": 5.5})
+        self.assertEqual(metrics.parse_landings([json.dumps(recs[1])])[0]["verify_s"], 12.3)
+
+    def test_concurrent_landings_get_distinct_attempts(self):
+        import threading
+        threads = [threading.Thread(target=land.record_landing, args=(dict(branch="br", steps={}), 0, 1.0)) for _ in range(12)]
+        [x.start() for x in threads]
+        [x.join() for x in threads]
+        self.assertEqual(sorted(r["attempt"] for r in self.journal()), list(range(1, 13)))
+
     def test_record_landing_swallows_write_error(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            (root / ".claude").mkdir()
-            (root / ".claude/.state").write_text("a file, so mkdir and open fail")
-            old = land.main_worktree
-            land.main_worktree = lambda: root
-            land.LAND_INFO.update(branch="br", task="")
-            try:
-                land.record_landing(0, 1.0)  # must not raise
-            finally:
-                land.main_worktree = old
+        (self.root / ".claude").mkdir()
+        (self.root / ".claude/.state").write_text("a file, so mkdir and open fail")
+        land.record_landing(dict(branch="br", steps={}), 0, 1.0)  # must not raise
 
     def test_record_landing_skips_without_branch(self):
-        with tempfile.TemporaryDirectory() as d:
-            old = land.main_worktree
-            land.main_worktree = lambda: Path(d)
-            land.LAND_INFO.clear()
-            try:
-                land.record_landing(4, 1.0)
-            finally:
-                land.main_worktree = old
-            self.assertFalse((Path(d) / ".claude").exists())
+        land.record_landing({"steps": {}}, 4, 1.0)
+        self.assertFalse((self.root / ".claude").exists())
+
+    def test_lock_timeout_is_journaled(self):
+        import fcntl
+        lock = self.root / "land.lock"
+        fd = os.open(lock, os.O_CREAT | os.O_RDWR)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        self.addCleanup(os.close, fd)
+        old = (land.LAND_LOCK, land.LAND_WAIT_S, sys.argv)
+        land.LAND_LOCK, land.LAND_WAIT_S, sys.argv = lock, 0, ["land.py", "br", "-m", "msg", "--task", "TASK-1"]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(land.main(), 4)
+        finally:
+            land.LAND_LOCK, land.LAND_WAIT_S, sys.argv = old
+        self.assertEqual([(r["branch"], r["task"], r["code"]) for r in self.journal()], [("br", "TASK-1", 4)])
+
+    def test_run_verify_keeps_each_step_time(self):
+        steps = {}
+        prog = "print('verify: x'); print('  OK   build            12.5 s'); print('  FAIL test-core         3.0 s')"
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = land.run_verify([sys.executable, "-c", prog], self.root, steps)
+        self.assertEqual(rc, 0)
+        self.assertEqual((steps["verify:build"], steps["verify:test-core"]), (12.5, 3.0))
+        self.assertIn("verify", steps)
 
 
 @unittest.skipUnless(kb_db.available(), "PostgreSQL is not available")
@@ -168,6 +209,7 @@ class DatabaseTests(unittest.TestCase):
                    "SINGULARITY_LEDGER": str(t / "ledger.jsonl")}
         cls.old = {k: os.environ.get(k) for k in cls.env}
         os.environ.update(cls.env)
+        kb_db.build(quiet=True)  # agent_runs and errors come from the kb index
 
     @classmethod
     def tearDownClass(cls):
@@ -185,6 +227,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(metrics.collect(quiet=True), 0)
         first = {t: self.count(t) for t in metrics.COLS}
         self.assertEqual((first["sessions"], first["llm_calls"], first["landings"]), (2, 2, 1))
+        self.assertEqual(self.count("sessions where tasks is not null"), 2)
         self.assertEqual(metrics.collect(quiet=True), 0)
         self.assertEqual({t: self.count(t) for t in metrics.COLS}, first)
         led = Path(self.env["SINGULARITY_LEDGER"])
@@ -207,6 +250,55 @@ class DatabaseTests(unittest.TestCase):
         self.assertIn("TASK-0206", text)
         self.assertIn("review records", text)
         self.assertRegex(text, r"developer\s+1\s+10\s+\d+\s+\d+\s+50")  # one run, 10 min, 50 output tokens (not 100)
+
+    def test_llm_calls_are_counted_once_not_per_ledger_entry(self):
+        s = metrics.summary(metrics.report_data("2026-11-20", "2026-11-21", limit=None))
+        self.assertEqual((s["llm calls (run records)"], s["ledger entries"]), (1, 1))  # one call, one ledger entry
+        self.assertGreater(s["llm usd (ledger)"], 0)
+
+    def test_stalls_include_ongoing_and_are_clipped_to_the_period(self):
+        ins = ("insert into task_flow (key, task, t, from_status, to_status, commit_id) values "
+               "('k1', 'TASK-9001', '2026-10-01', null, 'APPROVED', 'c1'), ('k2', 'TASK-9001', '2026-10-10', 'APPROVED', 'IN_PROGRESS', 'c2'),"
+               "('k3', 'TASK-9002', '2026-10-01', null, 'DONE', 'c3') on conflict do nothing")
+        kb_db.psql(self.db, ins, schema=True)
+        st = {r["status"]: r for r in metrics.report_data("2026-10-05", "2026-10-08")["stalls"]}
+        self.assertEqual(st["APPROVED"]["hours"], 72)  # 3 days inside the period, not 9
+        self.assertNotIn("IN_PROGRESS", st)  # starts on 10-10, after the period
+        self.assertNotIn("DONE", st)  # a finished task is not waiting
+        st = {r["status"]: r for r in metrics.report_data("2026-10-20", "2026-10-21")["stalls"]}
+        self.assertEqual((st["IN_PROGRESS"]["hours"], st["IN_PROGRESS"]["ongoing"]), (24, 1))  # still open
+
+    def test_comparison_uses_all_rows_not_the_display_limit(self):
+        values = ", ".join(f"('rv{i}', 'review', 'codex', 'm', 'TASK-8{i:03d}', '2026-11-22', 1, 1, 'accept', 0, 1)" for i in range(20))
+        kb_db.psql(self.db, "insert into llm_calls (key, kind, provider, model, task, t, input_tokens, output_tokens, verdict, findings, round) "
+                            f"values {values} on conflict do nothing", schema=True)
+        shown = metrics.report_data("2026-11-21", "2026-11-23")
+        self.assertEqual(len(shown["rounds"]), 15)
+        self.assertEqual(metrics.summary(metrics.report_data("2026-11-21", "2026-11-23", limit=None))["review records"], 20)
+
+    def test_report_fails_when_refresh_fails(self):
+        old = metrics.refresh
+        metrics.refresh = lambda: ("collect failed: boom", "")
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(metrics.main(["report", "--since", "2026-11-01", "--until", "2026-12-31"]), 1)
+        finally:
+            metrics.refresh = old
+
+    def test_collect_waits_for_the_writer_lock(self):
+        import fcntl
+        import threading
+        import time
+        state = Path(self.env["SINGULARITY_STATE"])
+        done = threading.Event()
+        with (state / "metrics.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            th = threading.Thread(target=lambda: (metrics.refresh(), done.set()))
+            th.start()
+            time.sleep(0.7)
+            self.assertFalse(done.is_set())  # blocked while another collection holds the lock
+        th.join(30)
+        self.assertTrue(done.is_set())
 
 
 if __name__ == "__main__":
