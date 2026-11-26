@@ -25,3 +25,4 @@
 | 608 | 2026-11-26 | Уточнение #600: предел месячного журнала решений — 150 КБ (журнал читают поиском по базе, не целиком); месяц остаётся одним файлом (#599) | владелец, AskUserQuestion | development/tasks/TASK-0209-kb-structure.md |
 | 609 | 2026-11-26 | TASK-0209 вливать двумя частями: (1) код и перенос журналов со вторым ревью, (2) теги в шапках документов; рецензент смотрит обе | владелец, AskUserQuestion | development/tasks/TASK-0209-kb-structure.md |
 | 610 | 2026-11-26 | Перенос в архив (kblog.py rollover) запускает land.py автоматически после каждой посадки | владелец, AskUserQuestion | development/tasks/TASK-0209-kb-structure.md |
+| 611 | 2026-11-26 | Влить TASK-0209 (хуки kb_guard и session_context показаны владельцу по #603); часть 2 (только строки tags: в 610 документах) — без внешнего второго ревью: вход 10,7 МБ больше предела 4 МБ, reviewer APPROVE | владелец, AskUserQuestion | development/tasks/TASK-0209-kb-structure.md |

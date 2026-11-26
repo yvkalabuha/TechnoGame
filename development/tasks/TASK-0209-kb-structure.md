@@ -1,7 +1,7 @@
 ---
 id: TASK-0209
 title: "Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #598, #599"
+review_ref: "reviewer: APPROVE part1 123ed95c, part2 9ccfab99; agy-sonnet second review part1 accept (DEBT-0127); part2 waived by owner #611"
 created: 2026-11-26
 tags: [task, knowledge-base, platform, active]
 ---
@@ -64,3 +65,7 @@ tags: [task, knowledge-base, platform, active]
 8. Пределы размера (#600): загружаемые всегда ≤ 6 КБ, живые документы ≤ 30 КБ, журналы по месяцам ≤ 60 КБ; kb_check — предупреждение, с 2026-12-03 — ошибка.
 9. База (O-112): таблицы docs (байты, ≈токены, over_limit), links/chain; пересборка только изменённых файлов; GIN-индекс тегов, полнотекст russian+simple; `kb_db.py pack <id> --budget N` для /dispatch; `q docs over_limit`.
 10. metrics: частота чтения файлов (Read/grep по file_path в журналах сессий, только пути) × размер — отчёт «самые дорогие файлы».
+
+## Посадка (Orchestrator, 2026-11-26)
+- reviewer: часть 1 CHANGES (cd634e4d, medium: откат rollover) → APPROVE (123ed95c); часть 2 APPROVE (9ccfab99, только tags:).
+- Часть 1 влита 49c31fd (второе ревью agy-sonnet accept, 2 medium + 2 low → DEBT-0127). Часть 2 влита ef569fe без второго ревью по решению владельца #611.
