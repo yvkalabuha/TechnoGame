@@ -9,6 +9,7 @@ Owner rule 2026-11-25: launch the game only with permission; tests in batches; a
 started without asking; work without questions; when nothing can move without answers, stop and ask all of them.
 
 ## Loop (repeat until the stop condition)
+0. **State.** `python3 tools/development/autopilot.py status`. If stopped: dispatch nothing, land nothing, start no reviews or shot batches; only collect finished agents' reports, write the handoff and report. Resume only after the owner says so (`autopilot.py on`).
 1. **Capacity.** `python3 tools/development/capacity.py`. Start new heavy agents (code, Lab, client) only while
    `free agent slots` > 0; docs-only agents (designers, research, reviewers, critics) may run beyond it (they do not load the CPU).
 2. **Ready work.** `python3 tools/development/registry.py list` — APPROVED tasks whose depends_on are DONE, plus review and
