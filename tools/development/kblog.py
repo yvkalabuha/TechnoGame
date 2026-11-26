@@ -148,7 +148,7 @@ def rollover_decisions(root: Path, keep: int = KEEP) -> dict[str, int]:
     _, rows, tail = raw_rows(main.read_text(encoding="utf-8"), DECISION_START)
     targets = {p: _file_rows(root / p, DECISION_START) for p in decision_paths(root) if p != DECISIONS}
     month = None
-    for p in sorted(targets):
+    for p in targets:  # read order (archive first, then months): the fallback is the latest month
         for r in targets[p].values():
             month = row_month(r) or month
     split = max(len(rows) - keep, 0)

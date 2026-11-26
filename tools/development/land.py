@@ -256,6 +256,35 @@ JOURNAL_PATHS = ["docs/decisions/DECISIONS_LOG.md", "docs/decisions/log", "devel
                  "development/archive"]
 
 
+ROLLOVER_TIMEOUT_S = 120
+
+
+def _restore_journals(root: Path) -> None:
+    """Put the journal files back as committed: no half-done rollover stays in the main worktree."""
+    for p in JOURNAL_PATHS:  # one by one: a path missing from HEAD must not stop the others
+        git("reset", "-q", "--", p, cwd=root, check=False)
+        git("checkout", "--", p, cwd=root, check=False)
+        git("clean", "-fdq", "--", p, cwd=root, check=False)
+
+
+def _journal_counts(root: Path, script: Path) -> tuple[int, int] | None:
+    """(decision rows, debt rows) over all files of the two journals, from kblog.py count; None if unreadable."""
+    r = subprocess.run([sys.executable, str(script), "count"], cwd=root, text=True, capture_output=True,
+                       timeout=ROLLOVER_TIMEOUT_S)
+    if r.returncode != 0:
+        return None
+    dec = debt = 0
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if len(parts) != 2 or not parts[0].isdigit():
+            return None
+        if parts[1].startswith("docs/decisions/"):
+            dec += int(parts[0])
+        else:
+            debt += int(parts[0])
+    return dec, debt
+
+
 def rollover_after_landing(root: Path, message: str) -> str:
     """#610: after a landing, move decision rows and closed debts out of the main journal files
     (tools/development/kblog.py rollover) and commit the move on the checked-out target. Fail-open: any
@@ -267,12 +296,16 @@ def rollover_after_landing(root: Path, message: str) -> str:
         dirty = git("status", "--porcelain", "--", *JOURNAL_PATHS, cwd=root, check=False).stdout.strip()
         if dirty:
             return "rollover skipped: journal files have local changes"
+        before = _journal_counts(root, script)
         r = subprocess.run([sys.executable, str(script), "rollover"], cwd=root, text=True, capture_output=True,
-                           timeout=120)
+                           timeout=ROLLOVER_TIMEOUT_S)
         if r.returncode != 0:
-            git("checkout", "--", *JOURNAL_PATHS, cwd=root, check=False)
-            git("clean", "-fdq", "--", *JOURNAL_PATHS, cwd=root, check=False)
+            _restore_journals(root)
             return f"rollover failed (exit {r.returncode}): {(r.stdout + r.stderr).strip()[-300:]}"
+        after = _journal_counts(root, script)
+        if before is None or after != before:
+            _restore_journals(root)
+            return f"rollover undone: rows before {before}, after {after} (decisions, debts) must be equal"
         st = git("status", "--porcelain", "-uall", "--", *JOURNAL_PATHS, cwd=root, check=False).stdout
         moved = [l[3:] for l in st.splitlines() if l.strip()]
         if not moved:
@@ -283,12 +316,14 @@ def rollover_after_landing(root: Path, message: str) -> str:
         c = git("commit", "-q", "-m", msg + ("\n\n" + trailers if trailers else ""), "--", *moved,
                 cwd=root, check=False)
         if c.returncode != 0:
-            git("reset", "-q", "--", *moved, cwd=root, check=False)
-            git("checkout", "--", *JOURNAL_PATHS, cwd=root, check=False)
-            git("clean", "-fdq", "--", *JOURNAL_PATHS, cwd=root, check=False)
+            _restore_journals(root)
             return f"rollover not committed: {(c.stdout + c.stderr).strip()[-300:]}"
         return "rollover committed: " + r.stdout.strip()
-    except Exception as ex:  # never undo or fail a landing
+    except Exception as ex:  # never undo or fail a landing; a timeout or crash leaves no half-done move
+        try:
+            _restore_journals(root)
+        except Exception:
+            pass
         return f"rollover failed: {type(ex).__name__}: {ex}"
 
 

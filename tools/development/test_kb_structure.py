@@ -18,6 +18,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 HOOKS = ROOT / ".claude" / "hooks"
+_SYS_PATH = list(sys.path)
 sys.path.insert(0, str(HERE))
 try:
     import kb_check
@@ -27,7 +28,7 @@ try:
     import land
     import metrics
 finally:
-    sys.path.remove(str(HERE))
+    sys.path[:] = _SYS_PATH  # also drops the copies the imported tools insert for their siblings
 
 HEAD = "| # | Дата | Решение | Ссылка |\n|---|---|---|---|\n"
 DEBT_HEAD = "| ID | Долг | Где | Почему допущен | План | Статус |\n|---|---|---|---|---|---|\n"
@@ -101,6 +102,15 @@ class JournalLayoutTest(unittest.TestCase):
         self.assertEqual(kblog.duplicates("decisions", self.root), {})
         self.assertIn("decision 404 EDITED", kb_check.decision_rows(kblog.text("decisions", self.root))[404])
 
+    def test_undated_row_takes_the_latest_month_not_the_archive(self):
+        kblog.rollover_decisions(self.root, keep=3)  # archive: 2026-10 rows; log/2026-11.md exists
+        main = self.root / kblog.DECISIONS
+        text = main.read_text(encoding="utf-8").replace("| 406 |", "| 409 | — | undated | r |\n| 406 |", 1)
+        main.write_text(text, encoding="utf-8")
+        kblog.rollover_decisions(self.root, keep=3)
+        self.assertIn("| 409 |", (self.root / "docs/decisions/log/2026-11.md").read_text(encoding="utf-8"))
+        self.assertNotIn("| 409 |", (self.root / "docs/decisions/log/2026-10.md").read_text(encoding="utf-8"))
+
     def test_landing_sees_no_new_rows_when_only_the_layout_changes(self):
         git = lambda *a: subprocess.run(["git", *a], cwd=self.root, check=True, capture_output=True, text=True).stdout
         git("init", "-q")
@@ -154,6 +164,34 @@ class LandRolloverTest(unittest.TestCase):
         self.assertIn("Co-Authored-By: A <a@b>", log)
         self.assertEqual(len(kb_check.decision_rows(kblog.text("decisions", self.root))), 11)
         self.assertEqual(land.rollover_after_landing(self.root, "m"), "rollover: nothing to move")
+
+    def fake_kblog(self, rollover_body: str) -> None:
+        write(self.root, "tools/development/kblog.py",
+              "import sys, time, pathlib\n"
+              "if sys.argv[1] == 'count':\n"
+              "    for p in ['docs/decisions/DECISIONS_LOG.md', 'development/TECH_DEBT.md']:\n"
+              "        t = pathlib.Path(p).read_text(encoding='utf-8')\n"
+              "        print(sum(1 for l in t.splitlines() if l.startswith('| ') and not l.startswith('| #') "
+              "and not l.startswith('|-') and not l.startswith('| ID')), p)\n"
+              "    sys.exit(0)\n" + rollover_body)
+        self.git("commit", "-qam", "fake kblog")
+
+    def test_timeout_restores_the_journals(self):
+        self.fake_kblog("pathlib.Path('docs/decisions/log').mkdir(parents=True, exist_ok=True)\n"
+                        "pathlib.Path('docs/decisions/log/2026-11.md').write_text('x')\n"
+                        "pathlib.Path('docs/decisions/DECISIONS_LOG.md').write_text('half')\n"
+                        "time.sleep(5)\n")
+        with mock.patch.object(land, "ROLLOVER_TIMEOUT_S", 1):
+            note = land.rollover_after_landing(self.root, "m")
+        self.assertIn("rollover failed: TimeoutExpired", note)
+        self.assertEqual(self.git("status", "--porcelain"), "")  # written files restored, new ones removed
+
+    def test_row_count_mismatch_is_undone(self):
+        self.fake_kblog("pathlib.Path('docs/decisions/DECISIONS_LOG.md').write_text('# lost\\n', encoding='utf-8')\n")
+        note = land.rollover_after_landing(self.root, "m")
+        self.assertIn("rollover undone", note)
+        self.assertEqual(self.git("status", "--porcelain"), "")
+        self.assertEqual(self.git("log", "-1", "--format=%s").strip(), "fake kblog")  # nothing committed
 
     def test_rollover_problems_never_fail_the_landing(self):
         (self.root / kblog.DECISIONS).write_text(sample_log() + "\n", encoding="utf-8")  # a local edit
@@ -215,6 +253,14 @@ class TagsAndLimitsTest(unittest.TestCase):
         self.assertEqual(kbdocs.size_class(".claude/skills/land/SKILL.md")[0], "living")
         self.assertIsNone(kbdocs.size_class("docs/decisions/log/archive-0001-0400.md"))
         self.assertEqual(kbdocs.size_class("docs/decisions/log/2026-11.md"), ("monthly", 150 * 1024))
+        write(tmp, "docs/decisions/log/2026-12.md", "z" * (150 * 1024 + 1))  # over the monthly limit
+        with mock.patch.object(kb_check, "ROOT", tmp):
+            for day, sink in ((dt.date(2026, 12, 2), 1), (dt.date(2026, 12, 3), 0)):
+                errors, warnings = [], []
+                kb_check.check_structure(["docs/decisions/log/2026-12.md"], ids, errors, warnings, day)
+                out = (errors, warnings)[sink]
+                self.assertEqual(len(out), 1, (errors, warnings))
+                self.assertIn("the limit for 'monthly' files is 150 KB", out[0])
 
     def test_summary_prefers_the_short_conclusion(self):
         body = "# T\n\nfirst paragraph\n\n## Цель\n\n## Краткий вывод\n\n- a\n- b\n\n## Next\nz"
@@ -357,6 +403,11 @@ class ShorterHooksTest(unittest.TestCase):
         out = subprocess.run([sys.executable, str(HOOKS / "kb_guard.py"), "file"], input=json.dumps(payload),
                              text=True, capture_output=True, env=env).stdout
         self.assertIn("DECISION #592", out)  # #592 names Codex, rounds and tools: facts of tools-codex-rule
+
+    def test_no_session_id_shares_no_seen_list(self):
+        self.assertEqual(len(self.guard("")), 5)
+        self.assertEqual(len(self.guard("")), 5)  # nothing remembered without a session id
+        self.assertFalse((self.tmp / "state" / "kb_guard").exists())
 
     def test_session_start_shows_the_two_latest_entries(self):
         write(self.tmp, "CURRENT_STATE.md", "## Сводка\n- **new:** a\n  - detail of new\n- **older:** b\n- **oldest:** c\n\n## Next\n")

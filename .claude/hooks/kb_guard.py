@@ -56,15 +56,19 @@ def run(root, *args: str) -> str:
     return r.stdout.strip()
 
 
-def seen_file(root, session: str) -> Path:
+def seen_file(root, session: str) -> Path | None:
+    """The seen-list of one session; None without a session id (then nothing is remembered or shared)."""
+    if not session.strip():
+        return None
     base = Path(os.environ.get("SINGULARITY_STATE") or Path(root) / ".claude" / ".state")
-    return base / "kb_guard" / (re.sub(r"[^\w.-]", "_", session or "nosession")[:80] + ".json")
+    return base / "kb_guard" / (re.sub(r"[^\w.-]", "_", session)[:80] + ".json")
 
 
-def pick_unseen(out: str, path: Path, limit: int = MAX_RELATED) -> list[str]:
-    """The first 'limit' FACT/DECISION lines of out not shown before in this session; records them as shown."""
+def pick_unseen(out: str, path: Path | None, limit: int = MAX_RELATED) -> list[str]:
+    """The first 'limit' FACT/DECISION lines of out not shown before in this session; records them as shown.
+    path None (no session id): the first 'limit' lines, nothing recorded."""
     try:
-        seen = set(json.loads(path.read_text(encoding="utf-8")))
+        seen = set(json.loads(path.read_text(encoding="utf-8"))) if path else set()
     except (OSError, ValueError):
         seen = set()
     picked = []
@@ -73,7 +77,7 @@ def pick_unseen(out: str, path: Path, limit: int = MAX_RELATED) -> list[str]:
         if m and m.group(1) not in seen and len(picked) < limit:
             picked.append(line)
             seen.add(m.group(1))
-    if picked:
+    if picked and path:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             tmp = path.with_suffix(".tmp")
