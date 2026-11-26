@@ -7,11 +7,13 @@ land_failures), which keep soft-deleted rows (deleted_at) between rebuilds.
 
   kb_db.py build [--quiet]            rebuild the index from files
   kb_db.py q TABLE [filter ...] [--json]  short filter query, one line per row
+  kb_db.py q chain ID [depth=1]       the chain of a document: ordered paths with short summaries (#599)
+  kb_db.py pack ID [--budget 1500]    context package for /dispatch: facts, decisions, chain within a token budget
   kb_db.py status                     database, row counts, freshness
   kb_db.py forget TABLE KEY_PREFIX    soft-delete a journal row
 
 Tables: items, links, decisions, orch, debt, questions, errors, agents,
-facts, refusals, landfails.  Filters: key=value  key!=value  key~text (full text, russian +
+facts, refusals, landfails, docs, doclinks.  Filters: key=value  key!=value  key~text (full text, russian +
 simple, or substring)  key>v  key<v  key>=v  key<=v, plus since=DATE until=DATE
 limit=N order=[-]col, and silent>2h for agents.  For text columns "=" is a
 case-insensitive match; for debt area, titles and texts it is a substring match.
@@ -21,6 +23,12 @@ Examples:
   kb_db.py q facts text~институт        (facts of development/FACTS.yaml; drift=true: probe disagrees)
   kb_db.py q items status=REVIEW agent=developer
   kb_db.py q agents 'silent>2h'     (quote it: the shell reads > as a redirect; silent=2h also works)
+  kb_db.py q docs tags=ui text~глобус   (docs catalogue: path, title, "Краткий вывод", tags, bytes, ~tokens)
+  kb_db.py q docs over_limit         (files over their size limit, #600)
+
+The decisions log and the debt table are read from all their files (kblog.py); decisions and debt rows carry
+the file they are in. The docs catalogue (docs, doclinks) is kept between rebuilds and updated file by file:
+only files whose size or mtime changed are parsed again (O-112).
 
 Connection: local socket, peer authentication of the current user, database singularity_kb
 (env SINGULARITY_KB_DB, created on first use), one schema per checkout ('main' for the main
@@ -47,7 +55,8 @@ DEFAULT_DB = "singularity_kb"
 PSQL_TIMEOUT = 60
 GIT_TIMEOUT = 10
 # Bump when a table or column changes: it forces a rebuild of an index made by older code.
-SCHEMA = 2
+SCHEMA = 3
+DOCS_SCHEMA = "1"  # docs/doclinks layout; a change drops and refills the catalogue
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # --------------------------------------------------------------------------
@@ -65,13 +74,14 @@ TABLES: dict[str, dict] = {
                   cols={"from_id": "text", "to_id": "text", "kind": "text"}, fuzzy=set()),
     "decisions": dict(sql="decisions", text="text", date="date", show=["num", "date", "text"],
                       cols={"num": "int", "date": "date", "text": "text", "source": "text", "ref": "text",
-                            "superseded_by": "int"}, fuzzy={"text", "ref"}),
+                            "superseded_by": "int", "file": "text"}, fuzzy={"text", "ref", "file"}),
     "orch": dict(sql="orch_decisions", text="text", date="date", show=["id", "date", "text"],
                  cols={"id": "text", "num": "int", "date": "date", "text": "text", "basis": "text",
                        "applied": "text"}, fuzzy={"text", "basis", "applied"}),
     "debt": dict(sql="debt", text="text", date="closed", show=["id", "status", "area", "text"],
                  cols={"id": "text", "text": "text", "area": "text", "why": "text", "plan": "text",
-                       "status": "text", "status_text": "text", "closed": "date"}, fuzzy={"text", "area", "plan"}),
+                       "status": "text", "status_text": "text", "closed": "date", "file": "text"},
+                 fuzzy={"text", "area", "plan", "file"}),
     "questions": dict(sql="questions", text="text", date=None, show=["id", "kind", "open", "text"],
                       cols={"id": "text", "kind": "text", "text": "text", "blocks": "text", "added": "text",
                             "open": "bool"}, fuzzy={"text", "blocks"}),
@@ -90,13 +100,20 @@ TABLES: dict[str, dict] = {
                      cols={"key": "text", "t": "ts", "hook": "text", "msg": "text"}, fuzzy={"msg"}, journal=True),
     "landfails": dict(sql="land_failures", text="msg", date="t", show=["key", "t", "branch", "msg"],
                       cols={"key": "text", "t": "ts", "branch": "text", "msg": "text"}, fuzzy={"msg"}, journal=True),
+    "docs": dict(sql="docs", text="search", date="date", show=["path", "tags", "tokens", "title", "summary"],
+                 cols={"path": "text", "title": "text", "summary": "text", "tags": "tags", "date": "date",
+                       "bytes": "int", "tokens": "int", "over_limit": "bool", "search": "text", "fp": "text"},
+                 fuzzy={"path", "title"}, catalogue=True),
+    "doclinks": dict(sql="doc_links", text=None, date=None, show=["from_path", "kind", "to_ref", "to_path"],
+                     cols={"from_path": "text", "kind": "text", "to_ref": "text", "to_path": "text"},
+                     fuzzy={"from_path", "to_path"}, catalogue=True),
 }
 
 PRIMARY_KEY = {"items": ["id"], "links": ["from_id", "to_id", "kind"], "decisions": ["num"], "orch": ["id"],
                "debt": ["id"], "questions": ["id"], "errors": ["id"], "agents": ["agent_id"], "facts": ["id"],
-               "refusals": ["key"], "landfails": ["key"]}
+               "refusals": ["key"], "landfails": ["key"], "docs": ["path"], "doclinks": ["from_path", "kind", "to_ref"]}
 
-PG_TYPES = {"text": "text", "int": "integer", "date": "date", "bool": "boolean", "ts": "timestamptz"}
+PG_TYPES = {"text": "text", "int": "integer", "date": "date", "bool": "boolean", "ts": "timestamptz", "tags": "text[]"}
 
 # Derived tables in COPY order (journals are kept, see build_script).
 DERIVED = ["items", "links", "decisions", "orch", "debt", "questions", "errors", "agents", "facts"]
@@ -353,8 +370,9 @@ def source_files() -> list[Path]:
     import registry
     files = [ROOT / t.folder / n for t in registry.TYPES.values() if (ROOT / t.folder).is_dir()
              for n in sorted(p.name for p in (ROOT / t.folder).glob(f"{t.prefix}-*.md"))]
-    files += [ROOT / "docs/decisions/DECISIONS_LOG.md", ROOT / "docs/decisions/ORCH_DECISIONS.md",
-              ROOT / "development/TECH_DEBT.md", ROOT / "development/OPEN_QUESTIONS.md",
+    import kblog
+    files += [ROOT / p for p in kblog.decision_paths(ROOT) + kblog.debt_paths(ROOT)]
+    files += [ROOT / "docs/decisions/ORCH_DECISIONS.md", ROOT / "development/OPEN_QUESTIONS.md",
               ROOT / "development/errors.yaml", state_dir() / "agents.jsonl", ROOT / "development/FACTS.yaml"]
     files += probe_files()  # the drift column depends on them
     files += sorted(state_dir().glob("hook_refusals*.jsonl")) + sorted(state_dir().glob("land_failures*.jsonl"))
@@ -381,6 +399,16 @@ def fingerprint() -> str:
 
 def read_text(p: Path) -> str:
     return p.read_text(encoding="utf-8") if p.exists() else ""
+
+
+def journal_rows(kind: str, parse, key: str) -> list[dict]:
+    """Rows of all files of a journal (kblog.py) with the file each row is in; a later file wins a repeated key."""
+    import kblog
+    out: dict = {}
+    for path, text in kblog.sources(kind, ROOT):
+        for r in parse(text):
+            out[r[key]] = dict(r, file=path)
+    return list(out.values())
 
 
 def collect() -> dict[str, list[dict]]:
@@ -411,9 +439,9 @@ def collect() -> dict[str, list[dict]]:
         fails += parse_journal(read_text(p).splitlines(), "land")
     return dict(
         items=item_rows, links=links,
-        decisions=parse_decisions(read_text(ROOT / "docs/decisions/DECISIONS_LOG.md")),
+        decisions=journal_rows("decisions", parse_decisions, "num"),
         orch=parse_orch(read_text(ROOT / "docs/decisions/ORCH_DECISIONS.md")),
-        debt=parse_debt(read_text(ROOT / "development/TECH_DEBT.md")),
+        debt=journal_rows("debt", parse_debt, "id"),
         questions=parse_questions(read_text(ROOT / "development/OPEN_QUESTIONS.md")),
         errors=parse_errors(yaml.safe_load(read_text(err_path)) if err_path.exists() else None),
         agents=parse_agent_log(read_text(log).splitlines()),
@@ -495,6 +523,8 @@ def copy_value(v) -> str:
         return r"\N"
     if isinstance(v, bool):
         return "t" if v else "f"
+    if isinstance(v, (list, tuple)):  # text[]: an array literal with every element quoted
+        v = "{" + ",".join('"' + str(x).replace("\\", "\\\\").replace('"', '\\"') + '"' for x in v) + "}"
     return str(v).replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
 
 
@@ -554,6 +584,7 @@ def build(quiet: bool = False, log=None) -> int:
         fp = fingerprint()
         data = collect()
         psql(db_name(), build_script(data, fp))
+        sync_docs(quiet)
     except Exception as ex:  # a derived index must never break the caller
         if not quiet:
             print(f"kb_db: build failed: {ex}", file=sys.stderr)
@@ -576,6 +607,188 @@ def ensure_fresh() -> None:
     if not is_fresh():
         if build(quiet=False, log=sys.stderr) != 0:  # stdout stays clean for --json
             raise PgError("rebuild failed")
+
+
+# --------------------------------------------------------------------------
+# Docs catalogue (#598, #599, O-112): updated file by file
+# --------------------------------------------------------------------------
+
+DOCS_DDL = """create table if not exists docs (path text primary key, title text, summary text, tags text[], date date,
+  bytes integer, tokens integer, over_limit boolean, search text, fp text);
+create table if not exists doc_links (from_path text, kind text, to_ref text, to_path text);
+create index if not exists docs_tags_gin on docs using gin (tags);
+create index if not exists docs_fts_russian on docs using gin (to_tsvector('russian', coalesce(search, '')));
+create index if not exists docs_fts_simple on docs using gin (to_tsvector('simple', coalesce(search, '')));
+create index if not exists doc_links_from on doc_links (from_path);
+create index if not exists doc_links_to on doc_links (to_path);
+"""
+
+
+def file_fp(p: Path) -> str:
+    st = p.stat()
+    return f"{st.st_mtime_ns}:{st.st_size}"
+
+
+def resolve_link(target: str, doc: str, item_paths: dict[str, str]) -> str | None:
+    """Repository path a header link points to: a registry id's file, a path, or a name next to the document."""
+    t = target.strip()
+    if t in item_paths:
+        return item_paths[t]
+    p = t.split("#", 1)[0]
+    if not p:
+        return None
+    for cand in (ROOT / p, ROOT / Path(doc).parent / p, ROOT / Path(doc).parent / (p + ".md")):
+        if cand.is_file():
+            try:
+                return cand.resolve().relative_to(ROOT.resolve()).as_posix()
+            except ValueError:
+                return None
+    return None
+
+
+def parse_doc(rel: str, text: str, item_paths: dict[str, str], overrides: dict) -> tuple[dict, list[dict]]:
+    """One row of docs and its header links (pure: no database)."""
+    import kbdocs
+    meta, body = kbdocs.split_front(text)
+    t, s = kbdocs.title(meta, body, rel), kbdocs.summary(body)
+    size = len(text.encode("utf-8"))
+    row = dict(path=rel, title=t, summary=s, tags=kbdocs.doc_tags(rel, meta, overrides) or [],
+               date=kbdocs.doc_date(meta, rel), bytes=size, tokens=kbdocs.approx_tokens(text),
+               over_limit=kbdocs.over_limit(rel, size) is not None, search=f"{rel} {t} {s}")
+    links = [dict(from_path=rel, kind=k, to_ref=v, to_path=resolve_link(v, rel, item_paths))
+             for k, v in kbdocs.links(meta)]
+    if meta and rel in item_paths.values():  # registry items: depends_on is a link of the chain too
+        import registry
+        links += [dict(from_path=rel, kind="depends_on", to_ref=v, to_path=item_paths.get(v))
+                  for v in registry.as_list(meta.get("depends_on"))]
+    return row, list({(l["kind"], l["to_ref"]): l for l in links}.values())
+
+
+def sync_docs(quiet: bool = True) -> int:
+    """Parse only the documents whose size or mtime changed since the last sync; drop removed ones.
+    Returns the number of documents parsed."""
+    import kbdocs
+    import registry
+    sch = ident(db_schema())
+    head = f"set search_path = {sch};\n"
+    got = psql(db_name(), f"create schema if not exists {sch};\n{head}{JOURNAL_DDL}{DOCS_DDL}"
+               "select value from kb_meta where key = 'docs_schema';", "-At").strip()
+    if got != DOCS_SCHEMA:
+        psql(db_name(), f"{head}drop table if exists docs, doc_links;\n{DOCS_DDL}", "-q")
+        have = {}
+    else:
+        have = dict(l.split("|", 1) for l in psql(db_name(), "select path, fp from docs", "-At", schema=True).splitlines()
+                    if "|" in l)
+    local = {}
+    for rel in kbdocs.catalogue_paths(ROOT):
+        try:
+            local[rel] = file_fp(ROOT / rel)
+        except OSError:
+            pass
+    changed = [p for p, fp in local.items() if have.get(p) != fp]
+    gone = [p for p in have if p not in local]
+    if not changed and not gone and got == DOCS_SCHEMA:
+        return 0
+    item_paths = {it.id: registry.rel(it.path) for it in registry.load_items([])}
+    _, overrides = kbdocs.load_vocab(ROOT)
+    rows, links = [], []
+    for p in changed:
+        try:
+            text = (ROOT / p).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        row, ls = parse_doc(p, text, item_paths, overrides)
+        rows.append(dict(row, fp=local[p]))
+        links += ls
+    cols = list(TABLES["docs"]["cols"])
+    lcols = list(TABLES["doclinks"]["cols"])
+    script = (f"begin;\nselect pg_advisory_xact_lock(599);\n{head}"
+              "create temp table tmp_paths (path text) on commit drop;\n"
+              + copy_block("tmp_paths", ["path"], [dict(path=p) for p in changed + gone])
+              + "delete from docs where path in (select path from tmp_paths);\n"
+              "delete from doc_links where from_path in (select path from tmp_paths);\n"
+              + copy_block("docs", cols, rows) + copy_block("doc_links", lcols, links)
+              + f"insert into kb_meta values ('docs_schema', {lit(DOCS_SCHEMA)}) "
+              "on conflict (key) do update set value = excluded.value;\ncommit;\n")
+    psql(db_name(), script)
+    if not quiet:
+        print(f"kb_db: docs catalogue: {len(rows)} parsed, {len(gone)} removed", file=sys.stderr)
+    return len(rows)
+
+
+def chain(start: str, depth: int = 1) -> list[dict]:
+    """Documents linked to start: supersedes/implements followed to the end, related/depends_on up to depth
+    steps, both directions. Ordered by date, then path; the start document is marked."""
+    import collections
+    q = lambda sql: [json.loads(l) for l in psql(db_name(), f"select row_to_json(x) from ({sql}) x", "-At",
+                                                  schema=True).splitlines() if l.strip()]
+    docs = {r["path"]: r for r in q("select path, title, summary, date, tags from docs")}
+    items = {r["id"]: r["path"] for r in q("select id, path from items")}
+    node = items.get(start) or (start if start in docs else None)
+    if node is None:
+        raise ValueError(f"{start!r} is neither a registry id nor a path of the docs catalogue")
+    adj: dict[str, list[tuple[str, str]]] = collections.defaultdict(list)
+    for r in q("select from_path, kind, to_path from doc_links where to_path is not null"):
+        adj[r["from_path"]].append((r["to_path"], r["kind"]))
+        adj[r["to_path"]].append((r["from_path"], r["kind"]))
+    for r in q("select from_id, kind, to_id from item_links"):
+        a, b = items.get(r["from_id"]), items.get(r["to_id"])
+        if a and b:
+            adj[a].append((b, r["kind"]))
+            adj[b].append((a, r["kind"]))
+    dist = {node: 0}
+    how = {node: "start"}
+    dq = collections.deque([node])
+    while dq:  # 0-1 BFS: supersedes and implements cost nothing
+        cur = dq.popleft()
+        for nxt, kind in sorted(adj.get(cur, [])):
+            d = dist[cur] + (0 if kind in ("supersedes", "implements") else 1)
+            if d <= depth and d < dist.get(nxt, depth + 1):
+                dist[nxt], how[nxt] = d, kind
+                (dq.appendleft if d == dist[cur] else dq.append)(nxt)
+    out = [dict(path=p, how=how[p], date=(docs.get(p) or {}).get("date"), title=(docs.get(p) or {}).get("title"),
+                summary=(docs.get(p) or {}).get("summary") or "") for p in dist]
+    return sorted(out, key=lambda r: (r["date"] or "", r["path"]))
+
+
+def pack(start: str, budget: int) -> str:
+    """Context package for a dispatch (O-112): related facts, decisions named by the start document and its
+    chain with summaries, cut to about budget tokens. The 'Факты:' block is accepted by guard_dispatch."""
+    import kb_check
+    import kbdocs
+    rows = chain(start)
+    me = next(r for r in rows if r["how"] == "start")
+    text = f"{me['title'] or ''} {me['summary']}"
+    try:
+        body = (ROOT / me["path"]).read_text(encoding="utf-8")
+    except OSError:
+        body = ""
+    facts = kb_check.related_facts(text + " " + body[:4000], kb_check.load_facts(), kb_check.DECISION_MIN_HITS)
+    nums = list(dict.fromkeys(int(n) for n in re.findall(r"(?<![\w&/])#(\d{2,4})\b", body[:6000])))
+    dec = kb_check.decision_rows(__import__("kblog").text("decisions", ROOT))
+    lines = [f"Контекст для {start} ({me['path']}); пакет kb_db.py pack, бюджет ≈{budget} токенов.", "Факты:"]
+    left: list[str] = []  # ids that did not fit: named in one short line each group
+
+    def add(line: str, key: str) -> None:
+        if kbdocs.approx_tokens("\n".join(lines + [line])) <= budget:
+            lines.append(line)
+        else:
+            left.append(key)
+
+    for f in facts:
+        add(f"FACT {f['id']}: {f['statement']}  [{f.get('source', '')}]", f"FACT {f['id']}")
+    if not facts:
+        lines.append("нет связанных")
+    for n in nums[:8]:
+        if n in dec:
+            add(f"DECISION #{n}: {' '.join(dec[n].split())[:240]}", f"#{n}")
+    lines.append("Цепочка документов (читать только нужный раздел):")
+    for r in rows:
+        add(f"- {r['path']} [{r['how']}{', ' + r['date'] if r['date'] else ''}]: {r['summary'][:300]}", r["path"])
+    if left:
+        lines.append(f"(не вошли в бюджет: {', '.join(left[:12])}{' ...' if len(left) > 12 else ''}; "
+                     f"kb_check.py related, kb_db.py q chain {start})")
+    return "\n".join(lines)
 
 
 # --------------------------------------------------------------------------
@@ -607,6 +820,8 @@ def build_query(table: str, tokens: list[str]) -> str:
     cols = spec["cols"]
     where, order, limit = [], None, 200
     for tok in tokens:
+        if cols.get(tok) == "bool":  # a bare boolean column: over_limit means over_limit=true
+            tok += "=true"
         m = FILTER_RE.match(tok)
         if not m:
             raise ValueError(f"bad filter {tok!r} (expected key=value, key~text, key>value ...)")
@@ -630,6 +845,11 @@ def build_query(table: str, tokens: list[str]) -> str:
             where.append(f"stop_t is null and start_t < now() - interval '{secs} seconds'")
         elif key == "deleted":
             pass
+        elif cols.get(key) == "tags":
+            if op not in ("=", "!="):
+                raise ValueError("tags take '=' (has the tag) or '!=' (has not)")
+            has = f"{key} @> array[{lit(val)}]::text[]"
+            where.append(has if op == "=" else f"not {has}")
         else:
             col = spec["text"] if key == "text" else key
             if not col or col not in cols:
@@ -661,6 +881,8 @@ def fmt_cell(v) -> str:
         return "-"
     if isinstance(v, bool):
         return "yes" if v else "no"
+    if isinstance(v, list):
+        v = ",".join(map(str, v))
     s = " ".join(str(v).split())
     return s[:160] + "..." if len(s) > 160 else s
 
@@ -671,6 +893,8 @@ def fmt_row(table: str, row: dict) -> str:
 
 def cmd_q(args) -> int:
     table = args.table
+    if table == "chain":
+        return cmd_chain(args)
     if table not in TABLES:
         print(f"unknown table {table!r}; tables: {', '.join(TABLES)}", file=sys.stderr)
         return 2
@@ -684,6 +908,8 @@ def cmd_q(args) -> int:
             print("kb_db: PostgreSQL is not available", file=sys.stderr)
             return 1
         ensure_fresh()
+        if TABLES[table].get("catalogue"):
+            sync_docs()
         rows = [json.loads(l) for l in psql(db_name(), sql, "-At", schema=True).splitlines() if l.strip()]
     except PgError as ex:
         print(f"kb_db: {ex}", file=sys.stderr)
@@ -693,6 +919,49 @@ def cmd_q(args) -> int:
     else:
         for r in rows:
             print(fmt_row(table, r))
+    return 0
+
+
+def cmd_chain(args) -> int:
+    if not args.filters:
+        print("usage: kb_db.py q chain ID_OR_PATH [depth=N]", file=sys.stderr)
+        return 2
+    start, depth = args.filters[0], 1
+    for tok in args.filters[1:]:
+        m = re.fullmatch(r"depth=(\d+)", tok)
+        if not m:
+            print(f"kb_db: bad chain option {tok!r} (depth=N)", file=sys.stderr)
+            return 2
+        depth = int(m.group(1))
+    try:
+        if not available():
+            print("kb_db: PostgreSQL is not available", file=sys.stderr)
+            return 1
+        ensure_fresh()
+        sync_docs()
+        rows = chain(start, depth)
+    except (PgError, ValueError) as ex:
+        print(f"kb_db: {ex}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(rows, ensure_ascii=False))
+    else:
+        for r in rows:
+            print(" | ".join([fmt_cell(r["date"]), r["path"], r["how"], fmt_cell(r["summary"])]))
+    return 0
+
+
+def cmd_pack(args) -> int:
+    try:
+        if not available():
+            print("kb_db: PostgreSQL is not available", file=sys.stderr)
+            return 1
+        ensure_fresh()
+        sync_docs()
+        print(pack(args.id, args.budget))
+    except (PgError, ValueError) as ex:
+        print(f"kb_db: {ex}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -749,13 +1018,16 @@ def main(argv=None) -> int:
     q.add_argument("filters", nargs="*")
     q.add_argument("--json", action="store_true")
     sub.add_parser("status")
+    p = sub.add_parser("pack")
+    p.add_argument("id")
+    p.add_argument("--budget", type=int, default=1500, help="about this many tokens")
     f = sub.add_parser("forget")
     f.add_argument("table")
     f.add_argument("key")
     args = ap.parse_args(argv)
     if args.cmd == "build":
         return build(args.quiet)
-    return {"q": cmd_q, "status": cmd_status, "forget": cmd_forget}[args.cmd](args)
+    return {"q": cmd_q, "status": cmd_status, "forget": cmd_forget, "pack": cmd_pack}[args.cmd](args)
 
 
 if __name__ == "__main__":

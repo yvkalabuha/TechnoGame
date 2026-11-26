@@ -17,7 +17,8 @@ So main never holds a commit that was not built and tested as merged.
      is closed with `python3 -m tools.llm_worker review-confirm <record> --finding N --rejected`
      after the Orchestrator checked it, or by a new commit and a new review.
 
-  0a. decisions and facts (#597): a branch that adds a row to DECISIONS_LOG.md must change the facts
+  0a. decisions and facts (#597): a branch that adds a row to the decisions log (DECISIONS_LOG.md or a file of
+     docs/decisions/log/, read through kblog.py) must change the facts
      related to it (development/FACTS.yaml) or carry 'facts-ok: #NNN' in -m or a commit message
      (`kb_check.py landing`), and no fact may drift on the branch head. Checked before the second
      review, so a refusal costs no review run.

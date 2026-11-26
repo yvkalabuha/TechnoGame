@@ -1,0 +1,57 @@
+# Tag vocabulary of the knowledge base (owner #599, TASK-0209): at most 50 tags in three facets.
+# A document carries 3-6 tags in its header (tags: [kind, area, state]): at least one kind, at least one area,
+# exactly one state. kb_check: an unknown tag is an error. Search: python3 tools/development/kb_db.py q docs tags=ui
+# Add a tag only when no existing tag fits and several documents need it; keep descriptions short.
+facets:
+  kind:
+    description: "Вид документа: что это за текст"
+    tags:
+      decision: {description: "ADR, журнал решений, решения оркестратора", examples: [docs/decisions/ADR-0001-stack.md]}
+      research: {description: "Исследование с источниками (RR, заметки исследователя)", examples: [docs/research/economy-data-licences-1945.md]}
+      review: {description: "Ревью, критика, вердикт ворот, разбор", examples: [docs/reviews/adr-0003-deepseek.md]}
+      design: {description: "Проект механики или системы игры", examples: [docs/game-design/civilization/INSTITUTIONS_PERSONALITIES.md]}
+      spec: {description: "Техническая или визуальная спецификация, контракт, бриф для исполнителя", examples: [docs/architecture/LAYER_CONTRACT.md]}
+      task: {description: "Задача реестра", examples: [development/tasks/TASK-0209-kb-structure.md]}
+      plan: {description: "План, дорожная карта, веха, состояние проекта", examples: [development/milestones/MS-M0-headless-prototype.md]}
+      handoff: {description: "Передача дел между сессиями", examples: [development/handoff/2026-11-02-1.md]}
+      hypothesis: {description: "Гипотеза с критериями проверки", examples: [development/hypotheses/HYP-0001-science-vs-industry.md]}
+      experiment: {description: "Эксперимент, предрегистрация, прогон, замер", examples: [development/experiments/EXP-0001-pilot-science-industry.md]}
+      analysis: {description: "Расчёт, диагностика, анализ результатов модели", examples: [docs/simulation/c2-diagnosis.md]}
+      note: {description: "Рабочая заметка, набросок, опись", examples: [docs/architecture/notes/client-save-load.md]}
+      guide: {description: "Правила, руководство, дизайн-система, процесс", examples: [docs/architecture/DEVELOPMENT_FRAMEWORK.md]}
+      vision: {description: "Видение, идея проекта, концепция", examples: [docs/vision/PROJECT_VISION.md]}
+      journal: {description: "Журнал строк: долги, риски, вопросы, факты", examples: [development/RISKS.md]}
+  area:
+    description: "Область: о чём документ"
+    tags:
+      science: {description: "Наука, знания, дерево технологий, институты науки", examples: [docs/research/jet-slice-1970-2030-content.md]}
+      economy: {description: "Экономика, производство, бюджет, торговля", examples: [docs/game-design/economy/E1-model.md]}
+      institutions: {description: "Институты, КБ, личности, национальные проекты", examples: [docs/game-design/civilization/INSTITUTIONS_PERSONALITIES.md]}
+      politics: {description: "Политика, государство, союзы, дипломатия", examples: [docs/research/notes/alliances-1945-2030.md]}
+      military: {description: "Война, военная мощь, вооружения", examples: [development/hypotheses/HYP-0003-war-capture-transfer.md]}
+      history: {description: "Исторические факты и данные эпохи, альтернативные ветки", examples: [docs/research/notes/alliances-1945-2030.md]}
+      map: {description: "Карта, провинции, регионы, границы, глобус", examples: [docs/decisions/ADR-0011-map-representation.md]}
+      gameplay: {description: "Игровой цикл, решения игрока, партия, баланс, ИИ-соперники", examples: [docs/game-design/M_PLAY_LOOP.md]}
+      ui: {description: "Интерфейс клиента, экраны, дизайн-система", examples: [docs/ui/UI_DESIGN_SYSTEM.md]}
+      visual: {description: "Визуальный стиль, иконки, 3D, изображения", examples: [docs/ui/specs/3d-models-plan.md]}
+      audio: {description: "Звук и музыка", examples: [docs/audio/AUDIO_DIRECTION.md]}
+      core: {description: "Ядро симуляции: Kernel, Core, Session, тик, данные, сохранения", examples: [docs/decisions/ADR-0006-tick-model.md]}
+      determinism: {description: "Детерминизм L1/L2, хеши, эталоны", examples: [docs/decisions/ADR-0002-determinism-levels.md]}
+      performance: {description: "Производительность, бюджет тика, бенчмарки", examples: [docs/decisions/ADR-0016-tick-budget.md]}
+      simulation-lab: {description: "Simulation Lab, модели и стенды экспериментов", examples: [docs/decisions/ADR-0008-simulation-lab.md]}
+      data: {description: "Данные модов, источники, лицензии данных", examples: [docs/decisions/ADR-0009-data-licenses.md]}
+      platform: {description: "Платформа разработки: агенты, хуки, инструменты, процесс, CI", examples: [docs/architecture/DEVELOPMENT_FRAMEWORK.md]}
+      external-llm: {description: "Внешние модели: DeepSeek, Codex, Gemini, llm_worker, лимиты", examples: [docs/ai-agents/EXTERNAL_LLM_STRATEGY.md]}
+      knowledge-base: {description: "База знаний: факты, теги, журналы, kb_db", examples: [docs/reviews/platform-kb-access-2026-11-26.md]}
+      testing: {description: "Тесты, инварианты, проверки качества", examples: [docs/decisions/ADR-0014-session-test-api.md]}
+  state:
+    description: "Состояние: можно ли на документ опираться сейчас (ровно один тег)"
+    tags:
+      draft: {description: "Черновик или предложение, не утверждено", examples: [docs/architecture/LAYER_CONTRACT_v3_DRAFT.md]}
+      active: {description: "Действует и поддерживается сейчас", examples: [docs/ui/UI_DESIGN_SYSTEM.md]}
+      accepted: {description: "Утверждено и неизменно (ADR, решение, принятый отчёт)", examples: [docs/decisions/ADR-0001-stack.md]}
+      done: {description: "Работа закончена; документ — история (задача, ревью, handoff)", examples: [development/handoff/2026-11-02-1.md]}
+      superseded: {description: "Заменён другим документом (указать supersedes у нового)", examples: [docs/audio/AUDIO_DIRECTION.md]}
+      deferred: {description: "Отложено или отклонено", examples: [docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md]}
+# Documents whose header cannot change (ACCEPTED ADRs are immutable): path -> tags.
+overrides: {}
