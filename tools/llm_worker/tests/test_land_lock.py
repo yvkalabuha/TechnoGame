@@ -42,7 +42,7 @@ class LandLockTest(unittest.TestCase):
         self.lock.write_text("999999999")
         seen = []
 
-        def run():
+        def run(*_args, **_kwargs):
             fd = os.open(self.lock, os.O_RDWR)
             try:
                 fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
