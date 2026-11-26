@@ -1,7 +1,7 @@
 ---
 id: TASK-0201
 title: "Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #590"
+review_ref: "reviewer: APPROVE c709b559; agy-sonnet second review accept (3 low, DEBT-0124)"
 created: 2026-11-26
 ---
 
@@ -54,3 +55,8 @@ Redis на машине не установлен (проверено 2026-11-26
 - Ветка worktree-agent-ab6db97a841ce0eb5 (e7f66ea0, d56d978e): redis_kv.py, хук пульса agent_beat.py, watch.py по пульсу, запись держателя land-блокировки, разрешение на клиент с EX (Redis только запрещает), guard_bash --deny-db для агентов (#597). 220 тестов OK.
 - reviewer: CHANGES (medium): ложные отказы агентам после обёрток — `nice -n 10 grep psql x`, `timeout 60 rg redis-cli docs`, `xargs grep psql`, `env A=1 git grep psql`; low: heredoc-строки, начинающиеся с psql; SINGULARITY_KB_TEST не ограничен базой kbtest_*; пульс молчит во время длинного вызова — порог --silent-min 20 мин мал.
 - Следующий шаг: исправить medium + тесты на четыре примера, поднять --silent-min (или считать «последний вызов начат»), повторная проверка reviewer, land. После посадки разрешение на запуск клиента выдать заново.
+
+## Результат (посадка 2026-11-26)
+- Правки по ревью (исключение владельца #601): 32ab468f, c709b559 — обёртки nice/timeout/xargs/env и др. снимаются, проверяется настоящее слово команды; heredoc; SINGULARITY_KB_TEST только для kbtest_*; watch --silent-min 45.
+- reviewer recheck: APPROVE (c709b559), 87 тестов OK. Второе ревью agy-sonnet (Codex — лимит): accept, 3 low → DEBT-0124.
+- Влито по #602 как 3388720 (land.py, verify OK). Разрешение на запуск клиента выдать заново при следующей съёмке.
