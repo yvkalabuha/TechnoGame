@@ -24,6 +24,9 @@ public sealed partial class TechTree
     bool _freeNotice, _planOpen, _fromReserve;
     ImmutableArray<QueuePlan> _draft = ImmutableArray<QueuePlan>.Empty;
     SliceCommand _sentAck;
+    bool _shotAssignEnabled, _shotConfirm; string _shotReason; int _shotQueueRows = -1;
+    int _cmpA = -1;                                   // node row marked as A of the comparison (Б is the selected node)
+    int[] _pathRows = Array.Empty<int>(); string[] _pathNum = Array.Empty<string>(); object _pathRef;   // the path on the map, numbered once per new path
 
     /// <summary>The slot science of the player is on: the strip, the card and the path replace the old goal panel.</summary>
     bool SlotsUi => _actor >= 0 && _actor == Player && _host.Snap is { Science: not null } sn && _actor < sn.View.Actors.Length && sn.View.Actors[_actor].Slots != null && sn.View.Actors[_actor].Institutes is { IsDefault: false };
@@ -43,7 +46,46 @@ public sealed partial class TechTree
     /// <summary>Selects an institute of the strip (its queue shows in the inspector) and clears the node selection.</summary>
     void SelectInstitute(int slot) { _selInst = slot; _selected = -1; _planOpen = false; _cancelAsk = -1; _insetDirty = true; AskScience(); Redraw(); }
 
-    void AskScience() => _host.AskScience(_selected >= 0 ? _host.Data.Nodes.Number[_selected] : 0, _goalNum);
+    void AskScience() => _host.AskScience(_selected >= 0 ? _host.Data.Nodes.Number[_selected] : 0, _goalNum, _cmpA >= 0 ? _host.Data.Nodes.Number[_cmpA] : 0);
+
+    /// <summary>Shift+Enter on a node of the map: the selected node becomes A, the node under the key ring B (spec §4).</summary>
+    void CompareWith(int row) { if (_selected >= 0 && _selected != row) _cmpA = _selected; Select(row); }
+
+    // The squares 1..N of the path on the map (spec §5): one per node, drawn last of the nodes; the strings are made when a new path arrives, so a draw allocates nothing.
+    void SyncPathRows(HostSnapshot s)
+    {
+        PathView p = SlotsUi && _goalNum > 0 && s.Science.Goal == _goalNum ? s.Science.Path : null;
+        if (ReferenceEquals(p, _pathRef)) return;
+        _pathRef = p;
+        var rows = new List<int>();
+        if (p != null) foreach (var n in p.Nodes) if (_rowOfNumber.TryGetValue(n.Node, out int r)) rows.Add(r);
+        _pathRows = rows.ToArray(); _pathNum = new string[_pathRows.Length];
+        for (int k = 0; k < _pathNum.Length; k++) _pathNum[k] = (k + 1).ToString();
+        Redraw();
+    }
+
+    void DrawPathNumbers()
+    {
+        for (int k = 0; k < _pathRows.Length; k++)
+        {
+            var p = PosOf(_pathRows[k]); float r = NR;
+            var box = new Rect2(p.X + r * 0.5f, p.Y - r - 22f, 22f, 22f);
+            if (!Area.Encloses(box)) continue;
+            _cv.DrawRect(box, Ui.Command); _cv.DrawRect(box, Ui.Ink, false, 1f);
+            Text(new Vector2(box.Position.X + 11f - 4.2f * _pathNum[k].Length, box.Position.Y + 17f), _pathNum[k], 14, Colors.White, FontKind.Mono);
+        }
+    }
+
+    // Alt+Up / Alt+Down on any button of a queue row move that row (spec §6).
+    void AltMove(Control c, Action up, Action down) =>
+        c.GuiInput += e =>
+        {
+            if (e is InputEventKey { Pressed: true, AltPressed: true } k && k.Keycode is Key.Up or Key.Down)
+            {
+                if (k.Keycode == Key.Up) up(); else down();
+                c.AcceptEvent();
+            }
+        };
 
     void SetGoal(int number) { _goalNum = number; _planOpen = false; _modelDirty = true; _insetDirty = true; AskScience(); }
 
@@ -84,10 +126,10 @@ public sealed partial class TechTree
         var lines = new List<string> { Loc.T("sci.strip.name", v.Slot + 1, Loc.TOr("inst." + v.Id, v.Id)) };
         if (st.Kind == SlotKind.Busy || st.Kind == SlotKind.Free)
         {
-            var tags = new List<string>();
+            var all = new List<string>();
             if (!v.DirLevels.IsDefault)
-                for (int d = 0; d < v.DirLevels.Length && tags.Count < 3; d++) if (v.DirLevels[d] > 0) tags.Add(ScienceMapLogic.Tag(d) + " " + v.DirLevels[d]);
-            lines.Add(string.Join(" · ", tags));
+                for (int d = 0; d < v.DirLevels.Length; d++) if (v.DirLevels[d] > 0) all.Add(ScienceMapLogic.Tag(d) + " " + v.DirLevels[d]);
+            lines.Add(string.Join(" · ", ScienceMapLogic.Cap(all, ScienceMapLogic.StripDirsShown)));
         }
         switch (st.Kind)
         {
@@ -120,6 +162,40 @@ public sealed partial class TechTree
         return b;
     }
 
+    // ---- shot run hooks: what the live session put on screen, for the run-time assertions (frames alone do not prove the live path) ----
+    public bool ShotSlotsUi => SlotsUi && _strip.Visible;
+    public int ShotStripCards => _stripCards.GetChildCount();
+    public bool ShotAssignEnabled => _shotAssignEnabled;
+    public string ShotReason => _shotReason;
+    public int ShotQueueRows => _shotQueueRows;
+    public int ShotPathSquares => _pathRows.Length;
+    public bool ShotConfirmShown => _shotConfirm;
+    public bool ShotNoticeShown => _freeNotice;
+    public bool ShotPlanOpen => _planOpen;
+    public int ShotSelectedInstitute => _selInst;
+    /// <summary>First row in a state (0 known, 1 frontier, 2 unavailable), or −1.</summary>
+    public int ShotRowByState(int kind) { for (int i = 0; _state != null && i < _state.Length; i++) if ((int)_state[i] == kind) return i; return -1; }
+    /// <summary>The first unknown product node (APP): a goal with a real path.</summary>
+    public int ShotGoalRow() { var n = _host.Data.Nodes; for (int i = 0; _state != null && i < _state.Length; i++) if (n.Type[i] == NodeType.APP && _state[i] != St.Known) return i; return -1; }
+    /// <summary>Numbers of the first <paramref name="n"/> frontier nodes that no institute holds.</summary>
+    public int[] ShotFreeFrontier(int n)
+    {
+        var r = new List<int>(); var nodes = _host.Data.Nodes; var views = _host.Snap.View.Actors[_actor].Institutes;
+        for (int i = 0; _state != null && i < _state.Length && r.Count < n; i++)
+        {
+            int num = nodes.Number[i];
+            if (_state[i] == St.Frontier && !views.Any(v => v.Active == num || (!v.Queue.IsDefault && v.Queue.Contains(num)))) r.Add(num);
+        }
+        return r.ToArray();
+    }
+    public void ShotSelectInstitute(int slot) => SelectInstitute(slot);
+    public void ShotSetGoal(int row) => SetGoal(row >= 0 ? _host.Data.Nodes.Number[row] : 0);
+    public void ShotOpenPlan() { if (_host.Snap?.Science is { } s && !s.Plan.IsDefaultOrEmpty) { _planOpen = true; _draft = s.Plan; _insetDirty = true; } }
+    public int ShotPlanLines { get { int n = 0; foreach (var q in _draft) n += q.Nodes.Length; return n; } }
+    /// <summary>Sends the suggested layout without acknowledgement: the path of the real refusal «money covers less than 60 %».</summary>
+    public void ShotApplyPlan() { if (_host.Snap?.Science is { } s && !s.Plan.IsDefaultOrEmpty) Send(new ApplyQueues(Player, s.Plan), new ApplyQueues(Player, s.Plan, true)); }
+    public void ShotClearNotice() { _freeNotice = false; _insetDirty = true; }
+
     // ---- commands ----
     void Send(SliceCommand command, SliceCommand acknowledged = null, string key = "cmd.sci")
     {
@@ -139,6 +215,7 @@ public sealed partial class TechTree
     // ---- inspector of the player's slot science ----
     void BuildScienceInset(HostSnapshot s)
     {
+        _shotConfirm = false; _shotAssignEnabled = false; _shotReason = null; _shotQueueRows = -1;
         var sci = s.Science;
         var views = s.View.Actors[_actor].Institutes;
         if (_freeNotice)
@@ -159,6 +236,7 @@ public sealed partial class TechTree
         if (s.Last.Status == CmdStatus.Rejected && s.Last.Reason == nameof(CommandRefusal.NeedsConfirmation) && _sentAck != null)
         {
             _inset.AddChild(new HSeparator());
+            _shotConfirm = true;
             _inset.AddChild(Ui.MarkedRow(Ui.Alarm, Ui.Wrap(Loc.T("sci.confirm"), 14, Ui.Ink)));
             var go = _sentAck;
             _inset.AddChild(Act("sci.confirm.go", () => { _sentAck = null; _host.Submit(go, "cmd.sci"); _insetDirty = true; }, true, true));
@@ -174,7 +252,7 @@ public sealed partial class TechTree
         _inset.AddChild(Ui.Lbl(Names.Node(nodes.Id[i]), 20, null, FontKind.Draft));
         _inset.AddChild(Ui.Wrap($"{Loc.T("ntype." + (int)nodes.Type[i])} · {(nodes.AnchorEstimated[i] ? "≈ " : "")}{nodes.AnchorYear[i]} · {StateWord(i)}", 14, Ui.Ink2));
         var ov = ScienceMapLogic.Overlap(nodes, i, default);
-        _inset.AddChild(Ui.Wrap(Loc.T("sci.dirs", string.Join(" · ", ov.Parts.Select(p => p.Tag + (p.Main ? " " + Loc.T("sci.main") : "")))), 14, Ui.Ink));
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.dirs", string.Join(" · ", ScienceMapLogic.Cap(ov.Parts.Select(p => p.Tag + (p.Main ? " " + Loc.T("sci.main") : "")), ScienceMapLogic.NodeDirsShown))), 14, Ui.Ink));
         bool fresh = sci.Node == num;
         int[] order = fresh ? ScienceMapLogic.FitOrder(sci.Fit) : Array.Empty<int>();
         int heldBy = -1;
@@ -203,6 +281,7 @@ public sealed partial class TechTree
         var can = ScienceMapLogic.CanAssign(_state[i] == St.Known, _state[i] == St.Frontier, missing, heldBy, views, order, out int target);
         var assign = Act("sci.assign", () => { if (target >= 0) Send(new AssignNode(Player, target, num), new AssignNode(Player, target, num, true)); }, can.Enabled && fresh, true);
         _inset.AddChild(assign);
+        _shotAssignEnabled = can.Enabled && fresh; _shotReason = can.Enabled ? "" : Reason(can, nodes);
         if (!can.Enabled) _inset.AddChild(Ui.Wrap(Reason(can, nodes), 16, Ui.Ink));
         // The institutes against the node.
         if (fresh && order.Length > 0)
@@ -245,7 +324,39 @@ public sealed partial class TechTree
         foreach (var g in unmet) _inset.AddChild(Ui.Wrap("✗ " + string.Join(" | ", g.Select(m => Names.Node(nodes.Id[m]))), 14, Ui.Ink));
         var dep = _dep[i].OrderBy(x => nodes.Number[x]).Take(6).ToList();
         if (dep.Count > 0) { Sec("sci.opens"); foreach (int x in dep) _inset.AddChild(Ui.Wrap((_state[x] == St.Known ? "● " : _state[x] == St.Frontier ? "◐ " : "○ ") + Names.Node(nodes.Id[x]), 14, Ui.Ink)); }
+        double priceB = fresh && rows.Length > 0 ? sci.Focus[sci.Fit.ToList().FindIndex(f => f.Slot == quoteSlot)][0].Price.ToDouble() : -1;
+        if (_cmpA >= 0 && _cmpA != i) BuildCompare(sci, i, priceB, rows.Length > 0 ? rows[0].Months : -1);
+        else if (_cmpA == i) { _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.pick"), 14, Ui.Ink2)); _inset.AddChild(Act("sci.cmp.close", () => { _cmpA = -1; _insetDirty = true; AskScience(); })); }
+        else _inset.AddChild(Act("sci.cmp.start", () => { _cmpA = i; _insetDirty = true; AskScience(); }));
         _inset.AddChild(Act(_goalNum == num ? "sci.goal.clear" : "sci.goal.set", () => SetGoal(_goalNum == num ? 0 : num)));
+    }
+
+    // «Compare nodes» (spec §4): A is the marked node, Б the selected one; the last line is the difference of two numbers of the same quotes.
+    void BuildCompare(ScienceSnap sci, int b, double priceB, int monthsB)
+    {
+        var nodes = _host.Data.Nodes; int a = _cmpA;
+        Sec("sci.cmp");
+        var rowsA = ScienceMapLogic.FocusRows(sci.Compare == nodes.Number[a] ? sci.CompareQuote : default);
+        bool haveA = rowsA.Length > 0, haveB = priceB >= 0 && monthsB >= 0;
+        double priceA = haveA ? sci.CompareQuote[0].Price.ToDouble() : -1;
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.names", Names.Node(nodes.Id[a]), Names.Node(nodes.Id[b])), 14, Ui.Ink));
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.row", Loc.T("sci.cmp.price"), haveA ? Units(priceA) : "—", haveB ? Units(priceB) : "—"), 14, Ui.Ink));
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.row", Loc.T("sci.cmp.time"), haveA ? Mo(rowsA[0].Months) : "—", haveB ? Mo(monthsB) : "—"), 14, Ui.Ink));
+        string MilOf(int r) => ScienceMapLogic.MilKey(nodes.MilValue[r]) is { } k ? Loc.T(k) : "—";
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.row", Loc.T("sci.cmp.mil"), MilOf(a), MilOf(b)), 14, Ui.Ink));
+        string Tags(int r) => string.Join(" ", ScienceMapLogic.Cap(ScienceMapLogic.Overlap(nodes, r, default).Parts.Select(p => p.Tag), ScienceMapLogic.NodeDirsShown));
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.row", Loc.T("sci.cmp.dirs"), Tags(a), Tags(b)), 14, Ui.Ink));
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.cmp.row", Loc.T("sci.cmp.state"), StateWord(a), StateWord(b)), 14, Ui.Ink));
+        if (haveA && haveB)
+        {
+            var c = ScienceMapLogic.Compare(priceA, rowsA[0].Months, priceB, monthsB);
+            string p = c.PriceWinner == 0 ? Loc.T("sci.cmp.same.price") : Loc.T(c.PriceWinner == 1 ? "sci.cmp.cheaper.a" : "sci.cmp.cheaper.b", Units(c.PriceDiff));
+            string t = c.MonthsWinner == 0 ? Loc.T("sci.cmp.same.time") : Loc.T(c.MonthsWinner == 1 ? "sci.cmp.faster.a" : "sci.cmp.faster.b", Mo(c.MonthsDiff));
+            _inset.AddChild(Ui.Wrap(p + " · " + t, 14, Ui.Ink));
+        }
+        else _inset.AddChild(Ui.Wrap(Loc.T("sci.nodata"), 14, Ui.Ink2));
+        _inset.AddChild(Act("sci.cmp.swap", () => { int old = _cmpA; _cmpA = _selected; Select(old); }));
+        _inset.AddChild(Act("sci.cmp.close", () => { _cmpA = -1; _insetDirty = true; AskScience(); }));
     }
 
     string Reason(AssignState a, NodeTable nodes) => a.Why switch
@@ -291,6 +402,7 @@ public sealed partial class TechTree
         Sec("sci.queue");
         _inset.AddChild(Ui.Wrap(Loc.T("sci.strip.queue", v.Queue.IsDefault ? 0 : v.Queue.Length, ScienceMapLogic.QueueMax), 14, Ui.Ink2));
         int[] q = v.Queue.IsDefault ? Array.Empty<int>() : v.Queue.ToArray();
+        _shotQueueRows = q.Length;
         for (int k = 0; k < q.Length; k++)
         {
             int idx = k, node = q[k];
@@ -301,10 +413,11 @@ public sealed partial class TechTree
             var up = Act("sci.up", () => { var n = ScienceMapLogic.Move(q, idx, -1); if (n != null) Send(new ReorderQueue(Player, v.Slot, [.. n])); }, k > 0);
             var dn = Act("sci.down", () => { var n = ScienceMapLogic.Move(q, idx, 1); if (n != null) Send(new ReorderQueue(Player, v.Slot, [.. n])); }, k < q.Length - 1);
             var rm = Act("sci.remove", () => Send(new Unassign(Player, v.Slot, node)));
+            foreach (var kb in new Control[] { up, dn, rm }) AltMove(kb, () => { var n = ScienceMapLogic.Move(q, idx, -1); if (n != null) Send(new ReorderQueue(Player, v.Slot, [.. n])); }, () => { var n = ScienceMapLogic.Move(q, idx, 1); if (n != null) Send(new ReorderQueue(Player, v.Slot, [.. n])); });
             row.AddChild(up); row.AddChild(dn); row.AddChild(rm);
             _inset.AddChild(row);
         }
-        _inset.AddChild(Ui.Wrap(Loc.T("sci.queue.note"), 14, Ui.Ink3));
+        _inset.AddChild(Ui.Wrap(Loc.T("sci.queue.note") + " " + Loc.T("sci.queue.keys"), 14, Ui.Ink3));
     }
 
     // ---- path to goal ----
@@ -340,7 +453,7 @@ public sealed partial class TechTree
         var nodes = _host.Data.Nodes;
         _inset.AddChild(new HSeparator());
         _inset.AddChild(Ui.Wrap(Loc.T("sci.plan.note"), 14, Ui.Ink2));
-        var groups = ScienceMapLogic.PlanGroups(_draft, sci.Path);
+        var groups = ScienceMapLogic.PlanGroups(_draft, sci.Path, sci.PathFit);
         var standing = views.Where(v => v.Standing).Select(v => v.Slot).ToArray();
         foreach (var (slot, lines, months, price) in groups)
         {

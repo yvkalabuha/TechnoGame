@@ -142,8 +142,32 @@ public static class ScienceMapLogic
     /// <summary>One line of the layout the player is asked to confirm.</summary>
     public readonly record struct PlanLine(int Node, int Number, int Months, double Price, bool WaitsForPrevious);
 
-    /// <summary>The suggested plan as groups per institute with their totals; a line waits when its node needs a node earlier in the path.</summary>
-    public static List<(int Slot, List<PlanLine> Lines, int Months, double Price)> PlanGroups(ImmutableArray<QueuePlan> plan, PathView path)
+    /// <summary>Most direction tags shown: four on a node card (the data gives 2..4 per node), three on a strip card.</summary>
+    public const int NodeDirsShown = 4, StripDirsShown = 3;
+
+    /// <summary>The first <paramref name="max"/> items of a list of tags; the rest are dropped, never squeezed.</summary>
+    public static List<T> Cap<T>(IEnumerable<T> items, int max)
+    {
+        var r = new List<T>(max);
+        foreach (var x in items) { if (r.Count >= max) break; r.Add(x); }
+        return r;
+    }
+
+    /// <summary>Whole months of an institute's own fit for a node (FitInstitutes, the assigned institute), or −1 when the fit has no such institute.</summary>
+    public static int MonthsAt(ImmutableArray<InstituteFitView> fit, int slot)
+    {
+        if (!fit.IsDefault) foreach (var f in fit) if (f.Slot == slot && f.Standing) return Ceil(f.Months);
+        return -1;
+    }
+
+    /// <summary>Comparison of two nodes A and B (price and months from the same quotes): who is cheaper and quicker and by how much; winner 0 = equal.</summary>
+    public readonly record struct Comparison(int PriceWinner, double PriceDiff, int MonthsWinner, int MonthsDiff);
+
+    public static Comparison Compare(double priceA, int monthsA, double priceB, int monthsB) =>
+        new(priceA < priceB ? 1 : priceB < priceA ? 2 : 0, Math.Abs(priceA - priceB), monthsA < monthsB ? 1 : monthsB < monthsA ? 2 : 0, Math.Abs(monthsA - monthsB));
+
+    /// <summary>The suggested plan as groups per institute with their totals; a line waits when its node needs a node earlier in the path. The months of a line are those of the institute it stands in (<paramref name="pathFit"/>, aligned with the path nodes), else those of the best one.</summary>
+    public static List<(int Slot, List<PlanLine> Lines, int Months, double Price)> PlanGroups(ImmutableArray<QueuePlan> plan, PathView path, ImmutableArray<ImmutableArray<InstituteFitView>> pathFit = default)
     {
         var res = new List<(int, List<PlanLine>, int, double)>();
         foreach (var q in plan)
@@ -155,7 +179,8 @@ public static class ScienceMapLogic
                 for (int i = 0; i < path.Nodes.Length; i++) if (path.Nodes[i].Node == node) at = i;
                 if (at < 0) continue;
                 var pn = path.Nodes[at];
-                int m = Ceil(pn.Months);
+                int own = !pathFit.IsDefault && at < pathFit.Length ? MonthsAt(pathFit[at], q.Slot) : -1;
+                int m = own >= 0 ? own : Ceil(pn.Months);
                 lines.Add(new PlanLine(node, at + 1, m, pn.Price.ToDouble(), !pn.InFrontier || pos > 1));
                 months += m; price += pn.Price.ToDouble(); pos++;
             }

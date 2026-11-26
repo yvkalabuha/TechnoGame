@@ -243,7 +243,7 @@ public sealed partial class Main : Node3D
 
     void BuildClient(CanvasLayer layer, int seed, GameData data)
     {
-        _host = new SimHost(seed, data, _powerArg);
+        _host = new SimHost(seed, data, _powerArg) { AutoFillFreeInstitutes = _shots || _bench || _mapFrames };   // unattended runs have no player to choose (O-099, O-103)
         _host.Start();
         _loading = Ui.Lbl("ui.loading", 18);
         _loading.Position = new Vector2(20, 60);
@@ -931,7 +931,7 @@ public sealed partial class Main : Node3D
     // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
-    int _capRow;
+    int _capRow, _noticeBefore;
     Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
 
@@ -1015,6 +1015,100 @@ public sealed partial class Main : Node3D
                     _shotLog += $"finance level 0 keyboard: Esc closed the panel and the focus is on the Finance rail button {_rail.HasAreaFocus(AreaId.Finance)}, pause restored {_host.Speed == speedBefore}: {(back ? "PASS" : "FAIL")}\n";
                     if (!back) InstFail("focus did not return to the rail button");
                     InstrumentLogic.OrganLevel = levelBefore; GetViewport().GuiReleaseFocus();
+                });
+            }
+            // Tech map stage 1 (TASK-0192): the strip, the card, the queue, the path and the layout on the live session of the player; each frame comes with an assertion on what the session put on screen.
+            if (scale == 100 && lang == "ru")
+            {
+                int sciRow = -1; int[] extra = Array.Empty<int>();
+                void SciFail(string what) { _shotLog += $"tech map stage 1 {sfx}: FAIL {what}\n"; InstFail($"tech map stage 1 {sfx}: {what}"); }
+                void SciPass(string what) => _shotLog += $"tech map stage 1 {sfx}: PASS {what}\n";
+                Q(0.4, () => { _tree.Player = _player; _host.AskScience(0, 0); _tree.ShowFor(_player, 0); });
+                Q(1.2, () =>
+                {
+                    if (!_tree.ShotSlotsUi) { SciFail("the institute strip is not shown: the player has no slot science in the live view"); return; }
+                    int inst = _host.Snap.View.Actors[_player].Institutes.Length, cards = _tree.ShotStripCards;
+                    if (cards != Math.Min(6, inst)) { SciFail($"the strip shows {cards} cards for {inst} institutes"); return; }
+                    SciPass($"strip shows {cards} of {inst} institutes");
+                    _tree.Select(-1); SaveShot($"tech_s1_overview{sfx}.png", null, true);
+                    sciRow = _tree.ShotRowByState(1); if (sciRow < 0) { SciFail("no frontier node"); return; }
+                    _tree.Select(sciRow);
+                });
+                Q(1.2, () =>
+                {
+                    if (sciRow < 0) return;
+                    if (_host.Snap.Science.Node != _host.Data.Nodes.Number[sciRow]) { SciFail("the session answered for another node than the selected one"); return; }
+                    SciPass($"card of the node: assign enabled {_tree.ShotAssignEnabled}, reason '{_tree.ShotReason}', fit rows {_host.Snap.Science.Fit.Length}");
+                    SaveShot($"tech_s1_card{sfx}.png", null, true);
+                    int off = _tree.ShotRowByState(2); if (off < 0) off = _tree.ShotRowByState(0);
+                    if (off < 0) { SciFail("no node to show the disabled button"); return; }
+                    _tree.Select(off);
+                });
+                Q(1.2, () =>
+                {
+                    if (_tree.ShotAssignEnabled || string.IsNullOrEmpty(_tree.ShotReason)) { SciFail($"a node that cannot be assigned shows the button enabled {_tree.ShotAssignEnabled} or no reason '{_tree.ShotReason}'"); return; }
+                    SciPass($"the button is off with the reason '{_tree.ShotReason}'");
+                    SaveShot($"tech_s1_card_disabled{sfx}.png", null, true);
+                    _tree.Select(-1);
+                    // A queue: more nodes than the institutes can take at once wait in the list of slot 0.
+                    extra = _tree.ShotFreeFrontier(8);
+                    foreach (int n in extra) _host.Submit(new Singularity.Core.Commands.AssignNode(_player, 0, n, true), "cmd.sci");
+                });
+                Q(2.0, () =>
+                {
+                    var v0 = _host.Snap.View.Actors[_player].Institutes;
+                    int slot = -1; for (int k = 0; k < v0.Length && slot < 0; k++) if (!v0[k].Queue.IsDefault && v0[k].Queue.Length > 0) slot = k;
+                    if (slot < 0) { SciFail($"no institute has a queue after assigning {extra.Length} nodes"); return; }
+                    _tree.ShotSelectInstitute(slot);
+                });
+                Q(0.8, () =>
+                {
+                    int slot = _tree.ShotSelectedInstitute; var q = _host.Snap.View.Actors[_player].Institutes[slot].Queue;
+                    if (_tree.ShotQueueRows != q.Length) { SciFail($"the queue panel shows {_tree.ShotQueueRows} rows, the view has {q.Length}"); return; }
+                    SciPass($"queue panel shows the {q.Length} queued nodes of institute {slot + 1}");
+                    SaveShot($"tech_s1_queue{sfx}.png", null, true);
+                    int g = _tree.ShotGoalRow(); if (g < 0) { SciFail("no unknown product node to take as a goal"); return; }
+                    _tree.Select(-1); _tree.ShotSetGoal(g);
+                });
+                Q(1.5, () =>
+                {
+                    var p = _host.Snap.Science.Path;
+                    if (p == null || p.Nodes.Length == 0) { SciFail("the session gave no path to the goal"); return; }
+                    if (_tree.ShotPathSquares != p.Nodes.Length) { SciFail($"the map shows {_tree.ShotPathSquares} numbered squares for {p.Nodes.Length} path nodes"); return; }
+                    SciPass($"path of {p.Nodes.Length} nodes numbered on the map, plan of {_host.Snap.Science.Plan.Length} institutes");
+                    SaveShot($"tech_s1_path{sfx}.png", null, true);
+                    _tree.ShotOpenPlan();
+                });
+                Q(1.0, () =>
+                {
+                    if (!_tree.ShotPlanOpen || _tree.ShotPlanLines == 0) { SciFail("the layout sheet did not open with lines"); return; }
+                    SciPass($"layout sheet with {_tree.ShotPlanLines} lines");
+                    SaveShot($"tech_s1_plan{sfx}.png", null, true);
+                    _tree.ShotApplyPlan();
+                });
+                Q(1.5, () =>
+                {
+                    // The 60 % refusal comes only when the layout really moves the coverage from 60 % or more to less; the frame is taken only then.
+                    if (!_tree.ShotConfirmShown) { _shotLog += $"tech map stage 1 {sfx}: tech_s1_confirm60 not taken: the layout did not cross 60 % in this state (the session accepted it)\n"; return; }
+                    SciPass("confirmation of a start the money does not cover");
+                    SaveShot($"tech_s1_confirm60{sfx}.png", null, true);
+                });
+                Q(0.4, () =>
+                {
+                    // The notice: free an institute for real (unassign its work, the adviser fill is off) and let a month pass; the banner shows only if the session raised the notice.
+                    _host.AutoFillFreeInstitutes = false; int before = _host.Snap.Science.NoticeSeq;
+                    var v0 = _host.Snap.View.Actors[_player].Institutes; int slot = -1; for (int k = 0; k < v0.Length && slot < 0; k++) if (v0[k].Active > 0) slot = k;
+                    if (slot >= 0) _host.Submit(new Singularity.Core.Commands.Unassign(_player, slot, v0[slot].Active), "cmd.sci");
+                    _host.StepTicks(70);
+                    _noticeBefore = before;
+                });
+                Q(1.5, () =>
+                {
+                    _host.AutoFillFreeInstitutes = true;
+                    if (_host.Snap.Science.NoticeSeq == _noticeBefore || !_tree.ShotNoticeShown) { _shotLog += $"tech map stage 1 {sfx}: tech_s1_notice not taken: the session raised no notice (yearly rule or 25 s throttle)\n"; _tree.ShotClearNotice(); _tree.Visible = false; return; }
+                    SciPass("the free-institute notice paused the game and shows its banner");
+                    SaveShot($"tech_s1_notice{sfx}.png", null, true);
+                    _tree.ShotClearNotice(); _tree.Select(-1); _tree.ShotSetGoal(-1); _tree.Visible = false;
                 });
             }
             // The goal statement with the legend flag left open in the chart view: the hidden sheet must reserve no space and the first Esc must close the tree (category D).
@@ -1321,7 +1415,7 @@ public sealed partial class Main : Node3D
                 _shotT = 0; break;
             case 145 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveFirst:   // the panel has refreshed for this power
             {
-                int links = LiveResearch(_liveFirst), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
+                int links = LiveResearch(_liveFirst), flasks = _areaPanel.ShotFlaskCount, want = _areaPanel.ShotSciSummaryShown ? 0 : Math.Min(links, 3);   // the player's panel shows the one-line summary with the slot model (O-103)
                 _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, research in progress {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
                 if (links == 0) { InstFail("live science check failed: the view lost its research in progress before the check"); break; }
                 if (flasks != want) { InstFail($"live science check failed: the view has {links} researches in progress, the panel shows {flasks} flasks, expected {want}"); break; }
@@ -1363,7 +1457,7 @@ public sealed partial class Main : Node3D
                 OpenArea(AreaId.Science); _host.WhyActor = _visA; _areaPanel.ShowActor(_visA); _shotStep = 152; _shotT = 0; break;
             case 152 when _shotT >= 0.4 && _host.Snap.WhyActor == _visA:
             {
-                int inView = LiveResearch(_visA), shown = _areaPanel.ShotFlaskCount, want = Math.Min(inView, 3);
+                int inView = LiveResearch(_visA), shown = _areaPanel.ShotFlaskCount, want = _areaPanel.ShotSciSummaryShown ? 0 : Math.Min(inView, 3);
                 _shotLog += $"live science visible: {_host.Layout.ActorIds[_visA]} month {_liveMonths}, research {inView}, flasks on screen {shown}\n";
                 if (shown != want) InstFail($"live science visibility check failed: {_host.Layout.ActorIds[_visA]} at month {_liveMonths} has {inView} researches in the view and {shown} flasks on screen, expected {want}");
                 else if (_liveVisible != null && inView > 0) _liveVisible[_visA]++;

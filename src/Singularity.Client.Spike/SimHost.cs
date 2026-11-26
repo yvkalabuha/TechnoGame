@@ -32,10 +32,11 @@ public sealed record HostSnapshot(
 
 /// <summary>What the tech map asks of the session for the node and the goal it shows (TASK-0192): reads of the month of the view, made on the simulation thread.
 /// <paramref name="NoticeSeq"/> counts the pauses for «an institute is free» (S12); the UI shows the banner when it changes.</summary>
-public sealed record ScienceSnap(int Node, int Goal, ImmutableArray<InstituteFitView> Fit, ImmutableArray<ImmutableArray<FocusQuoteView>> Focus, PathView Path, ImmutableArray<QueuePlan> Plan, long FreeNoticeMonth, int NoticeSeq);
+public sealed record ScienceSnap(int Node, int Goal, ImmutableArray<InstituteFitView> Fit, ImmutableArray<ImmutableArray<FocusQuoteView>> Focus, PathView Path, ImmutableArray<QueuePlan> Plan, long FreeNoticeMonth, int NoticeSeq,
+    ImmutableArray<ImmutableArray<InstituteFitView>> PathFit = default, int Compare = 0, ImmutableArray<FocusQuoteView> CompareQuote = default);
 
 /// <summary>The node (number, 0 = none) and the goal (number, 0 = none) the tech map shows.</summary>
-public readonly record struct ScienceAsk(int Node, int Goal);
+public readonly record struct ScienceAsk(int Node, int Goal, int Compare = 0);
 
 /// <summary>
 /// Runs SliceSession on a background thread. The UI thread never touches the session: it reads <see cref="Snap"/>, and sends
@@ -95,7 +96,7 @@ public sealed class SimHost : IDisposable
     /// <summary>The adviser fills the free institutes of the player (the old behaviour, O-099): off in play, where the player chooses; the unattended runs of the shot script switch it on.</summary>
     public volatile bool AutoFillFreeInstitutes;
     /// <summary>Asks the session for the fit, focus quotes, path and layout of a node and a goal; answered in the next snapshot.</summary>
-    public void AskScience(int node, int goal) { lock (_askLock) _ask = new ScienceAsk(node, goal); }
+    public void AskScience(int node, int goal, int compare = 0) { lock (_askLock) _ask = new ScienceAsk(node, goal, compare); }
     readonly object _askLock = new();
     ScienceAsk CurrentAsk() { lock (_askLock) return _ask; }
     public int WhyActor { get => Volatile.Read(ref _whyActor); set { Volatile.Write(ref _whyActor, value); } }
@@ -266,8 +267,20 @@ public sealed class SimHost : IDisposable
                 var fit = ask.Node > 0 ? _session.FitInstitutes(PlayerActor, ask.Node) : ImmutableArray<InstituteFitView>.Empty;
                 var focus = ImmutableArray.CreateBuilder<ImmutableArray<FocusQuoteView>>(fit.Length);
                 foreach (var f in fit) focus.Add(f.Standing ? _session.FocusQuote(PlayerActor, ask.Node, f.Slot) : ImmutableArray<FocusQuoteView>.Empty);
-                sci = new ScienceSnap(ask.Node, ask.Goal, fit, focus.MoveToImmutable(), ask.Goal > 0 ? _session.PathToGoal(PlayerActor, ask.Goal) : null,
-                    ask.Goal > 0 ? _session.SuggestQueues(PlayerActor, ask.Goal) : ImmutableArray<QueuePlan>.Empty, slotView.FreeNoticeMonth, _noticeSeq);
+                PathView path = ask.Goal > 0 ? _session.PathToGoal(PlayerActor, ask.Goal) : null;
+                var plan = ask.Goal > 0 ? _session.SuggestQueues(PlayerActor, ask.Goal) : ImmutableArray<QueuePlan>.Empty;
+                // The months of each path node at every institute: a line of the layout shows the months of the institute it stands in.
+                var pathFit = ImmutableArray.CreateBuilder<ImmutableArray<InstituteFitView>>();
+                if (path != null && !plan.IsDefaultOrEmpty) foreach (var pn in path.Nodes) pathFit.Add(_session.FitInstitutes(PlayerActor, pn.Node));
+                // The node to compare with: the quote of its best institute at no focus.
+                ImmutableArray<FocusQuoteView> cmpQuote = default;
+                if (ask.Compare > 0)
+                {
+                    var cf = _session.FitInstitutes(PlayerActor, ask.Compare);
+                    int[] order = ScienceMapLogic.FitOrder(cf);
+                    if (order.Length > 0) cmpQuote = _session.FocusQuote(PlayerActor, ask.Compare, order[0]);
+                }
+                sci = new ScienceSnap(ask.Node, ask.Goal, fit, focus.MoveToImmutable(), path, plan, slotView.FreeNoticeMonth, _noticeSeq, pathFit.ToImmutable(), ask.Compare, cmpQuote);
             }
             catch (Exception e) { _jobError = "science: " + e.Message; }
         }

@@ -544,3 +544,24 @@ sci.plan.waits,waits,ждёт
 sci.plan.move,To another institute,В другой институт
 sci.plan.apply,Apply,Применить
 sci.plan.cancel,Cancel,Отмена
+sci.summary,"Science: {0} institutes, {1} free. Research is run from the institute strip of the tech map.","Наука: институтов {0}, свободно {1}. Исследования ведутся в полосе институтов на карте технологий."
+sci.queue.keys,Alt+Up / Alt+Down moves an entry.,Alt+↑ / Alt+↓ двигает строку.
+sci.nodata.short,no data,нет данных
+sci.cmp,COMPARE NODES,СРАВНЕНИЕ УЗЛОВ
+sci.cmp.start,Compare with another node,Сравнить с другим узлом
+sci.cmp.pick,Pick the second node on the map (Shift+Enter on a node).,Выберите второй узел на карте (Shift+Enter на узле).
+sci.cmp.names,A: {0} · B: {1},А: {0} · Б: {1}
+sci.cmp.row,{0}: A {1} · B {2},{0}: А {1} · Б {2}
+sci.cmp.price,Price,Цена
+sci.cmp.time,Time,Срок
+sci.cmp.mil,Military value,Военная ценность
+sci.cmp.dirs,Directions,Направления
+sci.cmp.state,State,Состояние
+sci.cmp.cheaper.a,A is cheaper by {0},А дешевле на {0}
+sci.cmp.cheaper.b,B is cheaper by {0},Б дешевле на {0}
+sci.cmp.faster.a,A is quicker by {0},А быстрее на {0}
+sci.cmp.faster.b,B is quicker by {0},Б быстрее на {0}
+sci.cmp.same.price,the same price,цена одинаковая
+sci.cmp.same.time,the same time,срок одинаковый
+sci.cmp.swap,Swap A and B,Поменять местами
+sci.cmp.close,Close the comparison,Закрыть сравнение

@@ -114,4 +114,31 @@ public class ScienceMapLogicTests
         Assert.Null(ScienceMapLogic.MilKey(MilValue.None));
         Assert.Equal("mil.direct", ScienceMapLogic.MilKey(MilValue.Direct));
     }
+
+    [Fact]
+    public void Compare_NamesTheCheaperAndTheQuickerFromTheSameNumbers()
+    {
+        var c = ScienceMapLogic.Compare(48, 14, 36, 16);
+        Assert.Equal((2, 12.0, 1, 2), (c.PriceWinner, c.PriceDiff, c.MonthsWinner, c.MonthsDiff));
+        Assert.Equal(0, ScienceMapLogic.Compare(5, 3, 5, 3).PriceWinner);
+    }
+
+    [Fact]
+    public void Cap_DropsTheTagsBeyondTheLimit()
+    {
+        Assert.Equal(["A", "B", "C"], ScienceMapLogic.Cap(["A", "B", "C", "D", "E"], ScienceMapLogic.StripDirsShown));
+        Assert.Equal(["A"], ScienceMapLogic.Cap(["A"], 4));
+    }
+
+    [Fact]
+    public void PlanGroups_TakeTheMonthsOfTheInstituteTheNodeStandsIn()
+    {
+        Fx6 F(double v) => Fx6.FromRaw((long)(v * Fx6.Scale));
+        var path = new PathView([new PathNodeView(10, F(8), F(40), true)], F(8), F(8), 10);
+        InstituteFitView Fit(int slot, double months) => new(slot, "i" + slot, true, Fx6.One, Fx6.One, F(months), 0, false);
+        ImmutableArray<ImmutableArray<InstituteFitView>> fits = [[Fit(0, 8), Fit(2, 11.2)]];
+        Assert.Equal(12, ScienceMapLogic.PlanGroups([new QueuePlan(2, [10])], path, fits)[0].Months);   // slot 2's own months, not the best institute's 8
+        Assert.Equal(8, ScienceMapLogic.PlanGroups([new QueuePlan(2, [10])], path)[0].Months);          // no fit: the best institute's months
+        Assert.Equal(-1, ScienceMapLogic.MonthsAt(fits[0], 5));
+    }
 }

@@ -314,3 +314,30 @@ nodeshort.prn.programmable_signal_processing,Programmable signal processing,Об
 nodeshort.cmp.high_modulus_fibre,High-modulus fibre,Волокно
 nodeshort.prn.rcs_computational_prediction,Computational RCS prediction,Расчёт ЭПР
 nodeshort.eng.integrated_avionics_architecture,Integrated avionics architecture,Авионика
+inst.usa_naca,NACA,НАКА
+inst.usa_wright_field,Wright Field,Райт-Филд
+inst.usa_ge_research,GE Research,Исследовательский центр GE
+inst.usa_westinghouse_agt,Westinghouse AGT,Westinghouse (газовые турбины)
+inst.usa_nrl,Naval Research Laboratory,Морская исследовательская лаборатория
+inst.usa_galcit_jpl,GALCIT / JPL,GALCIT / JPL
+inst.gbr_rae,RAE,Королевский авиационный институт (RAE)
+inst.gbr_power_jets_ngte,Power Jets / NGTE,Power Jets / NGTE
+inst.gbr_npl,NPL,Национальная физическая лаборатория
+inst.sun_tsagi,TsAGI,ЦАГИ
+inst.sun_ciam,CIAM,ЦИАМ
+inst.sun_viam,VIAM,ВИАМ
+inst.sun_rnii,RNII,РНИИ
+inst.sun_lii,LII,ЛИИ
+inst.sun_icp,Institute of Chemical Physics,Институт химической физики
+inst.fra_stae,STAé,STAé
+inst.fra_cnrs,CNRS,CNRS
+inst.fra_cea,CEA,CEA
+inst.swe_ffa,FFA,FFA
+inst.swe_saab,Saab,Saab
+inst.swe_foa,FOA,FOA
+inst.swe_flygmotor,Flygmotor,Flygmotor
+inst.fra_onera,ONERA,ONERA
+inst.sun_nii88,NII-88,НИИ-88
+inst.gbr_rre,RRE,RRE
+inst.usa_darpa,DARPA,DARPA
+inst.fra_cnes,CNES,CNES

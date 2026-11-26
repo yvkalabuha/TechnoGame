@@ -181,7 +181,7 @@ public sealed partial class TechTree : Control
 
     public void ShowFor(int actor, int mode)
     {
-        _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; _kb = -1; _kbActive = false; CloseMenu(); Visible = true; CallDeferred(Control.MethodName.GrabFocus);   // Tab and the arrows work at once
+        _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; _cmpA = -1; _kb = -1; _kbActive = false; CloseMenu(); Visible = true; CallDeferred(Control.MethodName.GrabFocus);   // Tab and the arrows work at once
     }
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
     /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
@@ -220,6 +220,7 @@ public sealed partial class TechTree : Control
             _insetDirty = true; _drawnTick = -1;
         }
         UpdateStrip(s);
+        if (_state != null) SyncPathRows(s);
         if (_insetDirty || !ReferenceEquals(s.Last, _lastCmd) || (SlotsUi && s.Science.Node != _lastSciNode))
         {
             _insetDirty = false; _lastCmd = s.Last; _lastSciNode = s.Science?.Node ?? 0;
@@ -543,6 +544,7 @@ public sealed partial class TechTree : Control
         // Last layer: the "now" plate and the decade years, over links and hatch, whole or not at all.
         DrawNowLabel();
         DrawYearPlates();
+        DrawPathNumbers();
         DrawKeyFocus();
     }
 
@@ -1532,6 +1534,7 @@ public sealed partial class TechTree : Control
                 break;
             case Key.Enter or Key.KpEnter:
                 if (!KbFocusLive) { _kbActive = false; Redraw(); return false; }   // the focus left the view: Enter does not act on a node nobody can see
+                if (shift && SlotsUi) { CompareWith(_kb); return true; }   // Shift+Enter: the selected node becomes A, this one B
                 Select(_kb); return true;
             case Key.Equal or Key.Plus or Key.KpAdd: KeyZoom(1); return true;
             case Key.Minus or Key.KpSubtract: KeyZoom(-1); return true;

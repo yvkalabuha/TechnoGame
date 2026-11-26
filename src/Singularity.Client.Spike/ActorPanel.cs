@@ -223,10 +223,11 @@ public sealed partial class ActorPanel : PanelContainer
             _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]);
             _flaskSciRow.AddChild(_sciCell[i]);
         }
-        var sciCap = Ui.Wrap("flask.sci.cap", 14, Ui.Ink2);
+        _sciCap = Ui.Wrap("flask.sci.cap", 14, Ui.Ink2);
+        _sciSummary.AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciSummary.Visible = false;
         _sciNone.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _sciThrNote.AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciThrNote.Visible = false;
-        _sciBox.AddChild(sciCap); _sciBox.AddChild(_flaskSciRow); _sciBox.AddChild(_sciThrNote); _sciBox.AddChild(_sciNone);
+        _sciBox.AddChild(_sciCap); _sciBox.AddChild(_sciSummary); _sciBox.AddChild(_flaskSciRow); _sciBox.AddChild(_sciThrNote); _sciBox.AddChild(_sciNone);
         _secWhy.AddChild(_sciBox);
         _secWhy.AddChild(_why);
         _prodLater.Visible = _finLater.Visible = _treeBtn.Visible = areaMode;
@@ -280,6 +281,11 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>Screenshot run: the narrowest width the panel can take with the scroll bar present (content, insets, bar), in du.</summary>
     public float ShotMinWidthWithBar() => _root.GetCombinedMinimumSize().X + 24 + 12 + _scroll.GetVScrollBar().GetCombinedMinimumSize().X;
     readonly Label _sciNone = Ui.Lbl("flask.sci.none", 14, Ui.Ink2);
+    // With the slot science model the player's research is run from the institute strip of the tech map (TASK-0192, O-103): one line here points to it.
+    readonly Label _sciSummary = Ui.Lbl("", 14, Ui.Ink);
+    Control _sciCap;
+    /// <summary>The Science block shows the one-line summary instead of the flasks (run-time assertions).</summary>
+    public bool ShotSciSummaryShown => _sciSummary.IsVisibleInTree();
 
     /// <summary>Screenshot run: the Science flasks show these (have, need) research links instead of the Session chain (the shot scenario has none); null clears it.</summary>
     public void ShotResearch(IReadOnlyList<ResearchView> research) { _shotResearch = research; _dirty = true; }
@@ -490,14 +496,20 @@ public sealed partial class ActorPanel : PanelContainer
     void FillFlasks(ActorView a)
     {
         int n = 0;
-        IReadOnlyList<ResearchView> research = _shotResearch ?? (a.Research.IsDefault ? Array.Empty<ResearchView>() : a.Research);
+        bool summary = !Foreign && a.Slots != null && _shotResearch == null;
+        _sciSummary.Visible = summary; _sciCap.Visible = !summary;
+        if (summary)
+        {
+            _sciSummary.Text = Loc.T("sci.summary", a.Slots!.InstituteCount, a.Slots.FreeInstituteCount);
+        }
+        IReadOnlyList<ResearchView> research = _shotResearch ?? (summary || a.Research.IsDefault ? Array.Empty<ResearchView>() : a.Research);
         foreach (var f in InstrumentLogic.ResearchFlasks(research, _flaskSci.Length)) SetResearchFlask(n++, f);
         for (int i = 0; i < _flaskSci.Length; i++) _sciCell[i].Visible = i < n;
         _flaskSciRow.Visible = n > 0;
         // the note names the flasks it is about, so it cannot be read as a general remark
         string thrNames = ""; for (int i = 0; i < n; i++) if (_sciThr[i]) thrNames += (thrNames == "" ? "" : ", ") + _sciFull[i];
         _sciThrNote.Visible = thrNames != ""; _sciThrNote.Text = thrNames != "" ? Loc.T("flask.sci.threshold.note", thrNames) : "";
-        _sciNone.Visible = n == 0;   // nothing in progress: say so, never an empty row
+        _sciNone.Visible = n == 0 && !summary;   // nothing in progress: say so, never an empty row
         AlloyCoverage cov = _shotAlloy ?? a.Alloy;
         // No step ran yet (or a restored snapshot): no row, never a false «enough»; the panel never hands an Unknown state to the mapper.
         InstrumentLogic.AlloyFlaskView? shown = InstrumentLogic.AlloyFlaskOrNull(cov);
