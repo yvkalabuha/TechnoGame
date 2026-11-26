@@ -1,7 +1,7 @@
 ---
 id: TASK-0200
 title: "Platform DB index in PostgreSQL: kb_db.py build/query from registry, decisions, debt, questions, errors, agent log (#590)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #590"
+review_ref: "reviewer: APPROVE 0c88cff5; codex: 2 rounds + sql removed, waived per owner #592 (DEBT-0119)"
 created: 2026-11-26
 ---
 

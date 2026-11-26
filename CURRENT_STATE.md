@@ -30,7 +30,6 @@
 - TASK-0196 [IN_PROGRESS] Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582) (ui-art-director)
 - TASK-0198 [IN_PROGRESS] Platform error catalogue: errors.yaml, errors.py add/list/stats, auto capture from land, hooks, reviewer, CI; weekly DeepSeek digest (#584) (developer)
 - TASK-0199 [IN_PROGRESS] Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589) (developer)
-- TASK-0200 [IN_PROGRESS] Platform DB index in PostgreSQL: kb_db.py build/query from registry, decisions, debt, questions, errors, agent log (#590) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0193 [REVIEW] Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990 (research-scientist)
