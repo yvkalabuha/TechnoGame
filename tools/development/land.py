@@ -113,6 +113,32 @@ def second_review(root: Path, task: str, base: str, head: str, run: bool) -> tup
     return True, line
 
 
+STEPS: dict[str, float] = {}  # seconds per step of this landing, for landings.jsonl
+LAND_INFO: dict[str, str] = {}
+
+
+def record_landing(code: int, total_s: float) -> None:
+    """Append one line per landing run to .claude/.state/landings.jsonl (metrics.py reads it). Never fails."""
+    try:
+        root = main_worktree()
+        path = root / ".claude" / ".state" / "landings.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        branch = LAND_INFO.get("branch", "")
+        attempt = 1
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                try:
+                    attempt += json.loads(line).get("branch") == branch and bool(branch)
+                except ValueError:
+                    pass
+        rec = {"t": time.time(), "branch": branch, "task": LAND_INFO.get("task", ""), "attempt": attempt,
+               "code": code, "total_s": round(total_s, 1), "steps": {k: round(v, 1) for k, v in STEPS.items()}}
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec) + "\n")
+    except Exception:  # a journal must never change the outcome of a landing
+        pass
+
+
 def main_worktree() -> Path:
     out = subprocess.run(["git", "worktree", "list", "--porcelain"], text=True,
                          capture_output=True, check=True).stdout
@@ -147,10 +173,13 @@ def main() -> int:
             time.sleep(1)
     os.ftruncate(fd, 0)
     os.write(fd, str(os.getpid()).encode())  # information only
+    started, code = time.monotonic(), 1
     try:
-        return run()
+        code = run()
+        return code
     finally:
         os.close(fd)  # releases the lock
+        record_landing(code, time.monotonic() - started)
 
 
 def run() -> int:
@@ -166,6 +195,7 @@ def run() -> int:
     ap.add_argument("--allow-status", action="store_true",
                     help="accept status changes made on the branch (new items only)")
     args = ap.parse_args()
+    LAND_INFO.update(branch=args.branch, task=args.task or "")
 
     root = main_worktree()
     head = git("rev-parse", "--abbrev-ref", "HEAD", cwd=root).stdout.strip()
@@ -189,7 +219,9 @@ def run() -> int:
                   "or --no-second-review REASON")
             return 6
         else:
+            t_rev = time.monotonic()
             ok, note = second_review(root, args.task, mb, head_sha, run=True)
+            STEPS["review"] = time.monotonic() - t_rev
             if not ok:
                 print(f"land: second review not passed: {note}; main untouched")
                 return 6
@@ -223,7 +255,10 @@ def run() -> int:
             cmd.append("--full")
         if args.map:
             cmd.append("--map")
-        if subprocess.run(cmd, cwd=tmp).returncode != 0:
+        t_ver = time.monotonic()
+        verify_rc = subprocess.run(cmd, cwd=tmp).returncode
+        STEPS["verify"] = time.monotonic() - t_ver
+        if verify_rc != 0:
             print("land: verify failed on the merged tree, main untouched")
             return 1
         sha = git("rev-parse", "HEAD", cwd=tmp).stdout.strip()
