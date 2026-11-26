@@ -232,6 +232,33 @@ class TestApprove(Repo):
         with self.assertRaises(release.ReleaseError):
             release.cmd_approve(self.root, rc2, "#602")
 
+    def test_refuses_an_rc_older_than_the_latest_release(self):
+        old_rc = self.checked_rc()
+        self.commit("later work")
+        run(self.root, "tag", "-a", "v0.1", "-m", "r")
+        with self.assertRaisesRegex(release.ReleaseError, "not newer than v0.1"):
+            release.cmd_approve(self.root, old_rc, "#600")
+        self.assertEqual(release.release_tags(self.root), ["v0.1"])
+        new_rc = self.checked_rc()
+        self.assertEqual(release.cmd_approve(self.root, new_rc, "#601"), "v0.2")
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "permissions are not enforced for root")
+    def test_report_write_failure_changes_nothing_and_approve_can_be_retried(self):
+        rc = self.checked_rc()
+        docs = self.root / "docs" / "releases"
+        before = self.report(rc).read_text(encoding="utf-8")
+        docs.chmod(0o555)
+        try:
+            with self.assertRaisesRegex(release.ReleaseError, "nothing changed"):
+                release.cmd_approve(self.root, rc, "#600")
+        finally:
+            docs.chmod(0o755)
+        self.assertEqual(release.release_tags(self.root), [])
+        self.assertEqual(self.report(rc).read_text(encoding="utf-8"), before)
+        self.assertFalse((self.base / "rel" / "v0.1").exists())
+        self.assertEqual([p.name for p in docs.glob("*.tmp")], [])
+        self.assertEqual(release.cmd_approve(self.root, rc, "#600"), "v0.1")
+
     def test_needs_owner_ref_and_check_results(self):
         rc = self.checked_rc()
         with self.assertRaises(release.ReleaseError):
@@ -275,6 +302,14 @@ class TestDeploySafety(Repo):
         run(self.root, "tag", "-a", "v0.9", "-m", "r")
         release.cmd_release(self.root, "v0.9")
         self.assertTrue((self.base / "rel" / "v0.9" / "RELEASE").exists())
+
+    def test_run_command_of_an_exported_client_uses_its_packaged_data(self):
+        dest = Path(os.path.realpath(self.base / "rel")) / "v0.3"
+        (dest / "bin").mkdir(parents=True)
+        (dest / "bin" / "singularity").write_text("x", encoding="utf-8")
+        self.assertEqual(release.cmd_run("v0.3", ["--lang", "en"]), [str(dest / "bin" / "singularity"), "--lang", "en"])
+        (dest / "bin" / "singularity.pck").write_text("x", encoding="utf-8")
+        self.assertEqual(release.cmd_run("v0.3", []), [str(dest / "bin" / "singularity"), "--main-pack", str(dest / "bin" / "singularity.pck")])
 
     def test_run_prints_launcher_of_the_built_snapshot_and_validates(self):
         run(self.root, "tag", "-a", "v0.1", "-m", "r")
@@ -432,7 +467,11 @@ class TestPure(Repo):
         ok = [self.job(o) for o in release.OS_JOBS]
         self.assertEqual(release.ci_os_verdict(ok)[0], "PASS")
         self.assertEqual(release.ci_os_verdict(ok[:2] + [self.job("macos-latest", conclusion="failure")])[0], "FAIL")
-        self.assertEqual(release.ci_os_verdict(ok[:2])[0], "PENDING")
+        self.assertEqual(release.ci_os_verdict(ok[:2])[0], "FAIL")   # a job missing from a finished run
+        self.assertEqual(release.ci_os_verdict(ok[:2], run_completed=False)[0], "PENDING")
+        for bad in ("cancelled", "skipped", "neutral", "timed_out", None):
+            self.assertEqual(release.ci_os_verdict(ok[:2] + [self.job("macos-latest", conclusion=bad)])[0], "FAIL", bad)
+        self.assertEqual(release.ci_os_verdict(ok[:2] + [self.job("macos-latest", "in_progress", None)])[0], "PENDING")
 
     def test_pace_exit_codes_map_to_pass_warn_fail_and_no_base_is_skip(self):
         t = self.base / "ptree"
@@ -443,6 +482,21 @@ class TestPure(Repo):
             self.assertEqual(row[1], want)
             self.assertIn("--strict", row[2])
         self.assertEqual(release.pace_row(t, None)[1], "SKIP")
+
+    def test_first_release_baseline_is_the_rc_itself(self):
+        self.task(1, "a")
+        rc = release.cmd_rc(self.root, day="2026-11-26")
+        sha = release.git(self.root, "rev-parse", f"{rc}^{{commit}}")
+        self.assertTrue(release.pace_baseline_is_rc(self.root, "self", sha))
+        self.assertTrue(release.pace_baseline_is_rc(self.root, rc, sha))
+        self.assertTrue(release.pace_baseline_is_rc(self.root, sha[:10], sha))
+        self.assertFalse(release.pace_baseline_is_rc(self.root, "HEAD~1", sha))
+        self.assertFalse(release.pace_baseline_is_rc(self.root, None, sha))
+        empty = self.base / "no-pace-script"
+        empty.mkdir()
+        row = release.pace_row(empty, "self", is_rc=True)   # pace_check is not run (the script does not even exist here)
+        self.assertEqual(row[1], "PASS")
+        self.assertIn("RC itself", row[2])
 
     def test_checks_table_roundtrip_with_commit(self):
         p = self.base / "rc.md"

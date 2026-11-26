@@ -2,7 +2,7 @@
 """Release model (owner #594): release candidate -> integral check -> owner approval -> release -> rollback.
 
   python3 tools/development/release.py rc                        tag rc-YYYY-MM-DD-N on main, write docs/releases/rc-....md
-  python3 tools/development/release.py check [RC] [--pace-base SHA] [--no-ci-dispatch]
+  python3 tools/development/release.py check [RC] [--pace-base SHA|self] [--no-ci-dispatch]   (self: first release, the RC is its own pace baseline)
   python3 tools/development/release.py approve RC --owner-ref "#NNN"
   python3 tools/development/release.py release vX.N              build the client of an existing release tag into the releases folder
   python3 tools/development/release.py run vX.N [--exec] [ARGS]  print the launch command of a built release (--exec starts it)
@@ -237,19 +237,20 @@ def cmd_rc(root: Path, branch: str = MAIN, day: str | None = None) -> str:
 
 # ---------------------------------------------------------------- checks
 
-def ci_os_verdict(jobs: list[dict]) -> tuple[str, str]:
-    """Verdict of the three OS dotnet jobs of the newest full run. jobs: [{name, status, conclusion}] (gh run view)."""
+def ci_os_verdict(jobs: list[dict], run_completed: bool = True) -> tuple[str, str]:
+    """Verdict of the three OS dotnet jobs of the newest full CI run on the RC commit (gh run view).
+    PASS only when every job concluded success; failure, cancelled, skipped or a job missing from a finished run is FAIL."""
     state: dict[str, str] = {}
     for os_name in OS_JOBS:
         job = next((j for j in jobs if j.get("name", "") == f"dotnet ({os_name})"), None)
         if job is None:
-            state[os_name] = "missing"
+            state[os_name] = "missing" if run_completed else "running"
         elif job.get("status") != "completed":
             state[os_name] = "running"
         else:
             state[os_name] = "ok" if job.get("conclusion") == "success" else "failed"
     detail = ", ".join(f"{k.split('-')[0]}: {v}" for k, v in state.items())
-    if "failed" in state.values():
+    if "failed" in state.values() or (run_completed and "missing" in state.values()):
         return "FAIL", detail
     if all(v == "ok" for v in state.values()):
         return "PASS", detail
@@ -268,11 +269,12 @@ def check_ci(root: Path, tag: str, sha: str, dispatch: bool) -> tuple[str, str]:
         return "SKIP", "gh not installed"
     try:
         runs = gh_json(root, "run", "list", "--workflow", "ci.yml", "--commit", sha, "--limit", "20",
-                       "--json", "databaseId,event,status,conclusion")
-        full = sorted((r for r in runs if r["event"] in ("schedule", "workflow_dispatch")), key=lambda r: -r["databaseId"])
+                       "--json", "databaseId,event,status,conclusion,headSha")
+        full = sorted((r for r in runs if r["event"] in ("schedule", "workflow_dispatch") and r.get("headSha") == sha),
+                      key=lambda r: -r["databaseId"])
         if full:
             jobs = gh_json(root, "run", "view", str(full[0]["databaseId"]), "--json", "jobs")["jobs"]
-            return ci_os_verdict(jobs)
+            return ci_os_verdict(jobs, full[0].get("status") == "completed")
         if not dispatch:
             return "PENDING", "no three-OS run on this commit; dispatch skipped"
         r = subprocess.run(["gh", "workflow", "run", "ci.yml", "--ref", tag], cwd=root, text=True, capture_output=True)
@@ -402,9 +404,18 @@ def lab_checks(tree: Path, work: Path, sha: str, run_matrix=run_lab_matrix) -> l
     return [(n, s, f"{d} (commit {sha[:12]})") for n, s, d in rows]
 
 
-def pace_row(tree: Path, base: str | None) -> tuple[str, str, str]:
+def pace_baseline_is_rc(root: Path, base: str | None, sha: str) -> bool:
+    """First release: --pace-base self (or the RC itself) makes the RC its own baseline."""
     if not base:
-        return ("Lab pace_check", "SKIP", "no previous release tag: pass --pace-base SHA")
+        return False
+    return base == "self" or git(root, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}", check=False) == sha
+
+
+def pace_row(tree: Path, base: str | None, is_rc: bool = False) -> tuple[str, str, str]:
+    if is_rc:
+        return ("Lab pace_check", "PASS", "baseline is the RC itself (first release): nothing to compare, PASS by definition; the next RC compares with this release")
+    if not base:
+        return ("Lab pace_check", "SKIP", "no previous release tag: pass --pace-base SHA (or self for the first release)")
     code, text = run_cmd([sys.executable, "lab/analysis/pace_check.py", "--base", base, "--strict"], tree, 3600)
     status = {0: "PASS", 3: "WARN"}.get(code, "FAIL")
     return ("Lab pace_check", status, f"base {base}: {tail_of(text)}")
@@ -467,7 +478,7 @@ def cmd_check(root: Path, rc: str | None, pace_base: str | None, dispatch: bool)
         code, text = run_cmd([sys.executable, "tools/development/verify.py", "--full"], tree, 3600)
         rows.append(("verify --full", "PASS" if code == 0 else "FAIL", tail_of(text)))
         rows.append(("CI three OS", *check_ci(root, rc, sha, dispatch)))
-        rows.append(pace_row(tree, pace_base or last_release_tag(root)))
+        rows.append(pace_row(tree, pace_base or last_release_tag(root), pace_baseline_is_rc(root, pace_base, sha)))
         if code == 0:
             rows += lab_checks(tree, work, sha)
         else:
@@ -558,22 +569,43 @@ def cmd_approve(root: Path, rc: str, owner_ref: str) -> str:
         raise ReleaseError(f"the checks were made on {checked_commit(report) or 'an unknown commit'}, the RC is {sha}: run release.py check")
     if git(root, "tag", "--points-at", sha, "--list", "v*"):
         raise ReleaseError("this commit already has a release tag")
+    latest = last_release_tag(root)
+    if latest and subprocess.run(["git", "merge-base", "--is-ancestor", latest, sha], cwd=root).returncode != 0:
+        raise ReleaseError(f"{rc} is not newer than {latest}: approving it would silently roll the release back (use rollback)")
     tag = next_release_tag(root)
     base = last_release_tag(root)
     tasks = [(i, task_title(root, i)) for i in done_tasks(root, base, sha)]
+    notes = root / "docs" / "releases" / f"{tag}.md"
+    new_report = report.read_text(encoding="utf-8").replace(STATUS_PENDING, f"- Статус: ОДОБРЕН как {tag} ({owner_ref})")
+    tmps = [report.with_name(report.name + ".tmp"), notes.with_name(notes.name + ".tmp")]
+
+    def drop_tmps() -> None:
+        for t in tmps:
+            t.unlink(missing_ok=True)
+
+    try:   # both documents are written aside before anything is built or tagged
+        tmps[0].write_text(new_report, encoding="utf-8")
+        tmps[1].write_text(render_notes(tag, rc, tasks, owner_ref), encoding="utf-8")
+    except OSError as e:
+        drop_tmps()
+        raise ReleaseError(f"cannot write the release documents, nothing changed: {e}")
     status, detail = deploy(root, tag, sha)   # the tag is created only after a successful build
     if status != "PASS":
+        drop_tmps()
         out = record_error(root, "tooling", "release", f"release {tag} client build failed", f"{rc}: {detail}"[:300])
         add_defects(report, [f"- {', '.join(ERR_RE.findall(out)) or 'ERR-?'}: build of {tag} failed"])
         raise ReleaseError(f"deploy failed, no tag created: {detail}")
     try:
         git(root, "tag", "-a", tag, sha, "-m", f"release {tag} from {rc}")
     except ReleaseError:
+        drop_tmps()
         shutil.rmtree(release_dir(tag), ignore_errors=True)   # our own validated path: the build of a tag that was not made
         raise
-    (root / "docs" / "releases" / f"{tag}.md").write_text(render_notes(tag, rc, tasks, owner_ref), encoding="utf-8")
-    text = report.read_text(encoding="utf-8").replace(STATUS_PENDING, f"- Статус: ОДОБРЕН как {tag} ({owner_ref})")
-    report.write_text(text, encoding="utf-8")
+    try:
+        os.replace(tmps[1], notes)
+        os.replace(tmps[0], report)
+    except OSError as e:
+        raise ReleaseError(f"tag {tag} exists but the documents were not renamed ({e}): rename {tmps[0].name} and {tmps[1].name} by hand")
     print(f"deployed: {detail}")
     return tag
 
@@ -594,9 +626,11 @@ def cmd_run(tag: str, args: list[str]) -> list[str]:
     dest = release_dir(tag)
     if dest.is_symlink() or not dest.is_dir():
         raise ReleaseError(f"no build of {tag} in {dest}: python3 tools/development/release.py release {tag}")
-    for rel in ("bin/singularity", "src/run-globe-spike.sh"):
-        if (dest / rel).is_file():
-            return [str(dest / rel), *args]
+    exe, pck = dest / "bin" / "singularity", dest / "bin" / "singularity.pck"
+    if exe.is_file():   # exported client: its packaged data, whatever the current directory
+        return [str(exe), *(["--main-pack", str(pck)] if pck.is_file() else []), *args]
+    if (dest / "src" / "run-globe-spike.sh").is_file():   # source snapshot of the tag
+        return [str(dest / "src" / "run-globe-spike.sh"), *args]
     raise ReleaseError(f"{dest} holds no launcher")
 
 

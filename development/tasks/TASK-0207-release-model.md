@@ -41,7 +41,7 @@ created: 2026-11-26
 - approve: нужны все шесть обязательных строк PASS на этом коммите и статус отчёта «НА ПРОВЕРКЕ»; сначала сборка клиента в ~/singularity-releases/vX.N (через временную папку и rename; существующая или symlink-папка отказ, ничего не удаляется), только после успеха тег vX.N, заметки и статус. Сбой сборки: ни тега, ни заметок, запись в каталог ошибок.
 - Запуск релиза: python3 tools/development/release.py run vX.N (печатает команду снимка), с --exec запускает; без правки корневого скрипта запуска.
 - Ошибки пишутся через настоящий errors.py add (причина в symptom, RC в cause, id ERR в отчёте RC); отчёт RC содержит метрики периода из metrics.py report, если он есть (иначе пометка).
-Допущение: первый релиз без v-тега требует --pace-base SHA (иначе pace_check SKIP и approve отказывает).
+Первый релиз без v-тега: `check --pace-base self` (или тег/sha самого RC) — RC сам себе база, pace PASS по определению, в отчёте помечено. CI: PASS только при success всех трёх ОС на коммите RC. approve отказывает RC старше последнего v-тега; документы пишутся во временные файлы до сборки и тега. Экспортированный клиент запускается с `--main-pack` своего pck. run-client.sh намеренно заменён `release.py run`.
 Проверка: nice -n 10 python3 -m unittest tools/development/test_release.py (один прогон). Новые тесты на прежнем release.py (cae5e4d4): 27 из 36 падают.
 Не проверено: реальные verify --full, gh, Godot, pace_check и серии Lab из check (в тестах подставлены); формат generated-манифеста L2 (RC-L2.json: threads [1,2], seeds 2, серия SLOTS) и флаги errors.py в реальной работе кроме тестов; запуск metrics.py report с PostgreSQL.
 
