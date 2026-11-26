@@ -180,7 +180,9 @@ public sealed partial class TechTree
     /// <summary>Numbers of the first <paramref name="n"/> frontier nodes that no institute holds.</summary>
     public int[] ShotFreeFrontier(int n)
     {
-        var r = new List<int>(); var nodes = _host.Data.Nodes; var views = _host.Snap.View.Actors[_actor].Institutes;
+        var r = new List<int>();
+        var nodes = _host.Data.Nodes;
+        var views = _host.Snap.View.Actors[_actor].Institutes;
         for (int i = 0; _state != null && i < _state.Length && r.Count < n; i++)
         {
             int num = nodes.Number[i];
