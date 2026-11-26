@@ -2,11 +2,11 @@
 """SessionStart hook: print the facts a new session must start from (plain
 stdout is added to the session context).
 
-  1. 'Сводка' from CURRENT_STATE.md;
+  1. the two latest entries of 'Сводка' in CURRENT_STATE.md (#598: the rest on request);
   2. 'Фокус' from development/PLAN.md: the current plan of work;
   3. live checks: CI on main, unpushed commits, dirty files, worktrees,
      owner question queue;
-  4. active tasks (generated block).
+  4. the number of active tasks (the list: registry.py list, kb_db.py q items).
 
 Never blocks and never fails: every probe is optional and time-limited.
 """
@@ -16,14 +16,27 @@ import subprocess
 
 from _common import project_dir, read_input
 
-MAX_SUMMARY = 12
+SUMMARY_ENTRIES = 2
 MAX_FOCUS = 10
-MAX_ACTIVE = 12
 
 
 def section(text: str, title: str) -> list[str]:
     m = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^## |\Z)", text, re.S | re.M)
     return [l for l in m.group(1).splitlines() if l.strip()] if m else []
+
+
+def latest_entries(lines: list[str], n: int = SUMMARY_ENTRIES) -> list[str]:
+    """The first n top-level bullets of a section (the newest on top), each with its indented lines."""
+    out: list[str] = []
+    count = 0
+    for line in lines:
+        if line.startswith("- "):
+            count += 1
+            if count > n:
+                break
+        if count:
+            out.append(line)
+    return out
 
 
 def run(root, *cmd: str, timeout: float = 6.0) -> str | None:
@@ -99,8 +112,8 @@ def main() -> None:
         print("Project state: CURRENT_STATE.md not found.")
         return
     text = path.read_text(encoding="utf-8")
-    lines = ["Project state (from CURRENT_STATE.md):"]
-    lines += section(text, "Сводка")[:MAX_SUMMARY]
+    lines = [f"Project state (latest {SUMMARY_ENTRIES} entries of 'Сводка' in CURRENT_STATE.md; read the file for more):"]
+    lines += latest_entries(section(text, "Сводка"))
     plan = root / "development" / "PLAN.md"
     if plan.exists():
         focus = section(plan.read_text(encoding="utf-8"), "Фокус")[:MAX_FOCUS]
@@ -112,7 +125,8 @@ def main() -> None:
     active = re.search(r"<!-- registry:active:start -->\n(.*?)<!-- registry:active:end -->", text, re.S)
     if active:
         rows = [l for l in active.group(1).splitlines() if l.strip()]
-        lines += ["Active tasks:"] + rows[:MAX_ACTIVE]
+        lines.append(f"Active tasks: {len(rows)} (list: CURRENT_STATE.md or python3 tools/development/kb_db.py q items "
+                     "status=IN_PROGRESS)")
     lines += north_star(root)
     print("\n".join(lines))
 

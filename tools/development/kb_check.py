@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Knowledge base control: documents and decisions must agree with known facts.
 
-  python3 tools/development/kb_check.py check            all living documents
+  python3 tools/development/kb_check.py check            all living documents, tags, links and size limits
+  python3 tools/development/kb_check.py check --today D  (tests) the day that decides warning or error of size limits
   python3 tools/development/kb_check.py check --staged   staged Markdown files (pre-commit)
   python3 tools/development/kb_check.py check --file F   one file (PostToolUse hook)
   python3 tools/development/kb_check.py check --brief    one line (SessionStart hook)
@@ -17,13 +18,19 @@ Errors (exit 1):
   - a fact of development/FACTS.yaml whose probe no longer matches the repository (drift, #597);
     with --staged a warning unless development/FACTS.yaml itself is staged (landing and CI refuse it);
   - a fact whose source cites a decision marked SUPERSEDED in DECISIONS_LOG.md (#597);
-  - a fact with a `reviewed:` value that is not a date.
+  - a fact with a `reviewed:` value that is not a date;
+  - a decision number or debt id found in two files of its journal (kblog.py, #599);
+  - tags (#599): an unknown tag, fewer than 3 or more than 6, no kind or area tag, not exactly one state tag;
+    a vocabulary rule of development/TAGS.yaml broken; a related/supersedes/implements target that does not exist;
+  - a file over its size limit (#600) from 2026-12-03 (a warning before).
 Warnings (exit 0):
   - a fact whose source file changed in git after its `reviewed:` date (re-check it);
   - a fact whose source cites a decision that is partly superseded;
   - a stale pattern of a fact in a living document;
   - an ADR named with a status that differs from the registry;
-  - a repository path in backticks that does not exist.
+  - a repository path in backticks that does not exist;
+  - documents without tags (one summary line; --file names the file).
+The decisions log and the debt table are read from all their files (tools/development/kblog.py).
 
 `related` is a retrieval aid, not a judge: before a decision is recorded or a question is put to
 the owner, read what it prints and compare.
@@ -44,9 +51,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import registry  # noqa: E402
 
 FACTS = ROOT / "development" / "FACTS.yaml"
-DECISIONS = ROOT / "docs" / "decisions" / "DECISIONS_LOG.md"
 ORCH = ROOT / "docs" / "decisions" / "ORCH_DECISIONS.md"
-DEBT = ROOT / "development" / "TECH_DEBT.md"
 RISKS = ROOT / "development" / "RISKS.md"
 
 # Documents that describe the present state and must not carry outdated claims.
@@ -80,6 +85,65 @@ FACTS_OK = re.compile(r"facts-ok:\s*((?:#\d+[\s,]*)+)", re.I)
 # Logs that change every day: a fact citing them is not re-checked on every new row.
 NOT_SOURCES = {"docs/decisions/DECISIONS_LOG.md", "docs/decisions/ORCH_DECISIONS.md"}
 STALE_DAYS = 30
+
+
+# ---------------------------------------------------------------- journal layout (#599, kblog.py)
+# The decisions log and the debt table live in several files; this is their one reader (kblog.py re-exports it,
+# kb_db, metrics and kb_guard use it). It stays here so that kb_check works when copied with registry.py alone.
+
+JOURNAL_DECISIONS = "docs/decisions/DECISIONS_LOG.md"
+JOURNAL_LOG_DIR = "docs/decisions/log"
+JOURNAL_DEBT = "development/TECH_DEBT.md"
+JOURNAL_DEBT_ARCHIVE = "development/archive/TECH_DEBT-closed.md"
+LOG_FILE = re.compile(r"^docs/decisions/log/(archive-\d{4}-\d{4}|\d{4}-\d{2})\.md$")
+
+
+def _git_out(root: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=30, errors="replace")
+
+
+def decision_paths(root: Path = ROOT, rev: str | None = None) -> list[str]:
+    """Files of the decisions log in read order: archives, months, then DECISIONS_LOG.md; rev: a git revision."""
+    if rev:
+        r = _git_out(root, "ls-tree", "-r", "--name-only", rev, "--", "docs/decisions")
+        names = set(r.stdout.split()) if r.returncode == 0 else set()
+    else:
+        names = {p.relative_to(root).as_posix() for p in (root / JOURNAL_LOG_DIR).glob("*.md")}
+        if (root / JOURNAL_DECISIONS).exists():
+            names.add(JOURNAL_DECISIONS)
+    logs = sorted(p for p in names if LOG_FILE.match(p))
+    arch = [p for p in logs if "/archive-" in p]
+    return arch + [p for p in logs if p not in arch] + ([JOURNAL_DECISIONS] if JOURNAL_DECISIONS in names else [])
+
+
+def debt_paths(root: Path = ROOT, rev: str | None = None) -> list[str]:
+    if rev:
+        r = _git_out(root, "ls-tree", "-r", "--name-only", rev, "--", JOURNAL_DEBT, JOURNAL_DEBT_ARCHIVE)
+        names = set(r.stdout.split()) if r.returncode == 0 else set()
+    else:
+        names = {p for p in (JOURNAL_DEBT_ARCHIVE, JOURNAL_DEBT) if (root / p).exists()}
+    return [p for p in (JOURNAL_DEBT_ARCHIVE, JOURNAL_DEBT) if p in names]
+
+
+def journal_sources(kind: str, root: Path = ROOT, rev: str | None = None) -> list[tuple[str, str]]:
+    """(path, text) of every file of the journal ('decisions' or 'debt') in read order."""
+    out = []
+    for p in (decision_paths(root, rev) if kind == "decisions" else debt_paths(root, rev)):
+        if rev:
+            r = _git_out(root, "show", f"{rev}:{p}")
+            out.append((p, r.stdout if r.returncode == 0 else ""))
+        else:
+            out.append((p, (root / p).read_text(encoding="utf-8")))
+    return out
+
+
+def journal_text(kind: str, root: Path = ROOT, rev: str | None = None) -> str:
+    """All files of the journal joined, so a parser of one file reads the whole journal."""
+    return "\n".join(t for _, t in journal_sources(kind, root, rev))
+
+
+def is_decisions_file(rel_: str) -> bool:
+    return rel_ == JOURNAL_DECISIONS or bool(LOG_FILE.match(rel_))
 
 
 def decision_rows(text: str) -> dict[int, str]:
@@ -175,11 +239,11 @@ def last_change(paths: list[str], root: Path = ROOT) -> dt.date | None:
 
 def known_ids() -> dict[str, set[str] | int]:
     items = {i.id for i in registry.load_items([])}
-    dec = [int(m) for m in re.findall(r"^\| (\d+) \|", DECISIONS.read_text(encoding="utf-8"), re.M)]
+    dec = [int(m) for m in re.findall(r"^\| (\d+) \|", journal_text("decisions", ROOT), re.M)]
     def table(path: Path, pat: str) -> set[str]:
         return set(re.findall(pat, path.read_text(encoding="utf-8"), re.M)) if path.exists() else set()
     return {"items": items, "max_decision": max(dec) if dec else 0,
-            "debt": table(DEBT, r"^\| (DEBT-\d{4}) "), "risk": table(RISKS, r"^\| (RISK-\d{4}) "),
+            "debt": set(re.findall(r"^\| (DEBT-\d{4}) ", journal_text("debt", ROOT), re.M)), "risk": table(RISKS, r"^\| (RISK-\d{4}) "),
             "orch": table(ORCH, r"^\| (O-\d{3}) ")}
 
 
@@ -274,7 +338,7 @@ def check_facts(facts: list[dict], errors: list[str], warnings: list[str], decis
     """Drift and superseded sources are errors (#597); a source changed after `reviewed:` is a warning.
     drift_is_error=False (pre-commit without FACTS.yaml staged) reports drift as a warning: CI and landing judge it."""
     if decisions is None:
-        decisions = decision_rows(DECISIONS.read_text(encoding="utf-8")) if DECISIONS.exists() else {}
+        decisions = decision_rows(journal_text("decisions", ROOT))
     for f in facts:
         why = probe_drift(f)
         if why:
@@ -303,6 +367,79 @@ def check_facts(facts: list[dict], errors: list[str], warnings: list[str], decis
                             "re-check the fact and bump reviewed:")
 
 
+def link_target_ok(target: str, ids: dict, root: Path = ROOT, doc: str = "") -> bool:
+    """A header link (#599): a registry id, an owner decision #N, an O-NNN, DEBT or RISK row, or an existing
+    file (repository path, or a name next to the document, with or without .md)."""
+    t = target.strip()
+    if re.fullmatch(r"DEBT-\d{4}", t):
+        return t in ids["debt"]
+    if re.fullmatch(r"RISK-\d{4}", t):
+        return t in ids["risk"]
+    if re.fullmatch(r"#\d+", t):
+        return 0 < int(t[1:]) <= ids["max_decision"]
+    if re.fullmatch(r"O-\d{3}", t):
+        return t in ids["orch"]
+    if re.fullmatch(r"(?:ADR|TASK|EXP|HYP|RR)-\d{4}|MS-M\d+", t):
+        return t in ids["items"]
+    p = t.split("#", 1)[0]
+    near = root / Path(doc).parent / p
+    return bool(p) and ((root / p).exists() or near.exists() or near.with_name(near.name + ".md").exists())
+
+
+def check_doc_header(rel_: str, text: str, ids: dict, vocab: dict, overrides: dict,
+                     errors: list[str], missing: list[str]) -> None:
+    """Tags and header links of one document in the tag scope (kbdocs.in_scope)."""
+    import kbdocs
+    meta, _ = kbdocs.split_front(text)
+    tags = kbdocs.doc_tags(rel_, meta, overrides)
+    if tags is None:
+        missing.append(rel_)
+    else:
+        errors += [f"{rel_}: tags: {p}" for p in kbdocs.tag_problems(tags, vocab)]
+    for kind, target in kbdocs.links(meta):
+        if not link_target_ok(target, ids, doc=rel_):
+            errors.append(f"{rel_}: {kind}: '{target}' is not a registry id, decision, O-row or repository path")
+
+
+def check_structure(only: list[str] | None, ids: dict, errors: list[str], warnings: list[str],
+                    today: dt.date, single: bool = False) -> None:
+    """#599, #600: tags, header links, journal duplicates and size limits. only=None checks everything
+    (check), else the given repository paths (--file, --staged)."""
+    import kbdocs  # here, not at the top: landing needs only kb_check.py and registry.py
+    import kblog
+    vocab, overrides = kbdocs.load_vocab(ROOT)
+    if only is None or kbdocs.TAGS_FILE in only:
+        errors += kbdocs.vocab_problems(ROOT)
+    scope = kbdocs.scope_paths(ROOT) if only is None else [p for p in only if kbdocs.in_scope(p)]
+    missing: list[str] = []
+    for p in scope:
+        try:
+            text = (ROOT / p).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        check_doc_header(p, text, ids, vocab, overrides, errors, missing)
+    if missing and single:
+        warnings.append(f"{missing[0]}: no tags: in the header (3-6 tags from {kbdocs.TAGS_FILE}, #599)")
+    elif missing:
+        warnings.append(f"{len(missing)} of {len(scope)} documents have no tags (#599), e.g. {', '.join(missing[:3])}")
+    if only is None or any(is_decisions_file(p) or p in (JOURNAL_DEBT, JOURNAL_DEBT_ARCHIVE) for p in only):
+        for kind in ("decisions", "debt"):
+            for key, files in sorted(kblog.duplicates(kind, ROOT).items()):
+                errors.append(f"{kind} {'#' if kind == 'decisions' else ''}{key} is in {', '.join(files)}: keep one row "
+                              "(kblog.py rollover keeps the one in the main file)")
+    sink = errors if today >= kbdocs.LIMITS_ERROR_FROM else warnings
+    files = kbdocs.limit_files(ROOT, memory=only is None) if only is None else \
+        [(p, ROOT / p) for p in only if kbdocs.size_class(p)]
+    for name, path in files:
+        try:
+            why = kbdocs.over_limit(name, path.stat().st_size)
+        except OSError:
+            continue
+        if why:
+            when = "" if sink is errors else f" (an error from {kbdocs.LIMITS_ERROR_FROM})"
+            sink.append(f"{name}: {why}{when}: move old parts to an archive or split by topic")
+
+
 def cmd_check(args) -> int:
     ids, facts = known_ids(), load_facts()
     errors: list[str] = []
@@ -321,6 +458,9 @@ def cmd_check(args) -> int:
         if t.suffix == ".md" and t.exists():
             check_file(t, ids, facts, t.resolve() in living, errors, warnings,
                        added_lines(t) if args.staged else None)
+    today = dt.date.fromisoformat(args.today) if args.today else dt.date.today()
+    only = None if not (args.file or args.staged) else [rel(t) for t in targets]
+    check_structure(only, ids, errors, warnings, today, single=bool(args.file))
     if not args.file:
         check_facts(facts, errors, warnings, drift_is_error=not args.staged or staged_facts)
         import errors as catalogue  # development/errors.yaml schema (owner #584)
@@ -349,7 +489,8 @@ def cmd_related(args) -> int:
     for f in related_facts(text, load_facts()):
         print(f"FACT {f['id']}: {f['statement']}  [{f.get('source', '')}]")
         shown += 1
-    rows = re.findall(r"^\| (\d+) \| (\S+) \| (.*?) \| [^|]*\|\s*$", DECISIONS.read_text(encoding="utf-8"), re.M)
+    rows = list({n: (n, d, b) for n, d, b in re.findall(r"^\| (\d+) \| (\S+) \| (.*?) \| [^|]*\|\s*$",
+                                                       journal_text("decisions", ROOT), re.M)}.values())
     scored = []
     for num, date, body in rows:
         low = body.lower()
@@ -387,7 +528,7 @@ def cmd_stale(args) -> int:
 
 def cmd_decision_facts(args) -> int:
     """Facts related to the given decision rows (kb_guard after a write of the decisions log)."""
-    rows = decision_rows(DECISIONS.read_text(encoding="utf-8")) if DECISIONS.exists() else {}
+    rows = decision_rows(journal_text("decisions", ROOT))
     facts = load_facts()
     for n in args.nums:
         rel_ = related_facts(rows.get(n, ""), facts, DECISION_MIN_HITS)
@@ -428,8 +569,8 @@ def landing_problems(repo: Path, base: str, head: str, message: str = "") -> lis
         if why:
             out.append(f"fact '{f.get('id')}' drifts on the branch head: {why}. Update development/FACTS.yaml "
                        "or the code before landing")
-    old = decision_rows(git_show(repo, base, rel(DECISIONS)))
-    added = {n: b for n, b in decision_rows(git_show(repo, head, rel(DECISIONS))).items() if n not in old}
+    old = decision_rows(journal_text("decisions", repo, base))  # all files of the log, old or new layout
+    added = {n: b for n, b in decision_rows(journal_text("decisions", repo, head)).items() if n not in old}
     if not added:
         return out
     before = facts_at(repo, base)
@@ -467,6 +608,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--file")
     c.add_argument("--brief", action="store_true")
     c.add_argument("--errors-only", action="store_true")
+    c.add_argument("--today", help="YYYY-MM-DD (tests): the day that makes size limits errors")
     c.set_defaults(func=cmd_check)
     r = sub.add_parser("related")
     r.add_argument("text")

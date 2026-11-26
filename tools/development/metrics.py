@@ -11,8 +11,10 @@ deleted_at for a soft delete, and a repeated collect adds nothing (keys are mess
 ids). sessions (one aggregate per transcript file), messages (one row per API message: exact period sums) and
 llm_calls (a ledger amount changes at settle) are refreshed when their source row changes. agent_runs and errors are the derived tables of kb_db.
 
-Only numbers, ids, dates and short labels are stored. No prompt, answer, tool input or file text is read
-into the database; a transcript is read for message id, time, model and usage only.
+Only numbers, ids, dates, short labels and repository file paths are stored. No prompt, answer or file text is read
+into the database; a transcript is read for message id, time, model and usage, and for the paths of files the tools
+read (#598 item 10, file_reads): file_path of Read, path of Grep and Glob, and repository paths named in Bash and
+REPL inputs (a script that builds a path from parts is not seen; a named path is not proof it was read).
 Sources: ~/.claude/projects/<project>/*.jsonl and <session>/subagents/*.jsonl (internal Claude Code
 format, parsed tolerantly), tools/llm_worker/runs/*.json, the llm_worker ledger, .claude/.state/landings.jsonl
 (written by land.py), git log of development/tasks, development/OPEN_QUESTIONS.md.
@@ -51,6 +53,8 @@ create table if not exists landings (key text primary key, t timestamptz, branch
 create table if not exists task_flow (key text primary key, task text, t timestamptz, from_status text,
   to_status text, commit_id text, deleted_at timestamptz);
 alter table sessions add column if not exists tasks text;
+create table if not exists file_reads (key text primary key, kind text, session text, agent_id text, t timestamptz,
+  tool text, path text, deleted_at timestamptz);
 create table if not exists owner_waits (key text primary key, question text, asked date, answered date,
   deleted_at timestamptz);
 """
@@ -64,7 +68,44 @@ COLS = {
     "landings": ["key", "t", "branch", "task", "attempt", "code", "total_s", "verify_s", "steps"],
     "task_flow": ["key", "task", "t", "from_status", "to_status", "commit_id"],
     "owner_waits": ["key", "question", "asked", "answered"],
+    "file_reads": ["key", "kind", "session", "agent_id", "t", "tool", "path"],
 }
+# Repository paths named in shell and REPL inputs (item 10): top folders and root files of the project.
+PATH_RE = re.compile(r"(?<![\w.-])(?:\.claude/worktrees/[\w.-]+/)?((?:docs|development|tools|src|tests|mods|lab|\.claude)"
+                     r"/[\w./-]*\.(?:md|py|yaml|yml|json|cs|csv|txt|gd|tscn)|CLAUDE\.md|CURRENT_STATE\.md)\b")
+READ_TOOLS = {"Read": "file_path", "Grep": "path", "Glob": "path", "NotebookRead": "notebook_path"}
+
+
+MAIN = str(kb_db.git_common_parent() or ROOT)  # the main checkout; agent worktrees are inside it
+
+
+def repo_path(p: str) -> str | None:
+    """Repository-relative form of a path from a tool input; None outside the project."""
+    p = str(p or "").strip()
+    if not p:
+        return None
+    if p.startswith("/"):
+        if not p.startswith(MAIN.rstrip("/") + "/"):
+            return None
+        p = p[len(MAIN.rstrip("/")) + 1:]
+    elif p.startswith("./"):
+        p = p[2:]
+    p = re.sub(r"^\.claude/worktrees/[\w.-]+/", "", p)
+    return p.rstrip("/") or None
+
+
+def tool_reads(block: dict) -> list[tuple[str, str]]:
+    """(tool, repository path) pairs of one tool_use block."""
+    name, inp = block.get("name"), block.get("input")
+    if not isinstance(inp, dict):
+        return []
+    if name in READ_TOOLS:
+        p = repo_path(inp.get(READ_TOOLS[name]))
+        return [(name, p)] if p else []
+    if name in ("Bash", "REPL"):
+        text = str(inp.get("command") or inp.get("code") or "")
+        return [(name, p) for p in dict.fromkeys(m.group(1) for m in PATH_RE.finditer(text))]
+    return []
 
 # --------------------------------------------------------------------------
 # Parsers (pure functions)
@@ -105,6 +146,7 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
     One API message appears in several lines (one per content
     block) with the same id and usage: it is counted once. Bad lines and unknown fields are skipped."""
     msgs: dict[str, dict] = {}
+    reads: dict[str, dict] = {}
     seen_at: dict[str, str | None] = {}
     first = last = None
     tasks = None  # TASK ids named in the first user record; only the ids are kept
@@ -127,6 +169,11 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
         mid, u = m.get("id"), m["usage"]
         if not isinstance(mid, str) or not mid or m.get("model") == "<synthetic>":
             continue
+        for b in m.get("content") or []:
+            if isinstance(b, dict) and b.get("type") == "tool_use":
+                for tool, path in tool_reads(b):
+                    k = f"{key}:{b.get('id') or mid}:{path}"
+                    reads[k] = dict(key=k, kind=kind, session=session, agent_id=agent_id, t=t, tool=tool, path=path)
         seen_at.setdefault(mid, t)  # the first record of a message gives its time
         msgs[mid] = dict(model=str(m.get("model") or ""), i=num(u.get("input_tokens")), o=num(u.get("output_tokens")),
                          cr=num(u.get("cache_read_input_tokens")), cw=num(u.get("cache_creation_input_tokens")))
@@ -141,6 +188,7 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
                 output_tokens=sum(m["o"] for m in msgs.values()),
                 cache_read_tokens=sum(m["cr"] for m in msgs.values()),
                 cache_write_tokens=sum(m["cw"] for m in msgs.values()), tasks=",".join(tasks or []),
+                reads=list(reads.values()),
                 messages=[dict(key=f"{key}:{mid}", kind=kind, session=session, agent_id=agent_id, model=v["model"],
                                t=seen_at[mid], input_tokens=v["i"], output_tokens=v["o"], cache_read_tokens=v["cr"],
                                cache_write_tokens=v["cw"]) for mid, v in msgs.items()])
@@ -322,11 +370,11 @@ def read_lines(p: Path):
         return
 
 
-def collect_sessions(base: Path) -> tuple[list[dict], list[dict]]:
-    """(one aggregate per transcript file, one row per message)."""
-    rows, msgs = [], []
+def collect_sessions(base: Path) -> tuple[list[dict], list[dict], list[dict]]:
+    """(one aggregate per transcript file, one row per message, one row per file read)."""
+    rows, msgs, reads = [], [], []
     if not base.is_dir():
-        return rows, msgs
+        return rows, msgs, reads
     parsed = [(p, "session:" + p.stem, "session", p.stem, "") for p in sorted(base.glob("*.jsonl"))]
     parsed += [(p, "agent:" + p.stem.removeprefix("agent-"), "agent", p.relative_to(base).parts[0],
                 p.stem.removeprefix("agent-")) for p in sorted(base.glob("*/subagents/**/*.jsonl"))]
@@ -334,8 +382,9 @@ def collect_sessions(base: Path) -> tuple[list[dict], list[dict]]:
         r = parse_transcript(read_lines(p), key, kind, sess, aid)
         if r:
             msgs += r.pop("messages")
+            reads += r.pop("reads")
             rows.append(r)
-    return rows, msgs
+    return rows, msgs, reads
 
 
 def runs_dir() -> Path:
@@ -392,16 +441,17 @@ def git_owner_waits() -> list[dict]:
                             "development/OPEN_QUESTIONS.md"], cwd=ROOT, text=True, capture_output=True, timeout=120)
     except (OSError, subprocess.SubprocessError):
         return []
-    decisions = kb_db.parse_decisions(kb_db.read_text(ROOT / "docs/decisions/DECISIONS_LOG.md"))
+    import kblog  # all files of the decisions log
+    decisions = kb_db.parse_decisions(kblog.text("decisions", ROOT))
     return parse_question_history(r.stdout, decisions) if r.returncode == 0 else []
 
 
 def collect_all() -> dict[str, list[dict]]:
     land = kb_db.state_dir() / "landings.jsonl"
-    sessions, messages = collect_sessions(claude_dir())
+    sessions, messages, reads = collect_sessions(claude_dir())
     return dict(sessions=sessions, messages=messages, llm_calls=collect_llm_calls(),
                 landings=parse_landings(read_lines(land)), task_flow=git_task_flow(),
-                owner_waits=git_owner_waits())
+                owner_waits=git_owner_waits(), file_reads=reads)
 
 
 def sanitize(data: dict[str, list[dict]]) -> tuple[dict[str, list[dict]], list[str]]:
@@ -564,7 +614,28 @@ def report_data(since: str, until: str, limit: int | None = 15) -> dict:
             from landings l cross join lateral jsonb_each_text(l.steps::jsonb) e(k, v)
             where l.deleted_at is null and e.k like 'verify:%' and {p('l.t')}
             group by e.k order by sum(e.v::numeric) desc, e.k {lim}"""),
-        rejections=rejection_rows(since, until))
+        rejections=rejection_rows(since, until),
+        per_session=rows(f"""select count(distinct session) sessions,
+            coalesce(sum(input_tokens + cache_write_tokens + cache_read_tokens + output_tokens), 0) tokens,
+            coalesce(sum(output_tokens), 0) out_tokens
+            from messages where deleted_at is null and kind = 'session' and {p('t')}"""),
+        costly_files=costly_files(rows(f"""select path, count(*) reads, count(distinct session) sessions
+            from file_reads where deleted_at is null and {p('t')} group by path"""), limit))
+
+
+def costly_files(counts: list[dict], limit: int | None = 15, root: Path = ROOT) -> list[dict]:
+    """Files by reads x current size (item 10): what reading them costs, about 3.5 characters a token."""
+    out = []
+    for r in counts:
+        f = root / r["path"]
+        if not f.is_file():
+            continue
+        size = f.stat().st_size
+        n = int(r["reads"])
+        out.append(dict(path=r["path"], reads=n, sessions=int(r["sessions"]), kb=round(size / 1024, 1),
+                        approx_tokens=round(n * size / 3.5)))
+    out.sort(key=lambda x: (-x["approx_tokens"], x["path"]))
+    return out[:limit] if limit else out
 
 
 def summary(d: dict) -> dict[str, float]:
@@ -578,7 +649,13 @@ def summary(d: dict) -> dict[str, float]:
             "findings repeating a rejected one": s("rejections", "repeating_rejected"), "reviews with changes requested": s("rounds", "changes"),
             "errors": s("errors", "errors"), "landings": land, "landings failed": land - ok,
             "verify wall s": s("landings", "verify_wall_s"), "hours in task statuses": s("stalls", "hours"),
-            "owner answers": s("owner", "answered")}
+            "owner answers": s("owner", "answered"),
+            # item 6 of TASK-0209: the before/after measure of #598
+            "main sessions": s("per_session", "sessions"),
+            "claude tokens per main session": round(s("per_session", "tokens") / s("per_session", "sessions"))
+            if s("per_session", "sessions") else 0,
+            "agent output tokens per task": round(s("by_task", "out_tokens") / len(d["by_task"])) if d["by_task"] else 0,
+            "file reads (named paths)": sum(r["reads"] for r in d["costly_files"])}
 
 
 def table(title: str, items: list[dict]) -> str:
@@ -605,7 +682,10 @@ def render(d: dict, since: str, until: str) -> str:
            table("Where tasks stand: time in a status clipped to the period, ongoing included (DONE, REJECTED, DEFERRED excluded)", d["stalls"]),
            table("Owner wait (question to answer)", d["owner"]),
            table("Landings by exit code (verify_wall_s: wall time of verify, includes waiting for CPU)", d["landings"]),
-           table("Slowest verify steps", d["verify_steps"])]
+           table("Slowest verify steps", d["verify_steps"]),
+           table("Main sessions: tokens (input + cache writes + cache reads + output)", d["per_session"]),
+           table("Most expensive files: reads in the period x current size (~3.5 chars a token; paths named in "
+                 "Bash/REPL count as reads)", d["costly_files"])]
     return "\n".join(out)
 
 

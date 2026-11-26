@@ -251,7 +251,8 @@ class DatabaseTests(unittest.TestCase):
         self.assertIn("soft-deleted 0", out.getvalue())
 
     def test_02b_all_debt_ids_are_indexed(self):
-        text = (kb_db.ROOT / "development/TECH_DEBT.md").read_text(encoding="utf-8")
+        import kblog  # open debts and the archive of closed ones (TASK-0209)
+        text = kblog.text("debt", kb_db.ROOT)
         wanted = len(set(re.findall(r"^\| (DEBT-\d{4}) \|", text, re.M)))
         self.assertEqual(len(json.loads(self.run_q("q", "debt", "limit=1000", "--json"))), wanted)
 
