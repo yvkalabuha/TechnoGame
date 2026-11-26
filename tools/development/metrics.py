@@ -6,10 +6,10 @@
   metrics.py report --compare A..B C..D         two periods side by side (dates YYYY-MM-DD, end exclusive)
 
 Tables (schema of the checkout, see kb_db.db_schema; created if missing, never dropped by kb_db build):
-sessions, llm_calls, landings, task_flow, owner_waits are journals: rows are only added, a row has
+sessions, messages, llm_calls, landings, task_flow, owner_waits are journals: rows are only added, a row has
 deleted_at for a soft delete, and a repeated collect adds nothing (keys are message, file, ledger, commit
-ids). sessions is the one exception: it holds one aggregate per transcript file and the aggregate is
-refreshed while the file grows. agent_runs and errors are the derived tables of kb_db.
+ids). sessions (one aggregate per transcript file), messages (one row per API message: exact period sums) and
+llm_calls (a ledger amount changes at settle) are refreshed when their source row changes. agent_runs and errors are the derived tables of kb_db.
 
 Only numbers, ids, dates and short labels are stored. No prompt, answer, tool input or file text is read
 into the database; a transcript is read for message id, time, model and usage only.
@@ -40,6 +40,9 @@ DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 DDL = """create table if not exists sessions (key text primary key, kind text, session text, agent_id text, model text,
   start_t timestamptz, end_t timestamptz, msgs integer, input_tokens bigint, output_tokens bigint,
   cache_read_tokens bigint, cache_write_tokens bigint, deleted_at timestamptz, tasks text);
+create table if not exists messages (key text primary key, kind text, session text, agent_id text, model text,
+  t timestamptz, input_tokens bigint, output_tokens bigint, cache_read_tokens bigint, cache_write_tokens bigint,
+  deleted_at timestamptz);
 create table if not exists llm_calls (key text primary key, kind text, provider text, model text, task text,
   t timestamptz, input_tokens bigint, output_tokens bigint, usd numeric, verdict text, findings integer,
   round integer, deleted_at timestamptz);
@@ -54,6 +57,8 @@ create table if not exists owner_waits (key text primary key, question text, ask
 COLS = {
     "sessions": ["key", "kind", "session", "agent_id", "model", "start_t", "end_t", "msgs", "input_tokens",
                  "output_tokens", "cache_read_tokens", "cache_write_tokens", "tasks"],
+    "messages": ["key", "kind", "session", "agent_id", "model", "t", "input_tokens", "output_tokens",
+                 "cache_read_tokens", "cache_write_tokens"],
     "llm_calls": ["key", "kind", "provider", "model", "task", "t", "input_tokens", "output_tokens", "usd",
                   "verdict", "findings", "round"],
     "landings": ["key", "t", "branch", "task", "attempt", "code", "total_s", "verify_s", "steps"],
@@ -96,9 +101,11 @@ def num(v) -> int:
 
 
 def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "") -> dict | None:
-    """Aggregate of one Claude Code transcript. One API message appears in several lines (one per content
+    """Aggregate of one Claude Code transcript, plus one row per message under 'messages' (exact period sums).
+    One API message appears in several lines (one per content
     block) with the same id and usage: it is counted once. Bad lines and unknown fields are skipped."""
     msgs: dict[str, dict] = {}
+    seen_at: dict[str, str | None] = {}
     first = last = None
     tasks = None  # TASK ids named in the first user record; only the ids are kept
     for line in lines:
@@ -120,6 +127,7 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
         mid, u = m.get("id"), m["usage"]
         if not isinstance(mid, str) or not mid or m.get("model") == "<synthetic>":
             continue
+        seen_at.setdefault(mid, t)  # the first record of a message gives its time
         msgs[mid] = dict(model=str(m.get("model") or ""), i=num(u.get("input_tokens")), o=num(u.get("output_tokens")),
                          cr=num(u.get("cache_read_input_tokens")), cw=num(u.get("cache_creation_input_tokens")))
     if not msgs:
@@ -132,7 +140,10 @@ def parse_transcript(lines, key: str, kind: str, session: str, agent_id: str = "
                 msgs=len(msgs), input_tokens=sum(m["i"] for m in msgs.values()),
                 output_tokens=sum(m["o"] for m in msgs.values()),
                 cache_read_tokens=sum(m["cr"] for m in msgs.values()),
-                cache_write_tokens=sum(m["cw"] for m in msgs.values()), tasks=",".join(tasks or []))
+                cache_write_tokens=sum(m["cw"] for m in msgs.values()), tasks=",".join(tasks or []),
+                messages=[dict(key=f"{key}:{mid}", kind=kind, session=session, agent_id=agent_id, model=v["model"],
+                               t=seen_at[mid], input_tokens=v["i"], output_tokens=v["o"], cache_read_tokens=v["cr"],
+                               cache_write_tokens=v["cw"]) for mid, v in msgs.items()])
 
 
 def parse_run_record(name: str, rec, mtime: float) -> dict | None:
@@ -235,21 +246,26 @@ def parse_task_flow(log: str) -> list[dict]:
 
 def parse_question_history(log: str, decisions: list[dict]) -> list[dict]:
     """Owner waits from the git history of OPEN_QUESTIONS.md ('git log --reverse -p -U0 --format=@@%H %cI').
-    A question is asked at the commit that adds its row and answered at the commit that removes or closes it
-    (strike-through, 'Закрыт'); a decision that names the question id (Q<n>) on a later date answers it earlier.
-    Question tables of every kind are included (a removed row has no heading to tell them apart)."""
+    A question is asked at the commit that adds its row. It counts as answered only when its row was removed or
+    closed (strike-through, 'Закрыт <date>') AND there is an answer: a decision that names the question id (Q<n>)
+    dated on or after the question, or a date in the closing text. The answer date is the earliest such date; a
+    removed or closed row with no answer stays unresolved. Question tables of every kind are included."""
     asked: dict[str, str] = {}
-    answered: dict[str, str] = {}
+    closed_at: dict[str, str] = {}
+    text_dates: dict[str, str] = {}  # answer date written in a closing row
 
-    def settle(day: str, plus: dict[str, bool], minus: set[str]) -> None:
-        for qid, closed in plus.items():
-            if closed and qid in asked and qid not in answered:
-                answered[qid] = day
-            elif not closed:
+    def settle(day: str, plus: dict[str, str | None], minus: set[str]) -> None:
+        for qid, closing in plus.items():
+            if closing is not None:
+                if qid in asked and qid not in closed_at:
+                    closed_at[qid] = day
+                    if closing:
+                        text_dates[qid] = closing
+            else:
                 asked.setdefault(qid, day)
         for qid in minus - set(plus):
-            if qid in asked and qid not in answered:
-                answered[qid] = day
+            if qid in asked and qid not in closed_at:
+                closed_at[qid] = day
 
     day, plus, minus = None, {}, set()
     for line in log.splitlines():
@@ -265,18 +281,25 @@ def parse_question_history(log: str, decisions: list[dict]) -> list[dict]:
             qid = cells[0].strip("~ ")
             qid = f"Q{qid}" if qid.isdigit() else qid
             if line[0] == "+":
-                plus[qid] = kb_db.question_closed(cells)
+                if kb_db.question_closed(cells):  # '' = closed with no date in the text
+                    mm = re.search(r"(?:закрыт\w*|closed|answered)\W{0,12}(\d{4}-\d{2}-\d{2})", " | ".join(cells), re.I)
+                    plus[qid] = mm.group(1) if mm and real_date(mm.group(1)) else ""
+                else:
+                    plus[qid] = None
             else:
                 minus.add(qid)
     if day:
         settle(day, plus, minus)
-    for qid, a in asked.items():  # a decision dated after the question that names it
-        hit = [d["date"] for d in decisions if d.get("date") and d["date"] >= a
-               and re.search(rf"(?<![\w-]){re.escape(qid)}(?!\w)", d.get("text") or "")]
-        if hit and (qid not in answered or min(hit) < answered[qid]):
-            answered[qid] = min(hit)
-    return [dict(key=q, question=q, asked=asked[q], answered=answered[q]) for q in sorted(answered)
-            if answered[q] >= asked[q]]
+    answered: dict[str, str] = {}
+    for qid in closed_at:
+        a = asked[qid]
+        dates = [d["date"] for d in decisions if d.get("date") and d["date"] >= a
+                 and re.search(rf"(?<![\w-]){re.escape(qid)}(?!\w)", d.get("text") or "")]
+        if qid in text_dates and text_dates[qid] >= a:
+            dates.append(text_dates[qid])
+        if dates:
+            answered[qid] = min(dates)
+    return [dict(key=q, question=q, asked=asked[q], answered=answered[q]) for q in sorted(answered)]
 
 
 # --------------------------------------------------------------------------
@@ -299,21 +322,20 @@ def read_lines(p: Path):
         return
 
 
-def collect_sessions(base: Path) -> list[dict]:
-    rows = []
+def collect_sessions(base: Path) -> tuple[list[dict], list[dict]]:
+    """(one aggregate per transcript file, one row per message)."""
+    rows, msgs = [], []
     if not base.is_dir():
-        return rows
-    for p in sorted(base.glob("*.jsonl")):
-        r = parse_transcript(read_lines(p), "session:" + p.stem, "session", p.stem)
+        return rows, msgs
+    parsed = [(p, "session:" + p.stem, "session", p.stem, "") for p in sorted(base.glob("*.jsonl"))]
+    parsed += [(p, "agent:" + p.stem.removeprefix("agent-"), "agent", p.relative_to(base).parts[0],
+                p.stem.removeprefix("agent-")) for p in sorted(base.glob("*/subagents/**/*.jsonl"))]
+    for p, key, kind, sess, aid in parsed:
+        r = parse_transcript(read_lines(p), key, kind, sess, aid)
         if r:
+            msgs += r.pop("messages")
             rows.append(r)
-    for p in sorted(base.glob("*/subagents/**/*.jsonl")):
-        aid = p.stem.removeprefix("agent-")
-        sess = p.relative_to(base).parts[0]
-        r = parse_transcript(read_lines(p), "agent:" + aid, "agent", sess, aid)
-        if r:
-            rows.append(r)
-    return rows
+    return rows, msgs
 
 
 def runs_dir() -> Path:
@@ -364,7 +386,8 @@ def git_owner_waits() -> list[dict]:
 
 def collect_all() -> dict[str, list[dict]]:
     land = kb_db.state_dir() / "landings.jsonl"
-    return dict(sessions=collect_sessions(claude_dir()), llm_calls=collect_llm_calls(),
+    sessions, messages = collect_sessions(claude_dir())
+    return dict(sessions=sessions, messages=messages, llm_calls=collect_llm_calls(),
                 landings=parse_landings(read_lines(land)), task_flow=git_task_flow(),
                 owner_waits=git_owner_waits())
 
@@ -411,9 +434,12 @@ def load_script(data: dict[str, list[dict]]) -> str:
         out.append(f"create temp table tmp_{table} ({', '.join(f'{c} {types[c]}' for c in cols)}) on commit drop;\n")
         out.append(kb_db.copy_block(f"tmp_{table}", cols, data[table]))
         names = ", ".join(cols)
-        if table in ("sessions", "llm_calls"):  # growing file / reserve then settle: refresh unless soft-deleted
+        if table in ("sessions", "messages", "llm_calls"):  # growing file / reserve then settle: refresh if changed
             upd = ", ".join(f"{c} = excluded.{c}" for c in cols[1:])
-            tail = f"on conflict (key) do update set {upd} where {table}.deleted_at is null"
+            old = ", ".join(f"{table}.{c}" for c in cols[1:])
+            new = ", ".join(f"excluded.{c}" for c in cols[1:])
+            tail = (f"on conflict (key) do update set {upd} "
+                    f"where {table}.deleted_at is null and ({old}) is distinct from ({new})")
         else:
             tail = "on conflict (key) do nothing"
         out.append(f"insert into {table} ({names}) select {names} from tmp_{table} {tail};\n")
@@ -495,6 +521,9 @@ def report_data(since: str, until: str, limit: int | None = 15) -> dict:
             coalesce(sum(s.output_tokens), 0) out_tokens
             from {both} cross join lateral unnest(string_to_array(nullif(coalesce(nullif(a.tasks, ''), s.tasks), ''), ',')) t(task)
             where {p('coalesce(a.start_t, s.start_t)')} group by t.task order by out_tokens desc, t.task {lim}"""),
+        tokens=rows(f"""select model, count(*) messages, coalesce(sum(input_tokens + cache_write_tokens), 0) in_tokens,
+            coalesce(sum(cache_read_tokens), 0) cache_read_tokens, coalesce(sum(output_tokens), 0) out_tokens
+            from messages where deleted_at is null and {p('t')} group by model order by out_tokens desc, model"""),
         llm=rows(f"""select provider, kind, count(*) calls, coalesce(sum(input_tokens), 0) in_tokens,
             coalesce(sum(output_tokens), 0) out_tokens
             from llm_calls where deleted_at is null and kind <> 'ledger' and {p('t')}
@@ -529,8 +558,8 @@ def summary(d: dict) -> dict[str, float]:
     s = lambda k, c: sum(float(r.get(c) or 0) for r in d[k])
     land = s("landings", "landings")
     ok = sum(float(r["landings"]) for r in d["landings"] if r["code"] == 0)
-    return {"agent runs": s("by_agent", "runs"), "agent output tokens": s("by_agent", "out_tokens"),
-            "agent input tokens": s("by_agent", "in_tokens"), "llm calls (run records)": s("llm", "calls"),
+    return {"agent runs": s("by_agent", "runs"), "claude output tokens": s("tokens", "out_tokens"),
+            "claude input tokens": s("tokens", "in_tokens"), "claude cache read tokens": s("tokens", "cache_read_tokens"), "llm calls (run records)": s("llm", "calls"),
             "ledger entries": s("spend", "entries"), "llm usd (ledger)": round(s("spend", "usd"), 4),
             "review records": s("rounds", "reviews"), "reviews with changes requested": s("rounds", "changes"),
             "errors": s("errors", "errors"), "landings": land, "landings failed": land - ok,
@@ -551,7 +580,8 @@ def table(title: str, items: list[dict]) -> str:
 
 def render(d: dict, since: str, until: str) -> str:
     out = [f"Platform metrics {since} .. {until} (end exclusive)\n",
-           table("Agents by type (subagent transcripts; in_tokens = input + cache writes, cache reads apart)", d["by_agent"]),
+           table("Claude tokens by model, exact for the period (per message; in_tokens = input + cache writes)", d["tokens"]),
+           table("Agent runs started in the period by type (tokens of the whole run, wherever its messages fall)", d["by_agent"]),
            table("Tasks by agent output tokens (a run with several tasks counts fully for each)", d["by_task"]),
            table("LLM calls by provider and kind (run records; they carry no cost)", d["llm"]),
            table("LLM spend by model (ledger; run records and ledger share no id, so they are not joined)", d["spend"]),

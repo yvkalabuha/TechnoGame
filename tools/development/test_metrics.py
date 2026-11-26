@@ -17,6 +17,10 @@ import land  # noqa: E402
 import metrics  # noqa: E402
 
 
+ENV_KEYS = ("SINGULARITY_KB_DB", "SINGULARITY_KB_SCHEMA", "SINGULARITY_STATE", "SINGULARITY_CLAUDE_PROJECTS",
+            "SINGULARITY_LLM_RUNS", "SINGULARITY_LEDGER")
+
+
 def line(**kw):
     return json.dumps(kw)
 
@@ -78,17 +82,28 @@ class ParserTests(unittest.TestCase):
                                             steps=dict(verify=20.0, review=9)), "junk"])
         self.assertEqual((len(rows), rows[0]["attempt"], rows[0]["verify_s"]), (1, 2, 20.0))
 
-    def test_question_history_added_then_removed_or_closed(self):
+    def test_question_is_answered_only_when_closed_and_a_decision_exists(self):
         log = "\n".join([
-            "@@aaaaaaaa 2026-11-10T10:00:00+00:00", "@@ -0,0 +1,3 @@", "+| 1 | q one | a | b |", "+| 2 | q two | a | b |",
-            "+| 3 | q three | a | b |",
-            "@@bbbbbbbb 2026-11-12T10:00:00+00:00", "-| 1 | q one | a | b |",  # removed: answered
-            "-| 2 | q two | a | b |", "+| 2 | q two edited | a | b |",  # edited, still open
-            "-| 3 | q three | a | b |", "+| ~~3~~ | ~~q three~~ | a | b |"])  # struck through: answered
-        dec = [dict(date="2026-11-20", text="answers Q2 finally"), dict(date="2026-11-01", text="old Q3")]
+            "@@aaaaaaaa 2026-11-10T10:00:00+00:00", "@@ -0,0 +1,5 @@", "+| 1 | q one | a | b |", "+| 2 | q two | a | b |",
+            "+| 3 | q three | a | b |", "+| 4 | q four | a | b |", "+| 5 | q five | a | b |",
+            "@@bbbbbbbb 2026-11-18T10:00:00+00:00", "-| 1 | q one | a | b |",  # removed, no answer anywhere: unresolved
+            "-| 2 | q two | a | b |", "+| 2 | q two edited | a | b |",  # edited, still open even with a decision
+            "-| 3 | q three | a | b |", "+| ~~3~~ | ~~q three~~ | a | b |",  # struck through, decision exists
+            "-| 4 | q four | a | b |",  # removed, decision exists
+            "-| 5 | q five | a | b |", "+| 5 | q five | a | Закрыт 2026-11-14 |"])  # closing text carries the answer date
+        dec = [dict(date="2026-11-20", text="answers Q2"), dict(date="2026-11-12", text="decides Q3"),
+               dict(date="2026-11-15", text="Q4 decided"), dict(date="2026-11-01", text="old Q4 note"),
+               dict(date="2026-11-13", text="Q41 is another question")]
         rows = {r["question"]: (r["asked"], r["answered"]) for r in metrics.parse_question_history(log, dec)}
-        self.assertEqual(rows, {"Q1": ("2026-11-10", "2026-11-12"), "Q2": ("2026-11-10", "2026-11-20"),
-                                "Q3": ("2026-11-10", "2026-11-12")})
+        self.assertEqual(rows, {"Q3": ("2026-11-10", "2026-11-12"), "Q4": ("2026-11-10", "2026-11-15"),
+                                "Q5": ("2026-11-10", "2026-11-14")})
+
+    def test_transcript_messages_have_their_own_time_and_key(self):
+        lines = [assistant("m1", "2026-11-20T10:00:00Z", 7), assistant("m1", "2026-11-20T10:00:09Z", 7),
+                 assistant("m2", "2026-12-05T10:00:00Z", 3)]
+        r = metrics.parse_transcript(lines, "session:s", "session", "s")
+        got = {m["key"]: (m["t"][:10], m["output_tokens"]) for m in r["messages"]}
+        self.assertEqual(got, {"session:s:m1": ("2026-11-20", 7), "session:s:m2": ("2026-12-05", 3)})
 
     def test_research_record_sums_item_usage_and_counts_verdicts(self):
         rec = dict(kind="research", provider="deepseek-flash", input="docs/research/notes/x.yaml", created="2026-11-26T03:03:53Z",
@@ -182,14 +197,46 @@ class LandingJournalTests(unittest.TestCase):
         self.assertEqual((steps["verify:build"], steps["verify:test-core"]), (12.5, 3.0))
         self.assertIn("verify", steps)
 
+    def test_run_verify_survives_a_broken_console_and_bad_timing_lines(self):
+        class Broken:
+            def write(self, _s):
+                raise OSError("console gone")
+
+            def flush(self):
+                raise OSError("console gone")
+        steps = {}
+        prog = "print('  OK   a                1.2.3 s'); print('  OK   b                 4.0 s'); import sys; sys.exit(3)"
+        with contextlib.redirect_stdout(Broken()):
+            rc = land.run_verify([sys.executable, "-c", prog], self.root, steps)
+        self.assertEqual(rc, 3)  # the exit code is the verify result
+        self.assertEqual(steps["verify:b"], 4.0)
+        self.assertNotIn("verify:a", steps)
+
 
 @unittest.skipUnless(kb_db.available(), "PostgreSQL is not available")
 class DatabaseTests(unittest.TestCase):
+    """Every test gets its own schema, fixture files and tables (setUp), so the tests do not depend on each other."""
+
     @classmethod
     def setUpClass(cls):
         cls.db = "mtest_" + uuid.uuid4().hex[:10]
-        cls.tmp = tempfile.TemporaryDirectory()
-        t = Path(cls.tmp.name)
+        cls.old = {k: os.environ.get(k) for k in ENV_KEYS}
+        os.environ["SINGULARITY_KB_DB"] = cls.db
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.restore_env()
+        kb_db.psql("postgres", f"drop database if exists {cls.db}")
+
+    @classmethod
+    def restore_env(cls):
+        for k, v in cls.old.items():
+            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        t = Path(self.tmp.name)
         for sub in ("state", "claude/sess1/subagents", "runs"):
             (t / sub).mkdir(parents=True)
         (t / "state/agents.jsonl").write_text("\n".join([
@@ -197,36 +244,32 @@ class DatabaseTests(unittest.TestCase):
             line(t=1795000600, event="stop", agent_id="ag1", agent_type="developer")]) + "\n")
         (t / "state/landings.jsonl").write_text(line(t=1795000700, branch="b", task="TASK-0206", attempt=1, code=0,
                                                        total_s=50, steps=dict(verify=40)) + "\n")
-        (t / "claude/sess1.jsonl").write_text(assistant("m1", "2026-11-20T10:00:00Z", 7) + "\n")
+        (t / "claude/sess1.jsonl").write_text(assistant("m1", "2026-11-20T10:00:00Z", 7) + "\n"
+                                              + assistant("m2", "2026-12-05T10:00:00Z", 1000) + "\n")
         (t / "claude/sess1/subagents/agent-ag1.jsonl").write_text(
             assistant("m9", "2026-11-20T10:00:00Z", 50) + "\n" + assistant("m9", "2026-11-20T10:00:00Z", 50) + "\n")
         (t / "runs/review-TASK-0206-abc-1.json").write_text(json.dumps(dict(
             kind="review", provider="codex", task="TASK-0206", round=1, created_at="2026-11-20T11:00:00+00:00",
             usage=dict(input_tokens=1, output_tokens=2), result=dict(verdict="accept", findings=[]))))
         (t / "ledger.jsonl").write_text(line(id="a", model="m", t="reserve", task="TASK-0206", ts="2026-11-20T11:00:00+00:00", usd="0.1") + "\n")
-        cls.env = {"SINGULARITY_KB_DB": cls.db, "SINGULARITY_STATE": str(t / "state"),
-                   "SINGULARITY_CLAUDE_PROJECTS": str(t / "claude"), "SINGULARITY_LLM_RUNS": str(t / "runs"),
-                   "SINGULARITY_LEDGER": str(t / "ledger.jsonl")}
-        cls.old = {k: os.environ.get(k) for k in cls.env}
-        os.environ.update(cls.env)
+        self.schema = "t_" + uuid.uuid4().hex[:10]
+        self.env = {"SINGULARITY_KB_SCHEMA": self.schema, "SINGULARITY_STATE": str(t / "state"),
+                    "SINGULARITY_CLAUDE_PROJECTS": str(t / "claude"), "SINGULARITY_LLM_RUNS": str(t / "runs"),
+                    "SINGULARITY_LEDGER": str(t / "ledger.jsonl")}
+        os.environ.update(self.env)
+        self.addCleanup(self.drop_schema)
         kb_db.build(quiet=True)  # agent_runs and errors come from the kb index
+        self.assertEqual(metrics.collect(quiet=True), 0)  # this test's own tables
 
-    @classmethod
-    def tearDownClass(cls):
-        for k, v in cls.old.items():
-            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
-        try:
-            kb_db.psql("postgres", f"drop database if exists {cls.db}")
-        finally:
-            cls.tmp.cleanup()
+    def drop_schema(self):
+        kb_db.psql(self.db, f'drop schema if exists "{self.schema}" cascade')
 
     def count(self, table):
         return int(kb_db.psql(self.db, f"select count(*) from {table}", "-At", schema=True).strip())
 
     def test_collect_is_idempotent_and_keeps_soft_deletes(self):
-        self.assertEqual(metrics.collect(quiet=True), 0)
         first = {t: self.count(t) for t in metrics.COLS}
-        self.assertEqual((first["sessions"], first["llm_calls"], first["landings"]), (2, 2, 1))
+        self.assertEqual((first["sessions"], first["messages"], first["llm_calls"], first["landings"]), (2, 3, 2, 1))
         self.assertEqual(self.count("sessions where tasks is not null"), 2)
         self.assertEqual(metrics.collect(quiet=True), 0)
         self.assertEqual({t: self.count(t) for t in metrics.COLS}, first)
@@ -250,6 +293,14 @@ class DatabaseTests(unittest.TestCase):
         self.assertIn("TASK-0206", text)
         self.assertIn("review records", text)
         self.assertRegex(text, r"developer\s+1\s+10\s+\d+\s+\d+\s+50")  # one run, 10 min, 50 output tokens (not 100)
+
+    def test_token_totals_of_a_period_are_exact_per_message(self):
+        inside = metrics.report_data("2026-11-20", "2026-11-21")["tokens"]
+        self.assertEqual(sum(r["out_tokens"] for r in inside), 57)  # m1 (7) + the agent's m9 (50); m2 is in December
+        later = metrics.report_data("2026-12-01", "2026-12-31")["tokens"]
+        self.assertEqual(sum(r["out_tokens"] for r in later), 1000)
+        s = metrics.summary(metrics.report_data("2026-11-20", "2026-11-21", limit=None))
+        self.assertEqual(s["claude output tokens"], 57)
 
     def test_llm_calls_are_counted_once_not_per_ledger_entry(self):
         s = metrics.summary(metrics.report_data("2026-11-20", "2026-11-21", limit=None))

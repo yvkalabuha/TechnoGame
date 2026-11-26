@@ -161,17 +161,40 @@ STEP_RE = re.compile(r"^\s+(?:OK|FAIL)\s+(\S+)\s+([\d.]+) s")
 
 
 def run_verify(cmd: list[str], cwd: Path, steps: dict[str, float]) -> int:
-    """Run verify.py, echo its output and keep the time of each step ('verify:<name>') and the total."""
+    """Run verify.py, echo its output unchanged and keep the time of each step ('verify:<name>') and the total.
+    The timings are parsed after verify has finished, from the captured text; nothing here may raise or block
+    the landing: any failure of the capture falls back to a plain run, and a bad timing line is ignored."""
     t0 = time.monotonic()
-    with subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                          errors="replace") as p:
-        for line in p.stdout:
-            print(line, end="", flush=True)
+    captured: list[str] = []
+    try:
+        with subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                              errors="replace") as p:
+            try:
+                for line in p.stdout:
+                    captured.append(line)
+                    try:
+                        print(line, end="", flush=True)
+                    except (OSError, ValueError):
+                        pass  # the console went away: keep draining so verify never blocks on a full pipe
+            except Exception:
+                try:
+                    p.stdout.read()  # drain what is left
+                except Exception:
+                    pass
+            rc = p.wait()
+    except OSError:
+        rc = subprocess.run(cmd, cwd=cwd).returncode  # the capture could not start: run without timings
+    steps["verify"] = time.monotonic() - t0
+    try:
+        for line in captured:
             m = STEP_RE.match(line)
             if m:
-                steps["verify:" + m.group(1)] = float(m.group(2))
-        rc = p.wait()
-    steps["verify"] = time.monotonic() - t0
+                try:
+                    steps["verify:" + m.group(1)] = float(m.group(2))
+                except ValueError:
+                    pass  # '1.2.3': this line loses its timing, the others keep theirs
+    except Exception:  # never the landing
+        pass
     return rc
 
 
