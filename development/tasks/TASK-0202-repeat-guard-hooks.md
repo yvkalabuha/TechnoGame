@@ -1,7 +1,7 @@
 ---
 id: TASK-0202
 title: "Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: general-purpose         # ответственный агент
