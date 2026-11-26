@@ -3,6 +3,7 @@
 import fcntl
 import importlib.util
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,7 +13,15 @@ from tools.llm_worker import config
 
 spec = importlib.util.spec_from_file_location("land_mod", Path(config.REPO_ROOT) / "tools" / "development" / "land.py")
 land = importlib.util.module_from_spec(spec)
+_path_before = list(sys.path)
 spec.loader.exec_module(land)
+_path_after = list(sys.path)
+
+
+class LandImportPathTest(unittest.TestCase):
+    def test_import_leaves_sys_path_unchanged(self):
+        # tools/development has test_*.py names that would shadow llm_worker tests
+        self.assertEqual(_path_before, _path_after)
 
 
 class LandLockTest(unittest.TestCase):

@@ -33,8 +33,17 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import redis_kv  # noqa: E402
+# Import the sibling without leaving tools/development at the front of sys.path: it holds
+# test_*.py names that shadow tools/llm_worker/tests when a test imports land.
+_HERE = str(Path(__file__).resolve().parent)
+_added = _HERE not in sys.path
+if _added:
+    sys.path.insert(0, _HERE)
+try:
+    import redis_kv  # noqa: E402
+finally:
+    if _added:
+        sys.path.remove(_HERE)
 
 
 # Paths whose content verify.py builds or tests.
