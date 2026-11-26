@@ -1,7 +1,7 @@
 ---
 id: TASK-0204
 title: "Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #591"
+review_ref: "reviewer: APPROVE 35d1169b; second review agy-sonnet accept (codex limit), 4 findings → DEBT-0123"
 created: 2026-11-26
 ---
 
