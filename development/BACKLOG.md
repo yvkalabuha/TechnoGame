@@ -220,6 +220,9 @@
 | [TASK-0202](../development/tasks/TASK-0202-repeat-guard-hooks.md) | APPROVED | Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591) | MS-M0 |
 | [TASK-0203](../development/tasks/TASK-0203-skills-shots-recheck-error.md) | APPROVED | Skills /shots, /recheck, /error for the Orchestrator (#591) | MS-M0 |
 | [TASK-0204](../development/tasks/TASK-0204-review-rejection-memory.md) | APPROVED | Rejection memory: rejected review findings and their reasons are fed back to Codex, DeepSeek and agents so they do not repeat (#591) | MS-M0 |
+| [TASK-0205](../development/tasks/TASK-0205-institutes-1960-2030.md) | APPROVED | Data: build candidate institutes 1960-2030 for USA, SUN, GBR, FRA, SWE with directions and levels (#589, O-110) | MS-M0 |
+| [TASK-0206](../development/tasks/TASK-0206-platform-metrics.md) | APPROVED | Platform metrics in PostgreSQL: sessions, agents, LLM calls, landings, task flow, owner waits, errors; kb_db report (#593) | MS-M0 |
+| [TASK-0207](../development/tasks/TASK-0207-release-model.md) | APPROVED | Release model: release.py rc|check|approve|release|rollback, RC report, /release skill, client build (#594) | MS-M0 |
 
 ## Гипотезы
 
