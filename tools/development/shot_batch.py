@@ -83,7 +83,10 @@ def collect(items) -> list[dict]:
             except ValueError:
                 bad_flags = True
             problem = None if branch and only else "shots needs both branch and only"
-            problem = problem or ("malformed flags: " + flags if bad_flags else None) or check_branch(branch)
+            problem = problem or ("malformed flags: " + flags if bad_flags else None)
+            if not problem and not {"--shots", "--map-frames"} & set(shlex.split(flags)):
+                problem = "interactive command (flags need --shots or --map-frames)"
+            problem = problem or check_branch(branch)
             rows.append({"id": it.id, "branch": branch, "only": only, "flags": flags, "problem": problem})
     return rows
 

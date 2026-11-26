@@ -26,7 +26,8 @@ What it reports:
 orphan branch     a worktree-agent-* branch with commits not in main, older than --ping-hours, with no running agent
                     and no task in REVIEW (a foreground agent leaves no agent_id in the log): to-review?
 A branch without a task id in its commit subjects takes the task of its agent's start record, else the task
-named in its first commit body. A newer agent suppresses to-review only when its record names the same branch.
+named in its first commit body. A newer agent suppresses to-review only while it runs and its record names the same branch; once it
+stops, to-review applies to the branch. A running agent that names a branch also keeps it off the orphan list.
 Agents that run within the thresholds, or whose work is accounted for, print nothing.
 
 Read-only. Sources: the registry, git, .claude/.state/agents.jsonl.
@@ -102,13 +103,14 @@ def orphan_branches(br: list[dict], events: list[dict], status_of: dict[str, str
                     now: float, min_hours: float) -> list[dict]:
     """Agent branches with commits not in main, no open review and no running agent: the work of a foreground
     agent (its start record has no agent_id) or of an agent whose stop was missed."""
-    running = {e["agent_id"] for e in events if e.get("event") != "stop" and e.get("agent_id")} - \
-              {e["agent_id"] for e in events if e.get("event") == "stop" and e.get("agent_id")}
+    done = {e["agent_id"] for e in events if e.get("event") == "stop" and e.get("agent_id")}
+    live = [e for e in events if e.get("event") != "stop" and e.get("agent_id") and e["agent_id"] not in done]
+    running = {e["agent_id"] for e in live}
     out = []
     for b in br:
         if not b["name"].startswith(AGENT_BRANCH) or b["name"] in handled:
             continue
-        if b["name"][len(AGENT_BRANCH):] in running or any(status_of.get(t) == "REVIEW" for t in b["tasks"]):
+        if b["name"][len(AGENT_BRANCH):] in running or any(same_branch(e, b["name"]) for e in live) or any(status_of.get(t) == "REVIEW" for t in b["tasks"]):
             continue
         h = age_h(b["last"], now)
         if h is not None and h > min_hours:
@@ -186,9 +188,9 @@ def agent_actions(events: list[dict], now: float, ping_h: float, stop_h: float,
         elif any(status_of.get(t) == "IN_PROGRESS"
                  and any(b.get("name") == AGENT_BRANCH + key for b in unlanded.get(t, []))
                  for t in tasks) and not any(
-                o is not e and o.get("t", 0.0) > stopped[key] and set(agent_task(o)[0]) & set(tasks)
-                and same_branch(o, AGENT_BRANCH + key)
-                for o in started.values()):  # a newer agent on the same branch is the replacement
+                o is not e and ok not in stopped and o.get("t", 0.0) > stopped[key]
+                and set(agent_task(o)[0]) & set(tasks) and same_branch(o, AGENT_BRANCH + key)
+                for ok, o in started.items()):  # a newer agent still running on the same branch is the replacement
             action = "to-review"
         if action:
             out.append({"agent_id": key, "action": action, "hours": h, "tasks": tasks, "candidate": candidate,

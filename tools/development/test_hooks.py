@@ -205,6 +205,19 @@ class WatchActionsTest(unittest.TestCase):
               dict(self.started("b", 1), branch="worktree-agent-a")]
         self.assertEqual(self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{"name": "worktree-agent-a"}]}), {})
 
+    def test_replacement_finishing_gets_to_review(self):
+        ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
+              dict(self.started("b", 1), branch="worktree-agent-a"),
+              {"event": "stop", "agent_id": "b", "t": self.NOW}]
+        got = self.acts(ev, {"TASK-0001": "IN_PROGRESS"}, {"TASK-0001": [{"name": "worktree-agent-a"}]})
+        self.assertEqual(got["a"], "to-review")
+
+    def test_orphan_skips_branch_named_by_running_agent(self):
+        old = self.NOW - 5 * 3600
+        br = [{"name": "worktree-agent-a", "commits": 1, "last": old, "tasks": []}]
+        ev = [dict(self.started("b", 1), branch="worktree-agent-a")]
+        self.assertEqual(watch.orphan_branches(br, ev, {}, set(), self.NOW, 2.0), [])
+
     def test_later_agent_on_another_branch_does_not_suppress(self):
         ev = [self.started("a", 3), {"event": "stop", "agent_id": "a", "t": self.NOW - 2 * 3600},
               self.started("b", 1)]
@@ -402,6 +415,14 @@ class ShotBatchTest(unittest.TestCase):
         self.assertEqual([(r["id"], r["problem"]) for r in rows],
                          [("TASK-1", "missing shots field"), ("TASK-2", None), ("TASK-2", None)])
         self.assertIn("--map-frames --only 'map1945_*'", shot_batch.command(rows[2]))
+
+    def test_bare_launch_is_interactive_not_ready(self):
+        class It:
+            def __init__(s, i, **m):
+                s.id, s.meta = i, m
+        rows = shot_batch.collect([It("TASK-1", status="REVIEW", category="client",
+                                      shots={"branch": "fresh", "only": "a", "flags": "--headless"})])
+        self.assertIn("interactive command", rows[0]["problem"])
 
     def test_malformed_flags_reported_and_others_continue(self):
         class It:
