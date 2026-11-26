@@ -70,8 +70,7 @@ public class GlobeLabelHatchTests
     public void Plate_mode_follows_the_screen_area()
     {
         Assert.Equal(LabelPlacement.PlateMode.Callout, LabelPlacement.ModeFor(63f));
-        Assert.Equal(LabelPlacement.PlateMode.Framed, LabelPlacement.ModeFor(64f));
-        Assert.Equal(LabelPlacement.PlateMode.Framed, LabelPlacement.ModeFor(399f));
+        Assert.Equal(LabelPlacement.PlateMode.Callout, LabelPlacement.ModeFor(399f));
         Assert.Equal(LabelPlacement.PlateMode.Plain, LabelPlacement.ModeFor(400f));
         // 500 raster px at 100 px per degree on both axes; the same region foreshortened to half on the latitude axis (limb, high latitude) has half the area
         float full = LabelPlacement.ScreenArea(500, 100, 0, 0, 100), half = LabelPlacement.ScreenArea(500, 100, 0, 0, 50);

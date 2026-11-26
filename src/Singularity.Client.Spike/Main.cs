@@ -141,6 +141,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
         _overlay.InRegion = (c, lon, lat) => _data.InLabelRegion(c, lon, lat);
+        _overlay.IsLand = (lon, lat) => _data.IsLandAt(lon, lat);
         _overlay.LegendOpen = Settings.Current.MapLegendOpen;
         _overlay.LegendToggled += open => { Settings.Current.MapLegendOpen = open; if (!_shots && !_mapFrames && !_bench) Settings.Save(); };
         foreach (var c in top) _overlay.AddLabel(c, false);
@@ -678,6 +679,11 @@ public sealed partial class Main : Node3D
         ("map1945_africa_1920x1080.png", 20, 3, 2.25f, true),
         ("map1945_asia_1920x1080.png", 88, 38, 2.1f, true),
         ("map1945_limb_1920x1080.png", 118, 38, 2.1f, true),   // Europe near the limb
+        ("map1945_world_1920x1080.png", 20, 20, 3.2f, true),
+        ("map1945_namerica_1920x1080.png", -98, 42, 2.4f, true),
+        ("map1945_oceania_india_1920x1080.png", 105, -2, 3.0f, true),
+        ("map1945_africa_west_1920x1080.png", 2, 10, 1.55f, true),
+        ("map1945_europe_north_1920x1080.png", 12, 58, 1.5f, true),
     };
 
     // The globe alone on the lit side: the five slice powers keep an ink contour and every tone stays at full strength.
@@ -715,16 +721,29 @@ public sealed partial class Main : Node3D
         if (_mapStep >= MapViews.Length) { GetTree().Quit(_shotFailed ? 1 : 0); return; }
         var v = MapViews[_mapStep];
         if (_mapT < 0.3) { _yaw = v.Lon; _pitch = v.Lat; _dist = v.Dist; return; }
+        if (_mapT < 0.9) _overlay.MaxUpdateMs = 0;   // the pass is measured on the settled view, not on the first frame after loading
         if (_mapT < 1.2) return;
         // G4 on the live state: the big names of the frame stay on the map.
-        if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow}, frame < {LabelPlacement.FramedBelow})");
-        string need = v.Name.Contains("europe") ? "SWE" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
+        if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow})");
+        string need = v.Name.Contains("europe") ? "FRA" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : v.Name.Contains("namerica") ? "C_GREENLAND" : null;
         if (need != null)
         {
             bool shown = _overlay.IsShown(need);
             GD.Print($"MAPCHECK {v.Name} label {need} shown: " + (shown ? "PASS" : "FAIL"));
+            _shotLog += $"MAPCHECK {v.Name} label {need} shown: {(shown ? "PASS" : "FAIL")}\n";   // the run log carries it, not only stdout
             if (!shown) _shotFailed = true;
         }
+        string[] list = v.Name.Contains("europe_north") ? new[] { "GBR", "IRL", "SWE", "NOR", "DNK", "FIN", "ISL" }
+            : v.Name.Contains("namerica") ? new[] { "USA", "CAN", "MEX", "C_GREENLAND" }
+            : v.Name.Contains("oceania") ? new[] { "AUS", "NZL", "C_BRITISH_INDIA", "C_DUTCH_EAST_INDIES", "C_BURMA", "C_BRITISH_MALAYA", "C_PHILIPPINES" }
+            : v.Name.Contains("europe") ? new[] { "GBR", "SWE", "NOR", "CSK", "AUT", "HUN", "BGR", "IRL", "PRT", "FRA", "ESP", "POL", "DEU", "ITA", "ROU", "YUG", "GRC", "TUR" }
+            : v.Name.Contains("africa_west") ? new[] { "C_FRENCH_WEST_AFRICA", "C_BRITISH_WEST_AFRICA", "C_FRENCH_ALGERIA", "C_FRENCH_MOROCCO", "C_FRENCH_EQUATORIAL_AFRICA", "LBR" }
+            : v.Name.Contains("africa") ? new[] { "C_FRENCH_WEST_AFRICA", "C_FRENCH_EQUATORIAL_AFRICA", "SDN_AE", "C_BRITISH_WEST_AFRICA", "C_BRITISH_EAST_AFRICA", "C_PORTUGUESE_ANGOLA", "C_PORTUGUESE_MOZAMBIQUE", "C_SOUTH_WEST_AFRICA", "ZAF", "C_BELGIAN_CONGO", "ETH", "EGY" }
+            : v.Name.Contains("asia") ? new[] { "SUN", "ROC", "MNG", "KOR", "JPN", "NPL", "SAU", "IRQ", "SYR", "IRN", "AFG", "TIB", "THA", "C_BRITISH_INDIA", "C_BURMA", "C_FRENCH_INDOCHINA" } : new string[0];
+        var sb = new System.Text.StringBuilder();
+        foreach (var code in list) sb.Append(code).Append(_overlay.IsShown(code) ? " yes, " : " NO, ");
+        GD.Print($"CHECKLIST {v.Name}: {sb}");
+        GD.Print($"MAPCHECK {v.Name} labels shown {_overlay.VisibleLabels}, slowest label pass {_overlay.MaxUpdateMs:F1} ms");
         SaveShot(v.Name, null, v.Grey);
         _mapStep++; _mapT = 0;
     }
