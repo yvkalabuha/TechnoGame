@@ -1,6 +1,3 @@
----
-tags: [analysis, science, institutions, draft]
----
 # Поворот #561: влияние на модель знаний и на замеры
 
 > simulation-engineer, 2026-11-25. Основание: решения владельца #561 и #562 (`docs/decisions/DECISIONS_LOG.md`). Код прочитан на `main` e5c2b9d (`src/Singularity.Core/Knowledge/*`, `Institutes/*`, `Policy/*`) и на ветке TASK-0171 (`worktree-agent-a0d58d313e41da42c`, 58997ac: правило PATH, рынок M2). Замеры: `levers-on-baseline-558.md`, `institutes-recalibration.md` (обе пока только в ветках TASK-0171/0176/0178), `slice-pace-regression.md`. Это записка анализа, не спецификация: ни одна формула ниже не утверждена.

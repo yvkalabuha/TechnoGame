@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "#550"
 review_ref: "reviewer: APPROVE (9af89b2, 27be18c); land.py verify OK, merge 5435cbf"
 created: 2026-11-25
-tags: [task, history, map, done]
 ---
 
 # TASK-0177 — Data: Mongolia 1945 as an independent country (MNG owner and controller), #550

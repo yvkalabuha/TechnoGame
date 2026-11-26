@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # Gemini visual opinion: TASK-0126
 
 Model gemini-4-hydrogen, frames: tree_caption_turbine_1920x1080.png, tree_caption_jet_test_1920x1080.png, tree_legend_1920x1080.png, final_tree_played_USA_1920x1080.png, final_tree_other_actor_SUN_1920x1080.png, main_menu_1920x1080.png.

@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "#438, #439, #440 (mechanic approved by owner; gate docs/reviews/production-mastery-*.md)"
 review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-24
-tags: [task, core, economy, done]
 ---
 
 # TASK-0134 — Рост потолка кадров и освоение производства в Core (#438–#440)

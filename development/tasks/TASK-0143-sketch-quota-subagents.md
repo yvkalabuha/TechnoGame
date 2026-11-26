@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "owner asked in chat 2026-11-24 to investigate fewer images; light task approved by Orchestrator"
 review_ref: "reviewer: APPROVE ab63291; codex: waived #432 after 3rd return (7f20bb65), remainder DEBT-0089; landed fbbc783"
 created: 2026-11-24
-tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0143 — Почему Gemini рисует меньше эскизов, чем просили

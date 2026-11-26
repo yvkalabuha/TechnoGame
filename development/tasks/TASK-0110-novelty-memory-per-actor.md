@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "DEBT-0054, spec C10 (light)"
 created: 2026-11-18
-tags: [task, core, gameplay, done]
 ---
 
 # TASK-0110 — Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054)

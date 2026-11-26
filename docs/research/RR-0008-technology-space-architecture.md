@@ -5,7 +5,6 @@ status: FINAL
 date: 2026-11-02
 author: research-scientist
 related: [RR-0003]
-tags: [research, science, accepted]
 ---
 
 # RR-0008 — Архитектура технологического пространства

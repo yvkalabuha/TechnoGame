@@ -1,6 +1,3 @@
----
-tags: [analysis, science, determinism, done]
----
 # Темп знания среза после T12: что замедлило G2–G4 (follow-up TASK-0178)
 
 Автор: simulation-engineer, 2026-11-25. Код замеров: `main` `08a6250` и точки истории `main` (сборки `git archive` в `lab/results/bisect/<sha>`). Разбор: `lab/analysis/slice_pace_bisect.py`.

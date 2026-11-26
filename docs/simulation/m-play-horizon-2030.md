@@ -1,6 +1,3 @@
----
-tags: [analysis, core, gameplay, done]
----
 # Горизонт M-play 1945–2030 на срезе реактивной авиации (решение #422)
 
 > simulation-engineer, 2026-11-19. Зонд, не эксперимент EXP: код не менялся. Сырые данные — `lab/results/m-play-horizon/` (не коммитится).

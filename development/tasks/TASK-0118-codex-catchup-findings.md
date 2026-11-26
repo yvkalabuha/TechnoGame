@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "PLAN Фокус п.2 (after train 2); light task approved by Orchestrator"
 review_ref: "reviewer: APPROVE 8721899; codex: waived #432 after 3rd return (87218993), remainder DEBT-0094, ab_none per O-053; landed eea84f2"
 created: 2026-11-19
-tags: [task, core, external-llm, done]
 ---
 
 # TASK-0118 — Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110)

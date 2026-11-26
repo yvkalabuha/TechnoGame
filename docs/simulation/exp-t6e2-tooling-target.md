@@ -16,7 +16,6 @@ golden_hash:             # конечные хеши V0 main seeds 21…25
 baseline: V0 на той же сборке
 outcome:                 # supports | refutes | inconclusive
 created: 2026-11-04
-tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-NNNN — T6e2: цель прохода 2 A39 на сборке F17b

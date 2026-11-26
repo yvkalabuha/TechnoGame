@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "owner message 2026-11-25: «мы не по ключу же работаем»"
 review_ref: "reviewer: APPROVE; codex 3 returns, waived by #432, DEBT-0113; merge 241181f"
 created: 2026-11-25
-tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0190 — Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key

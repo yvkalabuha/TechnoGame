@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-02
 approval_ref: light follow-up of TASK-0001 (owner-approved pilot, DECISIONS_LOG #12)
 created: 2026-11-02
-tags: [task, core, testing, done]
 ---
 
 # TASK-0007 — Kernel: исправления по ревью и аудиту тестов

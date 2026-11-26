@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "PLAN Фокус п.2 (after train 2); light task approved by Orchestrator"
 review_ref: "reviewer: APPROVE (alloy fix re-review); ui-art-director: PASS task-0119-visual.md; codex: waived #432 after 3rd return (fac02a13), remainder DEBT-0092; landed c898dce"
 created: 2026-11-19
-tags: [task, core, ui, done]
 ---
 
 # TASK-0119 — Instrument data fields in the Session view: alloy coverage, research progress

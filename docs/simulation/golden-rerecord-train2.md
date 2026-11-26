@@ -1,6 +1,3 @@
----
-tags: [task, determinism, testing, done]
----
 # Перезапись эталонов поезда 2 (TASK-0147)
 
 > simulation-engineer, 2026-11-24. Ветка `task-0147`. Перезапись — developer `91949e6`, `63004e4` (tests/), simulation-engineer `3eaa727` (Lab). Порядок — решение Orchestrator «перезапись эталонов поезда 2» (строка `docs/decisions/ORCH_DECISIONS.md` на `main`, 2026-11-24; в ветке её пока нет, поэтому номер здесь не пишется — `kb_check` сверяет номера с таблицей ветки).

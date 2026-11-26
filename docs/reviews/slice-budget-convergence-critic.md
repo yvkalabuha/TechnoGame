@@ -1,6 +1,3 @@
----
-tags: [review, economy, gameplay, done]
----
 # Gate: правило бюджетов среза — критик (2026-11-19)
 
 Артефакт: `docs/game-design/economy/slice-budget-convergence.md`. Отчёт агента critic, сохранён Orchestrator.

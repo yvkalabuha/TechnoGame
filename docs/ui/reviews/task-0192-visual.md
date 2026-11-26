@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0192 — визуальное ревью, раунд 1 (кадры shots-out/TASK-0192-r1/, 1920x1080 + grey)
 
 Gemini: rework; review: agree (по существу); blocking rule breaches: см. ниже (B1–B5, все кроме B5 закрыты в aa89d2c4 в коде, но не переснято)

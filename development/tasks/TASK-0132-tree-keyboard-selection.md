@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "PLAN Фокус п.5; prerequisite of design pass 2 (#453); light task approved by Orchestrator"
 created: 2026-11-23
-tags: [task, ui, deferred]
 ---
 
 # TASK-0132 — Выбор узлов дерева знаний с клавиатуры (A6–A8)

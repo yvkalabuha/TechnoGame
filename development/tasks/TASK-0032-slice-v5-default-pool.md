@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-04
 approval_ref: "DECISIONS_LOG #163, #167; спека v0.22 §11; контракт v2.4 r8 F33"
 created: 2026-11-04
-tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0032 — V5 по умолчанию, колонка tool_unmet и причина why_not, переключатель POOL_ORDER

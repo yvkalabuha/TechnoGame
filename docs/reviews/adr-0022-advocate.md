@@ -1,6 +1,3 @@
----
-tags: [review, map, gameplay, done]
----
 # ADR-0022 — advocate (gate 2026-11-18)
 
 Verdict: ADR-0022 follows #384; two choices fail on the data. Fixes stay inside #384.

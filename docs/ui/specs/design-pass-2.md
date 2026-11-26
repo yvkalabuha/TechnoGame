@@ -1,6 +1,3 @@
----
-tags: [design, ui, visual, draft]
----
 # Design pass 2: почему интерфейс «топорный» и что делать
 **Автор:** ui-art-director · **Дата:** 2026-11-24 · **Основание:** отзыв владельца «выглядит топорно», `reviews/gemini-design-2026-11-24-all-screens-gemini-4-hydrogen.md` (8 кадров 1920x1080, 100 %), `specs/task-0136-clarity-depth.md`, `VISUAL_DIRECTION_V06.md`, ADR-0026.
 Пометки: [Факт] виден на кадре; [Предп.] не измерено; [Предл.] предложение, не решение. Gemini даёт второе мнение, решение мое.

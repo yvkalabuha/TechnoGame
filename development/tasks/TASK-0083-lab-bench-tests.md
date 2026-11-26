@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "TASK-0064 handoff, light"
 created: 2026-11-18
-tags: [task, testing, simulation-lab, done]
 ---
 
 # TASK-0083 — Tests for lab bench: statistics, manifest, plan, CLI

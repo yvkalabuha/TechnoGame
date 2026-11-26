@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#565, #563"
 created: 2026-11-26
-tags: [task, gameplay, military, active]
 ---
 
 # TASK-0194 — Air power goal (#565): Session goal state parity/superiority/dominance and a header indicator in the client

@@ -1,6 +1,3 @@
----
-tags: [analysis, economy, simulation-lab, done]
----
 # Диагностика: почему `fielded` пуст (T-fleet, TASK-0028)
 
 > simulation-engineer, 2026-11-04. Вход: находка TASK-0028 «Результат» (`G_front ≥ 1` в 0 из 7680 seed-месяцев). Свой прогон: core f0bdf29 (архив HEAD, src не менялся; c1f817f трогает только плечо `PURCHASE_CAP`), данные `mods/core` D1, seeds 1…20, 384 мес. Скретч-код и сырые числа: `lab/results/fieldeddiag/` (`DiagFieldedTests.cs`, `DiagFieldedSummaryTests.cs`, `ana/agg.py`, `ana/sum.py`, `ana/traj.txt`, `ana/sum.txt`; не коммитится). Контрфакты — только для диагностики, параметры по ним не подбираются (RISK-0011, #143).

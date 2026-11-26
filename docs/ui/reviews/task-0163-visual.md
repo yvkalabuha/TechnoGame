@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0163 — визуальный обзор подписей стран (ui-art-director)
 
 Кадры: shots-out/task-0163/ europe, africa, asia 1920x1080 100 %; смотрел цветные и europe_grey; africa_grey, asia_grey, limb не смотрел. Мнение Gemini: отсутствует; согласие по пунктам не записано.

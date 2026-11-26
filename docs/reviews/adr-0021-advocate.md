@@ -1,6 +1,3 @@
----
-tags: [review, core, determinism, done]
----
 # Gate ADR-0021 — advocate (2026-11-18)
 
 The base is right: the role only rolls dice, one writer per column, the #342 boundary holds. Partly adopt rejected alternatives in three places.

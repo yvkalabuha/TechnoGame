@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # Gemini visual opinion: TASK-0136
 
 Model gemini-4-hydrogen, frames: sun_legend_sel.png, sun_tree_grey.png, sun_tree.png, usa_legend_sel.png, usa_tree_s150.png.

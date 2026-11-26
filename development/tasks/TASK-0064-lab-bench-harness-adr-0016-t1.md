@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-17
 approval_ref: "ADR-0016 ACCEPTED (#276), light task inside approved plan"
 created: 2026-11-17
-tags: [task, performance, simulation-lab, done]
 ---
 
 

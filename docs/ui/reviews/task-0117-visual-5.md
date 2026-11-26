@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0117 visual review 5 (round 9, frames at 100 %)
 
 Verdict: FAIL (one defect, everything else in scope passes)

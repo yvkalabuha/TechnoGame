@@ -1,6 +1,3 @@
----
-tags: [note, core, ui, draft]
----
 # Сохранение и загрузка в клиенте (прототип)
 
 Автор: systems-architect, 2026-11-17. Основа: DECISIONS_LOG #302 (главное меню), `docs/ui/prototypes/design-v2.html` §4, ADR-0013 (ACCEPTED), ADR-0014 (ACCEPTED), ADR-0017 (PROPOSED, рев. 2), DEBT-0037.

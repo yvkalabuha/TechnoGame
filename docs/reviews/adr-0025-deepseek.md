@@ -1,6 +1,3 @@
----
-tags: [review, platform, external-llm, done]
----
 # ADR-0025 — третий голос DeepSeek (2026-11-21)
 
 Вывод `python3 -m tools.llm_worker gate --item docs/decisions/ADR-0025-view-snapshot-buffer-ring.md --stance third --profile deepseek-flash` (exit 0), хвост:

@@ -1,6 +1,3 @@
----
-tags: [review, military, external-llm, done]
----
 # Gate RR-0017-intelligence — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-RR-0017-intelligence-fa83ae95-third.json

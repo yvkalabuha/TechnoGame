@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0022 (#410), mandatory follow-up (1)"
 created: 2026-11-18
-tags: [task, map, testing, done]
 ---
 
 # TASK-0105 — ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region

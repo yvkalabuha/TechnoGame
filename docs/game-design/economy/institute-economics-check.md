@@ -1,6 +1,3 @@
----
-tags: [review, economy, science, done]
----
 # Проверка экономики научных институтов (rev 3, разд. 8)
 
 > economy-analyst, 2026-11-24. Проверка чисел `docs/game-design/civilization/research-institutes-priorities.md` rev 3 (#493–#496). Только документ: код, данные и спека не менялись. [Предл.] — не утверждено.

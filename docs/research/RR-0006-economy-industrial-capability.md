@@ -5,7 +5,6 @@ status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-04            # rev. 2026-11-14 (граница с E1-model, #170–#173, #193; подготовка к gate)
 author: economy-analyst
 related: [HYP-0001, HYP-0002, EXP-0001, RR-0008, RR-0007, RR-0010, RR-0014, ADR-0012]
-tags: [research, economy, science, accepted]
 ---
 
 # RR-0006 — Экономика и промышленный потенциал: способность производить ≠ знание технологии

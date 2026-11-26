@@ -1,6 +1,3 @@
----
-tags: [spec, data, science, active]
----
 # Класс изделия `jet_fighter` — данные среза
 
 > **Ревизия r5** (2026-11-03, контракт v2.4 r1, G4-9): поле `eng_gen` у альтернатив двигателя. **r4** (gate `COMPONENT_SELECTION.md` G-1/G-2): `af_mach2`, `af_class`, порог G4; см. «История ревизий».

@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-14
 approval_ref: "ROADMAP MS-M0 шаг 6; спека среза §8.2, A40 v0.20 (переобъявить полосы до прогона main); TASK-0053 «Для T12»"
 created: 2026-11-14
-tags: [task, simulation-lab, economy, done]
 ---
 
 # TASK-0054 — Подготовка T12

@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-04
 approval_ref: "DECISIONS_LOG #155, #156, #159; спека v0.19 §11 D2"
 created: 2026-11-04
-tags: [task, data, economy, done]
 ---
 
 # TASK-0029 — D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET

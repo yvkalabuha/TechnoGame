@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #598, #599"
 created: 2026-11-26
-tags: [task, knowledge-base, platform, active]
 ---
 
 # TASK-0209 — Knowledge base structure: tag vocabulary (<=50, 3 facets), docs catalogue and chains in kb_db, monthly decisions log, archives, shorter hooks (#598, #599)

@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0007 rev 2 gap list, light"
 created: 2026-11-18
-tags: [task, determinism, testing, done]
 ---
 
 # TASK-0085 — ADR-0007: extend the ban list (string.GetHashCode, Concurrent*, Channel)

@@ -1,6 +1,3 @@
----
-tags: [research, simulation-lab, done]
----
 # RR-0006, дополнение: находка F2 смоука T4s (разбавление культуры кластера)
 
 > Автор: economy-analyst, 2026-11-03. Входы: `docs/simulation/smoke-t4s.md` (F1, F2, C1, C2), `LAYER_CONTRACT.md` v2.3 §3, §4.1, §4.2, §6, §8.2, `slice-jet-aviation.md` v0.8 §1.1, §1.3, §3.2, §3.5 A18/A22, §8.1–8.2, `product_inputs.md` r3 §4, RR-0006 §2, §4.5.

@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-03
 approval_ref: "DECISIONS_LOG #127, #130–#136; спека v0.14 §11 D1"
 created: 2026-11-03
-tags: [task, data, history, done]
 ---
 
 # TASK-0026 — D1: пакет стартовых данных (заменитель ранга 0, правки старта SUN/FRA/USA/GBR, узел 58)

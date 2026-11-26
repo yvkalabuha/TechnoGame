@@ -1,6 +1,3 @@
----
-tags: [review, science, simulation-lab, done]
----
 # Critic: ai-institute-goals (TASK-0178), 2026-11-25
 
 Краткий вывод: высоких находок по замеру нет; вопрос «какой эталон решает» поставлен неверно.

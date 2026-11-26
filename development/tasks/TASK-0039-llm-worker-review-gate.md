@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "ADR-0015, план задач, п. 4 (задача 2)"
 created: 2026-11-13
-tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0039 — llm_worker: второе ревью и DeepSeek в воротах (ADR-0015 задача 2)

@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-17
 approval_ref: "AskUserQuestion 2026-11-17: 4 долга до заморозки"
 created: 2026-11-17
-tags: [task, core, done]
 ---
 
 # TASK-0061 — Долги перед заморозкой EXP-0002: DEBT-0030, 0034, 0035, 0036

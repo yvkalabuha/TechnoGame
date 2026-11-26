@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "O-086"
 review_ref: "reviewer: APPROVE (3 low fixed by orchestrator); land verify OK; merge e3435e2"
 created: 2026-11-25
-tags: [task, history, map, done]
 ---
 
 # TASK-0184 — Data: owners 1945 corrections from TASK-0166 check (Brunei, Ogaden, confidence marks; Tibet/Taiwan/Danzig wait for owner)

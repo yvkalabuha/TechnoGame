@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, external-llm, done]
----
 # Gemini visual opinion: TASK-0161
 
 Model gemini-4-neon-high, frames: shots-out/TASK-0161-r2/tree_year_overview_1920x1080_grey.png, shots-out/TASK-0161-r2/tree_year_overview_1920x1080.png, shots-out/TASK-0161-r2/tree_year_step2_1920x1080_grey.png, shots-out/TASK-0161-r2/tree_year_step2_1920x1080.png, shots-out/TASK-0161-r2/tree_year_step3_1920x1080_grey.png, shots-out/TASK-0161-r2/tree_year_step3_1920x1080.png, shots-out/TASK-0161-r2/tree_year_step5_1920x1080_grey.png, shots-out/TASK-0161-r2/tree_year_step5_1920x1080.png.

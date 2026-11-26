@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "Спека среза v0.24 §11, строка T10; DECISIONS_LOG #182"
 created: 2026-11-13
-tags: [task, simulation-lab, economy, done]
 ---
 
 # TASK-0044 — T10: Lab-модели среза

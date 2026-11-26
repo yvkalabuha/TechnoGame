@@ -1,6 +1,3 @@
----
-tags: [experiment, external-llm, platform, done]
----
 # Результаты пилота внешней LLM (TASK-0019)
 
 ## Прогон 1 — 2026-11-03, базовая линия

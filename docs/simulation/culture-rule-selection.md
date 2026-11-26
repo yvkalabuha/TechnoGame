@@ -1,6 +1,3 @@
----
-tags: [experiment, gameplay, simulation-lab, done]
----
 # Выбор правила роста культуры `culture_H` (смоук F2; решения #79, #80)
 
 > Автор: simulation-engineer. Входы: `smoke-t4s.md` (F1, F2, C1, C2), `docs/research/notes/rr0006-addendum-smoke-F2.md` (§3–5), `LAYER_CONTRACT.md` v2.3 §4.0–4.1, `slice-jet-aviation.md` v0.9 §3.5 A18, §8.1–8.2, DECISIONS_LOG #79, #80, замечания critic и advocate из задания Orchestrator.

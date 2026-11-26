@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 created: 2026-11-24
-tags: [task, ui, deferred]
 ---
 
 # TASK-0156 — Player levers client: research goals, budget in money with reserve, production line window, licence market window

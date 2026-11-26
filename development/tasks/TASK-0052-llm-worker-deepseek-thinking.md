@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-14
 approval_ref: "указание владельца 2026-11-14: «deepseek нужно переводить принудительно в режим размышления»; ADR-0015 §4–§5, #175 c"
 created: 2026-11-14
-tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0052 — llm_worker: режим размышления DeepSeek для gate и review

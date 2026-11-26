@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-16
 approval_ref: "#242, #243"
 created: 2026-11-16
-tags: [task, core, gameplay, done]
 ---
 
 # TASK-0058 — Порт I-OC и RANK (A41 в общем виде) в Core; golden, CONTROL_TABLES

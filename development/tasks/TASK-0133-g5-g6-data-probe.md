@@ -15,7 +15,6 @@ approved_at: 2026-11-23
 approval_ref: "O-038 (data on a branch, probe before owner approval)"
 review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-23
-tags: [task, data, simulation-lab, done]
 ---
 
 # TASK-0133 — Данные G5/G6 в mods на ветке поезда 2 и пробный прогон

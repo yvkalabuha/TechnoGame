@@ -1,6 +1,3 @@
----
-tags: [review, institutions, done]
----
 # Critic — INSTITUTIONS_PERSONALITIES rev 3 (§14), 2026-11-25
 
 Сжатая запись отчёта критика (полный текст — в сессии Orchestrator 2026-11-25).

@@ -16,7 +16,6 @@ golden_hash:             # V0 seeds 1…5 = golden D2
 baseline: V0 на той же сборке
 outcome:                 # supports | refutes | inconclusive
 created: 2026-11-04
-tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-NNNN — T6e: цель прохода 2 плана оснастки A39

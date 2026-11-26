@@ -1,6 +1,3 @@
----
-tags: [review, simulation-lab, done]
----
 # EXP-0002 result — critic review
 
 Gate review of `docs/simulation/exp0002-result.md` (commit db31dc8), 2026-11-17. Agent: critic (read-only; text transcribed by the Orchestrator).

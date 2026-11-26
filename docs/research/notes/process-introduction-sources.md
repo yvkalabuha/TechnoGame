@@ -1,6 +1,3 @@
----
-tags: [research, science, history, done]
----
 # Источники по «каналу введения процесса» (process introduction), 1945–1975
 
 Дата доступа ко всем URL: 2026-11-15. Автор: research-scientist. Контекст: `docs/simulation/c2-diagnosis.md`, HYP-0004.

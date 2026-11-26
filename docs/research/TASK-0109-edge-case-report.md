@@ -1,6 +1,3 @@
----
-tags: [research, map, history, done]
----
 # Отчёт research-scientist для TASK-0109 (шаг 1, 2026-11-18)
 
 Это текст для раздела «Отчёт research-scientist» в `development/tasks/TASK-0109-t4-region-status-edge-cases.md` (зона записи агента не включает файл задачи; Orchestrator переносит или ссылается). Не RR-документ, frontmatter нет.

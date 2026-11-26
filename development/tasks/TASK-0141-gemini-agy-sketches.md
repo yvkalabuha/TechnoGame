@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "#451, #450, #445"
 review_ref: "reviewer: APPROVE 9ab93a7; codex: waived #432 after 3rd return (98fb3d62), remainder DEBT-0086; live runs ae58bd5d (6 images) and c84d4536 (1 of 3); landed 8d58b4c"
 created: 2026-11-24
-tags: [task, external-llm, visual, done]
 ---
 
 # TASK-0141 — Эскизы дизайна от Gemini через Antigravity CLI

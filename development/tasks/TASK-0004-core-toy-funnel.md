@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-02
 approval_ref: DECISIONS_LOG #16–#17
 created: 2026-11-02
-tags: [task, core, science, done]
 ---
 
 # TASK-0004 — Core: модель ToyFunnel (A, B, C) на Kernel

@@ -5,7 +5,6 @@ status: DRAFT            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-18
 author: civilization-systems-designer
 related: [RR-0012, RR-0016, RR-0017, RR-0019, RR-0011]
-tags: [research, politics, institutions, draft]
 ---
 
 # RR-0021 — Politics and political systems: institutions, regimes, succession

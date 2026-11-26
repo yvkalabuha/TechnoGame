@@ -1,6 +1,3 @@
----
-tags: [research, history, politics, done]
----
 # Швеция 1945–1990: партнёры по лицензиям и поставкам авиатехники (TASK-0179)
 
 > research-scientist, 2026-11-25. Вопрос: у Швеции в `alliances.yaml` нет списка «друзей» (O-056), поэтому ИИ-Швеция ничего не покупает (`docs/simulation/licence-market-calibration.md`). Какие записи friends обосновать историей.

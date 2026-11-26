@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "#177 (C3+C4 совместно), #178, #220 (порядок M0), #231, #232; ROADMAP MS-M0 шаг 7"
 created: 2026-11-15
-tags: [task, simulation-lab, economy, done]
 ---
 
 # TASK-0056 — T12: калибровка и заморозка

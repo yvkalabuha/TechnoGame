@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#397, #399-#402"
 created: 2026-11-18
-tags: [task, map, history, data, done]
 ---
 
 # TASK-0096 — Owners 1945 data per decisions #397, #399–#402

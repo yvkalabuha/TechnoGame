@@ -1,6 +1,3 @@
----
-tags: [review, gameplay, done]
----
 # Gate ред. 3 контента G5/G6 (#457), 2026-11-24
 
 Критик, защитник, DeepSeek (third). Полные ответы — в сессии Orchestrator; здесь итог.

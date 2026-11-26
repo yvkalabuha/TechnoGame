@@ -1,6 +1,3 @@
----
-tags: [analysis, science, gameplay, done]
----
 # P-8: срок цели с приоритетом против срока без него — оценка game-designer
 
 > game-designer, 2026-11-25. Вход: `docs/simulation/institutes-p7-measurement.md` (ветка task-0173-lab-p7, серия 440 прогонов, seeds 1–20), `research-institutes-priorities.md` rev 4 §4–§5, P-8. Это оценка, не утверждение: статусы не меняю.

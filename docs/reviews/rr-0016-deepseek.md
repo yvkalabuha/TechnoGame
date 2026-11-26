@@ -1,6 +1,3 @@
----
-tags: [review, military, external-llm, done]
----
 # Gate RR-0016 (revised) — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-RR-0016-geopolitics-conflicts-war-endings-9d7b5c5f-third.json

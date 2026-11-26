@@ -1,6 +1,3 @@
----
-tags: [review, military, gameplay, done]
----
 # Gate: парк без замены — критик (2026-11-19)
 
 Артефакт: `docs/game-design/notes/fleet-without-replacement.md`. Отчёт агента critic, сохранён Orchestrator.

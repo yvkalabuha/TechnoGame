@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-17
 approval_ref: "DECISIONS_LOG #283 (owner: fix hot spots before the benchmark); light, no behaviour change"
 created: 2026-11-17
-tags: [task, performance, core, done]
 ---
 
 

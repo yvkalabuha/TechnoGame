@@ -1,6 +1,3 @@
----
-tags: [review, core, determinism, external-llm, done]
----
 # Gate ADR-0003-numeric-policy rev 2 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-ADR-0003-numeric-policy-9c7f4f75-third.json

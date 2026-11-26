@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («звуки невпопад, раздражают немного»)"
 review_ref: "sound-director: PASS (task review); owner: accepted in playtest 2026-11-24 (Звуки — нормально, без замечаний)"
 created: 2026-11-24
-tags: [task, audio, done]
 ---
 
 # TASK-0140 — Звуки невпопад

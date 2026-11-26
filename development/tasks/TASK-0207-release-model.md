@@ -15,7 +15,6 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #594"
 review_ref: "reviewer: APPROVE e8fdad45; codex: 3 rounds, waived per owner #592 after destructive/permit fixes (DEBT-0121)"
 created: 2026-11-26
-tags: [task, platform, done]
 ---
 
 # TASK-0207 — Release model: release.py rc|check|approve|release|rollback, RC report, /release skill, client build (#594)

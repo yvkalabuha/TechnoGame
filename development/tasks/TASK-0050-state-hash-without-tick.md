@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-14
 approval_ref: "ADR-0006, ADR-0013 (ACCEPTED, #66); DEBT-0009; владелец 2026-11-14: «долги закончи»"
 created: 2026-11-14
-tags: [task, determinism, core, done]
 ---
 
 # TASK-0050 — DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013)

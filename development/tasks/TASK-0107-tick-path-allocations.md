@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0023 p.2.1, 2.5 (light)"
 created: 2026-11-18
-tags: [task, performance, core, done]
 ---
 
 # TASK-0107 — Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1)

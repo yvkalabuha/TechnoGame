@@ -1,6 +1,3 @@
----
-tags: [review, science, gameplay, done]
----
 # Ревью game-designer: сталь ранга 0 для G1, узел 58 без сплава, путь SUN
 
 Автор: game-designer, 2026-11-03. Основание: DECISIONS_LOG #24, #26, #47, #50, #127, #130–#134; `docs/research/sun-start-data.md` r2; `docs/simulation/slice-jet-aviation.md` §1.3; `docs/game-design/COMPONENT_SELECTION.md` (§1, §3, пресеты); `STATE_WORDS.md` v0.2; `mods/core/product_classes.yaml`. Статус — **предложение дизайнера**; `mods/`, спека и решения не правились, прогонов не было. Всё, что про числа, — [Предп.].

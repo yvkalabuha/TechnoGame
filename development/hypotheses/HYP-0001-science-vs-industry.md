@@ -8,7 +8,6 @@ approved_by: owner
 approved_at: 2026-11-02
 approval_ref: DECISIONS_LOG #16–#17
 created: 2026-11-02
-tags: [hypothesis, science, economy, deferred]
 ---
 
 # HYP-0001 — Научное лидерство не даёт автоматического промышленного превосходства

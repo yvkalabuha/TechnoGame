@@ -1,6 +1,3 @@
----
-tags: [analysis, performance, core, active]
----
 # Снимок видов: аллокации (DEBT-0051, TASK-0103 F6)
 
 > Автор: systems-architect, 2026-11-18. Статус: записка (design note), не ADR.

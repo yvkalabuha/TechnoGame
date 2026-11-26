@@ -1,6 +1,3 @@
----
-tags: [review, history, gameplay, done]
----
 # Gate scripted-events-conditions rev 2 — critic (2026-11-18)
 
 5 high, 7 medium, 4 low. Most serious: failed-`sufficient` rules contradict #341; the document needs columns ADR-0020 lacks; one `group` field carries two meanings; the Taiwan core example cannot fire at t0.

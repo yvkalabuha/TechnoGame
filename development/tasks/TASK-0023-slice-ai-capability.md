@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: "DECISIONS_LOG #125; спека v0.12 §11 T6b; контракт v2.4 r3"
 created: 2026-11-03
-tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0023 — T6b: ИИ способности — план оснастки A39, учебная серия, программа качества

@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "#516 (ADR-0027), #520"
 review_ref: "reviewer: APPROVE (af96601, sign-safe O-078); codex 4 returns; second review agy-sonnet accept 2 low (codex limit), merge a701087"
 created: 2026-11-25
-tags: [task, core, determinism, done]
 ---
 
 # TASK-0162 — K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5

@@ -1,6 +1,3 @@
----
-tags: [experiment, external-llm, platform, done]
----
 # Отчёт llm_worker — 2026-11-03
 
 Итог: принято: 3, отклонено: 0, провалено: 0, эскалировано к pilot: 1, не проверено: 0.

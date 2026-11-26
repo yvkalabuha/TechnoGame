@@ -1,6 +1,3 @@
----
-tags: [analysis, performance, core, done]
----
 # gen2 и архитектура: структурный предел или конфигурация GC (решение #415)
 
 > Автор: systems-architect, 2026-11-19. Статус: записка (design note), не ADR. Код, ADR и статусы не менялись.

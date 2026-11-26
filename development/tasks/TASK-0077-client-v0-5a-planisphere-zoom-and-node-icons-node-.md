@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-18
 approval_ref: "DECISIONS_LOG #318"
 created: 2026-11-18
-tags: [task, ui, visual, map, done]
 ---
 
 

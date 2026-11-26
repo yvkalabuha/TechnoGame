@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "O-100, #575"
 created: 2026-11-26
-tags: [task, science, active]
 ---
 
 # TASK-0193 — Research + data: knowledge tree 1990-2030 (avionics, stealth, composites, computing, space, missiles) so leaders' institutes do not idle after 1990

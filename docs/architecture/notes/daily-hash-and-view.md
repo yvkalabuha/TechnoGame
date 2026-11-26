@@ -1,6 +1,3 @@
----
-tags: [note, determinism, performance, draft]
----
 # Дневной режим: параллельные Inputs (F4), переиспользование view (F7), StateHash в дневном режиме
 
 > Автор: systems-architect, 2026-11-17. Основа: `docs/simulation/tick-profile-m0.md` (§4 F4, F7, F8), ADR-0002, ADR-0006, ADR-0013, ADR-0014, ADR-0016, DECISIONS_LOG #228.

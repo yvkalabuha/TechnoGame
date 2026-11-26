@@ -1,6 +1,3 @@
----
-tags: [analysis, economy, simulation-lab, done]
----
 # Диагностика выпуска после D1: почему реактивных машин нет до ~1961 и почему выпуск USA падает
 
 > simulation-engineer, 2026-11-03. Вход: информационный прогон TASK-0026 «Результат» (commit 9fa20b7). Свой прогон: core 6efe4be (src = 9fa20b7), данные `mods/core` D1, ИИ A41, seeds 1…20, 384 мес. Диагностический код и сырые числа: `lab/results/d1diag/` (не коммитится; копия репозитория + `DiagD1Tests.cs`, `agg.py`). Спека, src, mods не менялись.

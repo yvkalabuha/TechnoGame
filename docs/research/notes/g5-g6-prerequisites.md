@@ -1,6 +1,3 @@
----
-tags: [research, science, history, done]
----
 # Реальные предпосылки для ранних узлов G5/G6 (TASK-0180, шаг 1)
 
 Дата: 2026-11-25. Автор: research-scientist. Данные: `mods/core/nodes.yaml` (99 узлов), `mods/` не менялся.

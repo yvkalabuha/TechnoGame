@@ -5,7 +5,6 @@ status: PLANNED          # PLANNED | ACTIVE | RELEASED
 approved_by: owner
 approved_at: 2026-11-18
 approval_ref: "DECISIONS_LOG #333"
-tags: [plan, economy, map, gameplay, active]
 ---
 
 # MS-M1 — экономика по регионам, провинции 1945, открытая гонка

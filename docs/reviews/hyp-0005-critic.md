@@ -1,6 +1,3 @@
----
-tags: [review, simulation-lab, testing, done]
----
 # Gate HYP-0005 — critic (2026-11-18)
 
 P1–P3 are decoupled correctly; Pocock level 0.0294 is right. Main problem: the outcome rule cannot give `refutes` for "predetermined" (a HYP-0002 repeat). Also undefined formulas at t0 and free parameters of the start perturbation and correction. The file has no numbered author questions 1–10 (only a gate question on P3, l. 122); answers below follow the 10 task criteria.

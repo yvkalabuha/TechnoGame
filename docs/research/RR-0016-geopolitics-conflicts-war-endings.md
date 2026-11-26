@@ -5,7 +5,6 @@ status: DRAFT            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-18
 author: game-designer
 related: [RR-0011, RR-0012, RR-0013, RR-0014, RR-0017, RR-0019, RR-0021, ADR-0016, ADR-0019, ADR-0020, ADR-0021]
-tags: [research, politics, military, draft]
 ---
 
 # RR-0016 — Геополитика, конфликты, завершение войн

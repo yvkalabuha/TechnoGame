@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "Спека среза v0.24 (A40 «Печать причины», A41 F17b «Печать», §5.5, §6.1, §6.11); slice-csv-format.md v0.4 §4.15"
 created: 2026-11-13
-tags: [task, core, economy, done]
 ---
 
 # TASK-0047 — Core: наблюдаемые величины для печатей среза

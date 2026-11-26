@@ -4,7 +4,6 @@ title: Ядро симуляции, многопоточность, детерм
 status: FINAL
 date: 2026-11-02
 author: research agent (Phase B)
-tags: [research, core, determinism, performance, accepted]
 ---
 
 # RR-0002 — Архитектура ядра симуляции, многопоточность, детерминизм, Simulation Lab

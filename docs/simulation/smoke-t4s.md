@@ -1,6 +1,3 @@
----
-tags: [experiment, science, simulation-lab, done]
----
 # Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s, TASK-0017)
 
 > Автор: simulation-engineer, 2026-11-03. Вход: `slice-jet-aviation.md` §8.1–§8.2, §11 T4s; `LAYER_CONTRACT.md` §4.1–4.3, §8.2; данные мода `core` (`scenario_hash` 3aa6bb49…), `product_inputs.md` §4, §7.

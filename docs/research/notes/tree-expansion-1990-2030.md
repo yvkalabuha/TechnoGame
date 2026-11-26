@@ -1,6 +1,3 @@
----
-tags: [research, science, done]
----
 # Расширение дерева знаний 1990–2030: 55 узлов (TASK-0193, шаг 1)
 
 Автор: research-scientist, 2026-11-26. **Ред. 2 (2026-11-26): проверка фактов DeepSeek + ревью Claude (#577).** Статус: [Предл.] — предложение для шага 2 (developer). mods/ не менялся. Метод и формат — `tree-expansion-575.md`. Входной файл для проверки фактов: `docs/research/notes/tree-expansion-1990-2030-input.yaml` (формат `llm_worker research`, #577).

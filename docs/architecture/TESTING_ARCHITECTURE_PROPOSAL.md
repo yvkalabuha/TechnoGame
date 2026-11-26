@@ -1,6 +1,3 @@
----
-tags: [research, testing, platform, draft]
----
 # TESTING_ARCHITECTURE_PROPOSAL — инфраструктура автоматического тестирования игры
 
 > Фаза 0 брифа владельца `docs/architecture/TEST_INFRA_BRIEF.md` (§0, §21, §24). Статус: **предложение** (уровень gate+research), кода и установок нет. Автор: systems-architect, 2026-11-03.

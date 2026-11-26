@@ -1,6 +1,3 @@
----
-tags: [experiment, economy, institutions, done]
----
 # Рынок лицензий: что покупает ИИ и калибровка под допуски 1945–1977 (TASK-0179, #553)
 
 > simulation-engineer, 2026-11-25. Основание: решения владельца #552, #553, #554; `development/tasks/TASK-0179-…md`; проект `docs/game-design/economy/production-lines-and-licence-market.md` ред. 2 (разд. 2.2, 2.6), `docs/game-design/economy/licence-prices.md` (разд. 4), O-056, O-062, O-068. Метод и правило §8-d — `docs/simulation/institutes-recalibration.md` (TASK-0176). Код — ветка TASK-0179 = TASK-0176 (`main` + WIP TASK-0171, флаги включены) + Lab этой задачи. Сырые данные — `lab/results/t0179-*` (не коммитятся). Разбор — `python3 lab/analysis/licence_market.py BASE VAR… [--detail] [--deals]`.

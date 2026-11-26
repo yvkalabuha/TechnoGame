@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "#482; scope changed by #484-#496"
 review_ref: "reviewer: APPROVE (rounds 1-2 fixes, scratch fix); codex 5 returns (#432) then accept at merge 5b1eb13; rest DEBT-0106/0107, Lab gate TASK-0173"
 created: 2026-11-24
-tags: [task, core, science, done]
 ---
 
 # TASK-0151 — Player levers core: research goals with a science share slider (SetResearchGoals)

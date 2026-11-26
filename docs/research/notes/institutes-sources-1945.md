@@ -3,7 +3,6 @@ type: research-note
 task: TASK-0157
 author: research-scientist
 accessed: 2026-11-24
-tags: [research, institutions, data, done]
 ---
 # Замены строк таблицы §1.1 (research-institutes-priorities.md): проверка источников
 

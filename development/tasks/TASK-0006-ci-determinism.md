@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-02
 approval_ref: light, owner-approved pilot plan (#12)
 created: 2026-11-02
-tags: [task, determinism, platform, testing, done]
 ---
 
 # TASK-0006 — CI: сборка, тесты и проверка детерминизма L1/L2

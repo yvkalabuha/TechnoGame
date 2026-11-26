@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: DEBT-0107
 review_ref: "reviewer: APPROVE (fcb151f); codex 3 returns (#432), rest DEBT-0106/0107"
 created: 2026-11-25
-tags: [task, science, institutions, done]
 ---
 
 # TASK-0174 — Institutes follow-up: iterative group walk (deep graph), built institute capacity by level, cooldown on same goal, no build charge after completion

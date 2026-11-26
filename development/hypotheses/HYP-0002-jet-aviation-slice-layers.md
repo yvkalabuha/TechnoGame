@@ -8,7 +8,6 @@ approved_by: owner
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #48
 created: 2026-11-03
-tags: [hypothesis, military, science, deferred]
 ---
 
 # HYP-0002 — Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство

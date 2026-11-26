@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "owner decision #456 (chat 2026-11-24); light task approved by Orchestrator"
 review_ref: "reviewer: APPROVE (edfdf6f bwrap box, earlier rounds); codex: waived #432 after 3rd return (2dcd45ed), highs fixed; live agy-sonnet run f4966ef; residual risk DEBT-0093; landed 00c60f9"
 created: 2026-11-24
-tags: [task, external-llm, platform, done]
 ---
 
 # TASK-0146 — Запасной второй ревьюер: Sonnet 5.5 через agy при лимите Codex (#456)

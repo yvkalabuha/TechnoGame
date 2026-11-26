@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #48, #53
 created: 2026-11-03
-tags: [task, data, core, done]
 ---
 
 # TASK-0013 — Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010)

@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-02
 approval_ref: light, DECISIONS_LOG #16–#17
 created: 2026-11-02
-tags: [task, simulation-lab, core, done]
 ---
 
 # TASK-0008 — Заморозка манифеста EXP-0001 и переключение Lab на интерфейс Core

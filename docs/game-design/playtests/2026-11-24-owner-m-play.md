@@ -1,6 +1,3 @@
----
-tags: [experiment, gameplay, ui, done]
----
 # Owner playtest of the M-play build, 2026-11-24
 
 Source: owner message in the Orchestrator session, 2026-11-24 (verbatim below). Build: main at 51a1659.

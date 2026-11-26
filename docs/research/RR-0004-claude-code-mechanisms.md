@@ -4,7 +4,6 @@ title: Механизмы Claude Code
 status: FINAL
 date: 2026-11-02
 author: research agent (Phase B)
-tags: [research, platform, accepted]
 ---
 
 # RR-0004 — Механизмы Claude Code для фреймворка разработки

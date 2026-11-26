@@ -1,6 +1,3 @@
----
-tags: [vision, gameplay, science, active]
----
 # PROJECT SINGULARITY
 # MASTER DEVELOPMENT PROMPT
 ## AI-Assisted Game Development Framework & Civilization Simulation

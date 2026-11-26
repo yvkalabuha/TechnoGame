@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-19
 approval_ref: "#404, #409, UI_INSTRUMENTS §8 (light)"
 created: 2026-11-19
-tags: [task, ui, visual, active]
 ---
 
 # TASK-0111 — UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059)

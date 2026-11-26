@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "ADR-0019 ACCEPTED (#353), Research R3"
 created: 2026-11-18
-tags: [task, core, economy, done]
 ---
 
 # TASK-0089 — ADR-0019 R3: inventory of flow columns and non-linear monthly rules in M0 systems

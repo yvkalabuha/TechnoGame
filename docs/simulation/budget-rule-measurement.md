@@ -1,6 +1,3 @@
----
-tags: [experiment, economy, determinism, done]
----
 # Замер правил бюджета NOW, A, B1, B2 на срезе реактивной авиации до 2030-12 (TASK-0123, решение #430)
 
 > simulation-engineer, 2026-11-19. Серия по плану §7 записки `docs/game-design/economy/slice-budget-convergence.md` (ред. 3). Сырые данные —

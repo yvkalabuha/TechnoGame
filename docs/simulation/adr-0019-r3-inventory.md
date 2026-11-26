@@ -1,6 +1,3 @@
----
-tags: [analysis, core, determinism, active]
----
 # ADR-0019 R3: опись колонок-потоков и нелинейных месячных правил систем M0
 
 > simulation-engineer, 2026-11-18, TASK-0089. Источники: ADR-0019 ред. 3, DECISIONS_LOG #344–#347, код `src/Singularity.Core`, `src/Singularity.Session` на `9c7f4f7`. Код не менялся.

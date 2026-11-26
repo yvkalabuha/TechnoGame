@@ -1,6 +1,3 @@
----
-tags: [review, platform, external-llm, done]
----
 # ADR-0023 — DeepSeek third voice (2026-11-18)
 
 Record: tools/llm_worker/runs/gate-ADR-0023-adr-0016-benchmark-rules-amendment-e15a8bdd-third.json

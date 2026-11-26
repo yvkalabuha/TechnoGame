@@ -15,7 +15,6 @@ approved_at: 2026-11-19
 approval_ref: "#423 (new data for later generations allowed); gate review before data commit"
 review_ref: "gate: critic + advocate + DeepSeek (docs/reviews/slice-g5-g6-content-rev3-gate.md), rev 3.1; owner #457 #458 #464 #465; data landed in train 2 88fa41b"
 created: 2026-11-23
-tags: [task, science, data, done]
 ---
 
 # TASK-0128 — Контент G5/G6 для среза «реактивная авиация» (поезд 2, шаг T-C)

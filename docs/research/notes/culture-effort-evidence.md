@@ -1,6 +1,3 @@
----
-tags: [research, economy, science, active]
----
 # Культура от инженерного усилия: доказательная база для второго кандидата (решение #95)
 
 > Автор: research-scientist. Дата: 2026-11-03. Входы: `DECISIONS_LOG.md` #95; `culture-rule-selection.md` §1.1, §9; `LAYER_CONTRACT.md` §4.1; `anchors_review.md` §1; `alpha-range-and-small-rates.md`; `rr0006-addendum-smoke-F2.md`.

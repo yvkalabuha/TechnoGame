@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
 review_ref: "reviewer: APPROVE (after merge, v25); codex 2 rounds closed; second review agy-sonnet accept 2 medium 3 low -> DEBT-0105; merge 7ed4860"
 created: 2026-11-24
-tags: [task, core, gameplay, done]
 ---
 
 # TASK-0153 — Player levers core: AI adviser for the player country production (no AI opening or closing of player lines)

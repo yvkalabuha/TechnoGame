@@ -1,6 +1,3 @@
----
-tags: [review, gameplay, external-llm, done]
----
 # Gate: PLAYER_LEVERS_WAVE1.md — DeepSeek third voice
 
 ```

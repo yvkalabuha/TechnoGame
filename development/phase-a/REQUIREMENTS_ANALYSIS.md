@@ -1,6 +1,3 @@
----
-tags: [spec, platform, accepted]
----
 # PHASE A — Requirements Analysis
 
 **Проект:** PROJECT SINGULARITY

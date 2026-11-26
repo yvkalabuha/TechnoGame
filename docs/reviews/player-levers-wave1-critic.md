@@ -1,6 +1,3 @@
----
-tags: [review, gameplay, done]
----
 # Gate: PLAYER_LEVERS_WAVE1.md — critic
 
 STATUS: done

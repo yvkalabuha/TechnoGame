@@ -1,6 +1,3 @@
----
-tags: [experiment, institutions, economy, done]
----
 # Институты: перекалибровка под допуски 1945–1977 при всех рычагах волны 1 (TASK-0176, #549)
 
 > simulation-engineer, 2026-11-25. Основание: решение владельца #549 (A16), `development/tasks/TASK-0176-…md`, `docs/game-design/civilization/research-institutes-priorities.md` rev 4a (§3, §5, §7), допуски §8 записки `docs/game-design/economy/slice-budget-convergence.md` в реализации `lab/analysis/tm_budget_rules.py` (`tolerance_s8`), `docs/simulation/institutes-p7-measurement.md` (P-7). Код — ветка TASK-0176 = `main` cd8d6fb + WIP TASK-0171 66a4919 (флаги включены по умолчанию). Сырые данные — `lab/results/t0176-*` (не коммитятся). Разбор — `python3 lab/analysis/institutes_recal.py DIR [--detail]`.

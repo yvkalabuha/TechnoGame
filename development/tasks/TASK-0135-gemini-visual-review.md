@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "#441"
 review_ref: "reviewer: APPROVE 61ad9fe + deltas; codex: 3 returns, waived by #432 → DEBT-0081; live runs gemini-flash-latest, gemini-4-hydrogen; landed 14fafb0"
 created: 2026-11-24
-tags: [task, external-llm, visual, done]
 ---
 
 # TASK-0135 — Gemini как второе мнение по кадрам интерфейса (#441)

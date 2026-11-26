@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-03
 approval_ref: DECISIONS_LOG #57
 created: 2026-11-03
-tags: [task, platform, core, done]
 ---
 
 # TASK-0016 — Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release

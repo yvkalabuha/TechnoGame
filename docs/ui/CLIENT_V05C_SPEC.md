@@ -1,6 +1,3 @@
----
-tags: [spec, ui, visual, active]
----
 # Клиент v0.5c — навигация по областям, шкала скорости, текстуры
 
 Автор: ui-art-director, 2026-11-18. Основа: DECISIONS_LOG #352, #302, #303, #326; `UI_DESIGN_SYSTEM.md` §17 (палитра C); `CLIENT_V05B_SPEC.md`; структура областей — `docs/game-design/UI_INFORMATION_ARCHITECTURE.md` (IA, [Предл.], владелец не утвердил). Макет: `prototypes/client-v05c.html`. Знаки: `assets/area-icons/`, картинки: `assets/area-pictures/`. Код не правился.

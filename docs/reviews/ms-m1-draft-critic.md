@@ -1,6 +1,3 @@
----
-tags: [review, gameplay, simulation-lab, done]
----
 # Gate MS-M1 draft — critic (2026-11-18)
 
 Artifact: `docs/game-design/MS-M1-draft.md` (commit ffc2c24).

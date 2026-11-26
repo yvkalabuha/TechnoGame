@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # Визуальная ревью клиента v0.2 (TASK-0069)
 
 Основа: четыре снимка `docs/ui/prototypes/client-v02/` (globe_panel, signal_field, tech_tree_a, tech_tree_b; хранится только globe_panel, остальное: кадр не хранится, генерируется: `./run-globe-spike.sh --shots`) против UI_DESIGN_SYSTEM.md («Надпечатка»), GLOBE_DIRECTION.md (#288), TECH_TREE_SCREEN.md и tech-tree.html. Вживую клиент не запускался: только снимки. Всё, чего на снимках не видно, помечено «не проверено».

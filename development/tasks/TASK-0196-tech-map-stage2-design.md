@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #582"
 created: 2026-11-26
-tags: [task, ui, visual, active]
 ---
 
 # TASK-0196 — Tech map stage 2 design: immersive volumetric map, free mouse travel, compact institute cards with emblems and icons (#582)

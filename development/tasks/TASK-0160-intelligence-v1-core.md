@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "#515, #259-#261, #364-#367, O-051"
 review_ref: "reviewer: APPROVE (round 2); codex: 3 returns, landed by #432; second review agy-sonnet accept (codex limit), merge ede19dd"
 created: 2026-11-25
-tags: [task, core, politics, done]
 ---
 
 # TASK-0160 — Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515)

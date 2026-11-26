@@ -1,6 +1,3 @@
----
-tags: [experiment, science, simulation-lab, done]
----
 # Зонд контента G5/G6 (TASK-0133, O-038)
 
 > simulation-engineer, 2026-11-23. Зонд, не эксперимент EXP. Ветка `worktree-agent-aee00c98dea970eae`: данные G5/G6 (`mods/core`, 81 узел, коммит `d194d2a`), Lab `0ea0aac`.

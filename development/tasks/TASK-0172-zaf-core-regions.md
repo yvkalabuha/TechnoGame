@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: O-076
 review_ref: "reviewer: APPROVE (both regions = 9 SA provinces); merge via land.py --map"
 created: 2026-11-25
-tags: [task, history, map, done]
 ---
 
 # TASK-0172 — Data: South Africa regions status core of ZAF (O-076), checked per region

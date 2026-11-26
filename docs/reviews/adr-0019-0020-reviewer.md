@@ -1,6 +1,3 @@
----
-tags: [review, core, done]
----
 # Gate ADR-0019 / ADR-0020 — reviewer (code feasibility, 2026-11-18)
 
 ## ADR-0019

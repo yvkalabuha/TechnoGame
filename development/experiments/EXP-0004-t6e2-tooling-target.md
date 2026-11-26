@@ -16,7 +16,6 @@ golden_hash: "V0 main конечные хеши s21…s25: 62da3685…, 9550dc1e
 baseline: V0 на той же сборке; эталон VINF
 outcome: refutes          # V-0 выполнено у USA и GBR; годных нет (K1 main провален у всех) → A39 остаётся V0
 created: 2026-11-04
-tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-0004 — Цель оснастки A39, повтор после F17b: V0, V1, V3, V4 против VINF (T6e2)

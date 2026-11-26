@@ -1,6 +1,3 @@
----
-tags: [design, economy, history, draft]
----
 # LICENSED_PRODUCTION — лицензионное производство (срез 1 «реактивная авиация»)
 
 **Версия:** 0.1 · 2026-11-04 · автор: game-designer · статус: черновик для gate (critic + advocate), владелец не утверждал

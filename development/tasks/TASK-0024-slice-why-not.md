@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: "спека v0.12 §11 T7; контракт v2.4 r3 §6"
 created: 2026-11-03
-tags: [task, gameplay, core, done]
 ---
 
 # TASK-0024 — T7: why_not по контракту §6 и 4 сценария «первый слой»

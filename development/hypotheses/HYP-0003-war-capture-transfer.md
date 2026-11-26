@@ -8,7 +8,6 @@ approved_by:             # owner — для EXPERIMENTAL и VALIDATED
 approved_at:
 approval_ref:
 created: 2026-11-03
-tags: [hypothesis, military, economy, draft]
 ---
 
 # HYP-0003 — Захват после победной войны: территория, заводы с повреждениями и часть знаний побеждённого

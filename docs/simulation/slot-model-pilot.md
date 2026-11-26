@@ -1,6 +1,3 @@
----
-tags: [experiment, science, simulation-lab, done]
----
 # Пилот модели «по слотам»: время узла T_n, ширина фронта, стартовые институты и потолок (TASK-0185)
 
 > simulation-engineer, 2026-11-25. Основание: решения владельца #561–#568 (`docs/decisions/DECISIONS_LOG.md`) и дополнение владельца «направления узлов и институтов» (сообщение Orchestrator 2026-11-25; в журнале решений ещё не записано, далее — «доп. Н»), `docs/simulation/notes/pivot-561-model-impact.md` (игрушечная модель §1.4, предложение §1.2), `docs/game-design/notes/pivot-561-game-design.md` §3 (старт и потолок), метод песочницы — `institutes-recalibration.md` (ветка TASK-0176). Это пилот Lab на реальном ядре в песочнице, не спецификация ядра: ни одна формула ниже не утверждена.

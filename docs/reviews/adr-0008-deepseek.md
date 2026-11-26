@@ -1,6 +1,3 @@
----
-tags: [review, simulation-lab, external-llm, done]
----
 # Gate ADR-0008-simulation-lab rev 2 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-ADR-0008-simulation-lab-ee915f26-third.json

@@ -1,6 +1,3 @@
----
-tags: [research, science, history, done]
----
 # Источники для K0/K1/K2 (темп знания): стреловидное крыло 1945, доля авиации в НИОКР, рост цены поколений, APP→ENG
 
 Дата: 2026-11-15 (все URL открыты в эту дату). Автор: research-scientist. Запрос: `docs/simulation/knowledge-pacing-proposal.md`.

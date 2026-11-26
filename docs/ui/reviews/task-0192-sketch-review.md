@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0192: ревью набросков Gemini (карта технологий, этап 1)
 
 Ревьюер: Claude ui-art-director (#578). Кадры: shots-out/sketches/TASK-0192/screen1_*.jpg, screen2_*.jpg, screen3_*.jpg. Бриф: docs/ui/specs/tech-map-stage1-brief.md.

@@ -6,7 +6,6 @@ date: 2026-11-18
 author: economy-analyst
 related: [RR-0006, RR-0010, RR-0011, RR-0014, RR-0021, RR-0017]
 revision: "3 (решения владельца #372 вариант B основной, #373 поиск геометрии; ранее rev 2 — gate 2026-11-18)"
-tags: [research, military, economy, draft]
 ---
 
 # RR-0019 — Логистика, связь и инфраструктура

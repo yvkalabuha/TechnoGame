@@ -1,6 +1,3 @@
----
-tags: [note, testing, ui, draft]
----
 # Агентное тестирование клиента: debug bridge, MCP, GdUnit4Net, агент ui-tester
 
 > Автор: systems-architect, 2026-11-17. Основа: DECISIONS_LOG #293, ADR-0014 (ACCEPTED, §7–§9), `docs/architecture/TESTING_ARCHITECTURE_PROPOSAL.md` §9–§11, `docs/architecture/spikes/godot-compat.md` §7, `src/Singularity.Client.Spike/` (v0.2, TASK-0069; код не менялся).

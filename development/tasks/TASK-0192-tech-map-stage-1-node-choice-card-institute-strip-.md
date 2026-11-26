@@ -17,7 +17,6 @@ approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#561, #563, #576, #578"
 created: 2026-11-25
-tags: [task, ui, science, active]
 ---
 
 # TASK-0192 — Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578)

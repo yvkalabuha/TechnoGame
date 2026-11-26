@@ -15,7 +15,6 @@ approved_at: 2026-11-19
 approval_ref: "project review 2026-11-19: CI red since 2026-11-14 (light)"
 review_ref: "reviewer: APPROVE eac3f4f..c984f20; landed b4f8361, a6d9330; CI green on main twice (runs for a6d9330, 29ac1f1)"
 created: 2026-11-19
-tags: [task, platform, testing, done]
 ---
 
 # TASK-0116 — CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts

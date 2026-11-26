@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0139: визуальная проверка (ui-art-director)
 
 Кадры: `shots-out/task-0139/` (1920x1080, 100 %). Мнение Gemini (#450): `tools/llm_worker/runs/visual-TASK-0139-9a5a469c-gemini.md` (verdict fail). Вердикт принадлежит арт-директору.

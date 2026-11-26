@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#375"
 created: 2026-11-18
-tags: [task, simulation-lab, core, done]
 ---
 
 # TASK-0087 — ToyFunnel moves from Core to Lab (#375)

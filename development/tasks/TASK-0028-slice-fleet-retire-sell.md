@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-04
 approval_ref: "DECISIONS_LOG #139, #141–#148; спека v0.17 A42, §11 T-fleet; контракт v2.4 r6 §4.4f"
 created: 2026-11-04
-tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0028 — T-fleet: списание и продажа парка (A42, контракт r6)

@@ -3,7 +3,6 @@ type: research-note
 task: TASK-0154
 author: research-scientist
 accessed: 2026-11-24
-tags: [research, politics, data, active]
 ---
 # Союзы и блоки 1945–2030 для круга покупателей лицензий (TASK-0154)
 

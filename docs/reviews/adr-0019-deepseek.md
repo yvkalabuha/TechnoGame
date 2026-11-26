@@ -1,6 +1,3 @@
----
-tags: [review, core, external-llm, done]
----
 # Gate ADR-0019-daily-slices-228 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-ADR-0019-daily-slices-228-5a51067b-third.json

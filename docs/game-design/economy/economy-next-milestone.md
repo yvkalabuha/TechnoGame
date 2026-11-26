@@ -6,7 +6,6 @@ date: 2026-11-05
 version: 0.5
 author: economy-analyst
 related: [RR-0006, RR-0010, HYP-0002, RISK-0016, RISK-0018]
-tags: [design, economy, gameplay, draft]
 ---
 
 # Минимальная экономика следующего milestone

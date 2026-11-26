@@ -15,7 +15,6 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #590"
 review_ref: "reviewer: APPROVE c709b559; agy-sonnet second review accept (3 low, DEBT-0124)"
 created: 2026-11-26
-tags: [task, platform, done]
 ---
 
 # TASK-0201 — Redis for agent heartbeat, locks and expiring permits (#590), after redis-server is installed

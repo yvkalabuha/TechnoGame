@@ -1,6 +1,3 @@
----
-tags: [design, military, economy, draft]
----
 # Парк без замены: правило и старение (решения владельца #431, #435–#437), редакция 4
 
 > game-designer, 2026-11-23. Редакция 4 приведена к решениям владельца и служит входом для TASK-0129 (реализует developer). Источники: код `src/Singularity.Core`, `docs/simulation/m-play-horizon-2030.md` («После 1977»), `docs/game-design/FLEET_RETIREMENT.md`, `docs/game-design/M_PLAY_LOOP.md`, DECISIONS_LOG #44, #48, #139, #141, #143, #147, #160, #431, #433, #435, #436, #437; гейт: `docs/reviews/fleet-without-replacement-critic.md`, `...-advocate.md`, `...-deepseek.md`; решение Orchestrator O-024; ADR-0003, ADR-0012.

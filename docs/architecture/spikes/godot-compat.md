@@ -1,6 +1,3 @@
----
-tags: [experiment, platform, determinism, done]
----
 # Спайк совместимости Godot .NET (TASK-0016)
 
 > Копия отчёта спайка TASK-0016 из ветки `spike/godot-compat` (коммит b95efb2); код спайка в `main` не вливается (#57).

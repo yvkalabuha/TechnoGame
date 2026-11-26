@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "DEBT-0026, DEBT-0027; ADR-0015 §4, §7"
 created: 2026-11-13
-tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0045 — llm_worker: долги DEBT-0026 и DEBT-0027

@@ -1,6 +1,3 @@
----
-tags: [spec, ui, visual, active]
----
 # Sketch brief: alert
 
 Redesign the attached in-game screen. An alert / signal notification over the main game screen.

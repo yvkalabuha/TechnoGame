@@ -1,6 +1,3 @@
----
-tags: [spec, data, economy, active]
----
 # Входные данные слоя изделия (T5) — срез «реактивная авиация»
 
 > Автор: research-scientist, 2026-11-03. **Ревизия r4** (gate `COMPONENT_SELECTION.md` G-1–G-3: блоки цены R-PS2m по составу, `alloy_kg` по горячей части, поля планера по `af_class`; §14). Ревизия r3 — решение #78: `M$` = 80 млн $ 1950 г., правила R-PS и R-DS приняты. Вход: `docs/simulation/slice-jet-aviation.md` v0.7 §1.1, §1.4, §3.3–§3.5 (A18, A20–A27), §8.1, §9 (C4); `LAYER_CONTRACT.md` §4.2, §4.4, §4.6; `product_class.md`, `scenario_1945.md`. Источники `P*` — в конце. `est` = `estimated: true`. Значения, изменённые в r3, помечены **r3**.

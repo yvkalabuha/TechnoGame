@@ -9,7 +9,6 @@ related: [ADR-0016, ADR-0017, ADR-0019, ADR-0020, ADR-0022, ADR-0023, ADR-0025, 
 approved_by:
 approved_at:
 approval_ref:
-tags: [decision, performance, determinism, draft]
 ---
 
 # ADR-NNNN — Бюджет тика M1: пересмотр раздела после EXP-0007, одно определение `K_d`, лестница замеров K4 с заранее записанными исходами

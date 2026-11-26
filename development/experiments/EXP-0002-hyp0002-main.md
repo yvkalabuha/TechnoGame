@@ -16,7 +16,6 @@ golden_hash: 183e47b9fc81957ccd6a53f93f5d09f4d10a2ca094b0be119680bd1cf42ab02d   
 baseline:                # контрольная версия (commit или EXP-NNNN)
 outcome: refutes
 created: 2026-11-04
-tags: [experiment, science, military, done]
 ---
 
 # EXP-0002 — EXP-0002: основной эксперимент HYP-0002 (срез «реактивная авиация»)

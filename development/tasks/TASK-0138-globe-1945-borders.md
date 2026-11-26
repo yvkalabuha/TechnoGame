@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («границы современные, а не на 45 год»); ADR-0011"
 review_ref: "reviewer: APPROVE (802fc88); ui-art-director: PASS with remainder round 2 (a3cf58d, G4 fixed a3a2b02); codex waived O-049 (diff over input limit); landed 228fb00"
 created: 2026-11-24
-tags: [task, map, history, done]
 ---
 
 # TASK-0138 — Глобус с границами 1945 года

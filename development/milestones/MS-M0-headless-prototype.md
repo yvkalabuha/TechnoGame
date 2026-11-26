@@ -5,7 +5,6 @@ status: RELEASED
 approved_by: owner
 approved_at: 2026-11-19
 approval_ref: "DECISIONS_LOG #419"
-tags: [plan, core, simulation-lab, done]
 ---
 
 # MS-M0 — Headless-прототип симуляции и Simulation Lab

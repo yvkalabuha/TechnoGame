@@ -1,6 +1,3 @@
----
-tags: [review, map, gameplay, done]
----
 # ADR-0022 — critic (gate 2026-11-18)
 
 1. HIGH (ADR-0022:36, :60, :66): SUN has 31 `owner: SUN, status: core` regions (owners.yaml), so the metropole-only quota still warns (Validator.cs:235); "если их метрополии ≤ 15" hides it. Owner question needed (separate cap, bound 5–35, or permanent warning); rewrite :60/:66.

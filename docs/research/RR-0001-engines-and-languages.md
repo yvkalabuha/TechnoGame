@@ -4,7 +4,6 @@ title: Движки и языки
 status: FINAL
 date: 2026-11-02
 author: research agent (Phase B)
-tags: [research, core, platform, accepted]
 ---
 
 # RR-0001 — Движки и языки для PROJECT SINGULARITY

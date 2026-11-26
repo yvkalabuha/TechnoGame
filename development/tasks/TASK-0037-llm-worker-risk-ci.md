@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #176 (ADR-0015, план 1c)"
 created: 2026-11-13
-tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0037 — llm_worker: классификатор риска и CI (ADR-0015 1c)

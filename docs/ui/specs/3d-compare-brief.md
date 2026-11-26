@@ -1,6 +1,3 @@
----
-tags: [spec, visual, external-llm, active]
----
 # Сравнение 3D: одна модель через Claude и через Gemini (#539)
 
 Задача обоим исполнителям одна и та же. Исполнитель строит модель в живом Blender через Blender MCP (execute_blender_code).

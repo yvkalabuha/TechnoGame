@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "O-091, #571"
 review_ref: "reviewer: APPROVE; codex findings rejected per O-093/O-094; merge a082491"
 created: 2026-11-25
-tags: [task, data, science, done]
 ---
 
 # TASK-0189 — Data: node and institute directions into mods (12 directions, O-091)

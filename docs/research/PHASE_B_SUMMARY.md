@@ -1,6 +1,3 @@
----
-tags: [research, platform, science, accepted]
----
 # PHASE B — Итоги технического исследования
 
 **Дата:** 2026-11-02

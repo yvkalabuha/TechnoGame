@@ -1,6 +1,3 @@
----
-tags: [note, core, institutions, draft]
----
 # Сквозной handle проекта `(slot, generation)` — DEBT-0052
 
 Автор: systems-architect, 2026-11-19. Статус: проектная записка [Предл.], не решение. Основание: ADR-0005 п. 3 (ACCEPTED, #388), ADR-0014 п. 2, ADR-0013 пп. 7, 9, TASK-0099 «Результат».

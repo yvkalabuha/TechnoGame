@@ -1,6 +1,3 @@
----
-tags: [review, visual, ui, done]
----
 # Приёмка пилота 3D-моделей истребителей G1–G6
 
 Автор: ui-art-director. Дата: 2026-11-25. Решение владельца: O-075. План: `docs/ui/specs/3d-models-plan.md` §4 (критерий «стоп»).

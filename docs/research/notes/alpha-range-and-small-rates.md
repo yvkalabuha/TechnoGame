@@ -1,6 +1,3 @@
----
-tags: [research, economy, science, active]
----
 # Диапазон `α` культуры и темп выпуска малых стран среза (решения #92, #93)
 
 > Автор: research-scientist. Дата: 2026-11-03. Входы: `docs/simulation/slice-jet-aviation.md` §1.1, §8.1; `LAYER_CONTRACT.md` §3, §4.1, §4.2; RR-0006 §2, §4.5; `docs/research/data/jet-slice/anchors_review.md`; `scenario_1945.md`; `product_inputs.md` §4 (R-NP); `culture-rule-selection.md` §7.5–7.6 (только определение `r_full` и единиц).

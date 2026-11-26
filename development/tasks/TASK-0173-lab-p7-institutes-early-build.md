@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: O-081
 review_ref: "reviewer: APPROVE (1fb49cd, d908f24); P-7 PASS; merge 255e9ee"
 created: 2026-11-25
-tags: [task, simulation-lab, science, done]
 ---
 
 # TASK-0173 — Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on

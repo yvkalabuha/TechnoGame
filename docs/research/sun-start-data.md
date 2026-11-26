@@ -1,6 +1,3 @@
----
-tags: [research, science, economy, done]
----
 # Старт SUN: горячая часть ранга 0, правило старта, стартовое знание (r2)
 
 Автор: research-scientist, 2026-11-03; r2 после gate-ревью (см. «Разногласия») и решений владельца #130, #131, #132. Основание: DECISIONS_LOG #127, #130–#132, `docs/simulation/t6b-alloy-gap.md`, `mods/core/product_classes.yaml`, `mods/core/scenario_1945.yaml`, `docs/game-design/COMPONENT_SELECTION.md`, `docs/research/data/jet-slice/{scenario_1945,product_class,product_inputs}.md`, `nodes.csv`, `rr0006-addendum-smoke-F2.md` §5. Статус — **предложение**. `mods/`, спека и контракт не правились, прогонов не было: все «ожидаемые эффекты» — расчёт на бумаге по контракту §4.2.

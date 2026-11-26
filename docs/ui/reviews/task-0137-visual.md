@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0137 visual review: globe variant B (physical atmosphere) as default
 
 Reviewer: ui-art-director. Frames: `.claude/worktrees/agent-ad14f255be74df44a/shots-out/task-0137/` (the path given in the task, `shots-out/task-0137/`, does not exist in the main tree; frames were read from the agent worktree). Choice of B is the owner's (#444) and is not re-argued.

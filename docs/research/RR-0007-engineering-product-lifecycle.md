@@ -5,7 +5,6 @@ status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-02
 author: game-designer
 related: [RR-0003, HYP-0001]
-tags: [research, economy, science, accepted]
 ---
 
 # RR-0007 — Инженерия и жизненный цикл изделий

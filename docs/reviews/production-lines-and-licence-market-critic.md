@@ -1,6 +1,3 @@
----
-tags: [review, economy, done]
----
 # Gate: production-lines-and-licence-market.md — critic
 
 STATUS: done

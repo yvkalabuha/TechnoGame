@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-18
 approval_ref: "DECISIONS_LOG #315 (ADR-0011 ACCEPTED)"
 created: 2026-11-18
-tags: [task, map, data, done]
 ---
 
 

@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: light; OPEN_QUESTIONS #1
 created: 2026-11-03
-tags: [task, determinism, testing, done]
 ---
 
 # TASK-0009 — Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI

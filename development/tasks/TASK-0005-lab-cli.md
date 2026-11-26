@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-02
 approval_ref: DECISIONS_LOG #12–#15; EXP-0001 «Ревью»
 created: 2026-11-02
-tags: [task, simulation-lab, platform, done]
 ---
 
 # TASK-0005 — Simulation Lab: CLI, манифест, раннер матрицы

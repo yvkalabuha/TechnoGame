@@ -1,6 +1,3 @@
----
-tags: [note, science, institutions, draft]
----
 # Направления: список, узлы знаний, институты (rev 1, 2026-11-25)
 
 Автор: research-scientist. Основание: решения владельца #571, #572; docs/game-design/SCIENCE_SLOTS.md §2a. Данные: mods/core/nodes.yaml (99 узлов), mods/core/institutes.yaml (27 институтов). mods/ не менялся.

@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #589"
 created: 2026-11-26
-tags: [task, science, economy, institutions, active]
 ---
 
 # TASK-0199 — Core: AI builds institutes on science surplus + era node price curve D by min(node year, calendar year) (#589)

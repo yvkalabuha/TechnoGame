@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "#577"
 review_ref: "reviewer: APPROVE (re-review on main after landing); codex 3 returns, waived by #432, DEBT-0114; merge c1b9100"
 created: 2026-11-25
-tags: [task, platform, external-llm, done]
 ---
 
 # TASK-0191 — Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577)

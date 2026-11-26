@@ -15,7 +15,6 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #591"
 review_ref: "reviewer: APPROVE f7deb1cd; codex: 3 rounds, waived per owner #592 (DEBT-0122)"
 created: 2026-11-26
-tags: [task, platform, knowledge-base, done]
 ---
 
 # TASK-0202 — Hooks against repeats: Agent dispatch needs committed task in its status, shot launch checks branch has new model, kb_check stale errors cleaned (#591)

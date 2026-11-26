@@ -1,6 +1,3 @@
----
-tags: [plan, ui, gameplay, draft]
----
 # UX_IMPROVEMENT_PLAN — дружелюбие клиента и стиль (2026-11-19)
 
 Автор: ui-art-director. Основание: запрос владельца 2026-11-19; решение #417 (`UI_DESIGN_SYSTEM.md` §12, критерии C1–C8, A1–A12); `KEY_SHOTS.md`, `CLIENT_V05C_SPEC.md`, `docs/game-design/UI_INFORMATION_ARCHITECTURE.md`, `docs/game-design/notes/product-review-2026-11-19.md`.

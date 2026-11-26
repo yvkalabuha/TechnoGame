@@ -15,7 +15,6 @@ approved_at: 2026-11-22
 approval_ref: "#432 (light)"
 review_ref: "reviewer: APPROVE 02dcf85 (5 rounds); codex: 3 returns, waived by #432, open → DEBT-0077; landed 07ea3a8"
 created: 2026-11-22
-tags: [task, core, external-llm, done]
 ---
 
 # TASK-0127 — Open Codex findings after TASK-0125 landing (#432)

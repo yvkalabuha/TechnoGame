@@ -15,7 +15,6 @@ approved_at: 2026-11-19
 approval_ref: "DEBT-0050, ADR-0009 (CC BY needs credit) (light)"
 review_ref: "reviewer: APPROVE ced692d (code read, no build; 4 Codex findings remain as DEBT-0065); codex accept 61f15a63; ui-art-director: PASS on 1920x1080 frames, docs/ui/reviews/task-0117-visual-2.md"
 created: 2026-11-19
-tags: [task, ui, audio, done]
 ---
 
 # TASK-0112 — Credits screen with music and sound attribution (DEBT-0050)

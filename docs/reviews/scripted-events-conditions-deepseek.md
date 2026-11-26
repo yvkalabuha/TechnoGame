@@ -1,6 +1,3 @@
----
-tags: [review, history, external-llm, done]
----
 # Gate scripted-events-conditions rev 2 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-scripted-events-conditions-3f4e7186-third.json

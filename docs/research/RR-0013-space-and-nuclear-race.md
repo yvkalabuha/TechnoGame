@@ -5,7 +5,6 @@ status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-14
 author: research-scientist
 related: [RR-0005, RR-0006, RR-0007, RR-0008, RR-0010, RR-0011, RR-0012, RR-0014]
-tags: [research, science, military, accepted]
 ---
 
 # RR-0013 — Космическая и ядерная гонка

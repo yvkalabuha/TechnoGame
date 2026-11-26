@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-03
 approval_ref: "DECISIONS_LOG #123–#126; спека v0.12 §11"
 created: 2026-11-03
-tags: [task, core, gameplay, done]
 ---
 
 # TASK-0022 — T6a: система политики ИИ и сборка мира среза (Session)

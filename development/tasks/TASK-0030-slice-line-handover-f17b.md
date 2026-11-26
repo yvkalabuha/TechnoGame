@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-04
 approval_ref: "DECISIONS_LOG #138, #160; спека v0.20 A41, §11 F17b"
 created: 2026-11-04
-tags: [task, gameplay, economy, done]
 ---
 
 # TASK-0030 — F17b: передача линии по рабочему выходу годных (удержание r_keep)

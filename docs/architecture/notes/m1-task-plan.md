@@ -1,6 +1,3 @@
----
-tags: [plan, core, map, active]
----
 # M1: план задач (нарезка MS-M1 после ADR-0027…0029)
 
 > systems-architect, 2026-11-25. Вход: `development/milestones/MS-M1-economy-provinces-open-race.md` (K1–K10), ADR-0027 (#516), ADR-0028 (#517), ADR-0029 (#518), ADR-0019, ADR-0020, ADR-0022, `docs/game-design/economy/E1-model.md`, DECISIONS_LOG #321, #324, #325, #328, #499, #504, #512–#514, `docs/research/notes/m1-ownership-events-broad-list.md`, `development/PLAN.md` этап 3. Это план-предложение **[Предл.]**: id задач — заглушки `T-M1-NN`, задачи заводит Orchestrator через `/new`. Оценки — дни работы агента **[Предп.]**, без ожидания ревью и машинного времени, если не сказано иначе.

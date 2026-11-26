@@ -15,7 +15,6 @@ approved_at: 2026-11-25
 approval_ref: "#555"
 review_ref: "reviewer: APPROVE (with TASK-0182 branch); pre-registered measurement FAIL vs T12, owner #558 accepted the baseline; codex accept e3b86996; merge f45c3d4"
 created: 2026-11-25
-tags: [task, science, data, done]
 ---
 
 # TASK-0180 — Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555)

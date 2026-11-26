@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "#302, #303, #326; spec docs/ui/CLIENT_V05B_SPEC.md"
 created: 2026-11-18
-tags: [task, ui, visual, done]
 ---
 
 # TASK-0081 — Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons

@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-18
 approval_ref: "TASK-0102, EXP-0008 П10 (light; rules may change at the EXP-0008 gate)"
 created: 2026-11-18
-tags: [task, simulation-lab, performance, done]
 ---
 
 # TASK-0106 — Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance

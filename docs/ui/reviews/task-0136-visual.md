@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0136 · визуальная ревизия (ui-art-director, 2026-11-24)
 Основание: spec `docs/ui/specs/task-0136-clarity-depth.md`, `UI_DESIGN_SYSTEM.md` §12. Кадры 1920×1080, 100 %, цвет и серый; кадр 150 % для A12. Метки: [Факт] виден на кадре, [Код] прочитан в коде, [Не проверено].
 

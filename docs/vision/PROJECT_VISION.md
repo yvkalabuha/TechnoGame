@@ -1,6 +1,3 @@
----
-tags: [vision, gameplay, science, active]
----
 # PROJECT VISION — PROJECT SINGULARITY
 
 > Краткое изложение `MASTER_PROMPT.md`. При расхождении действуют решения в `docs/decisions/`.

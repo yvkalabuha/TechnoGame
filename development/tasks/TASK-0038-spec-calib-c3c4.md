@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #177"
 created: 2026-11-13
-tags: [task, simulation-lab, economy, done]
 ---
 
 # TASK-0038 — Спека среза §8.2: совместный этап калибровки C3+C4 (#177)

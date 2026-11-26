@@ -1,6 +1,3 @@
----
-tags: [research, data, history, active]
----
 # Срез «реактивная авиация»: исторический контент 1970–2030 (решение #423)
 
 > research-scientist, 2026-11-19. Заметка, не элемент реестра. Читал: `mods/core/nodes.yaml` (61 узел), `mods/core/product_classes.yaml`,

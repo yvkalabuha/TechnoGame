@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-13
 approval_ref: "DECISIONS_LOG #184, #185"
 created: 2026-11-13
-tags: [task, economy, done]
 ---
 
 # TASK-0042 — Контракт §8.2 и спека v0.24: C1 по труду, две постановки

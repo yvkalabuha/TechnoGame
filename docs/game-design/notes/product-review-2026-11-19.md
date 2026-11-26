@@ -1,6 +1,3 @@
----
-tags: [review, gameplay, done]
----
 # Продуктовое ревью: путь к играбельной сборке (2026-11-19)
 
 > game-designer. Основа: VISION, ROADMAP (частично устарел), MS-M0/M1, HYP-0002/0005, exp0002-result, RISKS, DECISIONS_LOG, исходники `src/Singularity.Client.Spike`. Всё, что не помечено [Факт], — оценка автора.

@@ -1,6 +1,3 @@
----
-tags: [review, history, gameplay, done]
----
 # Gate scripted-events-conditions rev 2 — advocate (2026-11-18)
 
 Keep the main decisions. One strong contradiction with #341, two moderate simplifications, one consequence of an owner decision as a question.

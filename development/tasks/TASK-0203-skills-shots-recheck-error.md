@@ -15,7 +15,6 @@ approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #591"
 review_ref: "orchestrator-authored skills (docs only); used by owner decision #591"
 created: 2026-11-26
-tags: [task, platform, done]
 ---
 
 # TASK-0203 — Skills /shots, /recheck, /error for the Orchestrator (#591)

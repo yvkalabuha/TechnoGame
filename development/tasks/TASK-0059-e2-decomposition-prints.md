@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-16
 approval_ref: "#242 п.4"
 created: 2026-11-16
-tags: [task, simulation-lab, done]
 ---
 
 # TASK-0059 — Разбор E2 HYP-0004 и печати gate I-OC+RANK

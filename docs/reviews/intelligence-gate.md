@@ -1,6 +1,3 @@
----
-tags: [review, science, platform, done]
----
 # Gate INTELLIGENCE ред. 2 (#459–#463), 2026-11-24
 
 Критик, защитник, DeepSeek. Итог и решения — O-051.

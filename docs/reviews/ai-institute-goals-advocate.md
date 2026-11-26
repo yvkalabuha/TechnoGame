@@ -1,6 +1,3 @@
----
-tags: [review, science, simulation-lab, done]
----
 # Advocate: ai-institute-goals (TASK-0178), 2026-11-25
 
 Краткий вывод: сначала мерило, потом правило; эталон LEGACY замедлился на ≈13 лет после T12 — пока не объяснено, датам не доверять.

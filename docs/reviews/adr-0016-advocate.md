@@ -1,6 +1,3 @@
----
-tags: [review, performance, done]
----
 # ADR-0016 tick budget — advocate review
 
 Gate review of `docs/decisions/ADR-0016-tick-budget.md` (commit 50685b6), 2026-11-17. Agent: advocate (read-only; text transcribed by the Orchestrator).

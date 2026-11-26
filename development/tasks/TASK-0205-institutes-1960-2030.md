@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-26
 approval_ref: "DECISIONS_LOG #589; O-110"
 created: 2026-11-26
-tags: [task, institutions, data, active]
 ---
 
 # TASK-0205 — Data: build candidate institutes 1960-2030 for USA, SUN, GBR, FRA, SWE with directions and levels (#589, O-110)

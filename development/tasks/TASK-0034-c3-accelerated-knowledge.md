@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-13
 approval_ref: "TASK-0017 сверка 2026-11-13 (smoke-t4s.md §6, риск C3 и темпа знания)"
 created: 2026-11-13
-tags: [task, science, simulation-lab, done]
 ---
 
 # TASK-0034 — C3 при ускоренном темпе знания (вход для калибровки T12)

@@ -14,7 +14,6 @@ approved_by:             # owner | orchestrator (orchestrator — только l
 approved_at:
 approval_ref:
 created: 2026-11-18
-tags: [task, performance, simulation-lab, draft]
 ---
 
 # TASK-0102 — Re-registered tick benchmark series (frequency rule revision, #405)

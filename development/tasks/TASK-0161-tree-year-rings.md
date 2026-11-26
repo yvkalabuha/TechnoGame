@@ -14,7 +14,6 @@ approved_by: orchestrator
 approved_at: 2026-11-25
 approval_ref: "owner #473 (layout), #453, #466; owner request 2026-11-25 to start; light client task inside approved design"
 created: 2026-11-25
-tags: [task, ui, science, active]
 ---
 
 # TASK-0161 — Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473)

@@ -14,7 +14,6 @@ approved_by:             # owner | orchestrator (orchestrator — только l
 approved_at:
 approval_ref:
 created: 2026-11-25
-tags: [task, gameplay, science, draft]
 ---
 
 # TASK-0183 — Pace tuning G3-G4 after owner play session: ahead cost on on-time nodes, epoch budget weighting (#558)

@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#523"
 created: 2026-11-25
-tags: [task, map, ui, active]
 ---
 
 # TASK-0163 — Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523)

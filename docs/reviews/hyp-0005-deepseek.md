@@ -1,6 +1,3 @@
----
-tags: [review, platform, external-llm, done]
----
 # Gate HYP-0005 — DeepSeek third voice (2026-11-18)
 
 record: /var/www/gameDev/tools/llm_worker/runs/gate-HYP-0005-open-race-fa83ae95-third.json

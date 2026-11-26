@@ -16,7 +16,6 @@ golden_hash: "V0 main конечные хеши s41…s45: 6af346db…, fbfcaa87
 baseline: V0 на той же сборке; эталон VINF
 outcome: supports         # V-0 у USA и GBR; годен только V5 (K1, K2, K4, K5) → по правилу выбран V5; V4 не годен (K1 USA)
 created: 2026-11-04
-tags: [experiment, economy, simulation-lab, done]
 ---
 
 # EXP-0005 — Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3)

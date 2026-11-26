@@ -1,6 +1,3 @@
----
-tags: [research, map, history, done]
----
 # Сверка владельцев 1945-10-01 (TASK-0166, T-M1-10)
 
 Дата: 2026-11-25. Автор: research-scientist. Объект: `mods/core/scenarios/1945/owners.yaml` (379 регионов: H 215, M 156, L 8). Метки: [Факт] с источником, [Предп.], [Предл.]. `mods/` не менялся.

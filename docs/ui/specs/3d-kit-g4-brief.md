@@ -1,6 +1,3 @@
----
-tags: [spec, visual, active]
----
 # Brief: modular parts kit for the G4 fighter (owner request 2026-11-25)
 
 Purpose: in the game an aircraft design is assembled from slots — engine (eng_g4), airframe (af_mach2), afterburner (ab_on) (mods/core/product_classes.yaml). The 3D model must be assembled from parts the same way, so later kits (G1–G6) can be mixed: e.g. the G4 engine on a G3 airframe.

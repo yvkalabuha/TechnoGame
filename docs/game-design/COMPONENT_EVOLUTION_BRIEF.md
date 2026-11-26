@@ -1,6 +1,3 @@
----
-tags: [spec, science, gameplay, draft]
----
 # Modular technology development and component evolution — owner brief v1.0
 
 Source: owner's concept proposal of 2026-11-03, kept in substance (original in English), plus the owner's note in Russian at the end. Status: input for research and design; nothing here is approved.

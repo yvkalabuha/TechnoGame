@@ -1,6 +1,3 @@
----
-tags: [review, ui, visual, done]
----
 # TASK-0163 и TASK-0167 — визуальный обзор (ui-art-director)
 
 Кадры: shots-out/TASK-0163-0167/ map1945_{world,europe,africa,asia,oceania_india,namerica} 1920x1080 100 %; серые (A5) смотрел europe и world; остальные серые не смотрел. Предыдущий раунд: docs/ui/reviews/task-0163-visual.md (FAIL).

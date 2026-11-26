@@ -1,6 +1,3 @@
----
-tags: [spec, ui, visual, active]
----
 # TASK-0139: управление временем в верхней панели (спека)
 
 Источники: кадры `.claude/worktrees/agent-a08055aaa3c46ffb6/shots-out/task-0126/*_1920x1080.png` (верхний левый угол, 100 %), `TimeIcons.cs`, `TimeGlyphMetrics.cs`, `GaugeControl.cs`, UI_DESIGN_SYSTEM §12 (A1, A2, A6, A7, C3, C7), .claude/rules/ui.md. Решение владельца: кнопки не по центру и некрасивые; слов скорости («1 день/с») не нужно; рамка активной ступени шкалы не по центру.

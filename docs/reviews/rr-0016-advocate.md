@@ -1,6 +1,3 @@
----
-tags: [review, military, history, done]
----
 # Gate RR-0016 (revised) — advocate (2026-11-18)
 
 Sound frame: no-RNG combat, owner/controller, supply via variant-B flows, 4 outcomes. Five rejected or simplified alternatives are stronger than the draft.

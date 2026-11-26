@@ -1,6 +1,3 @@
----
-tags: [review, map, external-llm, done]
----
 # ADR-0011 rev 2 — DeepSeek third voice (2026-11-18, commit bc1b007)
 
 Record: `tools/llm_worker/runs/gate-ADR-0011-map-representation-bc1b007d-third.json` (sha256 e3a2a0ba…). changes_requested: 3 high, 11 medium, 3 low.

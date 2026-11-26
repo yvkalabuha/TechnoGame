@@ -1,6 +1,3 @@
----
-tags: [spec, ui, visual, active]
----
 # Sketch brief: science-panel
 
 Redesign the attached in-game screen. Science panel ("Наука") of a 1945–2100 science strategy game.

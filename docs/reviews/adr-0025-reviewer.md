@@ -1,6 +1,3 @@
----
-tags: [review, ui, core, done]
----
 # ADR-0025 — ревьюер (2026-11-21): changes requested
 
 - high, §2 п. 6–7: клиент не читает `session.View`; поток симуляции (`SimHost.Publish`, `SimHost.cs` ~196–216) кладёт вид в `HostSnapshot`, тот идёт в поток Godot через `volatile _snap`; `ActorPanel`, `TechTree`, `AudioDirector`, `SignalField` читают `s.View`. Аренду берёт поток симуляции при сборке `HostSnapshot`, освобождает клиент при замене снимка; убрать `SimHost` из п. 7.

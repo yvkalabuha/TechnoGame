@@ -1,6 +1,3 @@
----
-tags: [design, audio, draft]
----
 # AUDIO_DIRECTION r2 — живые записи эпохи и постель «аппаратной»
 
 Статус: [Предл.] ревизия к `docs/audio/AUDIO_DIRECTION.md` v0.1 по решению владельца #305. Лежит в `docs/ui/` из-за зоны записи; целевой путь `docs/audio/AUDIO_DIRECTION_r2.md` (переносит Orchestrator). Лицензии: только PD / CC0 / CC BY (ADR-0009, #298). Проверено на страницах 2026-11-18, если не отмечено [Предп.].

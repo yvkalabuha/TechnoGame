@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "#486"
 review_ref: "reviewer: APPROVE; codex: waived after 3 returns (#432); landed c9faa57; DEBT-0101"
 created: 2026-11-24
-tags: [task, science, knowledge-base, done]
 ---
 
 # TASK-0157 — Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486)

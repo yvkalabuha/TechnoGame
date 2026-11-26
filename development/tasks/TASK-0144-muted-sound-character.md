@@ -15,7 +15,6 @@ approved_at: 2026-11-24
 approval_ref: "owner preference #455; light task approved by Orchestrator"
 review_ref: "sound-director: PASS (task review); owner: accepted in playtest 2026-11-24 (Звуки — нормально, без замечаний)"
 created: 2026-11-24
-tags: [task, audio, done]
 ---
 
 # TASK-0144 — Глухой характер звуков (#455)

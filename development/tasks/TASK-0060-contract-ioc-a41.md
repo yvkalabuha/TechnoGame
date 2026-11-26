@@ -14,7 +14,6 @@ approved_by: owner
 approved_at: 2026-11-16
 approval_ref: "#242, #243"
 created: 2026-11-16
-tags: [task, gameplay, done]
 ---
 
 # TASK-0060 — Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40
