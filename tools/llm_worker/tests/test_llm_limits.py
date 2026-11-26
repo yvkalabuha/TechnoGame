@@ -145,6 +145,38 @@ class SourceTest(unittest.TestCase):
             ll._fetch = orig
         self.assertEqual(len(calls), 2)
 
+    def test_failed_fetch_is_remembered_for_a_minute(self):
+        """DEBT-0126: a hanging service costs one timeout a minute, not one per provider of a review."""
+        calls = []
+        orig = ll._fetch
+        ll._fetch = lambda s: calls.append(s) and None
+        url = "http://127.0.0.1:8790/x"
+        try:
+            self.assertIsNone(ll.status(NOW, url, self.cache))
+            self.assertIsNone(ll.status(NOW + timedelta(seconds=30), url, self.cache))
+            self.assertEqual(len(calls), 1)
+            self.assertIsNone(ll.status(NOW + timedelta(seconds=30), "http://127.0.0.1:8790/y", self.cache))  # other source
+            self.assertEqual(len(calls), 2)
+            ll._fetch = lambda s: calls.append(s) or {"providers": []}
+            self.assertEqual(ll.status(NOW + timedelta(seconds=95), "http://127.0.0.1:8790/y", self.cache), {"providers": []})
+            self.assertEqual(ll.status(NOW + timedelta(seconds=100), "http://127.0.0.1:8790/y", self.cache), {"providers": []})
+        finally:
+            ll._fetch = orig
+        self.assertEqual(len(calls), 3)
+
+
+class SessionLineTest(unittest.TestCase):
+    def test_only_not_ok_consumers_with_utc_reset(self):
+        p = payload(codex=[win("7d", 0, "2026-11-28T10:04:03+02:00")], claude=[win("7d", 60, "2026-11-29T04:00:00Z")],
+                    deepseek=[win("balance", None, value=0.5)])
+        st = {c: state(p, c) for c in CMAP}
+        self.assertEqual(ll.session_line(st), "Лимиты: codex out до 11-28 08:04Z, deepseek low")
+
+    def test_all_ok_or_all_unknown(self):
+        p = payload(claude=[win("7d", 60, "2026-11-29T04:00:00Z")])
+        self.assertEqual(ll.session_line({c: state(p, c) for c in CMAP}), "Лимиты: всё в норме")
+        self.assertIsNone(ll.session_line({c: state(None, c) for c in CMAP}))
+
 
 def out_codex(consumer):
     if consumer == "codex":

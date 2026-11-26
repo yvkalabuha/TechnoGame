@@ -82,6 +82,9 @@ def checks(root) -> list[str]:
     kb = run(root, "python3", "tools/development/kb_check.py", "check", "--brief", timeout=15.0)
     if kb:
         out.append(f"- Knowledge base: {kb}")
+    lim = run(root, "python3", "tools/development/llm_limits.py", "--session", timeout=1.8)  # #606, cached, advisory
+    if lim:
+        out.append(f"- {lim}")
     q = root / "development" / "OPEN_QUESTIONS.md"
     if q.exists():
         n = len(re.findall(r"^\| Q\d+ ", q.read_text(encoding="utf-8"), re.M))
