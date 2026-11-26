@@ -26,6 +26,18 @@ started without asking; work without questions; when nothing can move without an
    a client batch permission. Then ask ALL queued questions with AskUserQuestion (4 per call, as many calls as needed, critical
    first, plain Russian per orchestration §7), record the answers, and resume the loop.
 
+## Agent control (owner #583)
+Each loop: `python3 tools/development/watch.py` (with `--actions` once TASK-0197 lands). An agent silent > 2 h: SendMessage asking for status; silent 1 h more: TaskStop, note in the task, redispatch with its branch. An agent that reported done but whose branch is not on review: start the reviewer at once.
+
+## Shot batch (owner #583)
+Collect frames of ALL UI tasks waiting for shots into one batch (`tools/development/shot_batch.py` once it exists). Before asking, check each branch contains the new model (`git merge-base --is-ancestor f12684f <branch>`). One permission covers the batch.
+
+## Stop (owner #583)
+`/autopilot stop` or the owner saying stop: start no new agents, let running ones finish, land nothing new without the owner, write the handoff, then report. State file: `.claude/.state/autopilot.json` (`tools/development/autopilot.py` once TASK-0197 lands).
+
+## Questions (owner #587)
+Every owner question goes through AskUserQuestion, never as a chat list. If the call times out, ask again when the owner is back.
+
 ## Drift check (owner #529)
 After every 5 finished items: re-read docs/vision/NORTH_STAR.md, the "Фокус" of development/PLAN.md, the latest handoff and the last 15 owner decisions; compare with what is running; write any drift (forgotten owner wish, work outside the focus) into the handoff and fix the queue.
 
