@@ -52,7 +52,7 @@ def check_url(url):
     """Only http/https with a public host. Returns (host, port, ip): the ip that was checked, to pin in curl."""
     u = urllib.parse.urlparse(url)
     if u.scheme not in ("http", "https") or not u.hostname or u.username or u.password:
-        raise FetchError(f"refused url (http/https without credentials only): {url[:80]}")
+        raise FetchError(f"refused url (http/https without credentials only): {redact_url(url)[:80]}")
     try:
         port = u.port or (443 if u.scheme == "https" else 80)
         infos = socket.getaddrinfo(u.hostname, port, type=socket.SOCK_STREAM)
@@ -101,7 +101,7 @@ def curl_fetch(url, timeout_s=FETCH_TIMEOUT_S, max_hops=MAX_REDIRECTS):
     for _ in range(max_hops + 1):
         host, port, ip = check_url(url)
         pin = f"[{ip}]" if ":" in ip else ip
-        cmd = ["curl", "-q", "-sS", "--noproxy", "*", "--resolve", f"{host}:{port}:{pin}",
+        cmd = ["curl", "-q", "-sS", "--globoff", "--noproxy", "*", "--resolve", f"{host}:{port}:{pin}",
                "--proto", "=http,https", "--max-filesize", str(MAX_PAGE_BYTES), "--max-time", str(timeout_s),
                "-A", "singularity-research/1", "-w", "\n%{http_code}\n%{redirect_url}\n%{remote_ip}", "--", url]
         try:
@@ -182,7 +182,27 @@ def quote_in_text(quote, text, value=""):
         return False
     if v and not has_token(v, q):
         return False
-    return q in _norm(text)
+    return _bounded_in(q, _norm(text))
+
+
+def _bounded_in(q, text):
+    """q occurs in text starting and ending on word boundaries (never inside a number or a word)."""
+    pre = r"(?<!\w)" if q[:1].isalnum() else ""
+    post = r"(?!\w)" if q[-1:].isalnum() else ""
+    return re.search(pre + re.escape(q) + post, text) is not None
+
+
+def redact_url(url):
+    """The url without userinfo: credentials must never reach a record, a prompt or a message."""
+    try:
+        u = urllib.parse.urlsplit(url)
+        if u.username is None and u.password is None:
+            return url
+        host = u.hostname or ""
+        host = f"[{host}]" if ":" in host else host
+        return urllib.parse.urlunsplit((u.scheme, host + (f":{u.port}" if u.port else ""), u.path, u.query, u.fragment))
+    except ValueError:
+        return "invalid-url"
 
 
 def load_input(path):
@@ -206,7 +226,7 @@ def load_input(path):
 
 def load_page(url, fetch, cache_dir):
     """(text or None, info). The cache holds raw bytes by url hash; gitleaks scans the text before it can be used."""
-    info = {"url": url}
+    info = {"url": redact_url(url)}
     key = hashlib.sha256(url.encode()).hexdigest()
     cached = cache_dir / key
     try:
@@ -240,6 +260,15 @@ def build_prompt(item, pages):
     return f"{head}\n\n{body}"
 
 
+def _decade_only(value, quote):
+    """The evidence gives a decade ('1950s') where a year is needed: no verdict about the year can be drawn."""
+    for s in (value, quote):
+        s = _norm(s)
+        if s and re.search(r"\b\d{3}0s\b", s) and not re.search(r"\b\d{4}\b", s):
+            return True
+    return False
+
+
 def judge(provider, item, pages):
     """One model call; returns the checked result dict. A quote not found in the source page gives not_found."""
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -263,7 +292,9 @@ def judge(provider, item, pages):
             # The quote must agree with the verdict about the submitted value: a string check cannot prove meaning,
             # but a contradiction that quotes the submitted value, or a confirmation that does not, is refused.
             sub = _norm(str(item.get("year", item.get("value", ""))))
-            if sub and "claim" in item:
+            if sub and "claim" in item and re.fullmatch(r"\d{4}", sub) and _decade_only(res["value"], res["quote"]):
+                reason = "precision_decade_only"
+            elif sub and "claim" in item:
                 in_quote = has_token(sub, _norm(res["quote"])) or has_token(sub, _norm(res["value"]))
                 if said == "contradicted" and in_quote:
                     reason = "contradiction_gives_the_submitted_value"
@@ -308,11 +339,11 @@ def run_research(path, runs_dir=config.RUNS_DIR, make_provider=None, fetch=curl_
         out = {"id": it["id"], "text": it.get("claim") or it.get("question"), "pages": []}
         pages = []
         try:
-            for url in it["urls"][:MAX_URLS]:
+            for url in list(dict.fromkeys(it["urls"]))[:MAX_URLS]:  # one request per distinct source
                 text, info = load_page(url, fetch, cache_dir)
                 out["pages"].append(info)
                 if text:
-                    pages.append((url, text))
+                    pages.append((info["url"], text))
             if dry_run or not pages:
                 out.update(verdict="not_found", note="dry_run" if dry_run else "no_page_available")
             else:
