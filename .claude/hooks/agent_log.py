@@ -29,7 +29,7 @@ def main() -> None:
         if tasks:
             rec["tasks"] = tasks
         if event == "launched":
-            m = re.search(r"agentId: (\w+)", json.dumps(data.get("tool_response") or ""))
+            m = re.search(r'agentId\\?"?:\s*\\?"?(\w+)', json.dumps(data.get("tool_response") or ""))
             rec["agent_id"] = m.group(1) if m else ""
             if not rec["agent_id"]:
                 return  # foreground agent: it finished inside the call
