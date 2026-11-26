@@ -1,6 +1,7 @@
 ---
 id: {{ID}}
 title: {{TITLE_YAML}}
+tags: [plan, platform, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: PLANNED          # PLANNED | ACTIVE | RELEASED
 approved_by:             # owner (обязательно для ACTIVE/RELEASED)
 approved_at:

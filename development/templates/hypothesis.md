@@ -1,6 +1,7 @@
 ---
 id: {{ID}}
 title: {{TITLE_YAML}}
+tags: [hypothesis, gameplay, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: IDEA             # IDEA | HYPOTHESIS | UNDER_RESEARCH | EXPERIMENTAL | VALIDATED | REJECTED | DEFERRED
 systems: []              # связанные системы игры: science, industry, economy, ...
 related: []              # ID связанных элементов

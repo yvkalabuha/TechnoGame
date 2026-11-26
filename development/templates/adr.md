@@ -1,6 +1,7 @@
 ---
 id: {{ID}}
 title: {{TITLE_YAML}}
+tags: [decision, platform, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: {{DATE}}
 supersedes:              # ADR-NNNN, если заменяет

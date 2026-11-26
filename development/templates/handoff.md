@@ -1,3 +1,7 @@
+---
+tags: [handoff, platform, done]
+---
+
 # Handoff {{ID}}
 
 **Дата:** {{DATE}}

@@ -1,6 +1,7 @@
 ---
 id: {{ID}}
 title: {{TITLE_YAML}}
+tags: [task, platform, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0

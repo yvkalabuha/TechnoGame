@@ -1,6 +1,7 @@
 ---
 id: {{ID}}
 title: {{TITLE_YAML}}
+tags: [research, science, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: DRAFT            # DRAFT | FINAL | SUPERSEDED
 date: {{DATE}}
 author:

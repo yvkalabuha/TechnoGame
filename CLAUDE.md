@@ -15,30 +15,30 @@ Only with the owner's approval: changing the game concept or simulation principl
 - After each significant stage report: done, agents used, documents changed, proposals, hypotheses checked, risks, what needs approval, next step. Separate facts, assumptions, proposals, approved decisions, open questions.
 
 ## Session start
-1. The SessionStart hook prints facts from `CURRENT_STATE.md`, the "Фокус" of `development/PLAN.md` and live checks (CI on `main`, unpushed commits, worktrees, owner question queue). A red CI is the first task. Read the files themselves if you need more.
+1. The SessionStart hook prints `CURRENT_STATE.md`, the "Фокус" of `development/PLAN.md` and live checks (CI, commits, worktrees, questions, model limits). A red CI is the first task. Read the files themselves if you need more.
 2. Read the last handoff linked there only when continuing that work.
 3. Load only documents the current task needs. Read long documents from "Краткий вывод" first.
 
 ## Session end
-The owner runs `/handoff`. If the session ends without it and files changed, remind the owner.
+The owner runs `/handoff`; if a session ends without it and files changed, remind him.
 
 ## Agents (`.claude/agents/`)
 | Agent | Use for |
 |---|---|
 | game-designer | mechanics, loops, game value |
-| research-scientist | science model, tech space, facts with sources |
+| research-scientist | science model, facts with sources |
 | systems-architect | architecture, ADRs, performance |
 | simulation-engineer | math models, Lab code, experiments |
 | developer | APPROVED tasks only |
 | test-engineer | invariants, property tests, determinism L1/L2 |
-| critic, advocate | every gate-level review (`/review-gate`) |
+| critic, advocate | gate reviews (`/review-gate`) |
 | reviewer | every diff in src/, tests/, mods/ |
-| ui-art-director | visual identity, screen design, visual review of UI (may block with reasons) |
-| economy-analyst | economy, production capability, supply chains, trade |
-| civilization-systems-designer | institutions, personalities, national projects, political systems |
-| sound-director | audio identity, sound map, music, sourcing and licences, audio review |
-| counterfactual-analyst | alternative branches of technology and events, dead ends, ahead-of-time branches |
-| ui-tester | drives the client via the test bridge/MCP (#293), UI defects, client performance |
+| ui-art-director | visual identity, screens, UI review (may block) |
+| economy-analyst | economy, production, supply chains, trade |
+| civilization-systems-designer | institutions, personalities, projects, politics |
+| sound-director | audio, music, licences, audio review |
+| counterfactual-analyst | alternative tech and event branches |
+| ui-tester | drives the client via the test bridge (#293), UI defects |
 
 - Create or change agent files only at the end of a session: changes are not picked up by the running session. Fallback for a missing agent: `general-purpose` with the role file as instructions + `zone_check`.
 - Choose the minimal set of agents. Run agents in parallel only for independent work.
@@ -57,7 +57,7 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 - No premature implementation, no architecture for its own sake, no stubs presented as features, no fake mechanics.
 
 ## Technical decisions in force
-- ADR-0001: C# / .NET 10 core, no engine; Godot later. `dotnet` is `$HOME/.dotnet/dotnet` if not on PATH.
+- ADR-0001: C# / .NET 10 core, no engine; Godot later.
 - ADR-0002: determinism L1 + L2 from M0. Code rules: `.claude/rules/csharp-core.md`.
 - ADR-0009: external data only PD, CC0, CC BY.
 
@@ -69,15 +69,4 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 - Never commit secrets, `lab/results/`, build outputs.
 
 ## Navigation
-| Need | File |
-|---|---|
-| Current state | `CURRENT_STATE.md` |
-| Plan | `development/PLAN.md` (current work), `development/ROADMAP.md`, `development/milestones/` |
-| All items | `development/BACKLOG.md` (generated) |
-| Owner decisions | `docs/decisions/DECISIONS_LOG.md`; Orchestrator decisions: `docs/decisions/ORCH_DECISIONS.md` |
-| ADRs | `docs/decisions/ADR-*.md` |
-| Architecture | `docs/architecture/ARCHITECTURE.md` |
-| Research | `docs/research/` |
-| Open questions, risks, debt | `development/OPEN_QUESTIONS.md`, `RISKS.md`, `TECH_DEBT.md` |
-| Templates | `development/templates/` |
-| Original master prompt | `docs/vision/MASTER_PROMPT.md` (long; read only when needed) |
+State `CURRENT_STATE.md` · plan `development/PLAN.md`, `development/ROADMAP.md`, `development/milestones/` · items `development/BACKLOG.md` (generated) · decisions `docs/decisions/DECISIONS_LOG.md` (+ `docs/decisions/log/`), `ORCH_DECISIONS.md`, `ADR-*.md` · architecture `docs/architecture/ARCHITECTURE.md` · research `docs/research/` · questions, risks, debt `development/OPEN_QUESTIONS.md`, `RISKS.md`, `TECH_DEBT.md` · templates `development/templates/` · master prompt `docs/vision/MASTER_PROMPT.md` (long).

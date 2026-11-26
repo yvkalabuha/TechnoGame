@@ -1,6 +1,7 @@
 ---
 id: {{ID}}
 title: {{TITLE_YAML}}
+tags: [experiment, simulation-lab, draft]   # kind, area (edit), state (draft → active → done); development/TAGS.yaml
 status: PLANNED          # PLANNED | RUNNING | DONE | FAILED
 hypothesis: HYP-0000     # проверяемая гипотеза
 kind: scenario           # batch | scenario | sweep | monte-carlo | regression | balance | benchmark
