@@ -25,6 +25,9 @@ public sealed class ShotFilter
         return _patterns.Any(p => Glob(p, n));
     }
 
+    /// <summary>True when any frame of a group of steps (base names; the size suffix and the greyscale twin are added) is wanted: the group is skipped otherwise.</summary>
+    public bool WantsGroup(string sfx, params string[] bases) => bases.Any(b => Wants(b + sfx) || Wants(b + sfx + "_grey"));
+
     /// <summary>The patterns that matched none of the saved frames (a typo must fail the run, not pass with no frames).</summary>
     public string[] Unmatched(System.Collections.Generic.IEnumerable<string> saved)
     {

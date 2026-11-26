@@ -69,4 +69,15 @@ public class ShotFilterTests
         Assert.True(new ShotFilter("area_science_1920x1080,globe_panel").WantsLegacyStage);
         Assert.True(new ShotFilter("tree_*").WantsLegacyStage);
     }
+
+    [Fact]
+    public void WantsGroup_RunsAGroupOnlyWhenOneOfItsFramesIsWanted()
+    {
+        var f = new ShotFilter("tech_s1_*,tree_year_step2_1920x1080");
+        Assert.True(f.WantsGroup("_1920x1080", "tech_s1_overview", "tech_s1_card"));
+        Assert.True(f.WantsGroup("_1920x1080", "tree_year_step2", "tree_year_step5"));
+        Assert.False(f.WantsGroup("_1920x1080", "area_finance", "area_science", "menu_ingame"));
+        Assert.False(f.WantsGroup("_1920x1080_s125", "tree_year_step2"));
+        Assert.True(new ShotFilter("area_finance_1920x1080_grey").WantsGroup("_1920x1080", "area_finance"));
+    }
 }

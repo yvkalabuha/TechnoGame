@@ -220,8 +220,8 @@ public sealed class SimHost : IDisposable
     void WatchFreeNotice()
     {
         if (PlayerActor < 0 || PlayerActor >= _session.View.Actors.Length || _session.View.Actors[PlayerActor].Slots is not { } slots) return;
+        // The pause itself is the UI's (the speed control must know it, or Space toggles against a stale state): the snapshot carries the counter.
         if (!_notice.ShouldPause(slots.FreeNoticeMonth, Environment.TickCount64)) return;
-        Speed = 0;
         _noticeSeq++;
     }
 

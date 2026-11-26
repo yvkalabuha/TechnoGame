@@ -208,6 +208,16 @@ public sealed partial class Main : Node3D
         };
     }
 
+    // S12: a new «institute is free» notice of the session pauses the game through the speed control (the control and the host must agree, or Space toggles against a stale state).
+    // An unattended run (the adviser fills the institutes) has nobody to answer the pause and never stops.
+    int _noticeMain;
+    void WatchFreeNotice()
+    {
+        if (_host?.Snap?.Science is not { } sc || _signal == null || sc.NoticeSeq == _noticeMain) return;
+        _noticeMain = sc.NoticeSeq;
+        if (!_host.AutoFillFreeInstitutes) _signal.SetSpeed(0);
+    }
+
     void CloseGameMenu()
     {
         _mainMenu.Close(); GetViewport().GuiReleaseFocus();
@@ -776,6 +786,7 @@ public sealed partial class Main : Node3D
         }
         if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible && !_areaPanel.Visible && _titleHidden.Count == 0; if (_tree.Visible || _areaPanel.Visible || _titleHidden.Count > 0) _help.Visible = false; }   // never over an area panel; F1 still opens the help
         if (_rail != null) LayoutClient();
+        WatchFreeNotice();
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         if (_mapFrames) MapFramesStep(delta);
@@ -985,9 +996,13 @@ public sealed partial class Main : Node3D
         {
             string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
             if (!OnlyWantsSuffix(sfx)) continue;
+            // --only: a group of steps runs only when one of its frames is wanted, and a live check that saves no frame runs only in a full run (the first batch walked the old finance checks before any tech map frame).
+            bool Wn(params string[] names) => _only == null || _only.WantsGroup(sfx, names);
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
             Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); CheckScaleApplied(sfx, scale); _mainMenu.Open(true); });
+            if (Wn("menu_ingame", "main_menu", "credits", "credits_end", "new_game_empty", "new_game_selected", "settings_video", "settings_sound", "settings_general", "settings_rollback", "alert_tint5", "area_finance", "area_forces", "area_science", "area_production"))
+            {
             Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); TitleScene(true); _mainMenu.Open(false); });
             Q(0.5, () => { SaveShot($"main_menu{sfx}.png"); _mainMenu.Close(); TitleScene(false); _credits.Open(); });   // the real title screen (no HUD) at every scale
 
@@ -1004,8 +1019,9 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
+            }
             // Level 0 keyboard check through the real route only: the Finance hotkey opens the panel and moves the focus into it, Tab and an arrow key move a share slider, Space still pauses, Esc returns to the rail button.
-            if (scale == 100 && lang == "ru")
+            if (_only == null && scale == 100 && lang == "ru")
             {
                 int levelBefore = InstrumentLogic.OrganLevel; int[] shareBefore = new int[5]; bool hotFocus = false; int slider = -1, speedBefore = 0;
                 Q(0.6, () => { InstrumentLogic.OrganLevel = 0; CloseArea(); });
@@ -1037,7 +1053,7 @@ public sealed partial class Main : Node3D
                 });
             }
             // Tech map stage 1 (TASK-0192): the strip, the card, the queue, the path and the layout on the live session of the player; each frame comes with an assertion on what the session put on screen.
-            if (scale == 100 && lang == "ru")
+            if (scale == 100 && lang == "ru" && Wn("tech_s1_overview", "tech_s1_card", "tech_s1_card_disabled", "tech_s1_queue", "tech_s1_path", "tech_s1_plan", "tech_s1_confirm60", "tech_s1_notice"))
             {
                 int sciRow = -1; int[] extra = Array.Empty<int>();
                 void SciFail(string what) { _shotLog += $"tech map stage 1 {sfx}: FAIL {what}\n"; InstFail($"tech map stage 1 {sfx}: {what}"); }
@@ -1124,12 +1140,14 @@ public sealed partial class Main : Node3D
                 Q(1.5, () =>
                 {
                     _host.AutoFillFreeInstitutes = true;
-                    if (_host.Snap.Science.NoticeSeq == _noticeBefore || !_tree.ShotNoticeShown) { _shotLog += $"tech map stage 1 {sfx}: tech_s1_notice not taken: the session raised no notice (yearly rule or 25 s throttle)\n"; _tree.ShotClearNotice(); _tree.Visible = false; return; }
+                    if (_host.Snap.Science.NoticeSeq == _noticeBefore || !_tree.ShotNoticeShown) { _shotLog += $"tech map stage 1 {sfx}: tech_s1_notice not taken: the session raised no notice (yearly rule or 25 s throttle)\n"; _tree.ShotClearNotice(); _tree.Visible = false; _signal.SetSpeed(1); return; }
                     SciPass("the free-institute notice paused the game and shows its banner");
                     SaveShot($"tech_s1_notice{sfx}.png", null, true);
-                    _tree.ShotClearNotice(); _tree.Select(-1); _tree.ShotSetGoal(-1); _tree.Visible = false;
+                    _tree.ShotClearNotice(); _tree.Select(-1); _tree.ShotSetGoal(-1); _tree.Visible = false; _signal.SetSpeed(1);
                 });
             }
+            if (Wn("tech_tree_b"))
+            {
             // The goal statement with the legend flag left open in the chart view: the hidden sheet must reserve no space and the first Esc must close the tree (category D).
             Q(0.3, () => { OpenTree(1); _tree.ToggleLegend(true); });
             Q(0.8, () =>
@@ -1146,6 +1164,9 @@ public sealed partial class Main : Node3D
                 _shotLog += $"goal statement {sfx}: first Esc closed the tree with a hidden legend flag: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"Esc was consumed by a hidden legend {sfx}");
                 _tree.ToggleLegend(false); _tree.Visible = false;
             });
+            }
+            if (Wn("tree_zoom_icons_all"))
+            {
             // The Icons level with all six node types in one view (FND, PRN, ENG, CMP, PRC, APP): the in-node glyphs the legend shows.
             string allTypes = null;
             Q(0.4, () => OpenTree(0));
@@ -1157,6 +1178,9 @@ public sealed partial class Main : Node3D
                 _shotLog += $"tree glyph probe {sfx}: {(probe == null ? "PASS" : "FAIL " + probe)}\n"; if (probe != null) { InstFail($"glyph probe {sfx}: {probe}"); return; }
                 SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ShotProbe = false; _tree.ResetView(); _tree.Visible = false;
             });
+            }
+            if (Wn("tree_caption_turbine", "tree_caption_jet_test", "tree_caption_frontier"))
+            {
             // Captions the art director asked to see (TASK-0126): the nodes are centred at the Nodes level, the named ones selected, a frontier node left alone (its number tag or name).
             {   // every scale and language: the coverage rule wants each 100 % frame at 125 % and 150 % too
                 Q(0.4, () => OpenTree(0));
@@ -1167,6 +1191,9 @@ public sealed partial class Main : Node3D
                 }
                 Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
+            }
+            if (Wn("tree_key_tip", "tree_key_enter"))
+            {
             // Keyboard walk (TASK-0132, A6-A8) on the live session: real Tab key events reach the focused tree; the ring and the key tip show, Enter opens the node panel.
             {
                 int kbRow = -1;
@@ -1188,6 +1215,9 @@ public sealed partial class Main : Node3D
                     _tree.Select(-1); _tree.ResetView(); _tree.Visible = false;
                 });
             }
+            }
+            if (Wn("tree_year_overview", "tree_year_step2", "tree_year_step3", "tree_year_step5", "tree_year_step6", "tree_year_menu", "tree_year_focus", "tree_year_focus_plus", "tree_year_focus_tab_b"))
+            {
             // Year rings (TASK-0161, #473): radius = year, sectors = disciplines; the six zoom steps, the node menu with a hatched item, the keyboard ring; on the live session state.
             {
                 int yrRow = -1;
@@ -1221,6 +1251,9 @@ public sealed partial class Main : Node3D
                 Q(0.4, () => { SaveShot($"tree_year_focus_plus{sfx}.png", null, scale == 100); bool ok = _tree.ShotFocusTab(1); _shotLog += $"tree focus on a tab {sfx}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree view tab is not focusable"); });
                 Q(0.4, () => { SaveShot($"tree_year_focus_tab_b{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
+            }
+            if (Wn("rail_narrow_normal", "rail_narrow_badges", "rail_wide_normal", "rail_wide_badges", "tree_nolegend", "tree_legend_closed_zoom", "tree_legend", "tree_legend_sel", "journal"))
+            {
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
@@ -1283,6 +1316,7 @@ public sealed partial class Main : Node3D
                 SaveShot($"tree_legend_sel{sfx}.png", null, scale == 100 && lang == "ru"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true;
             });
             Q(0.6, () => { SaveShot($"journal{sfx}.png"); _journal.Visible = false; });
+            }
         }
         _sizeQ.Add((0.5, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang("ru"); }));
     }
