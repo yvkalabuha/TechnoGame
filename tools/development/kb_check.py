@@ -15,6 +15,7 @@ Errors (exit 1):
   - an id that does not exist: #NNN above the last owner decision, ADR/TASK/EXP/HYP/RR/MS not in
     the registry, DEBT, RISK or O-NNN not in their tables;
   - a fact of development/FACTS.yaml whose probe no longer matches the repository (drift, #597);
+    with --staged a warning unless development/FACTS.yaml itself is staged (landing and CI refuse it);
   - a fact whose source cites a decision marked SUPERSEDED in DECISIONS_LOG.md (#597);
   - a fact with a `reviewed:` value that is not a date.
 Warnings (exit 0):
@@ -101,10 +102,29 @@ def decision_rows(text: str) -> dict[int, str]:
     return out
 
 
-def related_facts(text: str, facts: list[dict]) -> list[dict]:
-    """Facts whose keywords occur in the text (the rule of `related`)."""
+SHORT_KEYWORD = 4  # shorter keywords (cc, g4, m0, api, лет, тик, 400) match only as whole words
+DECISION_MIN_HITS = 2  # landing and decision-facts: a fact relates to a decision only on two different keywords
+
+
+def keyword_hits(text: str, fact: dict) -> set[str]:
+    """The fact's keywords found in the text: a prefix match for long ones, whole words for short ones."""
     low = text.lower()
-    return [f for f in facts if any(str(k).lower() in low for k in f.get("keywords", []))]
+    hits = set()
+    for k in fact.get("keywords") or []:
+        k = str(k).lower()
+        if not k:
+            continue
+        if len(k) < SHORT_KEYWORD:
+            if re.search(r"(?<!\w)" + re.escape(k) + r"(?!\w)", low):
+                hits.add(k)
+        elif k in low:
+            hits.add(k)
+    return hits
+
+
+def related_facts(text: str, facts: list[dict], min_hits: int = 1) -> list[dict]:
+    """Facts with at least min_hits different keywords in the text (`related` uses 1)."""
+    return [f for f in facts if len(keyword_hits(text, f)) >= min_hits]
 
 
 def cited_decisions(fact: dict) -> list[int]:
@@ -226,15 +246,19 @@ def check_file(path: Path, ids: dict, facts: list[dict], living: bool,
                 warnings.append(f"{where}:{n}: path `{p}` does not exist")
 
 
-def probe_drift(fact: dict, root: Path = ROOT) -> str | None:
-    """Why the fact's probe disagrees with the repository, or None (no probe, or it matches)."""
+def probe_drift(fact: dict, root: Path = ROOT, read=None) -> str | None:
+    """Why the fact's probe disagrees with the repository, or None (no probe, or it matches).
+    read(path) -> text or None replaces the working tree (landing reads the branch head)."""
     pr = fact.get("probe")
     if not pr:
         return None
-    target = root / pr["file"]
-    if not target.exists():
+    if read is None:
+        target = root / pr["file"]
+        text = target.read_text(encoding="utf-8", errors="replace") if target.exists() else None
+    else:
+        text = read(pr["file"])
+    if text is None:
         return f"probe file {pr['file']} is missing"
-    text = target.read_text(encoding="utf-8", errors="replace")
     if "count" in pr:
         got = str(len(re.findall(pr["count"], text, re.M)))
     else:
@@ -246,14 +270,15 @@ def probe_drift(fact: dict, root: Path = ROOT) -> str | None:
 
 
 def check_facts(facts: list[dict], errors: list[str], warnings: list[str], decisions: dict[int, str] | None = None,
-                fresh: bool = True) -> None:
-    """Drift and superseded sources are errors (#597); a source changed after `reviewed:` is a warning."""
+                fresh: bool = True, drift_is_error: bool = True) -> None:
+    """Drift and superseded sources are errors (#597); a source changed after `reviewed:` is a warning.
+    drift_is_error=False (pre-commit without FACTS.yaml staged) reports drift as a warning: CI and landing judge it."""
     if decisions is None:
         decisions = decision_rows(DECISIONS.read_text(encoding="utf-8")) if DECISIONS.exists() else {}
     for f in facts:
         why = probe_drift(f)
         if why:
-            errors.append(f"FACTS.yaml: fact '{f['id']}' drifted: {why}. Update the fact and the documents "
+            (errors if drift_is_error else warnings).append(f"FACTS.yaml: fact '{f['id']}' drifted: {why}. Update the fact and the documents "
                           "that state it, or fix the code.")
         for n in cited_decisions(f):
             body = decisions.get(n)
@@ -289,6 +314,7 @@ def cmd_check(args) -> int:
         out = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"], cwd=ROOT,
                              capture_output=True, text=True).stdout.split()
         targets = [ROOT / f for f in out if f.endswith((".md", ".yaml")) and not f.startswith("lab/")]
+        staged_facts = rel(FACTS) in out
     else:
         targets = sorted(living)
     for t in targets:
@@ -296,7 +322,7 @@ def cmd_check(args) -> int:
             check_file(t, ids, facts, t.resolve() in living, errors, warnings,
                        added_lines(t) if args.staged else None)
     if not args.file:
-        check_facts(facts, errors, warnings)
+        check_facts(facts, errors, warnings, drift_is_error=not args.staged or staged_facts)
         import errors as catalogue  # development/errors.yaml schema (owner #584)
         try:
             errors += [f"errors.yaml: {e}" for e in catalogue.validate(catalogue.load(catalogue.ERRORS))]
@@ -364,7 +390,7 @@ def cmd_decision_facts(args) -> int:
     rows = decision_rows(DECISIONS.read_text(encoding="utf-8")) if DECISIONS.exists() else {}
     facts = load_facts()
     for n in args.nums:
-        rel_ = related_facts(rows.get(n, ""), facts)
+        rel_ = related_facts(rows.get(n, ""), facts, DECISION_MIN_HITS)
         if not rel_:
             continue
         print(f"DECISION #{n}: confirm or update these facts in development/FACTS.yaml (or put 'facts-ok: #{n}' "
@@ -374,10 +400,16 @@ def cmd_decision_facts(args) -> int:
     return 0
 
 
+def git_blob(repo: Path, rev: str, path: str) -> str | None:
+    """File content at a revision; None when the file is not there."""
+    r = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=repo, capture_output=True, text=True, timeout=30,
+                       errors="replace")
+    return r.stdout if r.returncode == 0 else None
+
+
 def git_show(repo: Path, rev: str, path: str) -> str:
     """File content at a revision; '' when the file is not there."""
-    r = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=repo, capture_output=True, text=True, timeout=30)
-    return r.stdout if r.returncode == 0 else ""
+    return git_blob(repo, rev, path) or ""
 
 
 def facts_at(repo: Path, rev: str) -> dict[str, dict]:
@@ -387,19 +419,27 @@ def facts_at(repo: Path, rev: str) -> dict[str, dict]:
 
 def landing_problems(repo: Path, base: str, head: str, message: str = "") -> list[str]:
     """#597: every decision row the branch adds needs its related facts changed on the branch, or
-    'facts-ok: #N' in the landing message or a commit message of base..head."""
+    'facts-ok: #N' in the landing message or a commit message of base..head. The facts of the head tree must not
+    drift from the head tree (pre-commit only warns about drift)."""
+    after = facts_at(repo, head)
+    out = []
+    for f in after.values():
+        why = probe_drift(f, read=lambda p: git_blob(repo, head, p))
+        if why:
+            out.append(f"fact '{f.get('id')}' drifts on the branch head: {why}. Update development/FACTS.yaml "
+                       "or the code before landing")
     old = decision_rows(git_show(repo, base, rel(DECISIONS)))
     added = {n: b for n, b in decision_rows(git_show(repo, head, rel(DECISIONS))).items() if n not in old}
     if not added:
-        return []
-    before, after = facts_at(repo, base), facts_at(repo, head)
+        return out
+    before = facts_at(repo, base)
     changed = {i for i, f in after.items() if before.get(i) != f}
     log = subprocess.run(["git", "log", "--format=%B", f"{base}..{head}"], cwd=repo, capture_output=True,
                          text=True, timeout=30, check=True).stdout
     ok = {int(n) for grp in FACTS_OK.findall(message + "\n" + log) for n in re.findall(r"#(\d+)", grp)}
-    out = []
     for n, body in sorted(added.items()):
-        missing = [f["id"] for f in related_facts(body, list(after.values())) if f["id"] not in changed]
+        missing = [f["id"] for f in related_facts(body, list(after.values()), DECISION_MIN_HITS)
+                   if f["id"] not in changed]
         if missing and n not in ok:
             out.append(f"decision #{n} relates to facts {', '.join(missing)}, unchanged on the branch: update them "
                        f"(statement, probe or reviewed:) or confirm them with 'facts-ok: #{n}' in the commit message")
@@ -407,10 +447,15 @@ def landing_problems(repo: Path, base: str, head: str, message: str = "") -> lis
 
 
 def cmd_landing(args) -> int:
-    problems = landing_problems(ROOT, args.base, args.head, args.message)
+    """Exit 0 passed, 1 refused, 2 the check itself failed (land.py names it apart)."""
+    try:
+        problems = landing_problems(ROOT, args.base, args.head, args.message)
+    except Exception as ex:  # git, YAML or a bad regex in a probe: not a verdict on the branch
+        print(f"kb_check landing: facts gate failed internally: {type(ex).__name__}: {ex}")
+        return 2
     for p in problems:
         print("ERROR  ", p)
-    print(f"kb_check landing: {len(problems)} decision(s) without confirmed facts")
+    print(f"kb_check landing: {len(problems)} problem(s) (new decisions without confirmed facts, drifting facts)")
     return 1 if problems else 0
 
 

@@ -19,11 +19,13 @@ So main never holds a commit that was not built and tested as merged.
 
   0a. decisions and facts (#597): a branch that adds a row to DECISIONS_LOG.md must change the facts
      related to it (development/FACTS.yaml) or carry 'facts-ok: #NNN' in -m or a commit message
-     (`kb_check.py landing`). Checked before the second review, so a refusal costs no review run.
+     (`kb_check.py landing`), and no fact may drift on the branch head. Checked before the second
+     review, so a refusal costs no review run.
 
 Exit codes: 0 landed, 1 verify failed, 3 merge conflict, 4 main moved or is dirty,
 5 the branch changes registry status fields, 6 second review missing or not passed,
-7 a new decision without its facts updated or confirmed.
+7 a new decision without its facts updated or confirmed, a fact drifting on the branch head,
+or the facts gate failed internally.
 The commit message is used as given: put the attribution trailer into -m.
 """
 from __future__ import annotations
@@ -91,9 +93,17 @@ def facts_gate(root: Path, base: str, head: str, message: str) -> tuple[bool, st
         known = False
     if not known:
         return True, "kb_check has no landing command here; decisions-to-facts check skipped"
-    r = subprocess.run([sys.executable, str(script), "landing", "--base", base, "--head", head,
-                        "--message", message], cwd=root, text=True, capture_output=True, timeout=120)
-    return r.returncode == 0, (r.stdout + r.stderr).strip()
+    try:
+        r = subprocess.run([sys.executable, str(script), "landing", "--base", base, "--head", head,
+                            "--message", message], cwd=root, text=True, capture_output=True, timeout=120)
+    except (subprocess.TimeoutExpired, OSError) as ex:
+        return False, f"facts gate failed internally: {type(ex).__name__}: {ex}"
+    out = (r.stdout + r.stderr).strip()
+    if r.returncode not in (0, 1):  # 2: kb_check caught its own failure; anything else: a crash
+        if "facts gate failed internally" not in out:
+            out = f"facts gate failed internally (kb_check exit {r.returncode}):\n{out}"
+        return False, out
+    return r.returncode == 0, out
 
 
 def second_review(root: Path, task: str, base: str, head: str, run: bool) -> tuple[bool, str]:
@@ -335,7 +345,11 @@ def run(info: dict | None = None) -> int:
     if out:
         print("land:", out)
     if not ok:
-        print("land: a new decision has related facts neither updated nor confirmed (#597); main untouched")
+        if "facts gate failed internally" in out:
+            print("land: the facts gate could not run (see above); main untouched")
+        else:
+            print("land: a new decision without its facts updated or confirmed, or a drifting fact (#597); "
+                  "main untouched")
         return 7
     risky = needs_second_review(files, root)
     if risky:

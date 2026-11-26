@@ -709,7 +709,11 @@ def cmd_status(_args) -> int:
         print(f"database {db_name()}: built {meta.get('built_at', 'never')}, "
               f"{'fresh' if is_fresh() else 'STALE (q rebuilds it)'}")
         for key, spec in TABLES.items():
-            n = psql(db_name(), f"select count(*) from {spec['sql']}", "-At", schema=True).strip()
+            exists = psql(db_name(), f"select to_regclass({lit(spec['sql'])}) is not null", "-At", schema=True).strip()
+            if exists != "t":  # an index built by older code (SCHEMA bump): no traceback, a hint
+                n = "missing: rebuild needed (kb_db.py build, or any q)"
+            else:
+                n = psql(db_name(), f"select count(*) from {spec['sql']}", "-At", schema=True).strip()
             print(f"  {key:10} {n}")
     except PgError as ex:
         print(f"kb_db: {ex}", file=sys.stderr)

@@ -63,11 +63,11 @@ class LandFactsGateTest(unittest.TestCase):
         dev = Path(config.REPO_ROOT) / "tools" / "development"
         for name in ("kb_check.py", "registry.py"):
             self.commit(f"tools/development/{name}", (dev / name).read_text(encoding="utf-8"))
-        self.commit("development/FACTS.yaml", "facts:\n  - {id: codex, statement: s, keywords: [Codex]}\n")
+        self.commit("development/FACTS.yaml", "facts:\n  - {id: codex, statement: s, keywords: [Codex, review]}\n")
         self.commit("docs/decisions/DECISIONS_LOG.md", "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | a | r |\n")
         self.base = self.git("rev-parse", "HEAD")
         self.commit("docs/decisions/DECISIONS_LOG.md",
-                    "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | a | r |\n| 2 | d | about Codex | r |\n")
+                    "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | a | r |\n| 2 | d | about Codex review | r |\n")
         self.head = self.git("rev-parse", "HEAD")
 
     def test_new_decision_without_facts_is_refused(self):
@@ -78,6 +78,25 @@ class LandFactsGateTest(unittest.TestCase):
     def test_facts_ok_in_message_passes(self):
         ok, out = land.facts_gate(self.repo, self.base, self.head, "merge: x\n\nfacts-ok: #2")
         self.assertTrue(ok, out)
+
+    def test_drift_on_branch_head_is_refused(self):
+        self.commit("development/FACTS.yaml", "facts:\n  - {id: v, statement: s, keywords: [x], "
+                    "probe: {file: docs/decisions/DECISIONS_LOG.md, count: 'Codex', expect: 5}}\n")
+        ok, out = land.facts_gate(self.repo, self.base, self.git("rev-parse", "HEAD"), "facts-ok: #2")
+        self.assertFalse(ok)
+        self.assertIn("drifts on the branch head", out)
+        self.assertNotIn("internally", out)
+
+    def test_internal_failure_is_named(self):
+        self.commit("development/FACTS.yaml", "facts:\n  - {id: v, statement: s, keywords: [x], "
+                    "probe: {file: development/FACTS.yaml, regex: '(', expect: 1}}\n")
+        ok, out = land.facts_gate(self.repo, self.base, self.git("rev-parse", "HEAD"), "facts-ok: #2")
+        self.assertFalse(ok)
+        self.assertIn("facts gate failed internally", out)
+        with mock.patch.object(land.subprocess, "run", side_effect=subprocess.TimeoutExpired("kb_check", 120)):
+            ok, out = land.facts_gate(self.repo, self.base, self.head, "")
+        self.assertFalse(ok)
+        self.assertIn("facts gate failed internally: TimeoutExpired", out)
 
     def test_old_kb_check_skips_the_gate(self):
         self.commit("tools/development/kb_check.py", "print('old')\n")

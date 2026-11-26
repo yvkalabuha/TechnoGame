@@ -290,6 +290,14 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(json.loads(self.run_q("q", "facts", "drift=true", "--json")), [])  # kb_check: no drift
         self.assertTrue(json.loads(self.run_q("q", "facts", "id=schema-version", "--json")))
 
+    def test_07_status_on_an_index_without_facts_asks_for_a_rebuild(self):
+        kb_db.psql(kb_db.db_name(), "drop table facts", schema=True)  # as built before SCHEMA 2
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            rc = kb_db.main(["status"])
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertIn("rebuild needed", out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

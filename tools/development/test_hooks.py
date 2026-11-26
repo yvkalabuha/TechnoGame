@@ -727,7 +727,7 @@ class KbCheckFactsTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, repo, True)
         git_in(repo, "init", "-b", "main")
         commit_file(repo, "development/FACTS.yaml",
-                    "facts:\n  - {id: codex, statement: s, keywords: [Codex]}\n  - {id: map, statement: m, keywords: [карта]}\n")
+                    "facts:\n  - {id: codex, statement: s, keywords: [Codex, ревью]}\n  - {id: map, statement: m, keywords: [карта, регион]}\n")
         commit_file(repo, "docs/decisions/DECISIONS_LOG.md", "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old | r |\n")
         return repo, git_in(repo, "rev-parse", "HEAD")
 
@@ -736,7 +736,7 @@ class KbCheckFactsTest(unittest.TestCase):
         log = "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old, edited | r |\n"
         commit_file(repo, "docs/decisions/DECISIONS_LOG.md", log)  # an edited row is not a new decision
         self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
-        commit_file(repo, "docs/decisions/DECISIONS_LOG.md", log + "| 2 | d | новое про Codex | r |\n")
+        commit_file(repo, "docs/decisions/DECISIONS_LOG.md", log + "| 2 | d | новое ревью Codex, карта | r |\n")
         problems = self.kb.landing_problems(repo, base, "HEAD")
         self.assertEqual(len(problems), 1)
         self.assertIn("#2", problems[0])
@@ -747,12 +747,47 @@ class KbCheckFactsTest(unittest.TestCase):
         commit_file(repo, "x.txt", "x", msg="docs: confirm\n\nfacts-ok: #1, #2")
         self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
 
+    def test_short_keywords_match_whole_words_and_decisions_need_two(self):
+        fact = {"id": "f", "keywords": ["cc", "api", "владелец", "M0"]}
+        self.assertEqual(self.kb.keyword_hits("ADR accepted, rapid change", fact), set())
+        self.assertEqual(self.kb.keyword_hits("CC BY data; API v2; m0 closed", fact), {"cc", "api", "m0"})
+        # reviewer false positive: a row that only says "accepted" and "владелец" relates to no fact
+        row = "ADR-0099 accepted; владелец согласен с планом"
+        self.assertEqual(self.kb.related_facts(row, self.kb.load_facts(), self.kb.DECISION_MIN_HITS), [])
+        self.assertEqual(self.kb.related_facts(row, [fact], self.kb.DECISION_MIN_HITS), [])
+        self.assertEqual(self.kb.related_facts(row, [fact]), [fact])  # `related` stays at one keyword
+
+    def test_staged_check_warns_about_drift_unless_facts_are_staged(self):
+        probe = {"file": "tools/development/kb_check.py", "regex": r"STALE_DAYS = (\d+)", "expect": "99"}
+        errors, warnings = [], []
+        self.kb.check_facts([{"id": "f", "statement": "s", "probe": probe}], errors, warnings, {}, fresh=False,
+                            drift_is_error=False)
+        self.assertEqual((len(errors), len(warnings)), (0, 1))
+        self.assertIn("drifted", warnings[0])
+        src = (ROOT / "tools/development/kb_check.py").read_text(encoding="utf-8")
+        self.assertIn("drift_is_error=not args.staged or staged_facts", src)
+        self.assertIn("staged_facts = rel(FACTS) in out", src)
+
+    def test_landing_refuses_drift_on_the_branch_head(self):
+        repo, base = self.landing_repo()
+        commit_file(repo, "src/v.txt", "Version = 3\n")
+        facts = "facts:\n  - {id: v, statement: s, keywords: [x], probe: {file: src/v.txt, regex: 'Version = (\\d+)', expect: '%s'}}\n"
+        commit_file(repo, "development/FACTS.yaml", facts % "3")
+        self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
+        commit_file(repo, "src/v.txt", "Version = 4\n")
+        problems = self.kb.landing_problems(repo, base, "HEAD")
+        self.assertEqual(len(problems), 1)
+        self.assertIn("drifts on the branch head", problems[0])
+        commit_file(repo, "src/v.txt", "nothing\n")
+        (repo / "src/v.txt").write_text("Version = 3\n")  # the working tree does not count, the head does
+        self.assertEqual(len(self.kb.landing_problems(repo, base, "HEAD")), 1)
+
     def test_landing_accepts_a_changed_fact(self):
         repo, base = self.landing_repo()
         commit_file(repo, "docs/decisions/DECISIONS_LOG.md",
-                    "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old | r |\n| 2 | d | Codex new | r |\n")
-        commit_file(repo, "development/FACTS.yaml", "facts:\n  - {id: codex, statement: s, keywords: [Codex], "
-                    "reviewed: 2026-11-26}\n  - {id: map, statement: m, keywords: [карта]}\n")
+                    "| # | Д | Р | С |\n|---|---|---|---|\n| 1 | d | Codex old | r |\n| 2 | d | Codex new ревью | r |\n")
+        commit_file(repo, "development/FACTS.yaml", "facts:\n  - {id: codex, statement: s, keywords: [Codex, ревью], "
+                    "reviewed: 2026-11-26}\n  - {id: map, statement: m, keywords: [карта, регион]}\n")
         self.assertEqual(self.kb.landing_problems(repo, base, "HEAD"), [])
 
 
@@ -764,10 +799,12 @@ class KbGuardDecisionTest(unittest.TestCase):
                               text=True, capture_output=True, env=env).stdout
 
     def test_new_decision_row_prints_its_facts(self):
-        out = self.call({"old_string": "| 595 | x |", "new_string": "| 595 | x |\n| 597 | y |"})
-        self.assertIn("DECISION #597", out)
-        self.assertIn("facts-ok: #597", out)
-        self.assertNotIn("DECISION #595", out)
+        # #592 names Codex, rounds and tools: two keywords of tools-codex-rule
+        out = self.call({"old_string": "| 591 | x |", "new_string": "| 591 | x |\n| 592 | y |"})
+        self.assertIn("DECISION #592", out)
+        self.assertIn("tools-codex-rule", out)
+        self.assertIn("facts-ok: #592", out)
+        self.assertNotIn("DECISION #591", out)
 
     def test_write_of_known_rows_prints_no_facts(self):
         text = (ROOT / "docs/decisions/DECISIONS_LOG.md").read_text(encoding="utf-8")
