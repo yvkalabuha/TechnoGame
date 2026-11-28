@@ -88,3 +88,18 @@ errors:
     ref: .claude/hooks/guard_dispatch.py
   repeats: []
   status: prevented
+- id: ERR-0007
+  date: '2026-11-28'
+  executor: orchestrator
+  kind: comms
+  area: owner-questions
+  symptom: 'Asked the owner about question A14 (redo 3D G1-G6 via Gemini in Blender), which was already done: TASK-0181
+    DONE on 2026-11-25. Blender was started for nothing.'
+  cause: The question queue in OPEN_QUESTIONS.md is not cleaned when a task closes it, and the Orchestrator did
+    not check the registry before asking.
+  found_by: self
+  cost: low
+  fix: Before asking queued questions, check each against registry status and DECISIONS_LOG (kb_db.py q); remove
+    answered or obsolete rows when the related task closes.
+  repeats: []
+  status: open
